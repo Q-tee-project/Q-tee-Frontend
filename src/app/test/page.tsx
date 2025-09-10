@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 
 export default function TestPage() {
   const [isDark, setIsDark] = useState(false);
@@ -552,6 +553,66 @@ export default function TestPage() {
                 </div>
               </div>
             </div>
+          </div>
+        </section>
+
+        {/* shadcn/ui 카드 컴포넌트 테스트 */}
+        <section className="mb-8">
+          <h2 className="text-2xl font-semibold mb-4">shadcn/ui 카드 컴포넌트</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>shadcn/ui 카드</CardTitle>
+                <CardDescription>
+                  이것은 shadcn/ui의 Card 컴포넌트입니다.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm">
+                  shadcn/ui의 Card 컴포넌트가 정상적으로 작동하는지 확인할 수 있습니다.
+                  스타일링이 올바르게 적용되었는지 확인해보세요.
+                </p>
+              </CardContent>
+              <CardFooter>
+                <button className="px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-all">
+                  액션 버튼
+                </button>
+              </CardFooter>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>두 번째 카드</CardTitle>
+                <CardDescription>
+                  색상 변수가 올바르게 적용되는지 확인
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="w-full h-3 bg-primary rounded"></div>
+                  <div className="w-full h-3 bg-secondary rounded"></div>
+                  <div className="w-full h-3 bg-muted rounded"></div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>세 번째 카드</CardTitle>
+                <CardDescription>
+                  다크모드 호환성 테스트
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">
+                  다크모드와 라이트모드에서 모두 잘 보이는지 확인해보세요.
+                </p>
+              </CardContent>
+              <CardFooter className="justify-between">
+                <span className="text-sm text-muted-foreground">상태: 활성</span>
+                <button className="btn-blue">확인</button>
+              </CardFooter>
+            </Card>
           </div>
         </section>
 
