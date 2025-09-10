@@ -176,10 +176,10 @@ export default function BankPage() {
   };
 
   return (
-    <div className="bg-gray-50">
+    <div className="bank-page min-h-screen">
       {/* 헤더 */}
       <div className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="w-full px-4 sm:px-6 lg:px-8">
           <div className="py-4">
             <h1 className="text-xl font-semibold text-gray-900">문제 관리</h1>
             <p className="mt-1 text-sm text-gray-500">생성된 워크시트와 문제를 관리합니다</p>
@@ -210,7 +210,7 @@ export default function BankPage() {
       </div>
 
       {/* 메인 컨텐츠 */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="w-full px-4 sm:px-6 lg:px-8 py-6">
         <div className="flex gap-6">
           {/* 왼쪽: 워크시트 목록 */}
           <div className="w-64 flex-shrink-0">
