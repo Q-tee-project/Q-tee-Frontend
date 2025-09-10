@@ -90,7 +90,7 @@ export default function Header() {
         role="banner"
         aria-label="상단 네비게이션"
       >
-        <div className="flex items-center justify-between w-full" style={{ paddingLeft: '12px', paddingRight: '12px' }}>
+        <div className="flex items-center justify-between w-full" style={{ paddingLeft: '10px', paddingRight: '10px' }}>
           <div className="flex items-center gap-md">
             <Link href="/" aria-label="홈으로 이동">
               <Image
@@ -105,7 +105,12 @@ export default function Header() {
 
           <nav aria-label="사용자 메뉴">
             <ul className="flex items-center gap-lg list-none">
-              <li style={{ position: 'relative' }} ref={bellMenuRef}>
+              <li style={{ position: 'relative', 
+              marginRight: '20px', 
+              display: 'flex',
+              alignItems: 'center'}}
+              ref={bellMenuRef}>
+                
                 <button
                   type="button"
                   aria-label="알림"
@@ -285,7 +290,10 @@ export default function Header() {
                   </div>
                 )}
               </li>
-              <li style={{ position: 'relative' }} ref={profileMenuRef}>
+              <li style={{ position: 'relative',
+                marginRight: '20px', 
+                display: 'flex',
+                alignItems: 'center'}} ref={profileMenuRef}>
                 <button
                   type="button"
                   aria-label="내 프로필"
