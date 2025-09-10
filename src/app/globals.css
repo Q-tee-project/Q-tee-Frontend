@@ -133,8 +133,13 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html,
   body {
-    @apply bg-background text-foreground;
+    @apply text-foreground m-0 p-0;
+    background-color: #EFF0F5;
+  }
+  #__next {
+    @apply min-h-screen;
   }
 }
 
@@ -153,8 +158,12 @@
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: rgba(0, 0, 0, 0.2); /* 손잡이는 연하게 표시 */
+  background-color: rgba(0, 0, 0, 0.3); /* 손잡이를 좀 더 진하게 */
   border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(0, 0, 0, 0.5); /* 호버 시 더 진하게 */
 }
 
 /* 랜딩 페이지 그리드 패턴 */
