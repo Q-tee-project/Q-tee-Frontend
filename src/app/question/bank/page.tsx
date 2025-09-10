@@ -7,7 +7,8 @@ import { Worksheet, MathProblem, ProblemType, Subject } from '@/types/math';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { DataTable } from './data-table';
 import { columns } from './columns';
-import { Trash2 } from 'lucide-react';
+import { Trash2, FileText } from 'lucide-react';
+import { PageHeader } from '@/components/layout/PageHeader';
 
 export default function BankPage() {
   const [worksheets, setWorksheets] = useState<Worksheet[]>([]);
@@ -110,75 +111,82 @@ export default function BankPage() {
   };
 
   return (
-    <div className="bank-page min-h-screen">
-      <div className="w-full px-4 sm:px-6 lg:px-8 py-4">
-        <h1 className="text-xl font-semibold text-gray-900 mb-4">문제 관리</h1>
+    <div className="h-full flex flex-col">
+      {/* 헤더 영역 */}
+      <PageHeader
+        icon={<FileText />}
+        title="문제 관리"
+        variant="question"
+        description="문제지 편집 및 배포할 수 있습니다"
+      />
 
-        {/* 과목 탭 */}
-        <div className="border-b border-gray-200 mb-6">
-          <nav className="-mb-px flex space-x-8">
-            {[Subject.KOREAN, Subject.MATH, Subject.ENGLISH].map((subject) => (
-              <button
-                key={subject}
-                onClick={() => setSelectedSubject(subject)}
-                className={`
-                  py-2 px-1 border-b-2 font-medium text-sm transition-colors
-                  ${
-                    selectedSubject === subject
-                      ? 'border-[#0072CE] text-[#0072CE]'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }
-                `}
-              >
-                {subject}
-              </button>
-            ))}
-          </nav>
-        </div>
+      {/* 과목 탭 */}
+      <div className="px-6 pb-4 flex-shrink-0">
+        <nav className="flex space-x-8">
+          {[Subject.KOREAN, Subject.MATH, Subject.ENGLISH].map((subject) => (
+            <button
+              key={subject}
+              onClick={() => setSelectedSubject(subject)}
+              className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+                selectedSubject === subject
+                  ? 'border-[#0072CE] text-[#0072CE]'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              {subject}
+            </button>
+          ))}
+        </nav>
       </div>
 
-      {/* 메인 컨텐츠 */}
-      <div className="w-full px-4 sm:px-6 lg:px-8">
+      {/* 메인 컨텐츠 영역 */}
+      <div className="flex-1 p-6 min-h-0">
         <div className="flex gap-6 h-full">
           {/* 문제지 목록 */}
-          <Card className="w-1/3 flex flex-col">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>문제 목록</CardTitle>
+          <Card className="w-1/3 flex flex-col shadow-sm">
+            <CardHeader className="flex flex-row items-center justify-between py-4 px-6 border-b border-gray-100">
+              <CardTitle className="text-lg font-medium">문제 목록</CardTitle>
               <button
-                className="text-[#0072CE] hover:text-[#0056A3] transition-colors inline-flex items-center justify-center w-6 h-6 rounded hover:bg-[#EBF6FF]"
-                title="삭제"
+                onClick={(e) => selectedWorksheet && handleDeleteWorksheet(selectedWorksheet, e)}
+                disabled={!selectedWorksheet}
+                className="text-[#0072CE] hover:text-[#0056A3] transition-colors inline-flex items-center justify-center w-8 h-8 rounded-md hover:bg-[#EBF6FF] disabled:opacity-50 disabled:cursor-not-allowed"
+                title="선택된 워크시트 삭제"
               >
-                <Trash2 className="w-3 h-3" />
+                <Trash2 className="w-4 h-4" />
               </button>
             </CardHeader>
-            <CardContent className="px-0 flex-1">
-              {selectedSubject !== Subject.MATH ? (
-                <div className="px-4 py-8 text-center text-gray-400 text-sm">
-                  {selectedSubject} 과목은 준비 중입니다
-                </div>
-              ) : worksheets.length === 0 ? (
-                <div className="px-4 py-8 text-center text-gray-400 text-sm">
-                  저장된 워크시트가 없습니다 (로딩 상태: {isLoading ? '로딩 중' : '로딩 완료'},
-                  과목: {selectedSubject})
-                  {error && <div className="text-red-500 mt-2">오류: {error}</div>}
-                </div>
-              ) : (
-                <DataTable
-                  columns={columns}
-                  data={worksheets}
-                  onRowClick={handleWorksheetSelect}
-                  selectedRowId={selectedWorksheet?.id}
-                />
-              )}
+            <CardContent className="p-0 flex-1 min-h-0">
+              <div className="h-full custom-scrollbar overflow-y-auto">
+                {selectedSubject !== Subject.MATH ? (
+                  <div className="px-4 py-8 text-center text-gray-400 text-sm">
+                    {selectedSubject} 과목은 준비 중입니다
+                  </div>
+                ) : worksheets.length === 0 ? (
+                  <div className="px-4 py-8 text-center text-gray-400 text-sm">
+                    저장된 워크시트가 없습니다 (로딩 상태: {isLoading ? '로딩 중' : '로딩 완료'},
+                    과목: {selectedSubject})
+                    {error && <div className="text-red-500 mt-2">오류: {error}</div>}
+                  </div>
+                ) : (
+                  <DataTable
+                    columns={columns}
+                    data={worksheets}
+                    onRowClick={handleWorksheetSelect}
+                    selectedRowId={selectedWorksheet?.id}
+                  />
+                )}
+              </div>
             </CardContent>
           </Card>
 
           {/* 시험지 상세 보기 (선택된 경우에만 표시) */}
           {selectedWorksheet ? (
-            <Card className="w-2/3 flex flex-col">
-              <CardHeader className="text-center">
-                <div className="flex items-center justify-center gap-3 mb-2">
-                  <CardTitle className="text-2xl">{selectedWorksheet.title}</CardTitle>
+            <Card className="w-2/3 flex flex-col shadow-sm">
+              <CardHeader className="text-center py-6 px-6 border-b border-gray-100">
+                <div className="flex items-center justify-center gap-3 mb-3">
+                  <CardTitle className="text-2xl font-bold text-gray-900">
+                    {selectedWorksheet.title}
+                  </CardTitle>
                   {showAnswerSheet && (
                     <span className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm font-semibold">
                       정답지
@@ -196,161 +204,212 @@ export default function BankPage() {
                 </div>
               </CardHeader>
 
-              <CardContent className="flex-1 overflow-y-auto">
-                {worksheetProblems.length === 0 ? (
-                  <div className="text-center py-20 text-gray-400">
-                    문제 데이터를 불러오는 중입니다...
-                  </div>
-                ) : (
-                  <div className="space-y-8">
-                    {worksheetProblems.map((problem, index) => (
-                      <div key={problem.id} className="page-break-inside-avoid">
-                        <div className="flex items-start gap-4 mb-4">
-                          <div className="flex-shrink-0">
-                            <span className="inline-flex items-center justify-center w-8 h-8 bg-[#0072CE] text-white rounded-full text-sm font-bold">
-                              {problem.sequence_order}
-                            </span>
-                          </div>
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-3">
-                              <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-medium">
-                                {getProblemTypeInKorean(problem.problem_type)}
-                              </span>
-                              <span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs font-medium">
-                                난이도 {problem.difficulty}
-                              </span>
-                              <span className="text-xs text-gray-500">
-                                (
-                                {problem.problem_type === 'multiple_choice'
-                                  ? '5점'
-                                  : problem.problem_type === 'short_answer'
-                                  ? '10점'
-                                  : '15점'}
-                                )
+              <CardContent className="flex-1 p-0 min-h-0">
+                <div className="h-full custom-scrollbar overflow-y-auto p-6">
+                  {worksheetProblems.length === 0 ? (
+                    <div className="text-center py-20 text-gray-400">
+                      문제 데이터를 불러오는 중입니다...
+                    </div>
+                  ) : (
+                    <div className="space-y-8">
+                      {worksheetProblems.map((problem, index) => (
+                        <div key={problem.id} className="page-break-inside-avoid">
+                          <div className="flex items-start gap-4 mb-4">
+                            <div className="flex-shrink-0">
+                              <span className="inline-flex items-center justify-center w-8 h-8 bg-[#0072CE] text-white rounded-full text-sm font-bold">
+                                {problem.sequence_order}
                               </span>
                             </div>
-
-                            <div className="text-base leading-relaxed text-gray-900 mb-4">
-                              <LaTeXRenderer content={problem.question} />
-                            </div>
-
-                            {problem.choices && problem.choices.length > 0 && (
-                              <div className="ml-4 space-y-3">
-                                {problem.choices.map((choice, choiceIndex) => {
-                                  const optionLabel = String.fromCharCode(65 + choiceIndex);
-                                  const isCorrect = problem.correct_answer === optionLabel;
-                                  return (
-                                    <div
-                                      key={choiceIndex}
-                                      className={`flex items-start gap-3 ${
-                                        showAnswerSheet && isCorrect
-                                          ? 'bg-green-100 border border-green-300 rounded-lg p-2'
-                                          : ''
-                                      }`}
-                                    >
-                                      <span
-                                        className={`flex-shrink-0 w-6 h-6 border-2 ${
-                                          showAnswerSheet && isCorrect
-                                            ? 'border-green-500 bg-green-500 text-white'
-                                            : 'border-gray-300 text-gray-600'
-                                        } rounded-full flex items-center justify-center text-sm font-medium`}
-                                      >
-                                        {showAnswerSheet && isCorrect ? '✓' : optionLabel}
-                                      </span>
-                                      <div className="flex-1 text-gray-900">
-                                        <LaTeXRenderer content={choice} />
-                                      </div>
-                                      {showAnswerSheet && isCorrect && (
-                                        <span className="text-xs font-medium text-green-700 bg-green-200 px-2 py-1 rounded">
-                                          정답
-                                        </span>
-                                      )}
-                                    </div>
-                                  );
-                                })}
+                            <div className="flex-1">
+                              <div className="flex items-center gap-3 mb-3">
+                                <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-medium">
+                                  {getProblemTypeInKorean(problem.problem_type)}
+                                </span>
+                                <span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs font-medium">
+                                  난이도 {problem.difficulty}
+                                </span>
+                                <span className="text-xs text-gray-500">
+                                  (
+                                  {problem.problem_type === 'multiple_choice'
+                                    ? '5점'
+                                    : problem.problem_type === 'short_answer'
+                                    ? '10점'
+                                    : '15점'}
+                                  )
+                                </span>
                               </div>
-                            )}
 
-                            {(!problem.choices || problem.choices.length === 0) && (
-                              <div className="mt-4 ml-4">
-                                {problem.problem_type === 'short_answer' ? (
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-gray-700">답:</span>
-                                    {showAnswerSheet ? (
-                                      <div className="bg-green-100 border border-green-300 rounded px-3 py-2 text-green-800 font-medium">
-                                        <LaTeXRenderer content={problem.correct_answer} />
-                                      </div>
-                                    ) : (
-                                      <div className="border-b-2 border-gray-300 flex-1 h-8"></div>
-                                    )}
-                                  </div>
-                                ) : (
-                                  <>
-                                    <div className="border border-gray-300 rounded-lg p-4 min-h-[120px] bg-gray-50">
-                                      <div className="text-sm text-gray-500 mb-2">
-                                        풀이 과정을 자세히 써주세요.
-                                      </div>
-                                      <div className="space-y-3">
-                                        {[...Array(6)].map((_, lineIndex) => (
-                                          <div
-                                            key={lineIndex}
-                                            className="border-b border-gray-200 h-6"
-                                          ></div>
-                                        ))}
-                                      </div>
-                                    </div>
-                                    {showAnswerSheet && (
-                                      <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
-                                        <div className="flex items-center gap-2 mb-2">
-                                          <span className="text-sm font-semibold text-blue-800">
-                                            모범답안:
+                              <div className="text-base leading-relaxed text-gray-900 mb-4">
+                                <LaTeXRenderer content={problem.question} />
+                              </div>
+
+                              {problem.choices && problem.choices.length > 0 && (
+                                <div className="ml-4 space-y-3">
+                                  {problem.choices.map((choice, choiceIndex) => {
+                                    const optionLabel = String.fromCharCode(65 + choiceIndex);
+                                    const isCorrect = problem.correct_answer === optionLabel;
+                                    return (
+                                      <div
+                                        key={choiceIndex}
+                                        className={`flex items-start gap-3 ${
+                                          showAnswerSheet && isCorrect
+                                            ? 'bg-green-100 border border-green-300 rounded-lg p-2'
+                                            : ''
+                                        }`}
+                                      >
+                                        <span
+                                          className={`flex-shrink-0 w-6 h-6 border-2 ${
+                                            showAnswerSheet && isCorrect
+                                              ? 'border-green-500 bg-green-500 text-white'
+                                              : 'border-gray-300 text-gray-600'
+                                          } rounded-full flex items-center justify-center text-sm font-medium`}
+                                        >
+                                          {showAnswerSheet && isCorrect ? '✓' : optionLabel}
+                                        </span>
+                                        <div className="flex-1 text-gray-900">
+                                          <LaTeXRenderer content={choice} />
+                                        </div>
+                                        {showAnswerSheet && isCorrect && (
+                                          <span className="text-xs font-medium text-green-700 bg-green-200 px-2 py-1 rounded">
+                                            정답
                                           </span>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+
+                              {/* 객관식 문제 해설 */}
+                              {problem.choices && problem.choices.length > 0 && showAnswerSheet && (
+                                <div className="mt-4 ml-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <span className="text-sm font-semibold text-blue-800">
+                                      해설:
+                                    </span>
+                                  </div>
+                                  <div className="text-sm text-blue-800">
+                                    <LaTeXRenderer
+                                      content={problem.explanation || '해설 정보가 없습니다'}
+                                    />
+                                  </div>
+                                </div>
+                              )}
+
+                              {(!problem.choices || problem.choices.length === 0) && (
+                                <div className="mt-4 ml-4">
+                                  {problem.problem_type === 'short_answer' ? (
+                                    <>
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-gray-700">답:</span>
+                                        {showAnswerSheet ? (
+                                          <div className="bg-green-100 border border-green-300 rounded px-3 py-2 text-green-800 font-medium">
+                                            <LaTeXRenderer
+                                              content={
+                                                problem.correct_answer ||
+                                                '백엔드 API에서 답안 정보가 전달되지 않았습니다. 개발팀에 문의하세요.'
+                                              }
+                                            />
+                                          </div>
+                                        ) : (
+                                          <div className="border-b-2 border-gray-300 flex-1 h-8"></div>
+                                        )}
+                                      </div>
+                                      {showAnswerSheet && (
+                                        <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                          <div className="flex items-center gap-2 mb-2">
+                                            <span className="text-sm font-semibold text-blue-800">
+                                              해설:
+                                            </span>
+                                          </div>
+                                          <div className="text-sm text-blue-800">
+                                            <LaTeXRenderer
+                                              content={
+                                                problem.explanation || '해설 정보가 없습니다'
+                                              }
+                                            />
+                                          </div>
                                         </div>
-                                        <div className="text-sm text-blue-900">
-                                          <LaTeXRenderer content={problem.correct_answer} />
+                                      )}
+                                    </>
+                                  ) : (
+                                    <>
+                                      <div className="border border-gray-300 rounded-lg p-4 min-h-[120px] bg-gray-50">
+                                        <div className="text-sm text-gray-500 mb-2">
+                                          풀이 과정을 자세히 써주세요.
                                         </div>
-                                        {problem.explanation && (
+                                        <div className="space-y-3">
+                                          {[...Array(6)].map((_, lineIndex) => (
+                                            <div
+                                              key={lineIndex}
+                                              className="border-b border-gray-200 h-6"
+                                            ></div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                      {showAnswerSheet && (
+                                        <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                          <div className="flex items-center gap-2 mb-2">
+                                            <span className="text-sm font-semibold text-blue-800">
+                                              모범답안:
+                                            </span>
+                                          </div>
+                                          <div className="text-sm text-blue-900">
+                                            <LaTeXRenderer
+                                              content={
+                                                problem.correct_answer ||
+                                                '백엔드 API에서 답안 정보가 전달되지 않았습니다. 개발팀에 문의하세요.'
+                                              }
+                                            />
+                                          </div>
                                           <div className="mt-3 pt-3 border-t border-blue-200">
                                             <span className="text-sm font-semibold text-blue-800">
                                               해설:
                                             </span>
                                             <div className="text-sm text-blue-800 mt-1">
-                                              <LaTeXRenderer content={problem.explanation} />
+                                              <LaTeXRenderer
+                                                content={
+                                                  problem.explanation || '해설 정보가 없습니다'
+                                                }
+                                              />
                                             </div>
                                           </div>
-                                        )}
-                                      </div>
-                                    )}
-                                  </>
-                                )}
-                              </div>
-                            )}
+                                        </div>
+                                      )}
+                                    </>
+                                  )}
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        </div>
 
-                        {index < worksheetProblems.length - 1 && (
-                          <hr className="border-gray-200 my-8" />
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
+                          {index < worksheetProblems.length - 1 && (
+                            <hr className="border-gray-200 my-8" />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
           ) : (
-            <div className="w-2/3 flex items-center justify-center text-gray-400 text-sm">
-              문제지를 선택하세요
-            </div>
+            <Card className="w-2/3 flex items-center justify-center shadow-sm">
+              <div className="text-center py-20">
+                <div className="text-gray-400 text-lg mb-2">📋</div>
+                <div className="text-gray-500 text-sm">문제지를 선택하세요</div>
+              </div>
+            </Card>
           )}
         </div>
       </div>
 
       {/* 하단 액션 버튼 */}
-      <div className="w-full px-4 sm:px-6 lg:px-8 mt-6">
+      <div className="px-6 py-4 flex-shrink-0">
         <div className="flex justify-between items-center">
           <button
             onClick={() => loadWorksheets()}
-            className="px-4 py-2 bg-white border border-[#0072CE] rounded-lg text-sm font-medium text-[#0072CE] hover:bg-[#EBF6FF] transition-colors flex items-center gap-2"
+            className="px-4 py-2 bg-white border border-[#0072CE] rounded-md text-sm font-medium text-[#0072CE] hover:bg-[#EBF6FF] transition-colors flex items-center gap-2 shadow-sm"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -367,11 +426,7 @@ export default function BankPage() {
             {selectedWorksheet && worksheetProblems.length > 0 && (
               <button
                 onClick={() => setShowAnswerSheet(!showAnswerSheet)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
-                  showAnswerSheet
-                    ? 'bg-[#0072CE] text-white hover:bg-[#0056A3]'
-                    : 'bg-[#0072CE] text-white hover:bg-[#0056A3]'
-                }`}
+                className="px-4 py-2 bg-[#0072CE] text-white rounded-md text-sm font-medium hover:bg-[#0056A3] transition-colors flex items-center gap-2 shadow-sm"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   {showAnswerSheet ? (
@@ -399,7 +454,7 @@ export default function BankPage() {
                 onClick={() => {
                   alert(`"${selectedWorksheet.title}" 워크시트를 내보냈습니다.`);
                 }}
-                className="px-4 py-2 bg-[#0072CE] text-white rounded-lg text-sm font-medium hover:bg-[#0056A3] transition-colors flex items-center gap-2"
+                className="px-4 py-2 bg-[#0072CE] text-white rounded-md text-sm font-medium hover:bg-[#0056A3] transition-colors flex items-center gap-2 shadow-sm"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path

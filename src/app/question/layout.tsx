@@ -1,19 +1,13 @@
 import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
 
-export default function QuestionLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function QuestionLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div>
+    <div className="h-screen">
       <Header />
-      <div className="flex min-h-screen">
+      <div className="flex h-[calc(100vh-80px)]">
         <Sidebar />
-        <main className="flex-1">
-          {children}
-        </main>
+        <main className="flex-1">{children}</main>
       </div>
     </div>
   );
