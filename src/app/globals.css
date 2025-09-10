@@ -135,7 +135,7 @@
   }
   html,
   body {
-    @apply text-foreground m-0 p-0 h-screen overflow-hidden;
+    @apply text-foreground m-0 p-0;
     background-color: #EFF0F5;
   }
   #__next {

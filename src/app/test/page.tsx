@@ -1,640 +1,549 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
+import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
+import { QuestionService } from '@/services/questionService';
+import { LaTeXRenderer } from '@/components/LaTeXRenderer';
+import { Worksheet, MathProblem, ProblemType, Subject } from '@/types/math';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { RefreshCw, Clock, CheckCircle, BookOpen } from 'lucide-react';
+import { PageHeader } from '@/components/layout/PageHeader';
+import { HandwritingCanvas } from '@/components/HandwritingCanvas';
+import { ScratchpadModal } from '@/components/ScratchpadModal';
 
 export default function TestPage() {
-  const [isDark, setIsDark] = useState(false);
-  const [selectedFilter, setSelectedFilter] = useState('전체');
+  const [worksheets, setWorksheets] = useState<Worksheet[]>([]);
+  const [selectedWorksheet, setSelectedWorksheet] = useState<Worksheet | null>(null);
+  const [worksheetProblems, setWorksheetProblems] = useState<MathProblem[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedSubject, setSelectedSubject] = useState<string>('수학');
+  const [currentProblemIndex, setCurrentProblemIndex] = useState(0);
+  const [answers, setAnswers] = useState<Record<number, string>>({});
+  const [timeRemaining, setTimeRemaining] = useState(3600); // 60분 (초 단위)
+  const [scratchpadOpen, setScratchpadOpen] = useState(false);
 
-  useEffect(() => {
-    // 시스템 다크 모드 설정 확인
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const isSystemDark = mediaQuery.matches;
-    setIsDark(isSystemDark);
-
-    // 초기 다크 모드 적용
-    if (isSystemDark) {
-      document.documentElement.classList.add('dark');
-      document.documentElement.style.colorScheme = 'dark';
-    } else {
-      document.documentElement.classList.remove('dark');
-      document.documentElement.style.colorScheme = 'light';
-    }
-
-    const handleChange = (e: MediaQueryListEvent) => {
-      setIsDark(e.matches);
-      if (e.matches) {
-        document.documentElement.classList.add('dark');
-        document.documentElement.style.colorScheme = 'dark';
-      } else {
-        document.documentElement.classList.remove('dark');
-        document.documentElement.style.colorScheme = 'light';
-      }
-    };
-
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
-  }, []);
-
-  const toggleTheme = () => {
-    const newTheme = !isDark;
-    setIsDark(newTheme);
-    
-    // HTML 요소에 dark 클래스를 추가/제거하여 다크 모드 적용
-    if (newTheme) {
-      document.documentElement.classList.add('dark');
-      document.documentElement.style.colorScheme = 'dark';
-    } else {
-      document.documentElement.classList.remove('dark');
-      document.documentElement.style.colorScheme = 'light';
+  // 문제 유형을 한국어로 변환
+  const getProblemTypeInKorean = (type: string): string => {
+    switch (type.toLowerCase()) {
+      case ProblemType.MULTIPLE_CHOICE:
+        return '객관식';
+      case ProblemType.ESSAY:
+        return '서술형';
+      case ProblemType.SHORT_ANSWER:
+        return '단답형';
+      default:
+        return type;
     }
   };
 
+  // 데이터 로드
+  useEffect(() => {
+    loadWorksheets();
+  }, [selectedSubject]);
+
+  // 타이머 효과
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTimeRemaining((prev) => {
+        if (prev <= 0) {
+          clearInterval(timer);
+          alert('시험 시간이 종료되었습니다.');
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  const loadWorksheets = async () => {
+    if (selectedSubject !== Subject.MATH) {
+      setWorksheets([]);
+      setSelectedWorksheet(null);
+      setWorksheetProblems([]);
+      return;
+    }
+
+    console.log('배포된 문제지 로드 시작...');
+    setIsLoading(true);
+    try {
+      const worksheetData = await QuestionService.getWorksheets();
+      console.log('문제지 데이터:', worksheetData);
+      setWorksheets(worksheetData);
+      if (worksheetData.length > 0) {
+        setSelectedWorksheet(worksheetData[0]);
+        await loadWorksheetProblems(worksheetData[0].id);
+      }
+    } catch (error: any) {
+      console.error('문제지 로드 실패:', error);
+      setError(`문제지 데이터를 불러올 수 없습니다: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 워크시트의 문제들 로드
+  const loadWorksheetProblems = async (worksheetId: number) => {
+    try {
+      const worksheetDetail = await QuestionService.getWorksheetDetail(worksheetId);
+      setWorksheetProblems(worksheetDetail.problems || []);
+    } catch (error: any) {
+      console.error('워크시트 문제 로드 실패:', error);
+      setError('워크시트 문제를 불러올 수 없습니다.');
+    }
+  };
+
+  // 문제지 선택 핸들러
+  const handleWorksheetSelect = async (worksheet: Worksheet) => {
+    setSelectedWorksheet(worksheet);
+    await loadWorksheetProblems(worksheet.id);
+    setCurrentProblemIndex(0);
+    setAnswers({});
+  };
+
+  // 답안 입력 핸들러
+  const handleAnswerChange = (problemId: number, answer: string) => {
+    setAnswers((prev) => ({
+      ...prev,
+      [problemId]: answer,
+    }));
+  };
+
+  // 다음 문제로 이동
+  const goToNextProblem = () => {
+    if (currentProblemIndex < worksheetProblems.length - 1) {
+      setCurrentProblemIndex(currentProblemIndex + 1);
+    }
+  };
+
+  // 이전 문제로 이동
+  const goToPreviousProblem = () => {
+    if (currentProblemIndex > 0) {
+      setCurrentProblemIndex(currentProblemIndex - 1);
+    }
+  };
+
+  // 시험 제출
+  const submitTest = () => {
+    const answeredCount = Object.keys(answers).length;
+    const totalProblems = worksheetProblems.length;
+
+    if (answeredCount < totalProblems) {
+      if (
+        !confirm(
+          `${totalProblems - answeredCount}개 문제가 답하지 않았습니다. 그래도 제출하시겠습니까?`,
+        )
+      ) {
+        return;
+      }
+    }
+
+    alert(`시험이 제출되었습니다.\n답한 문제: ${answeredCount}/${totalProblems}개`);
+  };
+
+  // 시간 포맷팅
+  const formatTime = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs
+      .toString()
+      .padStart(2, '0')}`;
+  };
+
+  const currentProblem = worksheetProblems[currentProblemIndex];
+
   return (
-    <div className="min-h-screen p-8" style={{ backgroundColor: 'var(--background)' }}>
-      <div className="container mx-auto max-w-4xl">
-        {/* 헤더 */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-4">CSS 테스트 페이지</h1>
-          <p className="text-muted-foreground mb-4">
-            라이트/다크 모드 색상 변경사항을 확인할 수 있는 테스트 페이지입니다.
-          </p>
-          
-          {/* 테마 토글 버튼 */}
-          <button
-            onClick={toggleTheme}
-            className="px-4 py-2 rounded-lg border border-border hover:bg-secondary transition-colors"
-          >
-            {isDark ? '라이트 모드로 전환' : '다크 모드로 전환'}
-          </button>
-        </div>
+    <div className="min-h-screen flex flex-col">
+      {/* 헤더 영역 */}
+      <PageHeader
+        icon={<CheckCircle />}
+        title="시험 응시"
+        variant="question"
+        description="배포된 문제지를 확인하고 시험을 응시할 수 있습니다"
+      />
 
-        {/* 색상 팔레트 섹션 */}
-        <section className="mb-8">
-          <h2 className="text-2xl font-semibold mb-4">색상 팔레트</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="p-4 rounded-lg border border-border">
-              <div className="w-full h-16 rounded mb-2" style={{ backgroundColor: 'var(--background)' }}></div>
-              <p className="text-sm font-medium">Background</p>
-              <p className="text-xs text-muted-foreground">var(--background)</p>
-            </div>
-            <div className="p-4 rounded-lg border border-border">
-              <div className="w-full h-16 rounded mb-2" style={{ backgroundColor: 'var(--foreground)' }}></div>
-              <p className="text-sm font-medium">Foreground</p>
-              <p className="text-xs text-muted-foreground">var(--foreground)</p>
-            </div>
-            <div className="p-4 rounded-lg border border-border">
-              <div className="w-full h-16 rounded mb-2" style={{ backgroundColor: 'var(--primary)' }}></div>
-              <p className="text-sm font-medium">Primary</p>
-              <p className="text-xs text-muted-foreground">var(--primary)</p>
-            </div>
-            <div className="p-4 rounded-lg border border-border">
-              <div className="w-full h-16 rounded mb-2" style={{ backgroundColor: 'var(--secondary)' }}></div>
-              <p className="text-sm font-medium">Secondary</p>
-              <p className="text-xs text-muted-foreground">var(--secondary)</p>
-            </div>
-            <div className="p-4 rounded-lg border border-border">
-              <div className="w-full h-16 rounded mb-2" style={{ backgroundColor: 'var(--accent)' }}></div>
-              <p className="text-sm font-medium">Accent</p>
-              <p className="text-xs text-muted-foreground">var(--accent)</p>
-            </div>
-            <div className="p-4 rounded-lg border border-border">
-              <div className="w-full h-16 rounded mb-2" style={{ backgroundColor: 'var(--muted)' }}></div>
-              <p className="text-sm font-medium">Muted</p>
-              <p className="text-xs text-muted-foreground">var(--muted)</p>
-            </div>
-            <div className="p-4 rounded-lg border border-border">
-              <div className="w-full h-16 rounded mb-2" style={{ backgroundColor: 'var(--destructive)' }}></div>
-              <p className="text-sm font-medium">Destructive</p>
-              <p className="text-xs text-muted-foreground">var(--destructive)</p>
-            </div>
-            <div className="p-4 rounded-lg border border-border">
-              <div className="w-full h-16 rounded mb-2" style={{ backgroundColor: 'var(--border)' }}></div>
-              <p className="text-sm font-medium">Border</p>
-              <p className="text-xs text-muted-foreground">var(--border)</p>
-            </div>
-          </div>
-        </section>
-
-        {/* 기본 버튼 컴포넌트 테스트 */}
-        <section className="mb-8">
-          <h2 className="text-2xl font-semibold mb-4">기본 버튼 컴포넌트</h2>
-          <div className="flex flex-wrap gap-4">
-            <button className="px-6 py-3 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-all">
-              Primary Button
-            </button>
-            <button className="px-6 py-3 rounded-lg bg-secondary text-secondary-foreground hover:opacity-90 transition-all">
-              Secondary Button
-            </button>
-            <button className="px-6 py-3 rounded-lg bg-accent text-accent-foreground hover:opacity-90 transition-all">
-              Accent Button
-            </button>
-            <button className="px-6 py-3 rounded-lg bg-destructive text-destructive-foreground hover:opacity-90 transition-all">
-              Destructive Button
-            </button>
-            <button className="px-6 py-3 rounded-lg border border-border hover:bg-secondary transition-all">
-              Outline Button
-            </button>
-          </div>
-        </section>
-
-        {/* 커스텀 버튼 스타일 테스트 */}
-        <section className="mb-8">
-          <h2 className="text-2xl font-semibold mb-4">커스텀 버튼 스타일</h2>
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-medium mb-3">Gray 버튼</h3>
-              <div className="flex flex-wrap gap-4">
-                <button className="btn-gray">Gray Button</button>
-                <button className="btn-gray" disabled>Disabled Gray</button>
-              </div>
-            </div>
-            <div>
-              <h3 className="text-lg font-medium mb-3">Blue 버튼 (토글 스타일)</h3>
-              <div className="flex flex-wrap gap-4">
-                <button className="btn-blue">활성화</button>
-                <button className="btn-blue inactive">비활성화</button>
-              </div>
-
-            </div>
-            
-            <div>
-              <h3 className="text-lg font-medium mb-3">동작하는 토글 버튼</h3>
-              <div className="flex gap-2">
-                <button 
-                  className={`btn-blue ${selectedFilter === '활성화' ? '' : 'inactive'}`}
-                  onClick={() => setSelectedFilter('활성화')}
+      {/* 메인 컨텐츠 영역 */}
+      <div className="flex-1 p-6 min-h-0">
+        <div className="flex gap-6 h-full">
+          {/* 배포된 문제지 목록 */}
+          <Card className="w-1/6 flex flex-col shadow-sm">
+            <CardHeader className="flex flex-row items-center justify-between py-2 px-6 border-b border-gray-100">
+              <CardTitle className="text-lg font-medium">과제 목록</CardTitle>
+              <div className="flex items-center gap-2">
+                <Button
+                  onClick={() => loadWorksheets()}
+                  variant="ghost"
+                  size="icon"
+                  className="text-[#0072CE] hover:text-[#0056A3] hover:bg-[#EBF6FF]"
+                  title="새로고침"
                 >
-                  활성화
-                </button>
-                <button 
-                  className={`btn-blue ${selectedFilter === '비활성화' ? '' : 'inactive'}`}
-                  onClick={() => setSelectedFilter('비활성화')}
-                >
-                  비활성화
-                </button>
+                  <RefreshCw className="w-4 h-4" />
+                </Button>
               </div>
-              <p className="text-sm text-muted-foreground mt-2">
-                현재 선택: <span className="font-medium">{selectedFilter}</span>
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* 입력 컴포넌트 테스트 */}
-        <section className="mb-8">
-          <h2 className="text-2xl font-semibold mb-4">입력 컴포넌트</h2>
-          <div className="space-y-4 max-w-md">
-            <div>
-              <label className="block text-sm font-medium mb-2">텍스트 입력</label>
-              <input
-                type="text"
-                placeholder="텍스트를 입력하세요"
-                className="w-full px-3 py-2 rounded-lg border border-border bg-input focus:outline-none focus:ring-2 focus:ring-ring"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">이메일 입력</label>
-              <input
-                type="email"
-                placeholder="email@example.com"
-                className="w-full px-3 py-2 rounded-lg border border-border bg-input focus:outline-none focus:ring-2 focus:ring-ring"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">비밀번호 입력</label>
-              <input
-                type="password"
-                placeholder="비밀번호를 입력하세요"
-                className="w-full px-3 py-2 rounded-lg border border-border bg-input focus:outline-none focus:ring-2 focus:ring-ring"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">텍스트 영역</label>
-              <textarea
-                placeholder="여러 줄 텍스트를 입력하세요"
-                rows={4}
-                className="w-full px-3 py-2 rounded-lg border border-border bg-input focus:outline-none focus:ring-2 focus:ring-ring resize-none"
-              />
-            </div>
-          </div>
-        </section>
-
-        {/* 기본 카드 컴포넌트 테스트 */}
-        <section className="mb-8">
-          <h2 className="text-2xl font-semibold mb-4">기본 카드 컴포넌트</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div className="p-6 rounded-lg border border-border bg-card">
-              <h3 className="text-lg font-semibold mb-2">기본 카드</h3>
-              <p className="text-muted-foreground mb-4">
-                이것은 기본 카드 컴포넌트입니다. 배경색과 테두리 색상을 확인할 수 있습니다.
-              </p>
-              <button className="px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-all">
-                액션 버튼
-              </button>
-            </div>
-            <div className="p-6 rounded-lg border border-border bg-secondary">
-              <h3 className="text-lg font-semibold mb-2">Secondary 카드</h3>
-              <p className="text-muted-foreground mb-4">
-                Secondary 배경색을 사용한 카드입니다.
-              </p>
-              <button className="px-4 py-2 rounded-lg border border-border hover:bg-accent transition-all">
-                보조 버튼
-              </button>
-            </div>
-            <div className="p-6 rounded-lg border border-destructive bg-destructive/10">
-              <h3 className="text-lg font-semibold mb-2 text-destructive">경고 카드</h3>
-              <p className="text-muted-foreground mb-4">
-                Destructive 색상을 사용한 경고 카드입니다.
-              </p>
-              <button className="px-4 py-2 rounded-lg bg-destructive text-destructive-foreground hover:opacity-90 transition-all">
-                위험 버튼
-              </button>
-            </div>
-          </div>
-        </section>
-
-        {/* 커스텀 카드 컴포넌트 테스트 */}
-        <section className="mb-8">
-          <h2 className="text-2xl font-semibold mb-4">커스텀 카드 컴포넌트</h2>
-          <div className="space-y-8">
-            {/* 기본 카드 구조 */}
-            <div>
-              <h3 className="text-lg font-medium mb-4">기본 카드 구조</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div className="card">
-                  <div className="card-header">
-                    <h4 className="card-title">카드 제목</h4>
-                    <p className="card-description">카드 설명입니다.</p>
-                  </div>
-                  <div className="card-content">
-                    <p>카드 내용이 여기에 표시됩니다. 다양한 정보를 담을 수 있습니다.</p>
-                  </div>
-                  <div className="card-footer">
-                    <button className="btn-blue">액션</button>
-                  </div>
-                </div>
-                <div className="card card-sm">
-                  <div className="card-header">
-                    <h4 className="card-title">작은 카드</h4>
-                    <p className="card-description">작은 크기</p>
-                  </div>
-                  <div className="card-content">
-                    <p>작은 카드입니다.</p>
-                  </div>
-                </div>
-                <div className="card card-lg">
-                  <div className="card-header">
-                    <h4 className="card-title">큰 카드</h4>
-                    <p className="card-description">큰 크기</p>
-                  </div>
-                  <div className="card-content">
-                    <p>큰 카드입니다. 더 많은 공간을 제공합니다.</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* 카드 색상 변형 */}
-            <div>
-              <h3 className="text-lg font-medium mb-4">카드 색상 변형</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div className="card card-primary">
-                  <div className="card-header">
-                    <h4 className="card-title">Primary 카드</h4>
-                    <p className="card-description">Primary 색상</p>
-                  </div>
-                  <div className="card-content">
-                    <p>Primary 색상을 사용한 카드입니다.</p>
-                  </div>
-                </div>
-                <div className="card card-secondary">
-                  <div className="card-header">
-                    <h4 className="card-title">Secondary 카드</h4>
-                    <p className="card-description">Secondary 색상</p>
-                  </div>
-                  <div className="card-content">
-                    <p>Secondary 색상을 사용한 카드입니다.</p>
-                  </div>
-                </div>
-                <div className="card card-muted">
-                  <div className="card-header">
-                    <h4 className="card-title">Muted 카드</h4>
-                    <p className="card-description">Muted 색상</p>
-                  </div>
-                  <div className="card-content">
-                    <p>Muted 색상을 사용한 카드입니다.</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* 카드 스타일 변형 */}
-            <div>
-              <h3 className="text-lg font-medium mb-4">카드 스타일 변형</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div className="card card-outline">
-                  <div className="card-header">
-                    <h4 className="card-title">Outline 카드</h4>
-                    <p className="card-description">테두리만 있는 카드</p>
-                  </div>
-                  <div className="card-content">
-                    <p>투명 배경에 테두리만 있는 카드입니다.</p>
-                  </div>
-                </div>
-                <div className="card card-interactive">
-                  <div className="card-header">
-                    <h4 className="card-title">Interactive 카드</h4>
-                    <p className="card-description">호버 효과가 있는 카드</p>
-                  </div>
-                  <div className="card-content">
-                    <p>마우스를 올리면 효과가 나타나는 카드입니다.</p>
-                  </div>
-                </div>
-                <div className="card card-interactive card-outline">
-                  <div className="card-header">
-                    <h4 className="card-title">Interactive Outline</h4>
-                    <p className="card-description">호버 + 테두리</p>
-                  </div>
-                  <div className="card-content">
-                    <p>호버 효과와 테두리 스타일을 결합한 카드입니다.</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* 타이포그래피 테스트 */}
-        <section className="mb-8">
-          <h2 className="text-2xl font-semibold mb-4">타이포그래피</h2>
-          <div className="space-y-4">
-            <h1 className="text-4xl font-bold">Heading 1</h1>
-            <h2 className="text-3xl font-semibold">Heading 2</h2>
-            <h3 className="text-2xl font-semibold">Heading 3</h3>
-            <h4 className="text-xl font-semibold">Heading 4</h4>
-            <h5 className="text-lg font-semibold">Heading 5</h5>
-            <h6 className="text-base font-semibold">Heading 6</h6>
-            <p className="text-base">
-              이것은 일반 텍스트입니다. <strong>굵은 텍스트</strong>와 <em>기울임 텍스트</em>를 포함합니다.
-            </p>
-            <p className="text-sm text-muted-foreground">
-              이것은 작은 크기의 muted 텍스트입니다.
-            </p>
-            <p className="text-xs text-muted-foreground">
-              이것은 매우 작은 크기의 muted 텍스트입니다.
-            </p>
-          </div>
-        </section>
-
-        {/* 유틸리티 클래스 테스트 */}
-        <section className="mb-8">
-          <h2 className="text-2xl font-semibold mb-4">유틸리티 클래스</h2>
-          <div className="space-y-6">
-            {/* 간격 유틸리티 */}
-            <div>
-              <h3 className="text-lg font-medium mb-3">간격 (Spacing)</h3>
-              <div className="space-y-2">
-                <div className="p-sm bg-secondary rounded">p-sm (4px)</div>
-                <div className="p-md bg-secondary rounded">p-md (16px)</div>
-                <div className="p-lg bg-secondary rounded">p-lg (24px)</div>
-              </div>
-            </div>
-
-            {/* 간격 유틸리티 */}
-            <div>
-              <h3 className="text-lg font-medium mb-3">간격 (Gap)</h3>
-              <div className="flex gap-sm">
-                <div className="p-2 bg-primary text-primary-foreground rounded">gap-sm</div>
-                <div className="p-2 bg-primary text-primary-foreground rounded">gap-sm</div>
-              </div>
-              <div className="flex gap-md mt-2">
-                <div className="p-2 bg-primary text-primary-foreground rounded">gap-md</div>
-                <div className="p-2 bg-primary text-primary-foreground rounded">gap-md</div>
-              </div>
-              <div className="flex gap-lg mt-2">
-                <div className="p-2 bg-primary text-primary-foreground rounded">gap-lg</div>
-                <div className="p-2 bg-primary text-primary-foreground rounded">gap-lg</div>
-              </div>
-            </div>
-
-            {/* 텍스트 정렬 */}
-            <div>
-              <h3 className="text-lg font-medium mb-3">텍스트 정렬</h3>
-              <div className="space-y-2">
-                <div className="text-left p-2 bg-muted rounded">text-left</div>
-                <div className="text-center p-2 bg-muted rounded">text-center</div>
-                <div className="text-right p-2 bg-muted rounded">text-right</div>
-              </div>
-            </div>
-
-            {/* Flexbox 유틸리티 */}
-            <div>
-              <h3 className="text-lg font-medium mb-3">Flexbox 유틸리티</h3>
+            </CardHeader>
+            <CardContent className="p-4 flex-1 min-h-0">
               <div className="space-y-4">
-                <div className="flex items-center gap-2 p-2 bg-muted rounded">
-                  <div className="p-1 bg-primary text-primary-foreground rounded text-xs">flex</div>
-                  <div className="p-1 bg-primary text-primary-foreground rounded text-xs">items-center</div>
-                </div>
-                <div className="flex justify-between gap-2 p-2 bg-muted rounded">
-                  <div className="p-1 bg-primary text-primary-foreground rounded text-xs">justify-between</div>
-                  <div className="p-1 bg-primary text-primary-foreground rounded text-xs">justify-between</div>
-                </div>
-                <div className="flex flex-col gap-2 p-2 bg-muted rounded">
-                  <div className="p-1 bg-primary text-primary-foreground rounded text-xs">flex-col</div>
-                  <div className="p-1 bg-primary text-primary-foreground rounded text-xs">flex-col</div>
-                </div>
-              </div>
-            </div>
+                <Select
+                  value={selectedWorksheet?.id.toString() || ''}
+                  onValueChange={(value) => {
+                    const worksheet = worksheets.find((ws) => ws.id.toString() === value);
+                    if (worksheet) {
+                      handleWorksheetSelect(worksheet);
+                    }
+                  }}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="과제를 선택하세요" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {worksheets.length === 0 ? (
+                      <SelectItem value="no-worksheets" disabled>
+                        배포된 문제지가 없습니다
+                      </SelectItem>
+                    ) : (
+                      worksheets.map((worksheet) => (
+                        <SelectItem key={worksheet.id} value={worksheet.id.toString()}>
+                          {worksheet.title}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
 
-            {/* 테두리 반경 */}
-            <div>
-              <h3 className="text-lg font-medium mb-3">테두리 반경</h3>
-              <div className="flex gap-4">
-                <div className="rounded-sm p-2 bg-secondary">rounded-sm</div>
-                <div className="rounded p-2 bg-secondary">rounded</div>
-                <div className="rounded-lg p-2 bg-secondary">rounded-lg</div>
+                {/* 문제 번호 테이블 */}
+                {selectedWorksheet && worksheetProblems.length > 0 && (
+                  <div className="border rounded-lg">
+                    <div className="p-3 border-b bg-gray-50">
+                      <h4 className="text-sm font-medium text-gray-700">문제 목록</h4>
+                    </div>
+                    <div className="max-h-108 overflow-y-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="text-center">번호</TableHead>
+                            <TableHead className="text-center">유형</TableHead>
+                            <TableHead className="text-center">난이도</TableHead>
+                            <TableHead className="text-center">답안</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {worksheetProblems.map((problem, index) => {
+                            const isAnswered = answers[problem.id];
+                            const isCurrentProblem = index === currentProblemIndex;
+                            return (
+                              <TableRow
+                                key={problem.id}
+                                className={`cursor-pointer hover:bg-gray-50 ${
+                                  isCurrentProblem ? 'bg-[#EBF6FF]' : ''
+                                }`}
+                                onClick={() => setCurrentProblemIndex(index)}
+                              >
+                                <TableCell className="text-center font-medium">
+                                  {problem.sequence_order}
+                                </TableCell>
+                                <TableCell className="text-center">
+                                  <Badge className="bg-blue-100 text-blue-800 border-blue-200 text-xs">
+                                    {getProblemTypeInKorean(problem.problem_type)}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="text-center">
+                                  <Badge
+                                    className={`text-xs ${
+                                      problem.difficulty === 'A'
+                                        ? 'border-red-300 text-red-600 bg-red-50'
+                                        : problem.difficulty === 'B'
+                                        ? 'border-green-300 text-green-600 bg-green-50'
+                                        : 'border-purple-300 text-purple-600 bg-purple-50'
+                                    }`}
+                                  >
+                                    {problem.difficulty}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="text-center">
+                                  {isAnswered ? (
+                                    <div className="w-3 h-3 bg-green-500 rounded-full mx-auto"></div>
+                                  ) : (
+                                    <div className="w-3 h-3 bg-gray-300 rounded-full mx-auto"></div>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
+            </CardContent>
+          </Card>
 
-            {/* 그림자 */}
-            <div>
-              <h3 className="text-lg font-medium mb-3">그림자</h3>
-              <div className="flex gap-4">
-                <div className="p-4 bg-background border border-border rounded shadow-sm">shadow-sm</div>
-                <div className="p-4 bg-background border border-border rounded shadow">shadow</div>
-                <div className="p-4 bg-background border border-border rounded shadow-md">shadow-md</div>
-                <div className="p-4 bg-background border border-border rounded shadow-lg">shadow-lg</div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* 반응형 디자인 테스트 */}
-        <section className="mb-8">
-          <h2 className="text-2xl font-semibold mb-4">반응형 디자인</h2>
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div className="p-4 bg-primary text-primary-foreground rounded text-center">
-                <p className="text-sm">모바일: 1열</p>
-                <p className="text-sm">태블릿: 2열</p>
-                <p className="text-sm">데스크톱: 3열</p>
-              </div>
-              <div className="p-4 bg-secondary text-secondary-foreground rounded text-center">
-                <p className="text-sm">반응형</p>
-                <p className="text-sm">그리드</p>
-                <p className="text-sm">테스트</p>
-              </div>
-              <div className="p-4 bg-accent text-accent-foreground rounded text-center">
-                <p className="text-sm">화면 크기를</p>
-                <p className="text-sm">조절해보세요</p>
-                <p className="text-sm">(768px, 1024px)</p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* CSS 변수 디버깅 */}
-        <section className="mb-8">
-          <h2 className="text-2xl font-semibold mb-4">CSS 변수 디버깅</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="p-4 rounded-lg border border-border bg-muted">
-              <h3 className="text-lg font-medium mb-3">색상 변수</h3>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span>--background:</span>
-                  <span style={{ color: 'var(--foreground)' }}>var(--background)</span>
+          {/* 문제 풀이 화면 */}
+          {selectedWorksheet && currentProblem ? (
+            <Card className="w-5/6 flex flex-col shadow-sm">
+              <CardHeader className="flex flex-row items-center justify-between py-6 px-6 border-b border-gray-100">
+                <div className="flex items-center justify-center gap-3 flex-1">
+                  <CardTitle className="text-2xl font-bold text-gray-900">
+                    {selectedWorksheet.title}
+                  </CardTitle>
                 </div>
-                <div className="flex justify-between">
-                  <span>--foreground:</span>
-                  <span style={{ color: 'var(--foreground)' }}>var(--foreground)</span>
+                <div className="flex items-center gap-3">
+                  <Clock className="w-5 h-5 text-[#0072CE]" />
+                  <span className="text-lg font-bold text-[#0072CE]">
+                    {formatTime(timeRemaining)}
+                  </span>
                 </div>
-                <div className="flex justify-between">
-                  <span>--primary:</span>
-                  <span style={{ color: 'var(--foreground)' }}>var(--primary)</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>--secondary:</span>
-                  <span style={{ color: 'var(--foreground)' }}>var(--secondary)</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>--muted:</span>
-                  <span style={{ color: 'var(--foreground)' }}>var(--muted)</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>--border:</span>
-                  <span style={{ color: 'var(--foreground)' }}>var(--border)</span>
-                </div>
-              </div>
-            </div>
-            <div className="p-4 rounded-lg border border-border bg-muted">
-              <h3 className="text-lg font-medium mb-3">간격 변수</h3>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span>--spacing-sm:</span>
-                  <span style={{ color: 'var(--foreground)' }}>var(--spacing-sm)</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>--spacing-md:</span>
-                  <span style={{ color: 'var(--foreground)' }}>var(--spacing-md)</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>--spacing-lg:</span>
-                  <span style={{ color: 'var(--foreground)' }}>var(--spacing-lg)</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>--radius:</span>
-                  <span style={{ color: 'var(--foreground)' }}>var(--radius)</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>--transition:</span>
-                  <span style={{ color: 'var(--foreground)' }}>var(--transition)</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* shadcn/ui 카드 컴포넌트 테스트 */}
-        <section className="mb-8">
-          <h2 className="text-2xl font-semibold mb-4">shadcn/ui 카드 컴포넌트</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>shadcn/ui 카드</CardTitle>
-                <CardDescription>
-                  이것은 shadcn/ui의 Card 컴포넌트입니다.
-                </CardDescription>
               </CardHeader>
-              <CardContent>
-                <p className="text-sm">
-                  shadcn/ui의 Card 컴포넌트가 정상적으로 작동하는지 확인할 수 있습니다.
-                  스타일링이 올바르게 적용되었는지 확인해보세요.
-                </p>
-              </CardContent>
-              <CardFooter>
-                <button className="px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-all">
-                  액션 버튼
-                </button>
-              </CardFooter>
-            </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>두 번째 카드</CardTitle>
-                <CardDescription>
-                  색상 변수가 올바르게 적용되는지 확인
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="w-full h-3 bg-primary rounded"></div>
-                  <div className="w-full h-3 bg-secondary rounded"></div>
-                  <div className="w-full h-3 bg-muted rounded"></div>
+              <CardContent className="flex-1 p-6 min-h-0">
+                <div className="h-full custom-scrollbar overflow-y-auto">
+                  <div className="space-y-6">
+                    {/* 문제 정보 */}
+                    <div className="flex items-start gap-4">
+                      <div className="flex-shrink-0">
+                        <span className="inline-flex items-center justify-center w-8 h-8 bg-white/80 backdrop-blur-sm border border-[#0072CE]/30 text-[#0072CE] rounded-full text-sm font-bold">
+                          {currentProblem.sequence_order}
+                        </span>
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-4">
+                          <Badge className="bg-blue-100 text-blue-800 border-blue-200">
+                            {getProblemTypeInKorean(currentProblem.problem_type)}
+                          </Badge>
+                          <Badge
+                            className={`${
+                              currentProblem.difficulty === 'A'
+                                ? 'border-red-300 text-red-600 bg-red-50'
+                                : currentProblem.difficulty === 'B'
+                                ? 'border-green-300 text-green-600 bg-green-50'
+                                : 'border-purple-300 text-purple-600 bg-purple-50'
+                            }`}
+                          >
+                            {currentProblem.difficulty}
+                          </Badge>
+                        </div>
+
+                        {/* 문제 내용 */}
+                        <div className="text-base leading-relaxed text-gray-900 mb-6">
+                          <LaTeXRenderer content={currentProblem.question} />
+                        </div>
+
+                        {/* 답안 입력 영역 */}
+                        <div className="space-y-4">
+                          {currentProblem.problem_type === 'multiple_choice' &&
+                          currentProblem.choices ? (
+                            <div className="space-y-3">
+                              {currentProblem.choices.map((choice, index) => {
+                                const optionLabel = String.fromCharCode(65 + index);
+                                const isSelected = answers[currentProblem.id] === optionLabel;
+                                return (
+                                  <label
+                                    key={index}
+                                    className="flex items-start gap-3 cursor-pointer p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
+                                  >
+                                    <input
+                                      type="radio"
+                                      name={`problem-${currentProblem.id}`}
+                                      value={optionLabel}
+                                      checked={isSelected}
+                                      onChange={(e) =>
+                                        handleAnswerChange(currentProblem.id, e.target.value)
+                                      }
+                                      className="mt-1"
+                                    />
+                                    <span className="font-medium text-gray-700 mr-2">
+                                      {optionLabel}.
+                                    </span>
+                                    <div className="flex-1 text-gray-900">
+                                      <LaTeXRenderer content={choice} />
+                                    </div>
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          ) : currentProblem.problem_type === 'short_answer' ? (
+                            <div className="space-y-4">
+                              <div className="flex justify-between items-center">
+                                <label className="block text-sm font-medium text-gray-700">
+                                  답 (핸드라이팅):
+                                </label>
+                                <Button
+                                  onClick={() => setScratchpadOpen(true)}
+                                  variant="outline"
+                                  size="sm"
+                                  className="flex items-center gap-1 text-[#0072CE] border-[#0072CE]"
+                                >
+                                  <BookOpen className="w-4 h-4" />
+                                  연습장
+                                </Button>
+                              </div>
+                              <HandwritingCanvas
+                                width={580}
+                                height={120}
+                                value={answers[currentProblem.id] || ''}
+                                onChange={(value) => handleAnswerChange(currentProblem.id, value)}
+                                className="w-full"
+                              />
+                            </div>
+                          ) : (
+                            <div className="space-y-4">
+                              <div className="flex justify-between items-center">
+                                <label className="block text-sm font-medium text-gray-700">
+                                  풀이 과정 (핸드라이팅):
+                                </label>
+                                <Button
+                                  onClick={() => setScratchpadOpen(true)}
+                                  variant="outline"
+                                  size="sm"
+                                  className="flex items-center gap-1 text-[#0072CE] border-[#0072CE]"
+                                >
+                                  <BookOpen className="w-4 h-4" />
+                                  연습장
+                                </Button>
+                              </div>
+                              <HandwritingCanvas
+                                width={580}
+                                height={300}
+                                value={answers[currentProblem.id] || ''}
+                                onChange={(value) => handleAnswerChange(currentProblem.id, value)}
+                                className="w-full"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
-            </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>세 번째 카드</CardTitle>
-                <CardDescription>
-                  다크모드 호환성 테스트
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  다크모드와 라이트모드에서 모두 잘 보이는지 확인해보세요.
-                </p>
-              </CardContent>
-              <CardFooter className="justify-between">
-                <span className="text-sm text-muted-foreground">상태: 활성</span>
-                <button className="btn-blue">확인</button>
-              </CardFooter>
-            </Card>
-          </div>
-        </section>
+              {/* 하단 네비게이션 */}
+              <div className="border-t border-gray-200 p-6">
+                <div className="flex justify-between items-center">
+                  <Button
+                    onClick={goToPreviousProblem}
+                    disabled={currentProblemIndex === 0}
+                    variant="outline"
+                    className="bg-white/80 backdrop-blur-sm border-[#0072CE]/30 text-[#0072CE] hover:bg-[#0072CE]/10 hover:border-[#0072CE]/50"
+                  >
+                    이전 문제
+                  </Button>
 
-        {/* 현재 테마 정보 */}
-        <section className="mb-8">
-          <h2 className="text-2xl font-semibold mb-4">현재 테마 정보</h2>
-          <div className="p-4 rounded-lg border border-border bg-muted">
-            <p className="text-sm">
-              <strong>현재 모드:</strong> {isDark ? '다크 모드' : '라이트 모드'}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              <strong>배경색:</strong> <span style={{ color: 'var(--foreground)' }}>var(--background)</span>
-            </p>
-            <p className="text-sm text-muted-foreground">
-              <strong>실제 배경색:</strong> <span style={{ color: 'var(--foreground)' }}>#1e1e1e (다크 모드)</span>
-            </p>
-            <p className="text-sm text-muted-foreground">
-              시스템 설정에 따라 자동으로 감지되거나 위의 토글 버튼으로 변경할 수 있습니다.
-            </p>
-          </div>
-        </section>
+                  {currentProblemIndex === worksheetProblems.length - 1 && (
+                    <div className="flex gap-3">
+                      <Button
+                        onClick={submitTest}
+                        className="bg-[#0072CE] hover:bg-[#0056A3] text-white"
+                      >
+                        시험 제출
+                      </Button>
+                    </div>
+                  )}
+
+                  <Button
+                    onClick={goToNextProblem}
+                    disabled={currentProblemIndex === worksheetProblems.length - 1}
+                    variant="outline"
+                    className="bg-white/80 backdrop-blur-sm border-[#0072CE]/30 text-[#0072CE] hover:bg-[#0072CE]/10 hover:border-[#0072CE]/50"
+                  >
+                    다음 문제
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          ) : (
+            <Card className="w-5/6 flex items-center justify-center shadow-sm">
+              <div className="text-center py-20">
+                <div className="text-gray-400 text-lg mb-2">📝</div>
+                <div className="text-gray-500 text-sm">문제지를 선택하세요</div>
+              </div>
+            </Card>
+          )}
+        </div>
       </div>
+
+      {/* 에러 메시지 */}
+      {error && (
+        <div className="fixed bottom-4 right-4 bg-white rounded-lg shadow-lg border border-red-200 p-4 max-w-md z-50">
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0">
+              <svg
+                className="w-5 h-5 text-red-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-gray-900">오류가 발생했습니다</p>
+              <p className="text-sm text-gray-600 mt-1">{error}</p>
+            </div>
+            <Button
+              onClick={() => setError(null)}
+              variant="ghost"
+              size="icon"
+              className="flex-shrink-0 text-gray-400 hover:text-gray-600"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* 연습장 모달 */}
+      {currentProblem && (
+        <ScratchpadModal
+          isOpen={scratchpadOpen}
+          onClose={() => setScratchpadOpen(false)}
+          problemNumber={currentProblem.sequence_order}
+        />
+      )}
+
+      {/* 로딩 오버레이 */}
+      {isLoading && (
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 shadow-xl">
+            <div className="flex items-center gap-3">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+              <span className="text-sm font-medium text-gray-700">처리 중입니다...</span>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
