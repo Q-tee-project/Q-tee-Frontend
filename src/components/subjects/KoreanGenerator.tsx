@@ -8,6 +8,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { HelpCircle } from 'lucide-react';
 
 const SCHOOL_OPTIONS = ['중학교', '고등학교'];
 const GRADE_OPTIONS = ['1학년', '2학년', '3학년'];
@@ -70,7 +72,7 @@ export default function KoreanGenerator({ onGenerate, isGenerating }: KoreanGene
       type,
       difficulty,
       requirements,
-      questionCount
+      questionCount,
     };
 
     onGenerate(mockData);
@@ -80,7 +82,6 @@ export default function KoreanGenerator({ onGenerate, isGenerating }: KoreanGene
     <>
       {/* 지문 불러오기 */}
       <div className="mb-4">
-        <div className="mb-2 font-semibold">지문 불러오기</div>
         <div className="space-y-2">
           <Select value={school} onValueChange={setSchool}>
             <SelectTrigger className="w-full">
@@ -125,7 +126,26 @@ export default function KoreanGenerator({ onGenerate, isGenerating }: KoreanGene
 
       {/* 문제 유형 */}
       <div className="mb-4">
-        <div className="mb-2 font-semibold">문제 유형</div>
+        <div className="mb-2 font-semibold flex items-center gap-2">
+          문제 유형
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <HelpCircle className="h-4 w-4 text-gray-400 hover:text-gray-600 cursor-help" />
+            </TooltipTrigger>
+            <TooltipContent>
+              <div className="max-w-xs">
+                <p className="font-medium mb-1">문제 유형 설정 팁</p>
+                <p className="text-xs">
+                  • <strong>전체</strong>를 선택하면 시, 소설, 수필/비문학, 말하기/듣기/쓰기/매체,
+                  문법의 비율을 설정할 수 있습니다
+                  <br />
+                  • 각 유형별로 10% 단위로 비율을 조정할 수 있습니다
+                  <br />• 총 비율은 100%가 되어야 합니다
+                </p>
+              </div>
+            </TooltipContent>
+          </Tooltip>
+        </div>
         <div className="flex flex-wrap gap-2">
           {KOREAN_TYPES.map((t) => (
             <button
@@ -151,7 +171,25 @@ export default function KoreanGenerator({ onGenerate, isGenerating }: KoreanGene
 
       {/* 난이도 */}
       <div className="mb-4">
-        <div className="mb-2 font-semibold">난이도</div>
+        <div className="mb-2 font-semibold flex items-center gap-2">
+          난이도
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <HelpCircle className="h-4 w-4 text-gray-400 hover:text-gray-600 cursor-help" />
+            </TooltipTrigger>
+            <TooltipContent>
+              <div className="max-w-xs">
+                <p className="font-medium mb-1">난이도 설정 팁</p>
+                <p className="text-xs">
+                  • <strong>전체</strong>를 선택하면 상, 중, 하 난이도의 비율을 설정할 수 있습니다
+                  <br />
+                  • 각 난이도별로 10% 단위로 비율을 조정할 수 있습니다
+                  <br />• 총 비율은 100%가 되어야 합니다
+                </p>
+              </div>
+            </TooltipContent>
+          </Tooltip>
+        </div>
         <div className="flex gap-2">
           {DIFFICULTY.map((d) => (
             <button

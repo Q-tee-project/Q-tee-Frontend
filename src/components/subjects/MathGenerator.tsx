@@ -8,6 +8,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { HelpCircle } from 'lucide-react';
 import { MathFormData, Unit, Chapter } from '@/types/math';
 
 const SCHOOL_OPTIONS = ['중학교', '고등학교'];
@@ -30,7 +32,7 @@ export default function MathGenerator({ onGenerate, isGenerating }: MathGenerato
   const [difficulty, setDifficulty] = useState<string>('');
   const [requirements, setRequirements] = useState<string>('');
   const [questionCount, setQuestionCount] = useState<number | null>(null);
-  
+
   // 교육과정 데이터 - 백엔드 응답 구조에 맞게
   const [units, setUnits] = useState<any[]>([]);
   const [selectedUnit, setSelectedUnit] = useState<string>('');
@@ -54,29 +56,34 @@ export default function MathGenerator({ onGenerate, isGenerating }: MathGenerato
   const loadCurriculumStructure = async () => {
     try {
       console.log('🔍 교육과정 로딩 시작:', { school, grade, semester });
-      const response = await fetch(`http://localhost:8001/api/math-generation/curriculum/structure?school_level=${encodeURIComponent(school)}`);
+      const response = await fetch(
+        `http://localhost:8001/api/math-generation/curriculum/structure?school_level=${encodeURIComponent(
+          school,
+        )}`,
+      );
       const data = await response.json();
       console.log('📥 API 응답:', data);
-      
+
       if (data.structure) {
         // 학교급과 학년, 학기에 맞는 교육과정 찾기
         const gradeNum = parseInt(grade.replace('학년', ''));
         const semesterNum = parseInt(semester.replace('학기', ''));
-        const curriculumKey = school === '중학교' 
-          ? `middle${gradeNum}_${semesterNum}semester`
-          : `high${gradeNum}_${semesterNum}semester`;
-        
+        const curriculumKey =
+          school === '중학교'
+            ? `middle${gradeNum}_${semesterNum}semester`
+            : `high${gradeNum}_${semesterNum}semester`;
+
         console.log('🔑 교육과정 키:', curriculumKey);
         console.log('📚 사용 가능한 키들:', Object.keys(data.structure));
-        
+
         const curriculum = data.structure[curriculumKey];
         console.log('📖 선택된 교육과정:', curriculum);
-        
+
         if (curriculum && curriculum.units) {
           const unitList = curriculum.units.map((unit: any) => ({
             unit_number: unit.unit_number,
             unit_name: unit.unit_name,
-            chapters: unit.chapters // 전체 chapter 객체 보존
+            chapters: unit.chapters, // 전체 chapter 객체 보존
           }));
           console.log('📋 로드된 단원 목록:', unitList);
           setUnits(unitList);
@@ -95,7 +102,7 @@ export default function MathGenerator({ onGenerate, isGenerating }: MathGenerato
   const loadChapters = (unitName: string) => {
     console.log('🔍 소단원 로딩 시작:', unitName);
     console.log('📚 현재 단원들:', units);
-    const selectedUnit = units.find(unit => unit.unit_name === unitName);
+    const selectedUnit = units.find((unit) => unit.unit_name === unitName);
     console.log('🎯 선택된 단원:', selectedUnit);
     if (selectedUnit && selectedUnit.chapters) {
       console.log('📖 소단원들:', selectedUnit.chapters);
@@ -129,7 +136,7 @@ export default function MathGenerator({ onGenerate, isGenerating }: MathGenerato
   const ratioSum = currentTypes.reduce((sum, t) => sum + (typeRatios[t] || 0), 0);
   const diffSum = ['A', 'B', 'C'].reduce((s, k) => s + (diffRatios[k] || 0), 0);
 
-  const isReadyToGenerate = 
+  const isReadyToGenerate =
     school &&
     grade &&
     semester &&
@@ -145,8 +152,10 @@ export default function MathGenerator({ onGenerate, isGenerating }: MathGenerato
     if (!isReadyToGenerate) return;
 
     // 선택된 단원 정보 찾기
-    const selectedUnitInfo = units.find(unit => unit.unit_name === selectedUnit);
-    const selectedChapterInfo = selectedUnitInfo?.chapters.find((ch: any) => ch.chapter_name === selectedChapter);
+    const selectedUnitInfo = units.find((unit) => unit.unit_name === selectedUnit);
+    const selectedChapterInfo = selectedUnitInfo?.chapters.find(
+      (ch: any) => ch.chapter_name === selectedChapter,
+    );
 
     // 백엔드 스키마에 맞게 데이터 구성
     const requestData = {
@@ -157,24 +166,30 @@ export default function MathGenerator({ onGenerate, isGenerating }: MathGenerato
       chapter: {
         chapter_number: selectedChapterInfo?.chapter_number || '',
         chapter_name: selectedChapter,
-        unit_name: selectedUnit
+        unit_name: selectedUnit,
       },
       problem_count: questionCount === 10 ? '10문제' : '20문제',
       user_text: requirements || '',
-      difficulty_ratio: difficulty === '전체' 
-        ? { A: diffRatios['A'], B: diffRatios['B'], C: diffRatios['C'] }
-        : difficulty === 'A' ? { A: 100, B: 0, C: 0 }
-        : difficulty === 'B' ? { A: 0, B: 100, C: 0 }
-        : { A: 0, B: 0, C: 100 },
-      problem_type_ratio: type === '전체'
-        ? { 
-            multiple_choice: typeRatios['객관식'] || 0,
-            essay: typeRatios['서술형'] || 0,
-            short_answer: typeRatios['단답형'] || 0
-          }
-        : type === '객관식' ? { multiple_choice: 100, essay: 0, short_answer: 0 }
-        : type === '서술형' ? { multiple_choice: 0, essay: 100, short_answer: 0 }
-        : { multiple_choice: 0, essay: 0, short_answer: 100 }
+      difficulty_ratio:
+        difficulty === '전체'
+          ? { A: diffRatios['A'], B: diffRatios['B'], C: diffRatios['C'] }
+          : difficulty === 'A'
+          ? { A: 100, B: 0, C: 0 }
+          : difficulty === 'B'
+          ? { A: 0, B: 100, C: 0 }
+          : { A: 0, B: 0, C: 100 },
+      problem_type_ratio:
+        type === '전체'
+          ? {
+              multiple_choice: typeRatios['객관식'] || 0,
+              essay: typeRatios['서술형'] || 0,
+              short_answer: typeRatios['단답형'] || 0,
+            }
+          : type === '객관식'
+          ? { multiple_choice: 100, essay: 0, short_answer: 0 }
+          : type === '서술형'
+          ? { multiple_choice: 0, essay: 100, short_answer: 0 }
+          : { multiple_choice: 0, essay: 0, short_answer: 100 },
     };
 
     onGenerate(requestData as any);
@@ -184,7 +199,6 @@ export default function MathGenerator({ onGenerate, isGenerating }: MathGenerato
     <>
       {/* 지문 불러오기 */}
       <div className="mb-4">
-        <div className="mb-2 font-semibold">지문 불러오기</div>
         <div className="space-y-2">
           <Select value={school} onValueChange={setSchool}>
             <SelectTrigger className="w-full">
@@ -229,7 +243,7 @@ export default function MathGenerator({ onGenerate, isGenerating }: MathGenerato
 
       {/* 교육과정 선택 */}
       <div className="mb-4">
-        <div className="mb-2 font-semibold">교육과정</div>
+        <div className="mb-2 font-semibold">단원 선택</div>
         <div className="space-y-2">
           <Select value={selectedUnit} onValueChange={setSelectedUnit}>
             <SelectTrigger className="w-full">
@@ -237,20 +251,30 @@ export default function MathGenerator({ onGenerate, isGenerating }: MathGenerato
             </SelectTrigger>
             <SelectContent>
               {units.map((unit, index) => (
-                <SelectItem key={`${unit.unit_number}-${unit.unit_name}-${index}`} value={unit.unit_name}>
+                <SelectItem
+                  key={`${unit.unit_number}-${unit.unit_name}-${index}`}
+                  value={unit.unit_name}
+                >
                   {unit.unit_name}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
 
-          <Select value={selectedChapter} onValueChange={setSelectedChapter} disabled={!chapters.length}>
+          <Select
+            value={selectedChapter}
+            onValueChange={setSelectedChapter}
+            disabled={!chapters.length}
+          >
             <SelectTrigger className="w-full">
               <SelectValue placeholder="소단원 선택" />
             </SelectTrigger>
             <SelectContent>
               {chapters.map((chapter: any, index: number) => (
-                <SelectItem key={`${chapter.chapter_number}-${chapter.chapter_name}-${index}`} value={chapter.chapter_name}>
+                <SelectItem
+                  key={`${chapter.chapter_number}-${chapter.chapter_name}-${index}`}
+                  value={chapter.chapter_name}
+                >
                   {chapter.chapter_name}
                 </SelectItem>
               ))}
@@ -261,7 +285,26 @@ export default function MathGenerator({ onGenerate, isGenerating }: MathGenerato
 
       {/* 문제 유형 */}
       <div className="mb-4">
-        <div className="mb-2 font-semibold">문제 유형</div>
+        <div className="mb-2 font-semibold flex items-center gap-2">
+          문제 유형
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <HelpCircle className="h-4 w-4 text-gray-400 hover:text-gray-600 cursor-help" />
+            </TooltipTrigger>
+            <TooltipContent>
+              <div className="max-w-xs">
+                <p className="font-medium mb-1">문제 유형 설정 팁</p>
+                <p className="text-xs">
+                  • <strong>전체</strong>를 선택하면 객관식, 서술형, 단답형의 비율을 설정할 수
+                  있습니다
+                  <br />
+                  • 각 유형별로 10% 단위로 비율을 조정할 수 있습니다
+                  <br />• 총 비율은 100%가 되어야 합니다
+                </p>
+              </div>
+            </TooltipContent>
+          </Tooltip>
+        </div>
         <div className="flex flex-wrap gap-2">
           {MATH_TYPES.map((t) => (
             <button
@@ -287,7 +330,25 @@ export default function MathGenerator({ onGenerate, isGenerating }: MathGenerato
 
       {/* 난이도 */}
       <div className="mb-4">
-        <div className="mb-2 font-semibold">난이도</div>
+        <div className="mb-2 font-semibold flex items-center gap-2">
+          난이도
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <HelpCircle className="h-4 w-4 text-gray-400 hover:text-gray-600 cursor-help" />
+            </TooltipTrigger>
+            <TooltipContent>
+              <div className="max-w-xs">
+                <p className="font-medium mb-1">난이도 설정 팁</p>
+                <p className="text-xs">
+                  • <strong>전체</strong>를 선택하면 A, B, C 난이도의 비율을 설정할 수 있습니다
+                  <br />
+                  • 각 난이도별로 10% 단위로 비율을 조정할 수 있습니다
+                  <br />• 총 비율은 100%가 되어야 합니다
+                </p>
+              </div>
+            </TooltipContent>
+          </Tooltip>
+        </div>
         <div className="flex gap-2">
           {DIFFICULTY.map((d) => (
             <button

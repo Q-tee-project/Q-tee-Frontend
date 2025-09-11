@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { PlusCircle } from 'lucide-react';
 import KoreanGenerator from '@/components/subjects/KoreanGenerator';
 import EnglishGenerator from '@/components/subjects/EnglishGenerator';
@@ -30,12 +31,6 @@ export default function CreatePage() {
   // 문제 생성 페이지는 열람만 가능 (편집 기능 제거)
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(0);
-
-  // 백엔드 API 상태
-
-  const chipBase = 'px-3 py-1 rounded-md border-2 text-sm';
-  const chipSelected = 'border-blue-500 bg-blue-50 text-blue-600';
-  const chipUnselected = 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50';
 
   // 수학 문제 생성 API 호출
   const generateMathProblems = async (requestData: any) => {
@@ -113,7 +108,9 @@ export default function CreatePage() {
   // 워크시트 결과 조회
   const fetchWorksheetResult = async (worksheetId: number) => {
     try {
-      const response = await fetch(`http://localhost:8001/api/math-generation/worksheets/${worksheetId}`);
+      const response = await fetch(
+        `http://localhost:8001/api/math-generation/worksheets/${worksheetId}`,
+      );
       const data = await response.json();
 
       if (data.problems) {
@@ -122,11 +119,13 @@ export default function CreatePage() {
           id: problem.id,
           title: problem.question,
           options: problem.choices ? problem.choices : undefined,
-          answerIndex: problem.choices ? problem.choices.findIndex((choice: string) => choice === problem.correct_answer) : undefined,
+          answerIndex: problem.choices
+            ? problem.choices.findIndex((choice: string) => choice === problem.correct_answer)
+            : undefined,
           correct_answer: problem.correct_answer,
           explanation: problem.explanation,
           question: problem.question,
-          choices: problem.choices
+          choices: problem.choices,
         }));
 
         setPreviewQuestions(convertedQuestions);
@@ -158,7 +157,7 @@ export default function CreatePage() {
     setPreviewQuestions([]);
 
     const cnt = Math.min(data.questionCount ?? 2, 5);
-    
+
     // 제목 설정
     setPreviewTitle(`${data.subject} 예시 문제`);
 
@@ -184,7 +183,6 @@ export default function CreatePage() {
     setIsGenerating(false);
   };
 
-
   return (
     <div className="min-h-screen flex flex-col">
       {/* 헤더 영역 */}
@@ -194,177 +192,211 @@ export default function CreatePage() {
         variant="question"
         description="과목별 문제를 생성할 수 있습니다"
       />
-      
+
+      {/* 과목 탭 */}
+      <div className="px-6 pb-2 flex-shrink-0">
+        <nav className="flex space-x-8">
+          {SUBJECTS.map((s) => (
+            <button
+              key={s}
+              onClick={() => {
+                setSubject(s);
+                setPreviewQuestions([]); // 과목 변경 시 초기화
+                setPreviewTitle('');
+              }}
+              className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+                subject === s
+                  ? 'border-[#0072CE] text-[#0072CE]'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              {s}
+            </button>
+          ))}
+        </nav>
+      </div>
+
       {/* 메인 컨텐츠 영역 */}
       <div className="flex-1 p-4 min-h-0">
         <div className="flex gap-4 h-full">
-      <div className="w-[400px] bg-white p-6 rounded shadow overflow-y-auto">
-        {/* 과목 선택 */}
-        <div className="mb-4">
-          <div className="mb-2 font-semibold">과목 선택</div>
-          <div className="flex gap-2">
-            {SUBJECTS.map((s) => (
-              <button
-                key={s}
-                onClick={() => {
-                  setSubject(s);
-                  setPreviewQuestions([]); // 과목 변경 시 초기화
-                  setPreviewTitle('');
-                }}
-                className={`${chipBase} ${subject === s ? chipSelected : chipUnselected}`}
-              >
-                {s}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* 과목별 컴포넌트 렌더링 */}
-        {subject === '국어' && (
-          <KoreanGenerator onGenerate={handleGenerate} isGenerating={isGenerating} />
-        )}
-        {subject === '영어' && (
-          <EnglishGenerator onGenerate={handleGenerate} isGenerating={isGenerating} />
-        )}
-        {subject === '수학' && (
-          <MathGenerator onGenerate={handleGenerate} isGenerating={isGenerating} />
-        )}
-      </div>
-
-      {/* 오른쪽 영역 - 결과 미리보기 자리 */}
-      <div className="flex-1 bg-white rounded ml-4 flex flex-col h-full">
-        {isGenerating ? (
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-center">
-              <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
-              <div className="text-lg font-medium text-gray-700 mb-2">
-                문제를 생성하고 있습니다...
-              </div>
-              <div className="w-64 bg-gray-200 rounded-full h-2">
-                <div
-                  className="bg-blue-600 h-2 rounded-full transition-all duration-300 ease-out"
-                  style={{ width: `${generationProgress}%` }}
-                ></div>
-              </div>
-              <div className="text-sm text-gray-500 mt-2">{Math.round(generationProgress)}% 완료</div>
-            </div>
-          </div>
-        ) : previewQuestions.length === 0 ? (
-          <div className="flex-1 flex items-center justify-center">
-            <Image src="/noQuestion.svg" alt="미리보기 없음" width={220} height={160} style={{ width: 'auto', height: 'auto' }} />
-          </div>
-        ) : (
-          <>
-            {/* 스크롤 가능한 문제 영역 */}
-            <div className="flex-1 overflow-y-auto p-6 min-h-0">
-              <div className="space-y-6">
-                <div className="w-full p-3 border rounded-md bg-gray-50 font-semibold text-lg">
-                  {previewTitle || "생성된 문제지"}
+          <Card className="w-[400px] flex flex-col shadow-sm h-[calc(100vh-200px)]">
+            <CardHeader className="flex flex-row items-center justify-center py-1 px-6 border-b border-gray-100">
+              <CardTitle className="text-base font-medium">문제 생성</CardTitle>
+            </CardHeader>
+            <CardContent className="flex-1 overflow-y-auto p-6">
+              {/* 과목별 컴포넌트 렌더링 */}
+              {subject === '국어' && (
+                <KoreanGenerator onGenerate={handleGenerate} isGenerating={isGenerating} />
+              )}
+              {subject === '영어' && (
+                <EnglishGenerator onGenerate={handleGenerate} isGenerating={isGenerating} />
+              )}
+              {subject === '수학' && (
+                <MathGenerator onGenerate={handleGenerate} isGenerating={isGenerating} />
+              )}
+              {!subject && (
+                <div className="flex items-center justify-center h-full text-gray-500">
+                  <div className="text-center">
+                    <div className="text-lg font-medium mb-2">과목을 선택해주세요</div>
+                    <div className="text-sm">
+                      위의 탭에서 과목을 선택하면 문제 생성 폼이 나타납니다.
+                    </div>
+                  </div>
                 </div>
-                {previewQuestions.map((q, index) => (
-                  <div
-                    key={q.id}
-                    className="grid grid-cols-12 gap-4 animate-fade-in"
-                    style={{
-                      animationDelay: `${index * 0.2}s`,
-                      animation: 'fadeInUp 0.6s ease-out forwards',
-                    }}
-                  >
-                    <div className="col-span-8">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="text-sm text-gray-500">문제 {q.id}</div>
-                        <div className="flex gap-2">
-                          <button className="text-gray-400 hover:text-gray-600">
-                            <svg
-                              className="w-4 h-4"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                              />
-                            </svg>
-                          </button>
-                          <button className="text-gray-400 hover:text-gray-600">
-                            <svg
-                              className="w-4 h-4"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                              />
-                            </svg>
-                          </button>
-                        </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* 오른쪽 영역 - 결과 미리보기 자리 */}
+          <Card className="flex-1 flex flex-col shadow-sm h-[calc(100vh-200px)]">
+            <CardHeader className="flex flex-row items-center justify-center py-1 px-6 border-b border-gray-100">
+              <CardTitle className="text-base font-medium">미리보기</CardTitle>
+            </CardHeader>
+            <CardContent className="flex-1 flex flex-col">
+              {isGenerating ? (
+                <div className="flex-1 flex items-center justify-center">
+                  <div className="text-center">
+                    <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
+                    <div className="text-lg font-medium text-gray-700 mb-2">
+                      문제를 생성하고 있습니다...
+                    </div>
+                    <div className="w-64 bg-gray-200 rounded-full h-2">
+                      <div
+                        className="bg-blue-600 h-2 rounded-full transition-all duration-300 ease-out"
+                        style={{ width: `${generationProgress}%` }}
+                      ></div>
+                    </div>
+                    <div className="text-sm text-gray-500 mt-2">
+                      {Math.round(generationProgress)}% 완료
+                    </div>
+                  </div>
+                </div>
+              ) : previewQuestions.length === 0 ? (
+                <div className="flex-1 flex items-center justify-center">
+                  <Image
+                    src="/noQuestion.svg"
+                    alt="미리보기 없음"
+                    width={220}
+                    height={160}
+                    style={{ width: 'auto', height: 'auto' }}
+                  />
+                </div>
+              ) : (
+                <>
+                  {/* 스크롤 가능한 문제 영역 */}
+                  <div className="flex-1 overflow-y-auto p-6 min-h-0">
+                    <div className="space-y-6">
+                      <div className="w-full p-3 border rounded-md bg-gray-50 font-semibold text-lg">
+                        {previewTitle || '생성된 문제지'}
                       </div>
-                      <div className="text-base leading-relaxed text-gray-900 mb-4">
-                        <LaTeXRenderer content={q.title} />
-                      </div>
-                      {q.options && q.options.map((opt, idx) => (
-                        <div key={idx} className="flex items-start gap-3 mb-3">
-                          <span
-                            className={`flex-shrink-0 w-6 h-6 border-2 ${
-                              idx === q.answerIndex
-                                ? 'border-green-500 bg-green-500 text-white'
-                                : 'border-gray-300 text-gray-600'
-                            } rounded-full flex items-center justify-center text-sm font-medium`}
-                          >
-                            {String.fromCharCode(65 + idx)}
-                          </span>
-                          <div className="flex-1 text-gray-900">
-                            <LaTeXRenderer content={opt} />
+                      {previewQuestions.map((q, index) => (
+                        <div
+                          key={q.id}
+                          className="grid grid-cols-12 gap-4 animate-fade-in"
+                          style={{
+                            animationDelay: `${index * 0.2}s`,
+                            animation: 'fadeInUp 0.6s ease-out forwards',
+                          }}
+                        >
+                          <div className="col-span-8">
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="text-sm text-gray-500">문제 {q.id}</div>
+                              <div className="flex gap-2">
+                                <button className="text-gray-400 hover:text-gray-600">
+                                  <svg
+                                    className="w-4 h-4"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                    />
+                                  </svg>
+                                </button>
+                                <button className="text-gray-400 hover:text-gray-600">
+                                  <svg
+                                    className="w-4 h-4"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                                    />
+                                  </svg>
+                                </button>
+                              </div>
+                            </div>
+                            <div className="text-base leading-relaxed text-gray-900 mb-4">
+                              <LaTeXRenderer content={q.title} />
+                            </div>
+                            {q.options &&
+                              q.options.map((opt, idx) => (
+                                <div key={idx} className="flex items-start gap-3 mb-3">
+                                  <span
+                                    className={`flex-shrink-0 w-6 h-6 border-2 ${
+                                      idx === q.answerIndex
+                                        ? 'border-green-500 bg-green-500 text-white'
+                                        : 'border-gray-300 text-gray-600'
+                                    } rounded-full flex items-center justify-center text-sm font-medium`}
+                                  >
+                                    {String.fromCharCode(65 + idx)}
+                                  </span>
+                                  <div className="flex-1 text-gray-900">
+                                    <LaTeXRenderer content={opt} />
+                                  </div>
+                                  {idx === q.answerIndex && (
+                                    <span className="text-xs font-medium text-green-700 bg-green-200 px-2 py-1 rounded">
+                                      정답
+                                    </span>
+                                  )}
+                                </div>
+                              ))}
                           </div>
-                          {idx === q.answerIndex && (
-                            <span className="text-xs font-medium text-green-700 bg-green-200 px-2 py-1 rounded">
-                              정답
-                            </span>
-                          )}
+                          <div className="col-span-4">
+                            <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+                              <div className="text-sm font-semibold text-gray-700 mb-2">
+                                {q.options && q.options.length > 0 ? (
+                                  <span>
+                                    정답: {String.fromCharCode(65 + (q.answerIndex || 0))}
+                                  </span>
+                                ) : (
+                                  <div className="flex items-center gap-2">
+                                    <span>정답:</span>
+                                    <div className="bg-green-100 border border-green-300 rounded px-2 py-1 text-green-800 font-medium">
+                                      <LaTeXRenderer content={q.correct_answer || 'N/A'} />
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                              <div className="text-sm font-semibold text-blue-800 mb-2">해설:</div>
+                              <div className="text-sm text-blue-800">
+                                <LaTeXRenderer content={q.explanation || '해설 정보가 없습니다'} />
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       ))}
                     </div>
-                    <div className="col-span-4">
-                      <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
-                        <div className="text-sm font-semibold text-gray-700 mb-2">
-                          {q.options && q.options.length > 0 ? (
-                            <span>정답: {String.fromCharCode(65 + (q.answerIndex || 0))}</span>
-                          ) : (
-                            <div className="flex items-center gap-2">
-                              <span>정답:</span>
-                              <div className="bg-green-100 border border-green-300 rounded px-2 py-1 text-green-800 font-medium">
-                                <LaTeXRenderer content={q.correct_answer || 'N/A'} />
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                        <div className="text-sm font-semibold text-blue-800 mb-2">해설:</div>
-                        <div className="text-sm text-blue-800">
-                          <LaTeXRenderer content={q.explanation || '해설 정보가 없습니다'} />
-                        </div>
-                      </div>
-                    </div>
                   </div>
-                ))}
-              </div>
-            </div>
 
-            {/* 하단 고정 버튼 영역 */}
-            <div className="border-t bg-gray-50 p-4">
-              <button className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-md font-medium">
-                문제 저장하기
-              </button>
-            </div>
-          </>
-        )}
-      </div>
+                  {/* 하단 고정 버튼 영역 */}
+                  <div className="border-t bg-gray-50 p-4">
+                    <button className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-md font-medium">
+                      문제 저장하기
+                    </button>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
