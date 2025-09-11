@@ -30,8 +30,16 @@ export const WorksheetList: React.FC<WorksheetListProps> = ({
   onDeleteWorksheet,
   onRefresh,
 }) => {
+  // 국어/영어 과목의 경우 카드 높이를 자동으로 조정
+  const isNonMathSubject = selectedSubject !== Subject.MATH;
+  const hasNoData = worksheets.length === 0;
+
   return (
-    <Card className="w-1/3 flex flex-col shadow-sm h-full">
+    <Card
+      className={`w-1/3 flex flex-col shadow-sm ${
+        isNonMathSubject || hasNoData ? 'h-auto' : 'h-[calc(100vh-200px)]'
+      }`}
+    >
       <CardHeader className="flex flex-row items-center justify-between py-6 px-6 border-b border-gray-100">
         <CardTitle className="text-lg font-medium">문제 목록</CardTitle>
         <div className="flex items-center gap-2">
@@ -56,29 +64,34 @@ export const WorksheetList: React.FC<WorksheetListProps> = ({
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="p-0 flex-1 overflow-hidden">
-        <ScrollArea style={{height: 'calc(100vh - 350px)'}} className="w-full">
+      <CardContent
+        className={`p-0 ${isNonMathSubject || hasNoData ? 'flex-none' : 'flex-1 overflow-hidden'}`}
+      >
+        {isNonMathSubject || hasNoData ? (
           <div className="p-4">
             {selectedSubject !== Subject.MATH ? (
               <div className="px-4 py-8 text-center text-gray-400 text-sm">
                 {selectedSubject} 과목은 준비 중입니다
               </div>
-            ) : worksheets.length === 0 ? (
-              <div className="px-4 py-8 text-center text-gray-400 text-sm">
-                저장된 워크시트가 없습니다 (로딩 상태: {isLoading ? '로딩 중' : '로딩 완료'},
-                과목: {selectedSubject})
-                {error && <div className="text-red-500 mt-2">오류: {error}</div>}
-              </div>
             ) : (
+              <div className="px-4 py-8 text-center text-gray-400 text-sm">
+                저장된 워크시트가 없습니다 (로딩 상태: {isLoading ? '로딩 중' : '로딩 완료'}, 과목:{' '}
+                {selectedSubject}){error && <div className="text-red-500 mt-2">오류: {error}</div>}
+              </div>
+            )}
+          </div>
+        ) : (
+          <ScrollArea style={{ height: 'calc(100vh - 350px)' }} className="w-full">
+            <div className="p-4">
               <DataTable
                 columns={columns}
                 data={worksheets}
                 onRowClick={onWorksheetSelect}
                 selectedRowId={selectedWorksheet?.id}
               />
-            )}
-          </div>
-        </ScrollArea>
+            </div>
+          </ScrollArea>
+        )}
       </CardContent>
     </Card>
   );

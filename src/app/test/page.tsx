@@ -308,7 +308,7 @@ export default function TestPage() {
                         disabled={isLoading}
                         className="w-full bg-[#0072CE] hover:bg-[#0056A3] text-white"
                       >
-                        {isLoading ? '시작 중...' : '🚀 시험 시작하기'}
+                        {isLoading ? '시작 중...' : ' 시험 시작하기'}
                       </Button>
                       <div className="text-xs text-gray-500 text-center">
                         시험을 시작하면 타이머가 작동합니다
@@ -593,7 +593,6 @@ export default function TestPage() {
               <div className="text-center py-20">
                 {selectedWorksheet && !isTestStarted && !testResult ? (
                   <>
-                    <div className="text-gray-400 text-lg mb-2">🚀</div>
                     <div className="text-gray-700 text-lg font-medium mb-2">
                       {selectedWorksheet.title}
                     </div>
