@@ -1,17 +1,22 @@
-'use client';
+'use client'
 
 import React, { useState } from 'react'
 import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
+import { HiEye, HiEyeOff } from 'react-icons/hi'
 
 export default function LoginPage() {
+  const router = useRouter()
+
   const [formData, setFormData] = useState({
     id: '',
     password: ''
   })
+  const [showPassword, setShowPassword] = useState(false)
   const [keepLogin, setKeepLogin] = useState(false)
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -27,8 +32,12 @@ export default function LoginPage() {
     console.log('Login submitted:', { ...formData, keepLogin })
   }
 
+  const handleJoinClick = () => {
+    router.push('/join')
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-white flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardContent className="p-8">
           <div className="text-center mb-8">
@@ -43,8 +52,6 @@ export default function LoginPage() {
               <h1 className="text-xl font-semibold">Q-Tee</h1>
             </div>
           </div>
-
-          <h2 className="text-lg font-medium text-center mb-6">로그인</h2>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* 아이디 */}
@@ -62,18 +69,27 @@ export default function LoginPage() {
             </div>
 
             {/* 비밀번호 */}
-            <div>
-              <label htmlFor="password" className="text-sm font-medium text-gray-700 mb-2 block">비밀번호</label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                placeholder="비밀번호를 입력해 주세요"
-                value={formData.password}
-                onChange={handleInputChange}
-                className="w-full"
-              />
-            </div>
+            <div className="relative">
+                <label htmlFor="password" className="text-sm font-medium text-gray-700 mb-2 block">
+                  비밀번호
+                </label>
+                <Input
+                  id="password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="비밀번호를 입력해 주세요"
+                  value={formData.password}
+                  onChange={handleInputChange}
+                  className="w-full pr-10"
+                />
+                {/*아이콘 */}
+                <div
+                  className="absolute top-[38px] right-3 cursor-pointer text-gray-500 hover:text-gray-700"
+                  onClick={() => setShowPassword(prev => !prev)}
+                >
+                  {showPassword ? <HiEyeOff size={20} /> : <HiEye size={20} />}
+                </div>
+              </div>
 
             {/* 로그인 상태 유지 */}
             <div className="flex items-center space-x-2">
@@ -106,6 +122,7 @@ export default function LoginPage() {
                 type="button" 
                 variant="outline" 
                 className="w-full"
+                onClick={handleJoinClick}
               >
                 회원가입
               </Button>
