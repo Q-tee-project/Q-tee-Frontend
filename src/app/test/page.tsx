@@ -27,6 +27,7 @@ import { RefreshCw, Clock, CheckCircle, BookOpen } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { HandwritingCanvas } from '@/components/HandwritingCanvas';
 import { ScratchpadModal } from '@/components/ScratchpadModal';
+import { TestResultModal } from './components/TestResultModal';
 
 export default function TestPage() {
   const [worksheets, setWorksheets] = useState<Worksheet[]>([]);
@@ -39,6 +40,11 @@ export default function TestPage() {
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [timeRemaining, setTimeRemaining] = useState(3600); // 60분 (초 단위)
   const [scratchpadOpen, setScratchpadOpen] = useState(false);
+  const [testSession, setTestSession] = useState<any>(null);
+  const [isTestStarted, setIsTestStarted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [testResult, setTestResult] = useState<any>(null);
+  const [showResultModal, setShowResultModal] = useState(false);
 
   // 문제 유형을 한국어로 변환
   const getProblemTypeInKorean = (type: string): string => {
@@ -118,14 +124,57 @@ export default function TestPage() {
     await loadWorksheetProblems(worksheet.id);
     setCurrentProblemIndex(0);
     setAnswers({});
+    setIsTestStarted(false);
+    setTestSession(null);
+    setTestResult(null);
+  };
+
+  // 시험 시작
+  const startTest = async () => {
+    if (!selectedWorksheet) return;
+
+    try {
+      setIsLoading(true);
+      const session = await QuestionService.startTest(selectedWorksheet.id);
+
+      // 세션 데이터를 로컬 스토리지에 저장
+      localStorage.setItem(
+        `${session.session_id}_data`,
+        JSON.stringify({
+          worksheet_id: selectedWorksheet.id,
+          worksheet_title: selectedWorksheet.title,
+          problems: worksheetProblems,
+        }),
+      );
+
+      setTestSession(session);
+      setIsTestStarted(true);
+      console.log('시험 세션 시작:', session);
+    } catch (error: any) {
+      console.error('시험 시작 실패:', error);
+      setError('시험을 시작할 수 없습니다: ' + error.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // 답안 입력 핸들러
-  const handleAnswerChange = (problemId: number, answer: string) => {
+  const handleAnswerChange = async (problemId: number, answer: string) => {
     setAnswers((prev) => ({
       ...prev,
       [problemId]: answer,
     }));
+
+    // 백엔드에 답안 임시 저장 (시험이 시작된 경우에만)
+    if (testSession && isTestStarted) {
+      try {
+        await QuestionService.saveAnswer(testSession.session_id, problemId, answer);
+        console.log('답안 임시 저장 완료:', { problemId, answer });
+      } catch (error) {
+        console.error('답안 저장 실패:', error);
+        // 실패해도 UI는 정상 작동하도록 함
+      }
+    }
   };
 
   // 다음 문제로 이동
@@ -143,21 +192,39 @@ export default function TestPage() {
   };
 
   // 시험 제출
-  const submitTest = () => {
+  const submitTest = async () => {
+    if (!testSession || !isTestStarted) {
+      alert('시험을 먼저 시작해주세요.');
+      return;
+    }
+
     const answeredCount = Object.keys(answers).length;
     const totalProblems = worksheetProblems.length;
 
     if (answeredCount < totalProblems) {
       if (
         !confirm(
-          `${totalProblems - answeredCount}개 문제가 답하지 않았습니다. 그래도 제출하시겠습니까?`,
+          `${totalProblems - answeredCount}개 문제에 답하지 않았습니다. 그래도 제출하시겠습니까?`,
         )
       ) {
         return;
       }
     }
 
-    alert(`시험이 제출되었습니다.\n답한 문제: ${answeredCount}/${totalProblems}개`);
+    try {
+      setIsSubmitting(true);
+      const result = await QuestionService.submitTest(testSession.session_id, answers);
+      setTestResult(result);
+      setIsTestStarted(false);
+
+      // 결과 모달 표시
+      setShowResultModal(true);
+    } catch (error: any) {
+      console.error('시험 제출 실패:', error);
+      setError('시험 제출에 실패했습니다: ' + error.message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // 시간 포맷팅
@@ -230,8 +297,57 @@ export default function TestPage() {
                   </SelectContent>
                 </Select>
 
+                {/* 시험 시작 버튼 */}
+                {selectedWorksheet &&
+                  worksheetProblems.length > 0 &&
+                  !isTestStarted &&
+                  !testResult && (
+                    <div className="space-y-3">
+                      <Button
+                        onClick={startTest}
+                        disabled={isLoading}
+                        className="w-full bg-[#0072CE] hover:bg-[#0056A3] text-white"
+                      >
+                        {isLoading ? '시작 중...' : '🚀 시험 시작하기'}
+                      </Button>
+                      <div className="text-xs text-gray-500 text-center">
+                        시험을 시작하면 타이머가 작동합니다
+                      </div>
+                    </div>
+                  )}
+
+                {/* 시험 상태 표시 */}
+                {isTestStarted && (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                      <span className="text-sm font-medium text-green-700">시험 진행 중</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* 시험 결과 표시 */}
+                {testResult && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-3">
+                    <h4 className="text-sm font-medium text-blue-700">시험 완료</h4>
+                    <div className="text-xs text-blue-600 space-y-1">
+                      <div>
+                        정답: {testResult.correct_count || 0}개 / {testResult.total_problems || 0}개
+                      </div>
+                      <div>점수: {testResult.score || 0}점</div>
+                    </div>
+                    <Button
+                      onClick={() => setShowResultModal(true)}
+                      size="sm"
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs"
+                    >
+                      📊 자세한 결과 보기
+                    </Button>
+                  </div>
+                )}
+
                 {/* 문제 번호 테이블 */}
-                {selectedWorksheet && worksheetProblems.length > 0 && (
+                {selectedWorksheet && worksheetProblems.length > 0 && isTestStarted && (
                   <div className="border rounded-lg">
                     <div className="p-3 border-b bg-gray-50">
                       <h4 className="text-sm font-medium text-gray-700">문제 목록</h4>
@@ -299,7 +415,7 @@ export default function TestPage() {
           </Card>
 
           {/* 문제 풀이 화면 */}
-          {selectedWorksheet && currentProblem ? (
+          {selectedWorksheet && currentProblem && isTestStarted ? (
             <Card className="w-5/6 flex flex-col shadow-sm">
               <CardHeader className="flex flex-row items-center justify-between py-6 px-6 border-b border-gray-100">
                 <div className="flex items-center justify-center gap-3 flex-1">
@@ -453,9 +569,10 @@ export default function TestPage() {
                     <div className="flex gap-3">
                       <Button
                         onClick={submitTest}
+                        disabled={isSubmitting}
                         className="bg-[#0072CE] hover:bg-[#0056A3] text-white"
                       >
-                        시험 제출
+                        {isSubmitting ? '제출 중...' : '📝 시험 제출'}
                       </Button>
                     </div>
                   )}
@@ -474,8 +591,31 @@ export default function TestPage() {
           ) : (
             <Card className="w-5/6 flex items-center justify-center shadow-sm">
               <div className="text-center py-20">
-                <div className="text-gray-400 text-lg mb-2">📝</div>
-                <div className="text-gray-500 text-sm">문제지를 선택하세요</div>
+                {selectedWorksheet && !isTestStarted && !testResult ? (
+                  <>
+                    <div className="text-gray-400 text-lg mb-2">🚀</div>
+                    <div className="text-gray-700 text-lg font-medium mb-2">
+                      {selectedWorksheet.title}
+                    </div>
+                    <div className="text-gray-500 text-sm mb-4">
+                      왼쪽에서 "시험 시작하기" 버튼을 눌러 시험을 시작하세요
+                    </div>
+                    <div className="text-gray-400 text-xs">
+                      문제 수: {worksheetProblems.length}개 | 제한 시간: 60분
+                    </div>
+                  </>
+                ) : testResult ? (
+                  <>
+                    <div className="text-green-400 text-lg mb-2">✅</div>
+                    <div className="text-gray-700 text-lg font-medium mb-2">시험 완료!</div>
+                    <div className="text-gray-500 text-sm">결과가 왼쪽에 표시됩니다</div>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-gray-400 text-lg mb-2">📝</div>
+                    <div className="text-gray-500 text-sm">문제지를 선택하세요</div>
+                  </>
+                )}
               </div>
             </Card>
           )}
@@ -530,6 +670,15 @@ export default function TestPage() {
           isOpen={scratchpadOpen}
           onClose={() => setScratchpadOpen(false)}
           problemNumber={currentProblem.sequence_order}
+        />
+      )}
+
+      {/* 채점 결과 모달 */}
+      {testResult && (
+        <TestResultModal
+          isOpen={showResultModal}
+          onClose={() => setShowResultModal(false)}
+          testResult={testResult}
         />
       )}
 
