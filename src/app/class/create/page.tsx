@@ -28,7 +28,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
-export default function classCreatePage() {
+export default function ClassCreatePage() {
   const router = useRouter();
   const [selectAll, setSelectAll] = useState(false);
   const [selectedRows, setSelectedRows] = useState<boolean[]>(Array(2).fill(false));
@@ -55,7 +55,7 @@ export default function classCreatePage() {
   const [classData, setClassData] = useState([
     {
       id: 1,
-      name: '중학교 수학',
+      name: '중학교 A반',
       school: '중학교',
       grade: '1학년',
       studentCount: 3,
@@ -68,7 +68,7 @@ export default function classCreatePage() {
     },
     {
       id: 2,
-      name: '고등학교 수학',
+      name: '고등학교 B반',
       school: '고등학교',
       grade: '2학년',
       studentCount: 5,
@@ -469,7 +469,7 @@ export default function classCreatePage() {
                           className="text-sm"
                           style={{ 
                             backgroundColor: classItem.school === '중학교' ? '#E6F3FF' : '#FFF5E9', 
-                            border: classItem.school === '중학교' ? '1px solid #0085FF' : '1px solid #FF9F2D', 
+                            border: 'none', 
                             color: classItem.school === '중학교' ? '#0085FF' : '#FF9F2D',
                             padding: '6px 12px',
                             minWidth: '80px',
@@ -489,8 +489,8 @@ export default function classCreatePage() {
                         <Badge 
                           className="text-sm"
                           style={{ 
-                            backgroundColor: '#fff', 
-                            border: '1px solid #999999', 
+                            backgroundColor: '#f5f5f5', 
+                            border: 'none', 
                             color: '#999999',
                             padding: '6px 12px',
                             minWidth: '60px',
