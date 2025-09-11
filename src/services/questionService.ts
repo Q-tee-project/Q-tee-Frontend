@@ -104,6 +104,22 @@ export class QuestionService {
     }).then(response => ({ success: true, message: response.message }));
   }
 
+  // 워크시트 업데이트
+  static async updateWorksheet(worksheetId: number, updateData: any): Promise<{ success: boolean; message: string }> {
+    return apiRequest<any>(`/api/math-generation/worksheets/${worksheetId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updateData),
+    }).then(response => ({ success: true, message: response.message || '워크시트가 업데이트되었습니다.' }));
+  }
+
+  // 개별 문제 업데이트
+  static async updateProblem(problemId: number, updateData: any): Promise<{ success: boolean; message: string }> {
+    return apiRequest<any>(`/api/math-generation/problems/${problemId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updateData),
+    }).then(response => ({ success: true, message: response.message || '문제가 업데이트되었습니다.' }));
+  }
+
   // 헬스체크
   static async healthCheck(): Promise<{ status: string; message: string }> {
     return apiRequest<{ message: string }>('/')

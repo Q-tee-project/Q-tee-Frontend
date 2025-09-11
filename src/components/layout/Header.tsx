@@ -1,21 +1,30 @@
 'use client';
 
-import React from 'react'
-import Image from 'next/image'
-import Link from 'next/link'
-import { VscBellDot } from 'react-icons/vsc'
-import { FaUserCircle } from 'react-icons/fa'
-import { LuUser, LuLogOut } from 'react-icons/lu'
-import { LuMail, LuCalendar, LuShoppingCart, LuTriangleAlert, LuCheck, LuPencilLine, LuX, LuTrash2 } from 'react-icons/lu'
+import React from 'react';
+import Image from 'next/image';
+import Link from 'next/link';
+import { VscBellDot } from 'react-icons/vsc';
+import { FaUserCircle } from 'react-icons/fa';
+import { LuUser, LuLogOut } from 'react-icons/lu';
+import {
+  LuMail,
+  LuCalendar,
+  LuShoppingCart,
+  LuTriangleAlert,
+  LuCheck,
+  LuPencilLine,
+  LuX,
+  LuTrash2,
+} from 'react-icons/lu';
 
 export default function Header() {
-  const [isProfileOpen, setIsProfileOpen] = React.useState(false)
-  const [isBellOpen, setIsBellOpen] = React.useState(false)
-  const profileMenuRef = React.useRef<HTMLLIElement | null>(null)
-  const bellMenuRef = React.useRef<HTMLLIElement | null>(null)
+  const [isProfileOpen, setIsProfileOpen] = React.useState(false);
+  const [isBellOpen, setIsBellOpen] = React.useState(false);
+  const profileMenuRef = React.useRef<HTMLLIElement | null>(null);
+  const bellMenuRef = React.useRef<HTMLLIElement | null>(null);
 
-  type NotificationType = 'message' | 'schedule' | 'market' | 'missing' | 'graded' | 'problem'
-  type Notification = { id: string; type: NotificationType; title: string }
+  type NotificationType = 'message' | 'schedule' | 'market' | 'missing' | 'graded' | 'problem';
+  type Notification = { id: string; type: NotificationType; title: string };
 
   const typeMeta: Record<NotificationType, { label: string; icon: React.ReactNode }> = {
     message: { label: '쪽지 알림', icon: <LuMail size={18} /> },
@@ -24,7 +33,7 @@ export default function Header() {
     missing: { label: '미제출 알림', icon: <LuTriangleAlert size={18} /> },
     graded: { label: '채점 알림', icon: <LuCheck size={18} /> },
     problem: { label: '문제 알림', icon: <LuPencilLine size={18} /> },
-  }
+  };
 
   const [notifications, setNotifications] = React.useState<Notification[]>([
     { id: 'm-1', type: 'message', title: '새 쪽지 1건' },
@@ -35,71 +44,74 @@ export default function Header() {
     { id: 'mi-1', type: 'missing', title: '미제출 과제' },
     { id: 'g-1', type: 'graded', title: '채점 완료' },
     { id: 'p-1', type: 'problem', title: '새 문제 등록' },
-  ])
+  ]);
 
-  const [expandedType, setExpandedType] = React.useState<NotificationType | null>(null)
+  const [expandedType, setExpandedType] = React.useState<NotificationType | null>(null);
 
   const handleRemoveNotification = (id: string) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id))
-  }
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  };
 
   const handleClearAll = () => {
-    setNotifications([])
-    setExpandedType(null)
-    setIsBellOpen(false)
-  }
+    setNotifications([]);
+    setExpandedType(null);
+    setIsBellOpen(false);
+  };
 
   const toggleProfileMenu = () => {
-    setIsProfileOpen((prev) => !prev)
-    setIsBellOpen(false)
-  }
+    setIsProfileOpen((prev) => !prev);
+    setIsBellOpen(false);
+  };
 
   const toggleBellMenu = () => {
-    setIsBellOpen((prev) => !prev)
-    setIsProfileOpen(false)
-  }
+    setIsBellOpen((prev) => !prev);
+    setIsProfileOpen(false);
+  };
 
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      const targetNode = event.target instanceof Node ? event.target : null
-      const clickedOutsideProfile = profileMenuRef.current && targetNode && !profileMenuRef.current.contains(targetNode)
-      const clickedOutsideBell = bellMenuRef.current && targetNode && !bellMenuRef.current.contains(targetNode)
-      if (clickedOutsideProfile) setIsProfileOpen(false)
-      if (clickedOutsideBell) setIsBellOpen(false)
-    }
+      const targetNode = event.target instanceof Node ? event.target : null;
+      const clickedOutsideProfile =
+        profileMenuRef.current && targetNode && !profileMenuRef.current.contains(targetNode);
+      const clickedOutsideBell =
+        bellMenuRef.current && targetNode && !bellMenuRef.current.contains(targetNode);
+      if (clickedOutsideProfile) setIsProfileOpen(false);
+      if (clickedOutsideBell) setIsBellOpen(false);
+    };
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        setIsProfileOpen(false)
-        setIsBellOpen(false)
+        setIsProfileOpen(false);
+        setIsBellOpen(false);
       }
-    }
+    };
 
-    document.addEventListener('mousedown', handleClickOutside)
-    document.addEventListener('keydown', handleKeyDown)
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-      document.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [])
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
   return (
     <>
       <header
         className="w-full border-b border-border"
-        style={{ padding: '10px', borderBottom: '1px solid #D1D1D1', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}
+        style={{
+          padding: '10px',
+          borderBottom: '1px solid #D1D1D1',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+          backgroundColor: '#FFFFFF',
+        }}
         role="banner"
         aria-label="상단 네비게이션"
       >
+
         <div className="flex items-center justify-between w-full" style={{ paddingLeft: '10px', paddingRight: '10px' }}>
+
           <div className="flex items-center gap-md">
             <Link href="/" aria-label="홈으로 이동">
-              <Image
-                src="/logo.svg"
-                alt="Q-Tee 로고"
-                width={28}
-                height={28}
-                priority
-              />
+              <Image src="/logo.svg" alt="Q-Tee 로고" width={28} height={28} priority />
             </Link>
           </div>
 
@@ -170,26 +182,61 @@ export default function Header() {
 
                     {(() => {
                       return (
-                        <div className="notif-scroll" style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '4px', maxHeight: '300px', overflowY: 'auto' }}>
+                        <div
+                          className="notif-scroll"
+                          style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '12px',
+                            marginTop: '4px',
+                            maxHeight: '300px',
+                            overflowY: 'auto',
+                          }}
+                        >
                           {Object.entries(
-                            notifications.reduce<Record<NotificationType, Notification[]>>((acc, cur) => {
-                              if (!acc[cur.type]) acc[cur.type] = []
-                              acc[cur.type].push(cur)
-                              return acc
-                            }, { message: [], schedule: [], market: [], missing: [], graded: [], problem: [] })
+                            notifications.reduce<Record<NotificationType, Notification[]>>(
+                              (acc, cur) => {
+                                if (!acc[cur.type]) acc[cur.type] = [];
+                                acc[cur.type].push(cur);
+                                return acc;
+                              },
+                              {
+                                message: [],
+                                schedule: [],
+                                market: [],
+                                missing: [],
+                                graded: [],
+                                problem: [],
+                              },
+                            ),
                           )
                             .filter(([_, list]) => list.length > 0)
                             .map(([typeKey, list], groupIndex) => {
-                              const t = typeKey as NotificationType
-                              const meta = typeMeta[t]
-                              const isOpen = expandedType === t
-                              const latest = list[list.length - 1]
-                              const panelMaxHeight = isOpen ? Math.min(280, list.length * 64 + 40) : 0
+                              const t = typeKey as NotificationType;
+                              const meta = typeMeta[t];
+                              const isOpen = expandedType === t;
+                              const latest = list[list.length - 1];
+                              const panelMaxHeight = isOpen
+                                ? Math.min(280, list.length * 64 + 40)
+                                : 0;
                               return (
-                                <div key={t} className="notif-item" style={{ animationDelay: `${groupIndex * 60}ms`, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                <div
+                                  key={t}
+                                  className="notif-item"
+                                  style={{
+                                    animationDelay: `${groupIndex * 60}ms`,
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: '12px',
+                                  }}
+                                >
                                   <button
-                                    onClick={() => setExpandedType((prev) => (prev === t ? null : t))}
-                                    aria-label={`${latest?.title ?? meta.label} ${list.length}개 보기`}
+                                    onClick={() =>
+                                      setExpandedType((prev) => (prev === t ? null : t))
+                                    }
+                                    aria-label={`${latest?.title ?? meta.label} ${
+                                      list.length
+                                    }개 보기`}
                                     style={{
                                       all: 'unset',
                                       display: 'block',
@@ -198,25 +245,31 @@ export default function Header() {
                                     }}
                                   >
                                     {list.length >= 2 && (
-                                      <div aria-hidden style={{
-                                        position: 'absolute',
-                                        inset: 0,
-                                        transform: 'translateY(6px)',
-                                        background: '#2F2F2F',
-                                        borderRadius: '10px',
-                                        opacity: 0.8,
-                                        filter: 'brightness(0.9)',
-                                      }} />
+                                      <div
+                                        aria-hidden
+                                        style={{
+                                          position: 'absolute',
+                                          inset: 0,
+                                          transform: 'translateY(6px)',
+                                          background: '#2F2F2F',
+                                          borderRadius: '10px',
+                                          opacity: 0.8,
+                                          filter: 'brightness(0.9)',
+                                        }}
+                                      />
                                     )}
                                     {list.length >= 2 && (
-                                      <div aria-hidden style={{
-                                        position: 'absolute',
-                                        inset: 0,
-                                        transform: 'translateY(3px)',
-                                        background: '#2F2F2F',
-                                        borderRadius: '10px',
-                                        opacity: 0.9,
-                                      }} />
+                                      <div
+                                        aria-hidden
+                                        style={{
+                                          position: 'absolute',
+                                          inset: 0,
+                                          transform: 'translateY(3px)',
+                                          background: '#2F2F2F',
+                                          borderRadius: '10px',
+                                          opacity: 0.9,
+                                        }}
+                                      />
                                     )}
                                     <div
                                       style={{
@@ -231,45 +284,110 @@ export default function Header() {
                                         borderRadius: '10px',
                                       }}
                                     >
-                                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                      <div
+                                        style={{
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          gap: '10px',
+                                        }}
+                                      >
                                         <span aria-hidden>{meta.icon}</span>
-                                        <span style={{ fontSize: '14px' }}>{latest?.title ?? meta.label}</span>
+                                        <span style={{ fontSize: '14px' }}>
+                                          {latest?.title ?? meta.label}
+                                        </span>
                                       </div>
-                                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                        <span style={{
-                                          fontSize: '12px',
-                                          color: '#E5E7EB',
-                                          background: 'rgba(255,255,255,0.12)',
-                                          padding: '2px 8px',
-                                          borderRadius: '9999px',
-                                        }}>{list.length}</span>
+                                      <div
+                                        style={{
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          gap: '10px',
+                                        }}
+                                      >
+                                        <span
+                                          style={{
+                                            fontSize: '12px',
+                                            color: '#E5E7EB',
+                                            background: 'rgba(255,255,255,0.12)',
+                                            padding: '2px 8px',
+                                            borderRadius: '9999px',
+                                          }}
+                                        >
+                                          {list.length}
+                                        </span>
                                       </div>
                                     </div>
                                   </button>
-                                  <div style={{
-                                    overflow: 'hidden',
-                                    transition: 'max-height 220ms ease',
-                                    maxHeight: panelMaxHeight,
-                                  }}>
+                                  <div
+                                    style={{
+                                      overflow: 'hidden',
+                                      transition: 'max-height 220ms ease',
+                                      maxHeight: panelMaxHeight,
+                                    }}
+                                  >
                                     {isOpen && (
-                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                      <div
+                                        style={{
+                                          display: 'flex',
+                                          flexDirection: 'column',
+                                          gap: '12px',
+                                        }}
+                                      >
                                         {list.map((n, index) => (
-                                          <div key={n.id} className="notif-item" style={{ position: 'relative', animationDelay: `${index * 60}ms` }}>
-                                            <div aria-hidden style={{
-                                              position: 'absolute', left: '6px', right: '6px', bottom: '-3px', height: '6px', borderRadius: '6px', background: 'rgba(0,0,0,0.12)', filter: 'blur(4px)'
-                                            }} />
+                                          <div
+                                            key={n.id}
+                                            className="notif-item"
+                                            style={{
+                                              position: 'relative',
+                                              animationDelay: `${index * 60}ms`,
+                                            }}
+                                          >
+                                            <div
+                                              aria-hidden
+                                              style={{
+                                                position: 'absolute',
+                                                left: '6px',
+                                                right: '6px',
+                                                bottom: '-3px',
+                                                height: '6px',
+                                                borderRadius: '6px',
+                                                background: 'rgba(0,0,0,0.12)',
+                                                filter: 'blur(4px)',
+                                              }}
+                                            />
                                             <div
                                               style={{
-                                                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', background: '#2F2F2F', color: '#FFFFFF', padding: '12px 14px', borderRadius: '10px'
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'space-between',
+                                                gap: '12px',
+                                                background: '#2F2F2F',
+                                                color: '#FFFFFF',
+                                                padding: '12px 14px',
+                                                borderRadius: '10px',
                                               }}
                                             >
-                                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                              <div
+                                                style={{
+                                                  display: 'flex',
+                                                  alignItems: 'center',
+                                                  gap: '10px',
+                                                }}
+                                              >
                                                 <span aria-hidden>{typeMeta[n.type].icon}</span>
                                                 <span style={{ fontSize: '14px' }}>{n.title}</span>
                                               </div>
                                               <button
                                                 aria-label={`${n.title} 닫기`}
-                                                style={{ all: 'unset', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '24px', height: '24px', cursor: 'pointer', color: '#FFFFFF' }}
+                                                style={{
+                                                  all: 'unset',
+                                                  display: 'inline-flex',
+                                                  alignItems: 'center',
+                                                  justifyContent: 'center',
+                                                  width: '24px',
+                                                  height: '24px',
+                                                  cursor: 'pointer',
+                                                  color: '#FFFFFF',
+                                                }}
                                                 onClick={() => handleRemoveNotification(n.id)}
                                               >
                                                 <LuX size={18} />
@@ -281,12 +399,11 @@ export default function Header() {
                                     )}
                                   </div>
                                 </div>
-                              )
+                              );
                             })}
                         </div>
-                      )
+                      );
                     })()}
-                    
                   </div>
                 )}
               </li>
@@ -332,7 +449,15 @@ export default function Header() {
                       zIndex: 1000,
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', flexDirection: 'column', gap: '8px', padding: '8px 16px 12px 16px' }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        flexDirection: 'column',
+                        gap: '8px',
+                        padding: '8px 16px 12px 16px',
+                      }}
+                    >
                       <div
                         aria-hidden
                         style={{
@@ -357,7 +482,7 @@ export default function Header() {
                         color: '#1F2937',
                       }}
                       onClick={() => {
-                        setIsProfileOpen(false)
+                        setIsProfileOpen(false);
                       }}
                     >
                       <LuUser size={18} aria-hidden />
@@ -377,7 +502,7 @@ export default function Header() {
                       }}
                       onClick={() => {
                         // TODO: trigger logout
-                        setIsProfileOpen(false)
+                        setIsProfileOpen(false);
                       }}
                     >
                       <LuLogOut size={18} aria-hidden />
@@ -391,5 +516,5 @@ export default function Header() {
         </div>
       </header>
     </>
-  )
+  );
 }
