@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react'
 import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
@@ -13,6 +14,7 @@ export default function LoginPage() {
     password: ''
   })
   const [keepLogin, setKeepLogin] = useState(false)
+  const router = useRouter()
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -106,6 +108,7 @@ export default function LoginPage() {
                 type="button" 
                 variant="outline" 
                 className="w-full"
+                onClick={() => router.push('/join')}
               >
                 회원가입
               </Button>
