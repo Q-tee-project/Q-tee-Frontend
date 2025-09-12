@@ -31,7 +31,7 @@ const Sidebar = () => {
     <div
       className="bg-white h-screen flex flex-col border-r border-[#D1D1D1] transition-all duration-300"
     >
-      <div className="p-5 flex-1 flex flex-col gap-4">
+      <div className="p-2.5 flex-1 flex flex-col gap-4">
         {/* Toggle Button */}
         <div className="flex items-center">
           <button

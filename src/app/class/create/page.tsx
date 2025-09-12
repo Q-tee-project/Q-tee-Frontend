@@ -337,10 +337,10 @@ export default function ClassCreatePage() {
               resetForm();
               setIsModalOpen(true);
             }}
-            className="bg-blue-600 text-white px-6 py-3 rounded-lg 
-                       hover:bg-blue-700 transition-colors font-medium"
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg 
+                       hover:bg-blue-700 transition-colors text-sm font-medium"
           >
-            신규 수업 생성하기
+            수업 생성
           </button>
         </div>
 
@@ -454,7 +454,7 @@ export default function ClassCreatePage() {
                     </TableCell>
                     <TableCell 
                       className="whitespace-nowrap text-sm font-medium cursor-pointer"
-                      onClick={() => router.push(`/class/${classItem.id}`)}
+                      onClick={() => router.push(`/class/${classItem.id}?school=${encodeURIComponent(classItem.school)}&grade=${encodeURIComponent(classItem.grade)}`)}
                     >
                       <div className="flex items-center justify-center text-sm text-gray-600 hover:text-blue-600">
                         {classItem.name}
@@ -462,7 +462,7 @@ export default function ClassCreatePage() {
                     </TableCell>
                     <TableCell 
                       className="whitespace-nowrap cursor-pointer"
-                      onClick={() => router.push(`/class/${classItem.id}`)}
+                      onClick={() => router.push(`/class/${classItem.id}?school=${encodeURIComponent(classItem.school)}&grade=${encodeURIComponent(classItem.grade)}`)}
                     >
                       <div className="flex items-center justify-center">
                         <Badge 
@@ -483,7 +483,7 @@ export default function ClassCreatePage() {
                     </TableCell>
                     <TableCell 
                       className="whitespace-nowrap cursor-pointer"
-                      onClick={() => router.push(`/class/${classItem.id}`)}
+                      onClick={() => router.push(`/class/${classItem.id}?school=${encodeURIComponent(classItem.school)}&grade=${encodeURIComponent(classItem.grade)}`)}
                     >
                       <div className="flex items-center justify-center">
                         <Badge 
@@ -504,7 +504,7 @@ export default function ClassCreatePage() {
                     </TableCell>
                     <TableCell 
                       className="whitespace-nowrap text-sm cursor-pointer"
-                      onClick={() => router.push(`/class/${classItem.id}`)}
+                      onClick={() => router.push(`/class/${classItem.id}?school=${encodeURIComponent(classItem.school)}&grade=${encodeURIComponent(classItem.grade)}`)}
                     >
                       <div className="flex items-center justify-center text-sm text-gray-600 hover:text-blue-600">
                         {(() => {
@@ -518,7 +518,7 @@ export default function ClassCreatePage() {
                     </TableCell>
                     <TableCell 
                       className="whitespace-nowrap text-sm cursor-pointer"
-                      onClick={() => router.push(`/class/${classItem.id}`)}
+                      onClick={() => router.push(`/class/${classItem.id}?school=${encodeURIComponent(classItem.school)}&grade=${encodeURIComponent(classItem.grade)}`)}
                     >
                       <div className="flex items-center justify-center text-sm text-gray-600 hover:text-blue-600">
                         총 {classItem.studentCount}명
