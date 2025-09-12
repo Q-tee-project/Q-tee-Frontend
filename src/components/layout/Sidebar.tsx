@@ -35,7 +35,7 @@ const Sidebar = () => {
       animate={{ width: isOpen ? '240px' : '80px' }}
       transition={{ duration: 0.3, ease: 'easeInOut' }}
     >
-      <div className="p-5 flex-1 flex flex-col gap-4">
+      <div className="p-2.5 flex-1 flex flex-col gap-4">
         {/* Toggle Button */}
         <div className="flex items-center">
           <motion.button

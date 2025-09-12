@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import React, { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { FiArrowLeft, FiChevronDown } from "react-icons/fi"
 import { IoIosClose } from "react-icons/io"
 import { Badge } from '@/components/ui/badge'
@@ -38,6 +38,7 @@ import {
 export default function ClassDetailPage() {
   const [activeTab, setActiveTab] = useState('assignment')
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [selectAll, setSelectAll] = useState(false)
   const [selectedRows, setSelectedRows] = useState<boolean[]>(Array(3).fill(false))
   const [isStudentModalOpen, setIsStudentModalOpen] = useState(false)
@@ -77,6 +78,45 @@ export default function ClassDetailPage() {
   const [selectedApprovals, setSelectedApprovals] = useState<boolean[]>(Array(2).fill(false))
   const [isApprovalModalOpen, setIsApprovalModalOpen] = useState(false)
   const [approvingStudentIndex, setApprovingStudentIndex] = useState<number | null>(null)
+  const [isResendModalOpen, setIsResendModalOpen] = useState(false)
+  const [resendingStudentIndex, setResendingStudentIndex] = useState<number | null>(null)
+  const [assignmentFormErrors, setAssignmentFormErrors] = useState({
+    title: false,
+    dueDate: false
+  })
+  
+  // 클래스 정보 (URL 파라미터에서 가져옴)
+  const [classInfo, setClassInfo] = useState({
+    school: '고등학교',
+    grade: '1학년'
+  })
+
+  // URL 파라미터에서 클래스 정보 가져오기
+  useEffect(() => {
+    const school = searchParams.get('school')
+    const grade = searchParams.get('grade')
+    
+    if (school && grade) {
+      setClassInfo({
+        school: decodeURIComponent(school),
+        grade: decodeURIComponent(grade)
+      })
+    }
+  }, [searchParams])
+
+  // 클래스 정보가 변경될 때마다 학생 목록 필터링
+  useEffect(() => {
+    setStudentResults(
+      allStudents.filter(student => 
+        student.school === classInfo.school && student.grade === classInfo.grade
+      )
+    )
+    setApprovalStudents(
+      allApprovalStudents.filter(student => 
+        student.school === classInfo.school && student.grade === classInfo.grade
+      )
+    )
+  }, [classInfo.school, classInfo.grade])
 
   const handleSelectAll = (checked: boolean) => {
     setSelectAll(checked)
@@ -93,20 +133,7 @@ export default function ClassDetailPage() {
     setSelectAll(allSelected)
   }
 
-  const handleAssignmentSelectAll = (checked: boolean) => {
-    setAssignmentSelectAll(checked)
-    setSelectedAssignments(Array(3).fill(checked))
-  }
-
-  const handleAssignmentRowSelect = (index: number, checked: boolean) => {
-    const newSelectedAssignments = [...selectedAssignments]
-    newSelectedAssignments[index] = checked
-    setSelectedAssignments(newSelectedAssignments)
-    
-    // 모든 행이 선택되었는지 확인
-    const allSelected = newSelectedAssignments.every(selected => selected)
-    setAssignmentSelectAll(allSelected)
-  }
+  // 과제 선택 관련 함수들 (라디오 버튼으로 단일 선택만 가능)
 
   const handleStudentSelectAll = (checked: boolean) => {
     setStudentSelectAll(checked)
@@ -136,6 +163,28 @@ export default function ClassDetailPage() {
     // 모든 행이 선택되었는지 확인
     const allSelected = newSelectedApprovals.every(selected => selected)
     setApprovalSelectAll(allSelected)
+  }
+
+  // 메일 재전송 모달 관련 함수들
+  const handleResendModalOpen = (index: number) => {
+    setResendingStudentIndex(index)
+    setIsResendModalOpen(true)
+  }
+
+  const handleResendModalClose = () => {
+    setIsResendModalOpen(false)
+    setResendingStudentIndex(null)
+  }
+
+  const handleEmailResend = () => {
+    if (resendingStudentIndex === null) {
+      return
+    }
+
+    // 메일 재전송 로직 (실제로는 API 호출)
+    alert('메일이 재전송되었습니다.')
+    
+    handleResendModalClose()
   }
 
   // 승인 모달 관련 함수들
@@ -213,25 +262,23 @@ export default function ClassDetailPage() {
       return
     }
 
-    // 새로운 학생 데이터 생성
-    const newStudent = {
+    // 새로운 승인 대기 학생 데이터 생성 (메일 전송 상태)
+    const newApprovalStudent = {
       name: studentFormData.name,
-      school: studentFormData.school,
-      grade: studentFormData.grade,
-      status: '미완료',
-      score: '-',
-      timeTaken: '-',
-      completionDate: '-',
+      school: classInfo.school,
+      grade: classInfo.grade,
+      schoolName: classInfo.school === '중학교' ? '진건중학교' : '진건고등학교',
       email: studentFormData.email,
       studentPhone: studentFormData.studentPhone,
-      parentPhone: studentFormData.parentPhone
+      parentPhone: studentFormData.parentPhone,
+      status: '메일 전송'
     }
 
-    // 학생 목록에 추가
-    setStudentResults([...studentResults, newStudent])
+    // 승인 대기 목록에 추가
+    setApprovalStudents([...approvalStudents, newApprovalStudent])
     
-    // selectedRows 배열 크기 조정
-    setSelectedRows([...selectedRows, false])
+    // selectedApprovals 배열 크기 조정
+    setSelectedApprovals([...selectedApprovals, false])
     
     handleStudentModalClose()
   }
@@ -245,8 +292,8 @@ export default function ClassDetailPage() {
       email: student.email,
       studentPhone: student.studentPhone,
       parentPhone: student.parentPhone,
-      school: student.school,
-      grade: student.grade
+      school: classInfo.school, // 클래스의 학교 정보로 고정
+      grade: classInfo.grade    // 클래스의 학년 정보로 고정
     })
     setIsEditModalOpen(true)
   }
@@ -259,8 +306,8 @@ export default function ClassDetailPage() {
       email: '',
       studentPhone: '',
       parentPhone: '',
-      school: '중학교',
-      grade: '1학년'
+      school: classInfo.school, // 클래스의 학교 정보로 초기화
+      grade: classInfo.grade    // 클래스의 학년 정보로 초기화
     })
   }
 
@@ -289,8 +336,8 @@ export default function ClassDetailPage() {
       email: editFormData.email,
       studentPhone: editFormData.studentPhone,
       parentPhone: editFormData.parentPhone,
-      school: editFormData.school,
-      grade: editFormData.grade
+      school: classInfo.school, // 클래스의 학교 정보로 고정
+      grade: classInfo.grade    // 클래스의 학년 정보로 고정
     }
     
     setStudentResults(updatedStudents)
@@ -334,13 +381,29 @@ export default function ClassDetailPage() {
       title: '',
       dueDate: ''
     })
+    setAssignmentFormErrors({
+      title: false,
+      dueDate: false
+    })
   }
 
   const handleAssignmentRegistration = () => {
+    // 에러 상태 초기화
+    setAssignmentFormErrors({ title: false, dueDate: false })
+    
+    let hasError = false
+    
+    // 입력 검증
     if (assignmentFormData.title.trim() === '') {
-      return
+      setAssignmentFormErrors(prev => ({ ...prev, title: true }))
+      hasError = true
     }
     if (assignmentFormData.dueDate.trim() === '') {
+      setAssignmentFormErrors(prev => ({ ...prev, dueDate: true }))
+      hasError = true
+    }
+    
+    if (hasError) {
       return
     }
 
@@ -351,8 +414,16 @@ export default function ClassDetailPage() {
 
   const handleAssignmentSelectModalClose = () => {
     setIsAssignmentSelectModalOpen(false)
-    setAssignmentSelectAll(false)
     setSelectedAssignments(Array(3).fill(false))
+    // 과제 등록 모달로 돌아갈 때 폼 데이터 초기화
+    setAssignmentFormData({
+      title: '',
+      dueDate: ''
+    })
+    setAssignmentFormErrors({
+      title: false,
+      dueDate: false
+    })
   }
 
   const handleAssignmentToStudentSelect = () => {
@@ -365,6 +436,15 @@ export default function ClassDetailPage() {
     setIsStudentSelectModalOpen(false)
     setStudentSelectAll(false)
     setSelectedStudents(Array(studentResults.length).fill(false))
+    // 과제 등록 모달로 돌아갈 때 폼 데이터 초기화
+    setAssignmentFormData({
+      title: '',
+      dueDate: ''
+    })
+    setAssignmentFormErrors({
+      title: false,
+      dueDate: false
+    })
   }
 
   const handleAssignmentFinalRegistration = () => {
@@ -374,11 +454,11 @@ export default function ClassDetailPage() {
     const newAssignment = {
       id: assignments.length + 1,
       title: assignmentFormData.title,
-      dueDate: assignmentFormData.dueDate,
+      dueDate: assignmentFormData.dueDate.replace('T', ' '), // T를 공백으로 변경
       students: selectedStudentData.map(student => ({
         name: student.name,
-        school: student.school,
-        grade: student.grade,
+        school: classInfo.school, // 클래스의 학교 정보로 고정
+        grade: classInfo.grade,   // 클래스의 학년 정보로 고정
         status: '미완료',
         score: '-',
         timeTaken: '-',
@@ -398,50 +478,41 @@ export default function ClassDetailPage() {
     handleStudentSelectModalClose()
   }
 
-  // 과제 데이터
+  // 과제 데이터 (클래스의 학교와 학년에 맞는 학생들만 포함)
   const [assignments, setAssignments] = useState([
     {
       id: 1,
       title: '수학 1단원',
-      dueDate: '2025.09.02 15:00',
+      dueDate: '2025-09-02 15:00',
       students: [
         {
-          name: '이윤진',
-          school: '고등학교',
+          name: '김중1',
+          school: '중학교',
           grade: '1학년',
           status: '완료',
-          score: '80점',
-          timeTaken: '45분',
+          score: '88점',
+          timeTaken: '35분',
           completionDate: '2025.09.02 15:00:00'
         },
         {
-          name: '김민수',
-          school: '고등학교',
-          grade: '2학년',
+          name: '이중1',
+          school: '중학교',
+          grade: '1학년',
           status: '미완료',
           score: '-',
           timeTaken: '-',
           completionDate: '-'
-        },
-        {
-          name: '박지영',
-          school: '중학교',
-          grade: '3학년',
-          status: '완료',
-          score: '95점',
-          timeTaken: '30분',
-          completionDate: '2025.09.01 14:30:00'
         }
       ]
     },
     {
       id: 2,
       title: '영어 문법, 독해',
-      dueDate: '2025.09.05 18:00',
+      dueDate: '2025-09-05 18:00',
       students: [
         {
-          name: '이윤진',
-          school: '고등학교',
+          name: '김중1',
+          school: '중학교',
           grade: '1학년',
           status: '완료',
           score: '85점',
@@ -449,18 +520,9 @@ export default function ClassDetailPage() {
           completionDate: '2025.09.03 10:15:00'
         },
         {
-          name: '김민수',
-          school: '고등학교',
-          grade: '2학년',
-          status: '미완료',
-          score: '-',
-          timeTaken: '-',
-          completionDate: '-'
-        },
-        {
-          name: '박지영',
+          name: '이중1',
           school: '중학교',
-          grade: '3학년',
+          grade: '1학년',
           status: '미완료',
           score: '-',
           timeTaken: '-',
@@ -471,11 +533,11 @@ export default function ClassDetailPage() {
     {
       id: 3,
       title: '국어 시 / 소설',
-      dueDate: '2025.09.01 12:00',
+      dueDate: '2025-09-01 12:00',
       students: [
         {
-          name: '이윤진',
-          school: '고등학교',
+          name: '김중1',
+          school: '중학교',
           grade: '1학년',
           status: '완료',
           score: '90점',
@@ -483,18 +545,9 @@ export default function ClassDetailPage() {
           completionDate: '2025.08.31 16:45:00'
         },
         {
-          name: '김민수',
-          school: '고등학교',
-          grade: '2학년',
-          status: '완료',
-          score: '75점',
-          timeTaken: '55분',
-          completionDate: '2025.08.31 17:30:00'
-        },
-        {
-          name: '박지영',
+          name: '이중1',
           school: '중학교',
-          grade: '3학년',
+          grade: '1학년',
           status: '완료',
           score: '88점',
           timeTaken: '50분',
@@ -504,69 +557,239 @@ export default function ClassDetailPage() {
     }
   ])
 
-  // 샘플 데이터
-  const [studentResults, setStudentResults] = useState([
+  // 전체 학생 데이터 (학교와 학년별로 세분화)
+  const allStudents = [
+    // 중학교 1학년
     {
-      name: '이윤진',
+      name: '김중1',
+      school: '중학교',
+      grade: '1학년',
+      status: '완료',
+      score: '88점',
+      timeTaken: '35분',
+      completionDate: '2025.09.02 15:00:00',
+      email: 'middle1_1@naver.com',
+      studentPhone: '010-1111-1111',
+      parentPhone: '010-2222-2222'
+    },
+    {
+      name: '이중1',
+      school: '중학교',
+      grade: '1학년',
+      status: '미완료',
+      score: '-',
+      timeTaken: '-',
+      completionDate: '-',
+      email: 'middle1_2@naver.com',
+      studentPhone: '010-3333-3333',
+      parentPhone: '010-4444-4444'
+    },
+    // 중학교 2학년
+    {
+      name: '박중2',
+      school: '중학교',
+      grade: '2학년',
+      status: '완료',
+      score: '95점',
+      timeTaken: '30분',
+      completionDate: '2025.09.01 14:30:00',
+      email: 'middle2_1@naver.com',
+      studentPhone: '010-5555-5555',
+      parentPhone: '010-6666-6666'
+    },
+    {
+      name: '최중2',
+      school: '중학교',
+      grade: '2학년',
+      status: '미완료',
+      score: '-',
+      timeTaken: '-',
+      completionDate: '-',
+      email: 'middle2_2@naver.com',
+      studentPhone: '010-7777-7777',
+      parentPhone: '010-8888-8888'
+    },
+    // 중학교 3학년
+    {
+      name: '정중3',
+      school: '중학교',
+      grade: '3학년',
+      status: '완료',
+      score: '92점',
+      timeTaken: '25분',
+      completionDate: '2025.09.01 16:00:00',
+      email: 'middle3_1@naver.com',
+      studentPhone: '010-9999-9999',
+      parentPhone: '010-0000-0000'
+    },
+    // 고등학교 1학년
+    {
+      name: '김고1',
       school: '고등학교',
       grade: '1학년',
       status: '완료',
-      score: '80점',
-      timeTaken: '45분',
+      score: '85점',
+      timeTaken: '40분',
       completionDate: '2025.09.02 15:00:00',
-      email: 'test@naver.com',
-      studentPhone: '010-1111-2222',
-      parentPhone: '010-1111-2222'
+      email: 'high1_1@naver.com',
+      studentPhone: '010-1234-5678',
+      parentPhone: '010-2345-6789'
     },
     {
-      name: '이윤진',
+      name: '이고1',
       school: '고등학교',
       grade: '1학년',
       status: '미완료',
-      score: '80점',
-      timeTaken: '45분',
-      completionDate: '2025.09.02 15:00:00',
-      email: 'test@naver.com',
-      studentPhone: '010-1111-2222',
-      parentPhone: '010-1111-2222'
+      score: '-',
+      timeTaken: '-',
+      completionDate: '-',
+      email: 'high1_2@naver.com',
+      studentPhone: '010-3456-7890',
+      parentPhone: '010-4567-8901'
+    },
+    // 고등학교 2학년
+    {
+      name: '박고2',
+      school: '고등학교',
+      grade: '2학년',
+      status: '완료',
+      score: '90점',
+      timeTaken: '35분',
+      completionDate: '2025.09.01 14:30:00',
+      email: 'high2_1@naver.com',
+      studentPhone: '010-5678-9012',
+      parentPhone: '010-6789-0123'
     },
     {
-      name: '이윤진',
+      name: '최고2',
       school: '고등학교',
-      grade: '1학년',
-      status: '완료',
-      score: '80점',
-      timeTaken: '45분',
-      completionDate: '2025.09.02 15:00:00',
-      email: 'test@naver.com',
-      studentPhone: '010-1111-2222',
-      parentPhone: '010-1111-2222'
-    }
-  ])
-
-  // 승인 대기 학생 데이터
-  const [approvalStudents, setApprovalStudents] = useState([
+      grade: '2학년',
+      status: '미완료',
+      score: '-',
+      timeTaken: '-',
+      completionDate: '-',
+      email: 'high2_2@naver.com',
+      studentPhone: '010-7890-1234',
+      parentPhone: '010-8901-2345'
+    },
+    // 고등학교 3학년
     {
-      name: '이문진',
+      name: '정고3',
       school: '고등학교',
+      grade: '3학년',
+      status: '완료',
+      score: '95점',
+      timeTaken: '30분',
+      completionDate: '2025.09.01 16:30:00',
+      email: 'high3_1@naver.com',
+      studentPhone: '010-9012-3456',
+      parentPhone: '010-0123-4567'
+    }
+  ]
+
+  // 클래스의 학교와 학년에 맞는 학생들만 필터링
+  const [studentResults, setStudentResults] = useState(
+    allStudents.filter(student => 
+      student.school === classInfo.school && student.grade === classInfo.grade
+    )
+  )
+
+  // 전체 승인 대기 학생 데이터 (학교와 학년별로 세분화)
+  const allApprovalStudents = [
+    // 중학교 1학년 승인 대기
+    {
+      name: '이중1승인',
+      school: '중학교',
       grade: '1학년',
-      schoolName: '이용진',
-      email: 'test@naver.com',
-      studentPhone: '010-1111-2222',
-      parentPhone: '010-3333-4444',
+      schoolName: '진건중학교',
+      email: 'middle1_approval1@naver.com',
+      studentPhone: '010-7777-7777',
+      parentPhone: '010-8888-8888',
       status: '승인 대기'
     },
     {
-      name: '김민수',
+      name: '김중1승인',
+      school: '중학교',
+      grade: '1학년',
+      schoolName: '진건중학교',
+      email: 'middle1_approval2@naver.com',
+      studentPhone: '010-9999-9999',
+      parentPhone: '010-0000-0000',
+      status: '메일 전송'
+    },
+    // 중학교 2학년 승인 대기
+    {
+      name: '박중2승인',
       school: '중학교',
       grade: '2학년',
       schoolName: '진건중학교',
-      email: 'minsu@naver.com',
-      studentPhone: '010-5555-6666',
-      parentPhone: '010-7777-8888',
+      email: 'middle2_approval1@naver.com',
+      studentPhone: '010-1111-1111',
+      parentPhone: '010-2222-2222',
       status: '승인 대기'
+    },
+    // 중학교 3학년 승인 대기
+    {
+      name: '최중3승인',
+      school: '중학교',
+      grade: '3학년',
+      schoolName: '진건중학교',
+      email: 'middle3_approval1@naver.com',
+      studentPhone: '010-3333-3333',
+      parentPhone: '010-4444-4444',
+      status: '메일 전송'
+    },
+    // 고등학교 1학년 승인 대기
+    {
+      name: '이고1승인',
+      school: '고등학교',
+      grade: '1학년',
+      schoolName: '진건고등학교',
+      email: 'high1_approval1@naver.com',
+      studentPhone: '010-5555-5555',
+      parentPhone: '010-6666-6666',
+      status: '승인 대기'
+    },
+    {
+      name: '김고1승인',
+      school: '고등학교',
+      grade: '1학년',
+      schoolName: '진건고등학교',
+      email: 'high1_approval2@naver.com',
+      studentPhone: '010-7777-7777',
+      parentPhone: '010-8888-8888',
+      status: '메일 전송'
+    },
+    // 고등학교 2학년 승인 대기
+    {
+      name: '박고2승인',
+      school: '고등학교',
+      grade: '2학년',
+      schoolName: '진건고등학교',
+      email: 'high2_approval1@naver.com',
+      studentPhone: '010-9999-9999',
+      parentPhone: '010-0000-0000',
+      status: '승인 대기'
+    },
+    // 고등학교 3학년 승인 대기
+    {
+      name: '정고3승인',
+      school: '고등학교',
+      grade: '3학년',
+      schoolName: '진건고등학교',
+      email: 'high3_approval1@naver.com',
+      studentPhone: '010-1111-2222',
+      parentPhone: '010-3333-4444',
+      status: '메일 전송'
     }
-  ])
+  ]
+
+  // 클래스의 학교와 학년에 맞는 승인 대기 학생들만 필터링
+  const [approvalStudents, setApprovalStudents] = useState(
+    allApprovalStudents.filter(student => 
+      student.school === classInfo.school && student.grade === classInfo.grade
+    )
+  )
 
   return (
     <div 
@@ -691,7 +914,7 @@ export default function ClassDetailPage() {
                         <div className="flex items-center justify-between w-full pr-4">
                           <div className="flex flex-col items-start">
                             <div className="text-sm text-gray-500 mb-1">
-                              {assignment.dueDate} 까지
+                              {assignment.dueDate.replace('T', ' ')} 까지
                             </div>
                             <div className="text-base font-medium text-gray-800">
                               {assignment.title}
@@ -785,7 +1008,20 @@ export default function ClassDetailPage() {
                                 </TableCell>
                                 <TableCell className="text-center">
                                   {student.status === '미완료' && (
-                                    <button className="text-blue-600 hover:text-blue-800 text-sm bg-blue-50 px-3 py-1 rounded">
+                                    <button 
+                                      className="text-xs hover:opacity-80 transition-opacity"
+                                      style={{ 
+                                        backgroundColor: '#E6F3FF',
+                                        border: 'none',
+                                        color: '#0085FF',
+                                        padding: '4px 8px',
+                                        minWidth: '70px',
+                                        textAlign: 'center',
+                                        display: 'inline-block',
+                                        borderRadius: '4px',
+                                        cursor: 'pointer'
+                                      }}
+                                    >
                                       과제 재전송
                                     </button>
                                   )}
@@ -1194,30 +1430,57 @@ export default function ClassDetailPage() {
                       </TableCell>
                       <TableCell className="whitespace-nowrap text-sm">
                         <div className="flex items-center justify-center">
-                          <button 
-                            onClick={() => handleApprovalModalOpen(index)}
-                            style={{ 
-                              background: 'none', 
-                              border: 'none', 
-                              padding: '0', 
-                              cursor: 'pointer' 
-                            }}
-                          >
-                            <Badge 
-                              className="text-xs hover:opacity-80 transition-opacity"
+                          {student.status === '메일 전송' ? (
+                            <button 
+                              onClick={() => handleResendModalOpen(index)}
                               style={{ 
-                                backgroundColor: '#FFF0F0',
-                                border: 'none',
-                                color: '#F44336',
-                                padding: '4px 8px',
-                                minWidth: '70px',
-                                textAlign: 'center',
-                                display: 'inline-block'
+                                background: 'none', 
+                                border: 'none', 
+                                padding: '0', 
+                                cursor: 'pointer' 
                               }}
                             >
-                              {student.status}
-                            </Badge>
-                          </button>
+                              <Badge 
+                                className="text-xs hover:opacity-80 transition-opacity"
+                                style={{ 
+                                  backgroundColor: '#F0F9F0',
+                                  border: 'none',
+                                  color: '#4CAF50',
+                                  padding: '4px 8px',
+                                  minWidth: '70px',
+                                  textAlign: 'center',
+                                  display: 'inline-block'
+                                }}
+                              >
+                                메일 전송
+                              </Badge>
+                            </button>
+                          ) : (
+                            <button 
+                              onClick={() => handleApprovalModalOpen(index)}
+                              style={{ 
+                                background: 'none', 
+                                border: 'none', 
+                                padding: '0', 
+                                cursor: 'pointer' 
+                              }}
+                            >
+                              <Badge 
+                                className="text-xs hover:opacity-80 transition-opacity"
+                                style={{ 
+                                  backgroundColor: '#FFF0F0',
+                                  border: 'none',
+                                  color: '#F44336',
+                                  padding: '4px 8px',
+                                  minWidth: '70px',
+                                  textAlign: 'center',
+                                  display: 'inline-block'
+                                }}
+                              >
+                                {student.status}
+                              </Badge>
+                            </button>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell className="whitespace-nowrap text-sm">
@@ -1364,36 +1627,28 @@ export default function ClassDetailPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     학교
                   </label>
-                  <Select 
-                    value={studentFormData.school}
-                    onValueChange={(value) => setStudentFormData({...studentFormData, school: value})}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="학교 선택" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="중학교">중학교</SelectItem>
-                      <SelectItem value="고등학교">고등학교</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <input
+                    type="text"
+                    value={classInfo.school}
+                    readOnly
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg 
+                               bg-gray-50 text-gray-700"
+                  />
+                  <div className="text-xs text-gray-500 mt-1">
+                    {classInfo.school === '중학교' ? `중학교 ${classInfo.grade} 학생만 등록 가능합니다.` : `고등학교 ${classInfo.grade} 학생만 등록 가능합니다.`}
+                  </div>
                 </div>
                 <div className="flex-1">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     학년
                   </label>
-                  <Select 
-                    value={studentFormData.grade}
-                    onValueChange={(value) => setStudentFormData({...studentFormData, grade: value})}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="학년 선택" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1학년">1학년</SelectItem>
-                      <SelectItem value="2학년">2학년</SelectItem>
-                      <SelectItem value="3학년">3학년</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <input
+                    type="text"
+                    value={classInfo.grade}
+                    readOnly
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg 
+                               bg-gray-50 text-gray-700"
+                  />
                 </div>
               </div>
             </div>
@@ -1541,36 +1796,28 @@ export default function ClassDetailPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     학교
                   </label>
-                  <Select 
-                    value={editFormData.school}
-                    onValueChange={(value) => setEditFormData({...editFormData, school: value})}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="학교 선택" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="중학교">중학교</SelectItem>
-                      <SelectItem value="고등학교">고등학교</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <input
+                    type="text"
+                    value={classInfo.school}
+                    readOnly
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg 
+                               bg-gray-50 text-gray-700"
+                  />
+                  <div className="text-xs text-gray-500 mt-1">
+                    {classInfo.school === '중학교' ? `중학교 ${classInfo.grade} 학생만 수정 가능합니다.` : `고등학교 ${classInfo.grade} 학생만 수정 가능합니다.`}
+                  </div>
                 </div>
                 <div className="flex-1">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     학년
                   </label>
-                  <Select 
-                    value={editFormData.grade}
-                    onValueChange={(value) => setEditFormData({...editFormData, grade: value})}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="학년 선택" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1학년">1학년</SelectItem>
-                      <SelectItem value="2학년">2학년</SelectItem>
-                      <SelectItem value="3학년">3학년</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <input
+                    type="text"
+                    value={classInfo.grade}
+                    readOnly
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg 
+                               bg-gray-50 text-gray-700"
+                  />
                 </div>
               </div>
             </div>
@@ -1742,13 +1989,33 @@ export default function ClassDetailPage() {
                 </label>
                 <input
                   type="text"
-                  placeholder="과제를 입력해주세요."
+                  placeholder="과제명을 입력해주세요. (30자 이내)"
                   value={assignmentFormData.title}
-                  onChange={(e) => setAssignmentFormData({...assignmentFormData, title: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg 
+                  onChange={(e) => {
+                    if (e.target.value.length <= 30) {
+                      setAssignmentFormData({...assignmentFormData, title: e.target.value})
+                      // 입력 시 에러 상태 해제
+                      if (assignmentFormErrors.title) {
+                        setAssignmentFormErrors(prev => ({ ...prev, title: false }))
+                      }
+                    }
+                  }}
+                  className={`w-full px-3 py-2 border rounded-lg 
                              focus:outline-none focus:ring-2 focus:ring-blue-500 
-                             focus:border-transparent"
+                             focus:border-transparent ${
+                               assignmentFormErrors.title 
+                                 ? 'border-red-500' 
+                                 : 'border-gray-300'
+                             }`}
                 />
+                <div className={`text-xs mt-1 ${
+                  assignmentFormErrors.title ? 'text-red-500' : 'text-gray-500'
+                }`}>
+                  {assignmentFormErrors.title 
+                    ? '과제명을 입력해주세요.' 
+                    : ''
+                  }
+                </div>
               </div>
 
               {/* 마감일 */}
@@ -1760,11 +2027,34 @@ export default function ClassDetailPage() {
                   type="datetime-local"
                   placeholder="마감일을 선택해주세요."
                   value={assignmentFormData.dueDate}
-                  onChange={(e) => setAssignmentFormData({...assignmentFormData, dueDate: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg 
+                  onChange={(e) => {
+                    setAssignmentFormData({...assignmentFormData, dueDate: e.target.value})
+                    // 입력 시 에러 상태 해제
+                    if (assignmentFormErrors.dueDate) {
+                      setAssignmentFormErrors(prev => ({ ...prev, dueDate: false }))
+                    }
+                  }}
+                  className={`w-full px-3 py-2 border rounded-lg cursor-pointer
                              focus:outline-none focus:ring-2 focus:ring-blue-500 
-                             focus:border-transparent"
+                             focus:border-transparent ${
+                               assignmentFormErrors.dueDate 
+                                 ? 'border-red-500' 
+                                 : 'border-gray-300'
+                             }`}
+                  style={{ 
+                    cursor: 'pointer',
+                    WebkitAppearance: 'none',
+                    MozAppearance: 'textfield'
+                  }}
                 />
+                <div className="text-xs text-gray-500 mt-1">
+                  예: 2025-10-01 21:40
+                </div>
+                {assignmentFormErrors.dueDate && (
+                  <div className="text-xs text-red-500 mt-1">
+                    마감일을 선택해주세요.
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -1826,7 +2116,7 @@ export default function ClassDetailPage() {
         >
           <DialogHeader className="flex flex-row items-center justify-between">
             <DialogTitle className="text-xl font-semibold text-gray-800">
-              과제 등록
+              문제지 선택
             </DialogTitle>
             <button 
               onClick={handleAssignmentSelectModalClose}
@@ -1855,37 +2145,20 @@ export default function ClassDetailPage() {
                   <TableRow className="hover:bg-transparent">
                     <TableHead className="text-left">
                       <div className="flex items-center justify-center">
-                        <Checkbox 
-                          checked={assignmentSelectAll}
-                          onCheckedChange={handleAssignmentSelectAll}
-                          className="data-[state=checked]:bg-[#0085FF] 
-                                     data-[state=checked]:border-[#0085FF]"
-                        />
+                        {/* 전체 선택 체크박스 제거 - 공간 유지 */}
                       </div>
                     </TableHead>
-                    <TableHead className="text-left text-sm font-bold 
-                                          uppercase tracking-wider">
-                      <div className="flex items-center justify-center text-base font-bold" style={{ color: '#666' }}>
-                        학교 / 학년
-                      </div>
+                    <TableHead className="text-center text-sm font-medium">
+                      학교 / 학년
                     </TableHead>
-                    <TableHead className="text-left text-sm font-bold 
-                                          uppercase tracking-wider">
-                      <div className="flex items-center justify-center text-base font-bold" style={{ color: '#666' }}>
-                        제목
-                      </div>
+                    <TableHead className="text-center text-sm font-medium">
+                      제목
                     </TableHead>
-                    <TableHead className="text-left text-sm font-bold 
-                                          uppercase tracking-wider">
-                      <div className="flex items-center justify-center text-base font-bold" style={{ color: '#666' }}>
-                        문제 유형
-                      </div>
+                    <TableHead className="text-center text-sm font-medium">
+                      문제 유형
                     </TableHead>
-                    <TableHead className="text-left text-sm font-bold 
-                                          uppercase tracking-wider">
-                      <div className="flex items-center justify-center text-base font-bold" style={{ color: '#666' }}>
-                        생성일
-                      </div>
+                    <TableHead className="text-center text-sm font-medium">
+                      생성일
                     </TableHead>
                   </TableRow>
                 </TableHeader>
@@ -1916,13 +2189,17 @@ export default function ClassDetailPage() {
                     <TableRow key={index} className="hover:bg-gray-50">
                       <TableCell className="whitespace-nowrap">
                         <div className="flex items-center justify-center">
-                          <Checkbox 
+                          <input
+                            type="radio"
+                            name="assignment"
                             checked={selectedAssignments[index] || false}
-                            onCheckedChange={(checked: boolean) => 
-                              handleAssignmentRowSelect(index, checked)
-                            }
-                            className="data-[state=checked]:bg-[#0085FF] 
-                                       data-[state=checked]:border-[#0085FF]"
+                            onChange={() => {
+                              // 다른 모든 선택 해제하고 현재 것만 선택
+                              const newSelected = Array(3).fill(false)
+                              newSelected[index] = true
+                              setSelectedAssignments(newSelected)
+                            }}
+                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500"
                           />
                         </div>
                       </TableCell>
@@ -1933,7 +2210,7 @@ export default function ClassDetailPage() {
                               className="text-sm"
                               style={{ 
                                 backgroundColor: '#E6F3FF', 
-                                border: '1px solid #0085FF', 
+                                border: 'none', 
                                 color: '#0085FF',
                                 padding: '6px 12px',
                                 minWidth: '60px',
@@ -1947,7 +2224,7 @@ export default function ClassDetailPage() {
                               className="text-sm"
                               style={{ 
                                 backgroundColor: '#f5f5f5', 
-                                border: '1px solid #999999', 
+                                border: 'none', 
                                 color: '#999999',
                                 padding: '6px 12px',
                                 minWidth: '60px',
@@ -1990,6 +2267,7 @@ export default function ClassDetailPage() {
               onClick={() => {
                 setIsAssignmentSelectModalOpen(false)
                 setIsAssignmentModalOpen(true)
+                // 이전 버튼을 눌렀을 때는 폼 데이터 유지
               }}
               className="flex-1"
               style={{
@@ -2042,7 +2320,7 @@ export default function ClassDetailPage() {
         >
           <DialogHeader className="flex flex-row items-center justify-between">
             <DialogTitle className="text-xl font-semibold text-gray-800">
-              과제 등록
+              학생 선택
             </DialogTitle>
             <button 
               onClick={handleStudentSelectModalClose}
@@ -2079,28 +2357,21 @@ export default function ClassDetailPage() {
                         />
                       </div>
                     </TableHead>
-                    <TableHead className="text-left text-sm font-bold 
-                                          uppercase tracking-wider">
-                      <div className="flex items-center justify-center text-base font-bold" style={{ color: '#666' }}>
-                        학교
-                      </div>
+                    <TableHead className="text-center text-sm font-medium">
+                      학교
                     </TableHead>
-                    <TableHead className="text-left text-sm font-bold 
-                                          uppercase tracking-wider">
-                      <div className="flex items-center justify-center text-base font-bold" style={{ color: '#666' }}>
-                        학년
-                      </div>
+                    <TableHead className="text-center text-sm font-medium">
+                      학년
                     </TableHead>
-                    <TableHead className="text-left text-sm font-bold 
-                                          uppercase tracking-wider">
-                      <div className="flex items-center justify-center text-base font-bold" style={{ color: '#666' }}>
-                        이름
-                      </div>
+                    <TableHead className="text-center text-sm font-medium">
+                      이름
                     </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody className="bg-white divide-y divide-gray-200">
-                  {studentResults.map((student, index) => (
+                  {studentResults.filter(student => 
+                    student.school === classInfo.school && student.grade === classInfo.grade
+                  ).map((student, index) => (
                     <TableRow key={index} className="hover:bg-gray-50">
                       <TableCell className="whitespace-nowrap">
                         <div className="flex items-center justify-center">
@@ -2170,6 +2441,7 @@ export default function ClassDetailPage() {
               onClick={() => {
                 setIsStudentSelectModalOpen(false)
                 setIsAssignmentSelectModalOpen(true)
+                // 이전 버튼을 눌렀을 때는 폼 데이터 유지
               }}
               className="flex-1"
               style={{
@@ -2358,6 +2630,90 @@ export default function ClassDetailPage() {
               }}
             >
               승인
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 메일 재전송 확인 모달창 */}
+      <Dialog open={isResendModalOpen} onOpenChange={setIsResendModalOpen}>
+        <DialogContent 
+          className="max-w-md"
+          showCloseButton={false}
+          style={{ 
+            backgroundColor: '#fff', 
+            borderRadius: '5px', 
+            padding: '40px' 
+          }}
+        >
+          <DialogHeader className="flex flex-row items-center justify-between">
+            <DialogTitle className="text-xl font-semibold text-gray-800">
+              메일 재전송
+            </DialogTitle>
+            <button 
+              onClick={handleResendModalClose}
+              style={{ 
+                background: 'none', 
+                border: 'none', 
+                padding: '0', 
+                cursor: 'pointer',
+                color: '#000'
+              }}
+            >
+              <IoIosClose size={32} />
+            </button>
+          </DialogHeader>
+
+          {/* modal-body */}
+          <div className="space-y-4">
+            <div className="py-4">
+              <div className="text-sm text-gray-600 mb-3">
+                {resendingStudentIndex !== null && approvalStudents[resendingStudentIndex]?.name}님에게
+              </div>
+              <div className="text-sm text-gray-600 mb-3">
+                클래스 참여 안내 메일을 재전송하시겠습니까?
+              </div>
+              <div className="text-sm text-gray-600">
+                재전송을 원하시면 <span className="text-blue-600 font-medium">[재전송]</span> 버튼을 눌러주세요.
+              </div>
+            </div>
+          </div>
+
+          {/* 구분선 */}
+          <div style={{ borderTop: '1px solid #e1e1e1', margin: '10px 0px' }}></div>
+
+          <DialogFooter className="flex gap-4">
+            <button 
+              onClick={handleResendModalClose}
+              className="flex-1"
+              style={{
+                background: '#F5F5F5',
+                border: 'none',
+                borderRadius: '5px',
+                padding: '10px 16px',
+                cursor: 'pointer',
+                color: '#666',
+                fontSize: '14px',
+                fontWeight: '500'
+              }}
+            >
+              취소
+            </button>
+            <button 
+              onClick={handleEmailResend}
+              className="flex-1"
+              style={{
+                background: '#0072CE',
+                border: 'none',
+                borderRadius: '5px',
+                padding: '10px 16px',
+                cursor: 'pointer',
+                color: '#fff',
+                fontSize: '14px',
+                fontWeight: '500'
+              }}
+            >
+              재전송
             </button>
           </DialogFooter>
         </DialogContent>
