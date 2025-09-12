@@ -1,405 +1,410 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Image from 'next/image';
+import { PageHeader } from '@/components/layout/PageHeader';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { PlusCircle } from 'lucide-react';
+import KoreanGenerator from '@/components/subjects/KoreanGenerator';
+import EnglishGenerator from '@/components/subjects/EnglishGenerator';
+import MathGenerator from '@/components/subjects/MathGenerator';
+import { LaTeXRenderer } from '@/components/LaTeXRenderer';
 
 const SUBJECTS = ['국어', '영어', '수학'];
-const SCHOOL_OPTIONS = ['중학교', '고등학교'];
-const GRADE_OPTIONS = ['1학년', '2학년', '3학년'];
-const SEMESTER_OPTIONS = ['1학기', '2학기'];
-const DIFFICULTY = ['전체', '상', '중', '하'];
-const KOREAN_TYPES = ['전체', '시', '소설', '수필 / 비문학', '말하기 / 듣기 / 쓰기 / 매체', '문법'];
-const ENGLISH_MATH_TYPES = ['전체', '객관식', '서술형', '단답형'];
-const QUESTION_COUNTS = [10, 20];
 
 export default function CreatePage() {
   const [subject, setSubject] = useState<string>('');
-  const [school, setSchool] = useState<string>('');
-  const [grade, setGrade] = useState<string>('');
-  const [semester, setSemester] = useState<string>('');
-  const [type, setType] = useState<string>(''); // 기본 선택 해제
-  const [difficulty, setDifficulty] = useState<string>(''); // 기본 선택 해제
-  const [requirements, setRequirements] = useState<string>('');
-  const [questionCount, setQuestionCount] = useState<number | null>(null);
 
   // 미리보기용 목업 데이터 타입/상태
   type PreviewQuestion = {
     id: number;
     title: string;
-    options: string[];
-    answerIndex: number;
+    options?: string[];
+    answerIndex?: number;
     explanation: string;
+    correct_answer?: string;
+    choices?: string[];
+    question?: string;
   };
   const [previewTitle, setPreviewTitle] = useState('');
   const [previewQuestions, setPreviewQuestions] = useState<PreviewQuestion[]>([]);
+  // 문제 생성 페이지는 열람만 가능 (편집 기능 제거)
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generationProgress, setGenerationProgress] = useState(0);
 
-  // 전체(비율) 설정 모달 - 문제 유형
-  const [isTypeRatioOpen, setIsTypeRatioOpen] = useState(false);
-  const [typeRatios, setTypeRatios] = useState<Record<string, number>>({});
-  const [ratioError, setRatioError] = useState<string>('');
+  // 수학 문제 생성 API 호출
+  const generateMathProblems = async (requestData: any) => {
+    try {
+      setIsGenerating(true);
+      setGenerationProgress(0);
+      setPreviewQuestions([]);
 
-  // 전체(비율) 설정 모달 - 난이도
-  const [isDiffRatioOpen, setIsDiffRatioOpen] = useState(false);
-  const [diffRatios, setDiffRatios] = useState<Record<string, number>>({ 상: 0, 중: 0, 하: 0 });
-  const [diffError, setDiffError] = useState<string>('');
+      console.log('🚀 문제 생성 요청 데이터:', requestData);
 
-  const chipBase = 'px-3 py-1 rounded-md border-2 text-sm';
-  const chipSelected = 'border-blue-500 bg-blue-50 text-blue-600';
-  const chipUnselected = 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50';
+      // 문제 생성 API 호출
+      const response = await fetch('http://localhost:8001/api/math-generation/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestData),
+      });
 
-  const getTypeOptions = () => {
-    if (subject === '국어') return KOREAN_TYPES;
-    if (subject === '영어' || subject === '수학') return ENGLISH_MATH_TYPES;
-    return [];
+      if (!response.ok) {
+        const errorData = await response.text();
+        console.error('❌ API 응답 오류:', response.status, errorData);
+        throw new Error(`문제 생성 요청 실패: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      // 진행 상황 폴링
+      await pollTaskStatus(data.task_id);
+    } catch (error) {
+      console.error('문제 생성 오류:', error);
+      alert('문제 생성 중 오류가 발생했습니다.');
+      setIsGenerating(false);
+    }
   };
 
-  // 현재 과목 유형(전체 제외)
-  const currentTypes = getTypeOptions().filter((t) => t !== '전체');
-  const ratioSum = currentTypes.reduce((sum, t) => sum + (typeRatios[t] || 0), 0);
-  const diffSum = ['상','중','하'].reduce((s, k) => s + (diffRatios[k] || 0), 0);
+  // 태스크 상태 폴링
+  const pollTaskStatus = async (taskId: string) => {
+    let attempts = 0;
+    const maxAttempts = 120; // 2분 최대 대기
 
-  const isReadyToGenerate =
-    subject &&
-    school &&
-    grade &&
-    semester &&
-    type &&
-    difficulty &&
-    questionCount !== null &&
-    (type !== '전체' ? true : ratioSum === 100) &&
-    (difficulty !== '전체' ? true : diffSum === 100);
+    const poll = async () => {
+      try {
+        const response = await fetch(`http://localhost:8001/api/math-generation/tasks/${taskId}`);
+        const data = await response.json();
 
-  // 예시 문제 생성
-  const generateMock = () => {
-    const cnt = Math.min(questionCount ?? 2, 5);
-    const base = `${subject} · ${school} ${grade} ${semester} · ${type} · ${difficulty}`;
-    const q: PreviewQuestion[] = Array.from({ length: cnt }).map((_, i) => ({
-      id: i + 1,
-      title: `문제 ${i + 1}. ${base} 관련 예시 질문입니다.`,
-      options: ['travel - 여행하다', 'apple - 사과', 'book - 책', 'sky - 하늘', 'music - 음악'],
-      answerIndex: 1, // 2번 정답
-      explanation:
-        '해설 텍스트 해설 텍스트 해설 텍스트 해설 텍스트 해설 텍스트 해설 텍스트 해설 텍스트.',
-    }));
-    setPreviewTitle(`${subject} ${type} 예시 문제`);
-    setPreviewQuestions(q);
+        if (data.status === 'PROGRESS') {
+          setGenerationProgress(Math.round((data.current / data.total) * 100));
+        } else if (data.status === 'SUCCESS') {
+          // 성공 시 워크시트 상세 조회
+          if (data.result && data.result.worksheet_id) {
+            await fetchWorksheetResult(data.result.worksheet_id);
+          }
+          return;
+        } else if (data.status === 'FAILURE') {
+          throw new Error(data.error || '문제 생성 실패');
+        }
+
+        attempts++;
+        if (attempts < maxAttempts) {
+          setTimeout(poll, 1000); // 1초 후 재시도
+        } else {
+          throw new Error('문제 생성 시간 초과');
+        }
+      } catch (error) {
+        console.error('태스크 상태 확인 오류:', error);
+        alert('문제 생성 중 오류가 발생했습니다.');
+        setIsGenerating(false);
+      }
+    };
+
+    await poll();
+  };
+
+  // 워크시트 결과 조회
+  const fetchWorksheetResult = async (worksheetId: number) => {
+    try {
+      const response = await fetch(
+        `http://localhost:8001/api/math-generation/worksheets/${worksheetId}`,
+      );
+      const data = await response.json();
+
+      if (data.problems) {
+        // 백엔드 데이터를 프론트엔드 형식으로 변환
+        const convertedQuestions: PreviewQuestion[] = data.problems.map((problem: any) => ({
+          id: problem.id,
+          title: problem.question,
+          options: problem.choices ? problem.choices : undefined,
+          answerIndex: problem.choices
+            ? problem.choices.findIndex((choice: string) => choice === problem.correct_answer)
+            : undefined,
+          correct_answer: problem.correct_answer,
+          explanation: problem.explanation,
+          question: problem.question,
+          choices: problem.choices,
+        }));
+
+        setPreviewQuestions(convertedQuestions);
+        setPreviewTitle(`수학 문제 - ${data.worksheet.unit_name} ${data.worksheet.chapter_name}`);
+      }
+    } catch (error) {
+      console.error('워크시트 조회 오류:', error);
+      alert('워크시트를 불러오는 중 오류가 발생했습니다.');
+    } finally {
+      setIsGenerating(false);
+      setGenerationProgress(100);
+    }
+  };
+
+  // 과목별 문제 생성 핸들러
+  const handleGenerate = (data: any) => {
+    if (subject === '수학') {
+      generateMathProblems(data);
+    } else {
+      // 국어, 영어는 임시 목업 생성
+      generateMockProblems(data);
+    }
+  };
+
+  // 목업 문제 생성 (국어, 영어용)
+  const generateMockProblems = async (data: any) => {
+    setIsGenerating(true);
+    setGenerationProgress(0);
+    setPreviewQuestions([]);
+
+    const cnt = Math.min(data.questionCount ?? 2, 5);
+
+    // 제목 설정
+    setPreviewTitle(`${data.subject} 예시 문제`);
+
+    // 문제들 생성
+    const questions: PreviewQuestion[] = [];
+    for (let i = 0; i < cnt; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 800)); // 문제 간 지연
+
+      const newQuestion: PreviewQuestion = {
+        id: i + 1,
+        title: `문제 ${i + 1}. ${data.subject} 관련 예시 질문입니다.`,
+        options: ['선택지 1', '선택지 2', '선택지 3', '선택지 4', '선택지 5'],
+        answerIndex: 1,
+        explanation:
+          '해설 텍스트 해설 텍스트 해설 텍스트 해설 텍스트 해설 텍스트 해설 텍스트 해설 텍스트.',
+      };
+
+      questions.push(newQuestion);
+      setPreviewQuestions([...questions]);
+      setGenerationProgress(((i + 1) / cnt) * 100);
+    }
+
+    setIsGenerating(false);
   };
 
   return (
-    <div className="flex min-h-screen bg-gray-100 p-10">
-      <div className="w-[400px] bg-white p-6 rounded shadow">
-        {/* 과목 선택 */}
-        <div className="mb-4">
-          <div className="mb-2 font-semibold">과목 선택</div>
-          <div className="flex gap-2">
-            {SUBJECTS.map((s) => (
-              <button
-                key={s}
-                onClick={() => {
-                  setSubject(s);
-                  setType('');            // 과목 변경 시 초기화
-                  setTypeRatios({});      // 유형 비율 초기화
-                }}
-                className={`${chipBase} ${subject === s ? chipSelected : chipUnselected}`}
-              >
-                {s}
-              </button>
-            ))}
-          </div>
-        </div>
+    <div className="min-h-screen flex flex-col">
+      {/* 헤더 영역 */}
+      <PageHeader
+        icon={<PlusCircle />}
+        title="문제 생성"
+        variant="question"
+        description="과목별 문제를 생성할 수 있습니다"
+      />
 
-        {/* 지문 불러오기 */}
-        <div className="mb-4">
-          <div className="mb-2 font-semibold">지문 불러오기</div>
-          <select value={school} onChange={(e) => setSchool(e.target.value)} className="w-full mb-2 p-2 border rounded">
-            <option value="">학교 선택</option>
-            {SCHOOL_OPTIONS.map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
-          <select value={grade} onChange={(e) => setGrade(e.target.value)} className="w-full mb-2 p-2 border rounded">
-            <option value="">학년 선택</option>
-            {GRADE_OPTIONS.map((g) => (
-              <option key={g} value={g}>{g}</option>
-            ))}
-          </select>
-          <select value={semester} onChange={(e) => setSemester(e.target.value)} className="w-full p-2 border rounded">
-            <option value="">학기 선택</option>
-            {SEMESTER_OPTIONS.map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
-        </div>
-
-        {/* 문제 유형 */}
-        <div className="mb-4">
-          <div className="mb-2 font-semibold">문제 유형</div>
-          <div className="flex flex-wrap gap-2">
-            {getTypeOptions().map((t) => (
-              <button
-                key={t}
-                onClick={() => {
-                  if (t === '전체') {
-                    const init: Record<string, number> = {};
-                    currentTypes.forEach((ct) => (init[ct] = typeRatios[ct] ?? 0));
-                    setTypeRatios(init);
-                    setRatioError('');
-                    setIsTypeRatioOpen(true);
-                  } else {
-                    setType(t);
-                  }
-                }}
-                className={`${chipBase} ${type === t ? chipSelected : chipUnselected}`}
-              >
-                {t}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* 난이도 */}
-        <div className="mb-4">
-          <div className="mb-2 font-semibold">난이도</div>
-          <div className="flex gap-2">
-            {DIFFICULTY.map((d) => (
-              <button
-                key={d}
-                onClick={() => {
-                  if (d === '전체') {
-                    setDiffError('');
-                    setIsDiffRatioOpen(true);
-                  } else {
-                    setDifficulty(d);
-                  }
-                }}
-                className={`${chipBase} ${difficulty === d ? chipSelected : chipUnselected}`}
-              >
-                {d}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* 요구사항 */}
-        <div className="mb-4">
-          <div className="mb-2 font-semibold">요구사항</div>
-          <textarea
-            value={requirements}
-            onChange={(e) => setRequirements(e.target.value)}
-            className="w-full p-2 border rounded h-24 resize-none"
-            placeholder="문제 출제 요구사항을 입력해주세요."
-            maxLength={50}
-          />
-          <div className="text-right text-sm text-gray-500 min-h-[1.5rem]">
-            {requirements.length}/50
-          </div>
-        </div>
-
-        {/* 총 문항 수 */}
-        <div className="mb-4">
-          <div className="mb-2 font-semibold">총 문항 수</div>
-          <div className="flex gap-2">
-            {QUESTION_COUNTS.map((count) => (
-              <button
-                key={count}
-                onClick={() => setQuestionCount(count)}
-                className={`${chipBase} ${questionCount === count ? chipSelected : chipUnselected}`}
-              >
-                {count}문항
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* 문제 생성하기 버튼 */}
-        <button
-          disabled={!isReadyToGenerate}
-          className={`w-full p-2 rounded text-white ${
-            isReadyToGenerate ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-400 cursor-not-allowed'
-          }`}
-          onClick={() => {
-            generateMock();
-          }}
-        >
-          문제 생성하기
-        </button>
+      {/* 과목 탭 */}
+      <div className="px-6 pb-2 flex-shrink-0">
+        <nav className="flex space-x-8">
+          {SUBJECTS.map((s) => (
+            <button
+              key={s}
+              onClick={() => {
+                setSubject(s);
+                setPreviewQuestions([]); // 과목 변경 시 초기화
+                setPreviewTitle('');
+              }}
+              className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+                subject === s
+                  ? 'border-[#0072CE] text-[#0072CE]'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              {s}
+            </button>
+          ))}
+        </nav>
       </div>
 
-      {/* 오른쪽 영역 - 결과 미리보기 자리 */}
-      <div className="flex-1 bg-white rounded ml-4 p-6 overflow-auto">
-        {previewQuestions.length === 0 ? (
-          <div className="w-full h-full flex items-center justify-center">
-            <Image src="/noQuestion.svg" alt="미리보기 없음" width={220} height={160} />
-          </div>
-        ) : (
-          <div className="space-y-6">
-            <input
-              value={previewTitle}
-              onChange={(e) => setPreviewTitle(e.target.value)}
-              placeholder="문제의 제목을 입력해 주세요."
-              className="w-full p-3 border rounded-md"
-            />
-            {previewQuestions.map((q) => (
-              <div key={q.id} className="grid grid-cols-12 gap-4">
-                <div className="col-span-8">
-                  <div className="text-sm text-gray-500 mb-2">문제 {q.id}</div>
-                  <input value={q.title} readOnly className="w-full p-2 border rounded-md mb-3" />
-                  {q.options.map((opt, idx) => (
-                    <div key={idx} className="flex items-center gap-2 mb-2">
+      {/* 메인 컨텐츠 영역 */}
+      <div className="flex-1 p-4 min-h-0">
+        <div className="flex gap-4 h-full">
+          <Card className="w-[400px] flex flex-col shadow-sm h-[calc(100vh-200px)]">
+            <CardHeader className="flex flex-row items-center justify-center py-1 px-6 border-b border-gray-100">
+              <CardTitle className="text-base font-medium">문제 생성</CardTitle>
+            </CardHeader>
+            <CardContent className="flex-1 overflow-y-auto p-6">
+              {/* 과목별 컴포넌트 렌더링 */}
+              {subject === '국어' && (
+                <KoreanGenerator onGenerate={handleGenerate} isGenerating={isGenerating} />
+              )}
+              {subject === '영어' && (
+                <EnglishGenerator onGenerate={handleGenerate} isGenerating={isGenerating} />
+              )}
+              {subject === '수학' && (
+                <MathGenerator onGenerate={handleGenerate} isGenerating={isGenerating} />
+              )}
+              {!subject && (
+                <div className="flex items-center justify-center h-full text-gray-500">
+                  <div className="text-center">
+                    <div className="text-lg font-medium mb-2">과목을 선택해주세요</div>
+                    <div className="text-sm">
+                      위의 탭에서 과목을 선택하면 문제 생성 폼이 나타납니다.
+                    </div>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* 오른쪽 영역 - 결과 미리보기 자리 */}
+          <Card className="flex-1 flex flex-col shadow-sm h-[calc(100vh-200px)]">
+            <CardHeader className="flex flex-row items-center justify-center py-1 px-6 border-b border-gray-100">
+              <CardTitle className="text-base font-medium">미리보기</CardTitle>
+            </CardHeader>
+            <CardContent className="flex-1 flex flex-col">
+              {isGenerating ? (
+                <div className="flex-1 flex items-center justify-center">
+                  <div className="text-center">
+                    <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
+                    <div className="text-lg font-medium text-gray-700 mb-2">
+                      문제를 생성하고 있습니다...
+                    </div>
+                    <div className="w-64 bg-gray-200 rounded-full h-2">
                       <div
-                        className={`w-5 h-5 rounded-full border-2 flex items-center justify-center text-xs ${
-                          idx === q.answerIndex ? 'border-blue-500 text-blue-600' : 'border-gray-300 text-gray-400'
-                        }`}
-                        title={idx === q.answerIndex ? '정답' : '보기'}
-                      >
-                        {idx === q.answerIndex ? '②' : '·'}
-                      </div>
-                      <input value={opt} readOnly className="flex-1 p-2 border rounded-md" />
+                        className="bg-blue-600 h-2 rounded-full transition-all duration-300 ease-out"
+                        style={{ width: `${generationProgress}%` }}
+                      ></div>
                     </div>
-                  ))}
-                </div>
-                <div className="col-span-4">
-                  <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
-                    <div className="text-sm font-semibold text-gray-700 mb-2">
-                      정답: {q.answerIndex + 1}
+                    <div className="text-sm text-gray-500 mt-2">
+                      {Math.round(generationProgress)}% 완료
                     </div>
-                    <textarea
-                      value={q.explanation}
-                      readOnly
-                      className="w-full h-40 p-2 border rounded-md bg-white"
-                    />
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* 전체 비율 설정 모달 - 문제 유형 */}
-      {isTypeRatioOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setIsTypeRatioOpen(false)} />
-          <div className="relative z-10 w-[520px] max-w-[90vw] rounded-xl bg-white shadow-lg p-6">
-            <div className="flex items-start justify-between mb-4">
-              <div className="text-xl font-semibold">문제 유형 비율 설정</div>
-              <button className="text-gray-500 hover:text-gray-700" onClick={() => setIsTypeRatioOpen(false)}>✕</button>
-            </div>
-            <p className="text-sm text-gray-500 mb-4">전체 선택 시 각 유형의 출제 비율을 지정합니다.<br/>
-            합계가 100%가 되어야 저장할 수 있어요.</p>
-
-            <div className="space-y-3 max-h-[300px] overflow-auto">
-              {currentTypes.length === 0 && <div className="text-sm text-gray-500">먼저 과목을 선택해 주세요.</div>}
-              {currentTypes.map((ct) => (
-                <div key={ct} className="flex items-center justify-between">
-                  <span className="text-sm text-gray-700">{ct}</span>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="number"
-                      min={0}
-                      max={100}
-                      value={typeRatios[ct] ?? 0}
-                      onChange={(e) => {
-                        const v = Number(e.target.value);
-                        setTypeRatios((prev) => {
-                          const others = currentTypes.reduce((s, k) => (k === ct ? s : s + (prev[k] || 0)), 0);
-                          const allowed = Math.max(0, 100 - others);
-                          const next = Math.min(Math.max(0, isNaN(v) ? 0 : v), allowed);
-                          return { ...prev, [ct]: next };
-                        });
-                      }}
-                      className="w-24 p-2 border rounded-md text-right"
-                    />
-                    <span className="text-sm text-gray-500">%</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="flex items-center justify-between mt-4">
-              <div className={`text-sm ${ratioSum === 100 ? 'text-green-600' : 'text-red-600'}`}>합계: {ratioSum}%</div>
-              {ratioError && <div className="text-sm text-red-600">{ratioError}</div>}
-            </div>
-
-            <div className="mt-6 flex gap-3 justify-end">
-              <button onClick={() => setIsTypeRatioOpen(false)} className="px-5 py-2 rounded-md border bg-gray-100 text-gray-700 hover:bg-gray-200">취소</button>
-              <button
-                onClick={() => {
-                  if (currentTypes.length === 0) return setRatioError('과목을 먼저 선택해 주세요.');
-                  if (ratioSum !== 100) return setRatioError('합계가 100%가 되어야 합니다.');
-                  setRatioError('');
-                  setType('전체');
-                  setIsTypeRatioOpen(false);
-                }}
-                className={`px-5 py-2 rounded-md text-white ${ratioSum === 100 ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-300 cursor-not-allowed'}`}
-                disabled={ratioSum !== 100 || currentTypes.length === 0}
-              >
-                저장
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 전체 비율 설정 모달 - 난이도 */}
-      {isDiffRatioOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setIsDiffRatioOpen(false)} />
-          <div className="relative z-10 w-[520px] max-w-[90vw] rounded-xl bg-white shadow-lg p-6">
-            <div className="flex items-start justify-between mb-4">
-              <div className="text-xl font-semibold">난이도 비율 설정</div>
-              <button className="text-gray-500 hover:text-gray-700" onClick={() => setIsDiffRatioOpen(false)}>✕</button>
-            </div>
-            <p className="text-sm text-gray-500 mb-4">합계가 100%가 되어야 저장할 수 있어요.</p>
-
-            {['상','중','하'].map((lv) => (
-              <div key={lv} className="flex items-center justify-between mb-3">
-                <span className="text-sm text-gray-700">{lv}</span>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    min={0}
-                    max={100}
-                    value={diffRatios[lv] ?? 0}
-                    onChange={(e) => {
-                      const v = Number(e.target.value);
-                      setDiffRatios((prev) => {
-                        const others = ['상','중','하'].reduce((s, k) => (k === lv ? s : s + (prev[k] || 0)), 0);
-                        const allowed = Math.max(0, 100 - others);
-                        const next = Math.min(Math.max(0, isNaN(v) ? 0 : v), allowed);
-                        return { ...prev, [lv]: next };
-                      });
-                    }}
-                    className="w-24 p-2 border rounded-md text-right"
+              ) : previewQuestions.length === 0 ? (
+                <div className="flex-1 flex flex-col items-center justify-center">
+                  <Image
+                    src="/noQuestion.svg"
+                    alt="미리보기 없음"
+                    width={220}
+                    height={160}
+                    style={{ width: 'auto', height: 'auto' }}
                   />
-                  <span className="text-sm text-gray-500">%</span>
+                  <div className="mt-4">
+                    <button className="bg-blue-600 hover:bg-blue-700 text-white py-3 px-6 rounded-md font-medium">
+                      문제 저장하기
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ) : (
+                <div className="flex-1 flex flex-col overflow-hidden">
+                  {/* 스크롤 가능한 문제 영역 */}
+                  <ScrollArea style={{ height: 'calc(100vh - 380px)' }} className="w-full">
+                    <div className="p-6 space-y-6">
+                      <div className="w-full p-3 border rounded-md bg-gray-50 font-semibold text-lg">
+                        {previewTitle || '생성된 문제지'}
+                      </div>
+                      {previewQuestions.map((q, index) => (
+                        <div
+                          key={q.id}
+                          className="grid grid-cols-12 gap-4 animate-fade-in"
+                          style={{
+                            animationDelay: `${index * 0.2}s`,
+                            animation: 'fadeInUp 0.6s ease-out forwards',
+                          }}
+                        >
+                          <div className="col-span-8">
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="text-sm text-gray-500">문제 {q.id}</div>
+                              <div className="flex gap-2">
+                                <button className="text-gray-400 hover:text-gray-600">
+                                  <svg
+                                    className="w-4 h-4"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                    />
+                                  </svg>
+                                </button>
+                                <button className="text-gray-400 hover:text-gray-600">
+                                  <svg
+                                    className="w-4 h-4"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                                    />
+                                  </svg>
+                                </button>
+                              </div>
+                            </div>
+                            <div className="text-base leading-relaxed text-gray-900 mb-4">
+                              <LaTeXRenderer content={q.title} />
+                            </div>
+                            {q.options &&
+                              q.options.map((opt, idx) => (
+                                <div key={idx} className="flex items-start gap-3 mb-3">
+                                  <span
+                                    className={`flex-shrink-0 w-6 h-6 border-2 ${
+                                      idx === q.answerIndex
+                                        ? 'border-green-500 bg-green-500 text-white'
+                                        : 'border-gray-300 text-gray-600'
+                                    } rounded-full flex items-center justify-center text-sm font-medium`}
+                                  >
+                                    {String.fromCharCode(65 + idx)}
+                                  </span>
+                                  <div className="flex-1 text-gray-900">
+                                    <LaTeXRenderer content={opt} />
+                                  </div>
+                                  {idx === q.answerIndex && (
+                                    <span className="text-xs font-medium text-green-700 bg-green-200 px-2 py-1 rounded">
+                                      정답
+                                    </span>
+                                  )}
+                                </div>
+                              ))}
+                          </div>
+                          <div className="col-span-4">
+                            <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+                              <div className="text-sm font-semibold text-gray-700 mb-2">
+                                {q.options && q.options.length > 0 ? (
+                                  <span>
+                                    정답: {String.fromCharCode(65 + (q.answerIndex || 0))}
+                                  </span>
+                                ) : (
+                                  <div className="flex items-center gap-2">
+                                    <span>정답:</span>
+                                    <div className="bg-green-100 border border-green-300 rounded px-2 py-1 text-green-800 font-medium">
+                                      <LaTeXRenderer content={q.correct_answer || 'N/A'} />
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                              <div className="text-sm font-semibold text-blue-800 mb-2">해설:</div>
+                              <div className="text-sm text-blue-800">
+                                <LaTeXRenderer content={q.explanation || '해설 정보가 없습니다'} />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
 
-            <div className="flex items-center justify-between mt-1">
-              <div className={`text-sm ${diffSum === 100 ? 'text-green-600' : 'text-red-600'}`}>합계: {diffSum}%</div>
-              {diffError && <div className="text-sm text-red-600">{diffError}</div>}
-            </div>
-
-            <div className="mt-6 flex gap-3 justify-end">
-              <button onClick={() => setIsDiffRatioOpen(false)} className="px-5 py-2 rounded-md border bg-gray-100 text-gray-700 hover:bg-gray-200">취소</button>
-              <button
-                onClick={() => {
-                  if (diffSum !== 100) return setDiffError('합계가 100%가 되어야 합니다.');
-                  setDiffError('');
-                  setDifficulty('전체');
-                  setIsDiffRatioOpen(false);
-                }}
-                className={`px-5 py-2 rounded-md text-white ${diffSum === 100 ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-300 cursor-not-allowed'}`}
-                disabled={diffSum !== 100}
-              >
-                저장
-              </button>
-            </div>
-          </div>
+                  {/* 하단 고정 버튼 영역 */}
+                  <div className="p-4">
+                    <button className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-md font-medium">
+                      문제 저장하기
+                    </button>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
-      )}
+      </div>
     </div>
   );
 }

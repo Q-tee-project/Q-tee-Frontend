@@ -2,32 +2,106 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
+import { authService } from '@/services/authService';
 
 export default function JoinPage() {
-  const [userType, setUserType] = useState('');
+  const router = useRouter();
+  const [userType, setUserType] = useState<'teacher' | 'student'>('teacher');
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    contact: '',
-    studentId: '',
+    phone: '',
+    username: '',
     password: '',
     confirmPassword: '',
+    parent_phone: '',
+    school_level: 'middle' as 'middle' | 'high',
+    grade: 1,
   });
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: name === 'grade' ? Number(value) : value,
     }));
+    setError('');
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const validateForm = () => {
+    if (!userType) {
+      setError('가입 유형을 선택해주세요.');
+      return false;
+    }
+    if (!formData.name || !formData.email || !formData.phone || !formData.username || !formData.password) {
+      setError('모든 필수 항목을 입력해주세요.');
+      return false;
+    }
+    if (formData.password !== formData.confirmPassword) {
+      setError('비밀번호가 일치하지 않습니다.');
+      return false;
+    }
+    if (userType === 'student' && !formData.parent_phone) {
+      setError('학부모 연락처를 입력해주세요.');
+      return false;
+    }
+    if (formData.password.length < 8) {
+      setError('비밀번호는 8자 이상이어야 합니다.');
+      return false;
+    }
+    return true;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Form submitted:', { userType, ...formData });
+    
+    if (!validateForm()) {
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+    
+    try {
+      if (userType === 'teacher') {
+        await authService.teacherSignup({
+          username: formData.username,
+          email: formData.email,
+          name: formData.name,
+          phone: formData.phone,
+          password: formData.password,
+        });
+      } else {
+        await authService.studentSignup({
+          username: formData.username,
+          email: formData.email,
+          name: formData.name,
+          phone: formData.phone,
+          parent_phone: formData.parent_phone,
+          school_level: formData.school_level,
+          grade: formData.grade,
+          password: formData.password,
+        });
+      }
+      
+      // 회원가입 성공 후 로그인 페이지로 이동
+      router.push('/login');
+    } catch (error: any) {
+      console.error('Signup error:', error);
+      setError(error?.message || '회원가입에 실패했습니다. 다시 시도해주세요.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleBackClick = () => {
+    router.push('/login');
   };
 
   return (
@@ -71,6 +145,13 @@ export default function JoinPage() {
               </div>
             </div>
 
+            {/* 에러 메시지 */}
+            {error && (
+              <div className="text-red-500 text-sm text-center bg-red-50 p-2 rounded">
+                {error}
+              </div>
+            )}
+
             {/* 이름 */}
             <div>
               <label htmlFor="name" className="text-sm font-medium text-gray-700 mb-2 block">
@@ -84,6 +165,7 @@ export default function JoinPage() {
                 value={formData.name}
                 onChange={handleInputChange}
                 className="w-full"
+                disabled={isLoading}
               />
             </div>
 
@@ -100,44 +182,42 @@ export default function JoinPage() {
                 value={formData.email}
                 onChange={handleInputChange}
                 className="w-full"
+                disabled={isLoading}
               />
             </div>
 
             {/* 연락처 */}
             <div>
-              <label htmlFor="contact" className="text-sm font-medium text-gray-700 mb-2 block">
+              <label htmlFor="phone" className="text-sm font-medium text-gray-700 mb-2 block">
                 연락처
               </label>
               <Input
-                id="contact"
-                name="contact"
+                id="phone"
+                name="phone"
                 type="tel"
                 placeholder="연락처를 입력해 주세요"
-                value={formData.contact}
+                value={formData.phone}
                 onChange={handleInputChange}
                 className="w-full"
+                disabled={isLoading}
               />
             </div>
 
             {/* 아이디 */}
             <div>
-              <label htmlFor="studentId" className="text-sm font-medium text-gray-700 mb-2 block">
+              <label htmlFor="username" className="text-sm font-medium text-gray-700 mb-2 block">
                 아이디
               </label>
-              <div className="flex gap-2">
-                <Input
-                  id="studentId"
-                  name="studentId"
-                  type="text"
-                  placeholder="아이디를 입력해 주세요"
-                  value={formData.studentId}
-                  onChange={handleInputChange}
-                  className="flex-1"
-                />
-                <Button type="button" variant="default" className="shrink-0">
-                  중복 확인
-                </Button>
-              </div>
+              <Input
+                id="username"
+                name="username"
+                type="text"
+                placeholder="아이디를 입력해 주세요"
+                value={formData.username}
+                onChange={handleInputChange}
+                className="w-full"
+                disabled={isLoading}
+              />
             </div>
 
             {/* 비밀번호 */}
@@ -153,6 +233,7 @@ export default function JoinPage() {
                 value={formData.password}
                 onChange={handleInputChange}
                 className="w-full"
+                disabled={isLoading}
               />
               <p className="text-xs text-gray-500 mt-1">
                 숫자, 문자, 특수문자 혼합으로 8-15 자리 입력하세요. (20자 제한)
@@ -175,16 +256,86 @@ export default function JoinPage() {
                 value={formData.confirmPassword}
                 onChange={handleInputChange}
                 className="w-full"
+                disabled={isLoading}
               />
             </div>
 
+            {/* 학생 전용 필드들 */}
+            {userType === 'student' && (
+              <>
+                {/* 학부모 연락처 */}
+                <div>
+                  <label htmlFor="parent_phone" className="text-sm font-medium text-gray-700 mb-2 block">
+                    학부모 연락처 *
+                  </label>
+                  <Input
+                    id="parent_phone"
+                    name="parent_phone"
+                    type="tel"
+                    placeholder="학부모 연락처를 입력해 주세요"
+                    value={formData.parent_phone}
+                    onChange={handleInputChange}
+                    className="w-full"
+                    disabled={isLoading}
+                  />
+                </div>
+
+                {/* 학교급 선택 */}
+                <div>
+                  <label htmlFor="school_level" className="text-sm font-medium text-gray-700 mb-2 block">
+                    학교급 *
+                  </label>
+                  <select
+                    id="school_level"
+                    name="school_level"
+                    value={formData.school_level}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    disabled={isLoading}
+                  >
+                    <option value="middle">중등학교</option>
+                    <option value="high">고등학교</option>
+                  </select>
+                </div>
+
+                {/* 학년 선택 */}
+                <div>
+                  <label htmlFor="grade" className="text-sm font-medium text-gray-700 mb-2 block">
+                    학년 *
+                  </label>
+                  <select
+                    id="grade"
+                    name="grade"
+                    value={formData.grade}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    disabled={isLoading}
+                  >
+                    <option value={1}>1학년</option>
+                    <option value={2}>2학년</option>
+                    <option value={3}>3학년</option>
+                  </select>
+                </div>
+              </>
+            )}
+
             {/* 버튼 */}
             <div className="flex gap-3 pt-4">
-              <Button type="button" variant="outline" className="flex-1">
+              <Button 
+                type="button" 
+                variant="outline" 
+                className="flex-1"
+                onClick={handleBackClick}
+                disabled={isLoading}
+              >
                 이전
               </Button>
-              <Button type="submit" className="flex-1 bg-blue-600 hover:bg-blue-700">
-                회원가입
+              <Button 
+                type="submit" 
+                className="flex-1 bg-blue-600 hover:bg-blue-700"
+                disabled={isLoading}
+              >
+                {isLoading ? '가입 중...' : '회원가입'}
               </Button>
             </div>
           </form>

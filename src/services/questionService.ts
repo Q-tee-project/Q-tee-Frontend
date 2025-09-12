@@ -9,14 +9,30 @@ export class QuestionService {
 
   // 수학 워크시트 목록 가져오기
   static async getWorksheets(): Promise<any[]> {
-    return apiRequest<{ worksheets: any[] }>('/api/math-generation/worksheets').then(
+    // 현재 로그인한 사용자 정보 가져오기
+    const currentUser = JSON.parse(localStorage.getItem('user_profile') || '{}');
+    const userId = currentUser?.id;
+    
+    if (!userId) {
+      throw new Error('로그인이 필요합니다.');
+    }
+    
+    return apiRequest<{ worksheets: any[] }>(`/api/math-generation/worksheets?user_id=${userId}`).then(
       (response) => response.worksheets,
     );
   }
 
   // 특정 워크시트의 상세 정보 가져오기 (문제 포함)
   static async getWorksheetDetail(worksheetId: number): Promise<any> {
-    return apiRequest<any>(`/api/math-generation/worksheets/${worksheetId}`);
+    // 현재 로그인한 사용자 정보 가져오기
+    const currentUser = JSON.parse(localStorage.getItem('user_profile') || '{}');
+    const userId = currentUser?.id;
+    
+    if (!userId) {
+      throw new Error('로그인이 필요합니다.');
+    }
+    
+    return apiRequest<any>(`/api/math-generation/worksheets/${worksheetId}?user_id=${userId}`);
   }
 
   // 수학 문제 생성

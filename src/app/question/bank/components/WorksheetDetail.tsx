@@ -55,7 +55,7 @@ export const WorksheetDetail: React.FC<WorksheetDetailProps> = ({
 }) => {
   if (!selectedWorksheet) {
     return (
-      <Card className="w-2/3 flex items-center justify-center shadow-sm h-full">
+      <Card className="w-2/3 flex items-center justify-center shadow-sm h-[calc(100vh-200px)]">
         <div className="text-center py-20">
           <div className="text-gray-400 text-lg mb-2">📋</div>
           <div className="text-gray-500 text-sm">문제지를 선택하세요</div>
@@ -65,7 +65,7 @@ export const WorksheetDetail: React.FC<WorksheetDetailProps> = ({
   }
 
   return (
-    <Card className="w-2/3 flex flex-col shadow-sm h-full">
+    <Card className="w-2/3 flex flex-col shadow-sm h-[calc(100vh-200px)]">
       <CardHeader className="flex flex-row items-center py-6 px-6 border-b border-gray-100">
         <div className="flex-1"></div>
         <div className="flex items-center justify-center gap-3">
@@ -149,7 +149,7 @@ export const WorksheetDetail: React.FC<WorksheetDetailProps> = ({
       </CardHeader>
 
       <CardContent className="flex-1 p-0 overflow-hidden">
-        <ScrollArea style={{height: 'calc(100vh - 350px)'}} className="w-full">
+        <ScrollArea style={{ height: 'calc(100vh - 350px)' }} className="w-full">
           <div className="p-6 space-y-8">
             {worksheetProblems.length === 0 ? (
               <div className="text-center py-20 text-gray-400">
@@ -235,22 +235,18 @@ export const WorksheetDetail: React.FC<WorksheetDetailProps> = ({
                           </div>
                         )}
 
-                        {problem.choices &&
-                          problem.choices.length > 0 &&
-                          showAnswerSheet && (
-                            <div className="mt-4 ml-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
-                              <div className="flex items-center gap-2 mb-2">
-                                <span className="text-sm font-semibold text-blue-800">
-                                  해설:
-                                </span>
-                              </div>
-                              <div className="text-sm text-blue-800">
-                                <LaTeXRenderer
-                                  content={problem.explanation || '해설 정보가 없습니다'}
-                                />
-                              </div>
+                        {problem.choices && problem.choices.length > 0 && showAnswerSheet && (
+                          <div className="mt-4 ml-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="text-sm font-semibold text-blue-800">해설:</span>
                             </div>
-                          )}
+                            <div className="text-sm text-blue-800">
+                              <LaTeXRenderer
+                                content={problem.explanation || '해설 정보가 없습니다'}
+                              />
+                            </div>
+                          </div>
+                        )}
 
                         {(!problem.choices || problem.choices.length === 0) && (
                           <div className="mt-4 ml-4">
@@ -280,9 +276,7 @@ export const WorksheetDetail: React.FC<WorksheetDetailProps> = ({
                                     </div>
                                     <div className="text-sm text-blue-800">
                                       <LaTeXRenderer
-                                        content={
-                                          problem.explanation || '해설 정보가 없습니다'
-                                        }
+                                        content={problem.explanation || '해설 정보가 없습니다'}
                                       />
                                     </div>
                                   </div>
@@ -326,9 +320,7 @@ export const WorksheetDetail: React.FC<WorksheetDetailProps> = ({
                                       </span>
                                       <div className="text-sm text-blue-800 mt-1">
                                         <LaTeXRenderer
-                                          content={
-                                            problem.explanation || '해설 정보가 없습니다'
-                                          }
+                                          content={problem.explanation || '해설 정보가 없습니다'}
                                         />
                                       </div>
                                     </div>

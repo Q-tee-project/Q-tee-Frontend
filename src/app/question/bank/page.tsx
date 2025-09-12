@@ -73,7 +73,7 @@ export default function BankPage() {
       {/* 과목 탭 */}
       <div className="px-6 pb-2 flex-shrink-0">
         <nav className="flex space-x-8">
-          {[Subject.KOREAN, Subject.MATH, Subject.ENGLISH].map((subject) => (
+          {[Subject.KOREAN, Subject.ENGLISH, Subject.MATH].map((subject) => (
             <button
               key={subject}
               onClick={() => setSelectedSubject(subject)}
