@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Image from 'next/image';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { PlusCircle } from 'lucide-react';
 import KoreanGenerator from '@/components/subjects/KoreanGenerator';
 import EnglishGenerator from '@/components/subjects/EnglishGenerator';
@@ -272,7 +273,7 @@ export default function CreatePage() {
                   </div>
                 </div>
               ) : previewQuestions.length === 0 ? (
-                <div className="flex-1 flex items-center justify-center">
+                <div className="flex-1 flex flex-col items-center justify-center">
                   <Image
                     src="/noQuestion.svg"
                     alt="미리보기 없음"
@@ -280,12 +281,17 @@ export default function CreatePage() {
                     height={160}
                     style={{ width: 'auto', height: 'auto' }}
                   />
+                  <div className="mt-4">
+                    <button className="bg-blue-600 hover:bg-blue-700 text-white py-3 px-6 rounded-md font-medium">
+                      문제 저장하기
+                    </button>
+                  </div>
                 </div>
               ) : (
-                <>
+                <div className="flex-1 flex flex-col overflow-hidden">
                   {/* 스크롤 가능한 문제 영역 */}
-                  <div className="flex-1 overflow-y-auto p-6 min-h-0">
-                    <div className="space-y-6">
+                  <ScrollArea style={{ height: 'calc(100vh - 380px)' }} className="w-full">
+                    <div className="p-6 space-y-6">
                       <div className="w-full p-3 border rounded-md bg-gray-50 font-semibold text-lg">
                         {previewTitle || '생성된 문제지'}
                       </div>
@@ -385,15 +391,15 @@ export default function CreatePage() {
                         </div>
                       ))}
                     </div>
-                  </div>
+                  </ScrollArea>
 
                   {/* 하단 고정 버튼 영역 */}
-                  <div className="border-t bg-gray-50 p-4">
+                  <div className="p-4">
                     <button className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-md font-medium">
                       문제 저장하기
                     </button>
                   </div>
-                </>
+                </div>
               )}
             </CardContent>
           </Card>

@@ -3,9 +3,11 @@
 import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { VscBellDot } from 'react-icons/vsc';
 import { FaUserCircle } from 'react-icons/fa';
 import { LuUser, LuLogOut } from 'react-icons/lu';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   LuMail,
   LuCalendar,
@@ -18,6 +20,8 @@ import {
 } from 'react-icons/lu';
 
 export default function Header() {
+  const router = useRouter();
+  const { isAuthenticated, userType, userProfile, logout } = useAuth();
   const [isProfileOpen, setIsProfileOpen] = React.useState(false);
   const [isBellOpen, setIsBellOpen] = React.useState(false);
   const profileMenuRef = React.useRef<HTMLLIElement | null>(null);
@@ -59,6 +63,10 @@ export default function Header() {
   };
 
   const toggleProfileMenu = () => {
+    if (!isAuthenticated) {
+      router.push('/login');
+      return;
+    }
     setIsProfileOpen((prev) => !prev);
     setIsBellOpen(false);
   };
@@ -66,6 +74,12 @@ export default function Header() {
   const toggleBellMenu = () => {
     setIsBellOpen((prev) => !prev);
     setIsProfileOpen(false);
+  };
+
+  const handleLogout = () => {
+    logout();
+    setIsProfileOpen(false);
+    router.push('/login');
   };
 
   React.useEffect(() => {
@@ -420,7 +434,7 @@ export default function Header() {
                   onClick={toggleProfileMenu}
                   style={{
                     all: 'unset',
-                    color: '#AFAFAF',
+                    color: isAuthenticated ? '#0072CE' : '#AFAFAF',
                     display: 'inline-flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -432,7 +446,7 @@ export default function Header() {
                   <FaUserCircle size={24} />
                 </button>
 
-                {isProfileOpen && (
+                {isProfileOpen && isAuthenticated && (
                   <div
                     role="menu"
                     aria-label="프로필 메뉴"
@@ -467,7 +481,21 @@ export default function Header() {
                           background: '#AFAFAF',
                         }}
                       />
-                      <div style={{ color: '#6B7280', fontSize: '14px' }}>user.name</div>
+                      <div style={{ color: '#6B7280', fontSize: '14px' }}>
+                        {isAuthenticated ? userProfile?.name : '로그인이 필요합니다'}
+                      </div>
+                      {isAuthenticated && userType && (
+                        <div style={{ 
+                          fontSize: '12px', 
+                          backgroundColor: userType === 'teacher' ? '#EBF6FF' : '#F0F9F0',
+                          color: userType === 'teacher' ? '#0072CE' : '#4CAF50',
+                          padding: '2px 8px',
+                          borderRadius: '12px',
+                          fontWeight: '500'
+                        }}>
+                          {userType === 'teacher' ? '선생님' : '학생'}
+                        </div>
+                      )}
                     </div>
                     <div style={{ height: '1px', background: '#EFEFEF' }} />
                     <button
@@ -500,10 +528,7 @@ export default function Header() {
                         cursor: 'pointer',
                         color: '#1F2937',
                       }}
-                      onClick={() => {
-                        // TODO: trigger logout
-                        setIsProfileOpen(false);
-                      }}
+                      onClick={handleLogout}
                     >
                       <LuLogOut size={18} aria-hidden />
                       <span>로그아웃</span>

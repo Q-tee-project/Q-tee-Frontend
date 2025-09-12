@@ -12,6 +12,7 @@ import { FiUsers } from 'react-icons/fi';
 import { FiShoppingCart } from 'react-icons/fi';
 import { FiClipboard } from 'react-icons/fi';
 import { FiBook } from 'react-icons/fi';
+import path from 'path';
 
 const Sidebar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -24,7 +25,7 @@ const Sidebar = () => {
     { icon: <FiClipboard />, text: '문제 관리', path: '/question/bank' },
     { icon: <FiBook />, text: '과제 풀이', path: '/test' },
     { icon: <FiEdit />, text: '문제 생성', path: '/question/create' },
-    { icon: <FiUsers />, text: '학생 관리' },
+    { icon: <FiUsers />, text: '학생 관리', path: '/class/create' },
     { icon: <FiShoppingCart />, text: '마켓플레이스' },
   ];
 
