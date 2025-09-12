@@ -167,6 +167,7 @@ export default function ClassCreatePage() {
             </Button>
           </div>
 
+
           {/* 에러 메시지 */}
           {error && (
             <div className="text-red-600 text-sm bg-red-50 p-3 rounded mb-4 border border-red-200">
@@ -237,6 +238,7 @@ export default function ClassCreatePage() {
                               e.stopPropagation();
                               handleShowCode(classroom);
                             }}
+
                           >
                             <Code className="w-4 h-4 mr-1" />
                             코드

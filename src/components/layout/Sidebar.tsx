@@ -50,7 +50,7 @@ const Sidebar = () => {
       transition={{ duration: 0.3, ease: 'easeInOut' }}
       style={{ height: 'calc(100vh - 60px)' }}
     >
-      <div className="p-5 flex-1 flex flex-col gap-4">
+      <div className="p-2.5 flex-1 flex flex-col gap-4">
         {/* Toggle Button */}
         <div className="flex items-center">
           <motion.button
