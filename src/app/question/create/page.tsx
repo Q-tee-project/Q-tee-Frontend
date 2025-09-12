@@ -185,7 +185,7 @@ export default function CreatePage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="flex flex-col">
       {/* 헤더 영역 */}
       <PageHeader
         icon={<PlusCircle />}

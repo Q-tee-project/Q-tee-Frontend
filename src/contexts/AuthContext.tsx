@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { authService, TeacherProfile, StudentProfile } from '@/services/authService';
+import { setTokenExpiredCallback } from '@/lib/api';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -36,6 +37,16 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   // 초기 로드시 로컬 스토리지에서 인증 정보 복원
   useEffect(() => {
     refreshAuth();
+    
+    // 토큰 만료 시 자동 로그아웃 콜백 설정
+    setTokenExpiredCallback(() => {
+      console.log('토큰이 만료되어 자동 로그아웃됩니다.');
+      logout();
+      // 선택적으로 사용자에게 알림 표시
+      alert('로그인이 만료되었습니다. 다시 로그인해주세요.');
+      // 로그인 페이지로 리디렉션
+      window.location.href = '/login';
+    });
   }, []);
 
   const refreshAuth = async () => {

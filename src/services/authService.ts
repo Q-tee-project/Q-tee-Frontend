@@ -98,45 +98,48 @@ export const tokenStorage = {
     if (typeof window === 'undefined') return null;
     return localStorage.getItem('access_token');
   },
-  
+
   setToken: (token: string): void => {
     if (typeof window === 'undefined') return;
     localStorage.setItem('access_token', token);
   },
-  
+
   removeToken: (): void => {
     if (typeof window === 'undefined') return;
     localStorage.removeItem('access_token');
     localStorage.removeItem('user_type');
     localStorage.removeItem('user_profile');
   },
-  
+
   getUserType: (): 'teacher' | 'student' | null => {
     if (typeof window === 'undefined') return null;
     return localStorage.getItem('user_type') as 'teacher' | 'student' | null;
   },
-  
+
   setUserType: (userType: 'teacher' | 'student'): void => {
     if (typeof window === 'undefined') return;
     localStorage.setItem('user_type', userType);
   },
-  
+
   getUserProfile: (): TeacherProfile | StudentProfile | null => {
     if (typeof window === 'undefined') return null;
     const profile = localStorage.getItem('user_profile');
     return profile ? JSON.parse(profile) : null;
   },
-  
+
   setUserProfile: (profile: TeacherProfile | StudentProfile): void => {
     if (typeof window === 'undefined') return;
     localStorage.setItem('user_profile', JSON.stringify(profile));
-  }
+  },
 };
 
 // 인증된 요청을 위한 헤더 추가
 const getAuthHeaders = (): Record<string, string> => {
   const token = tokenStorage.getToken();
-  return token ? { Authorization: `Bearer ${token}` } : {};
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {})
+  };
 };
 
 // 인증 API 서비스
@@ -163,11 +166,11 @@ export const authService = {
       method: 'POST',
       body: JSON.stringify(data),
     });
-    
+
     // 토큰과 사용자 타입 저장
     tokenStorage.setToken(response.access_token);
     tokenStorage.setUserType('teacher');
-    
+
     return response;
   },
 
@@ -177,11 +180,11 @@ export const authService = {
       method: 'POST',
       body: JSON.stringify(data),
     });
-    
+
     // 토큰과 사용자 타입 저장
     tokenStorage.setToken(response.access_token);
     tokenStorage.setUserType('student');
-    
+
     return response;
   },
 
@@ -190,7 +193,7 @@ export const authService = {
     const profile = await authApiRequest<TeacherProfile>('/api/auth/teacher/me', {
       headers: getAuthHeaders(),
     });
-    
+
     tokenStorage.setUserProfile(profile);
     return profile;
   },
@@ -200,7 +203,7 @@ export const authService = {
     const profile = await authApiRequest<StudentProfile>('/api/auth/student/me', {
       headers: getAuthHeaders(),
     });
-    
+
     tokenStorage.setUserProfile(profile);
     return profile;
   },
@@ -216,26 +219,24 @@ export const authService = {
   },
 
   // 현재 사용자 정보 가져오기
-  getCurrentUser(): { type: 'teacher' | 'student' | null; profile: TeacherProfile | StudentProfile | null } {
+  getCurrentUser(): {
+    type: 'teacher' | 'student' | null;
+    profile: TeacherProfile | StudentProfile | null;
+  } {
     return {
       type: tokenStorage.getUserType(),
       profile: tokenStorage.getUserProfile(),
     };
-  }
+  },
 };
 
 // 클래스룸 관리 API 서비스 (Teacher용)
 export const classroomService = {
   // 클래스룸 생성
   async createClassroom(data: ClassroomCreateData): Promise<Classroom> {
-    const headers = getAuthHeaders();
-    console.log('🔍 Creating classroom with data:', data);
-    console.log('🔍 Using headers:', headers);
-    console.log('🔍 Token from storage:', tokenStorage.getToken());
-    
     return authApiRequest<Classroom>('/api/classrooms/create', {
       method: 'POST',
-      headers,
+      headers: getAuthHeaders(),
       body: JSON.stringify(data),
     });
   },
@@ -255,16 +256,25 @@ export const classroomService = {
   },
 
   // 가입 요청 승인/거절
-  async approveJoinRequest(requestId: number, status: 'approved' | 'rejected'): Promise<StudentJoinRequest> {
-    return authApiRequest<StudentJoinRequest>(`/api/classrooms/join-requests/${requestId}/approve`, {
-      method: 'PUT',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({ status }),
-    });
+  async approveJoinRequest(
+    requestId: number,
+    status: 'approved' | 'rejected',
+  ): Promise<StudentJoinRequest> {
+    return authApiRequest<StudentJoinRequest>(
+      `/api/classrooms/join-requests/${requestId}/approve`,
+      {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ status }),
+      },
+    );
   },
 
   // 학생 직접 등록
-  async registerStudentDirectly(classroomId: number, data: DirectRegisterData): Promise<StudentProfile> {
+  async registerStudentDirectly(
+    classroomId: number,
+    data: DirectRegisterData,
+  ): Promise<StudentProfile> {
     return authApiRequest<StudentProfile>(`/api/classrooms/${classroomId}/students/register`, {
       method: 'POST',
       headers: getAuthHeaders(),
@@ -277,7 +287,7 @@ export const classroomService = {
     return authApiRequest<StudentProfile[]>(`/api/classrooms/${classroomId}/students`, {
       headers: getAuthHeaders(),
     });
-  }
+  },
 };
 
 // 학생 클래스 가입 API 서비스 (Student용)
@@ -289,5 +299,12 @@ export const studentClassService = {
       headers: getAuthHeaders(),
       body: JSON.stringify(data),
     });
-  }
+  },
+
+  // 내가 속한 클래스 목록 조회
+  async getMyClasses(): Promise<Classroom[]> {
+    return authApiRequest<Classroom[]>('/api/classrooms/my-classrooms', {
+      headers: getAuthHeaders(),
+    });
+  },
 };

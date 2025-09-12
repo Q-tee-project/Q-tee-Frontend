@@ -39,12 +39,12 @@ export default function ClassCreatePage() {
   const [classes, setClasses] = useState<Classroom[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
-  
+
   // 모달 상태
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isCodeModalOpen, setIsCodeModalOpen] = useState(false);
   const [selectedClass, setSelectedClass] = useState<Classroom | null>(null);
-  
+
   // 폼 데이터
   const [formData, setFormData] = useState({
     name: '',
@@ -61,7 +61,7 @@ export default function ClassCreatePage() {
       router.push('/login');
       return;
     }
-    
+
     loadClasses();
   }, [isAuthenticated, userType, router]);
 
@@ -81,9 +81,9 @@ export default function ClassCreatePage() {
 
   // 폼 데이터 변경 핸들러
   const handleInputChange = (field: string, value: string | number) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
     setError('');
   };
@@ -99,7 +99,7 @@ export default function ClassCreatePage() {
       await classroomService.createClassroom({
         name: formData.name,
         school_level: formData.school_level,
-        grade: formData.grade
+        grade: formData.grade,
       });
 
       // 성공 후 목록 새로고침
@@ -127,7 +127,7 @@ export default function ClassCreatePage() {
   // 코드 복사
   const handleCopyCode = async () => {
     if (!selectedClass) return;
-    
+
     try {
       await navigator.clipboard.writeText(selectedClass.class_code);
       setCopied(true);
@@ -143,7 +143,7 @@ export default function ClassCreatePage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="flex flex-col">
       {/* 헤더 */}
       <PageHeader
         icon={<Users />}
@@ -158,7 +158,7 @@ export default function ClassCreatePage() {
           {/* 상단 액션 버튼 */}
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-lg font-semibold text-gray-900">내 클래스 목록</h2>
-            <Button 
+            <Button
               onClick={() => setIsCreateModalOpen(true)}
               className="bg-green-600 hover:bg-green-700"
             >
@@ -185,7 +185,7 @@ export default function ClassCreatePage() {
                 <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">생성된 클래스가 없습니다</h3>
                 <p className="text-gray-500 mb-4">첫 번째 클래스를 생성해보세요!</p>
-                <Button 
+                <Button
                   onClick={() => setIsCreateModalOpen(true)}
                   className="bg-green-600 hover:bg-green-700"
                 >
@@ -211,8 +211,8 @@ export default function ClassCreatePage() {
                   </TableHeader>
                   <TableBody>
                     {classes.map((classroom) => (
-                      <TableRow 
-                        key={classroom.id} 
+                      <TableRow
+                        key={classroom.id}
                         className="cursor-pointer hover:bg-gray-50"
                         onClick={() => handleClassClick(classroom)}
                       >
@@ -261,7 +261,7 @@ export default function ClassCreatePage() {
               신규 클래스 생성
             </DialogTitle>
           </DialogHeader>
-          
+
           <div className="space-y-4">
             <div>
               <label htmlFor="className" className="block text-sm font-medium text-gray-700 mb-2">
@@ -279,9 +279,11 @@ export default function ClassCreatePage() {
               <label htmlFor="school" className="block text-sm font-medium text-gray-700 mb-2">
                 학교급 *
               </label>
-              <Select 
-                value={formData.school_level} 
-                onValueChange={(value: 'middle' | 'high') => handleInputChange('school_level', value)}
+              <Select
+                value={formData.school_level}
+                onValueChange={(value: 'middle' | 'high') =>
+                  handleInputChange('school_level', value)
+                }
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -297,8 +299,8 @@ export default function ClassCreatePage() {
               <label htmlFor="grade" className="block text-sm font-medium text-gray-700 mb-2">
                 학년 *
               </label>
-              <Select 
-                value={formData.grade.toString()} 
+              <Select
+                value={formData.grade.toString()}
                 onValueChange={(value) => handleInputChange('grade', parseInt(value))}
               >
                 <SelectTrigger>
@@ -314,16 +316,10 @@ export default function ClassCreatePage() {
           </div>
 
           <DialogFooter className="gap-2">
-            <Button 
-              variant="outline" 
-              onClick={() => setIsCreateModalOpen(false)}
-            >
+            <Button variant="outline" onClick={() => setIsCreateModalOpen(false)}>
               취소
             </Button>
-            <Button 
-              onClick={handleCreateClass}
-              className="bg-green-600 hover:bg-green-700"
-            >
+            <Button onClick={handleCreateClass} className="bg-green-600 hover:bg-green-700">
               생성하기
             </Button>
           </DialogFooter>
@@ -339,7 +335,7 @@ export default function ClassCreatePage() {
               클래스 코드
             </DialogTitle>
           </DialogHeader>
-          
+
           {selectedClass && (
             <div className="space-y-4">
               <div>
@@ -351,7 +347,7 @@ export default function ClassCreatePage() {
                   </p>
                 </div>
               </div>
-              
+
               <div className="text-xs text-gray-500 space-y-1">
                 <p>• 이 코드를 학생들에게 공유하세요</p>
                 <p>• 학생은 클래스 가입 페이지에서 이 코드를 입력할 수 있습니다</p>
@@ -361,16 +357,10 @@ export default function ClassCreatePage() {
           )}
 
           <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => setIsCodeModalOpen(false)}
-            >
+            <Button variant="outline" onClick={() => setIsCodeModalOpen(false)}>
               닫기
             </Button>
-            <Button 
-              onClick={handleCopyCode}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
+            <Button onClick={handleCopyCode} className="bg-blue-600 hover:bg-blue-700">
               {copied ? (
                 <>
                   <CheckCircle className="w-4 h-4 mr-2" />

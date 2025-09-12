@@ -12,28 +12,43 @@ import { FiUsers } from 'react-icons/fi';
 import { FiShoppingCart } from 'react-icons/fi';
 import { FiClipboard } from 'react-icons/fi';
 import { FiBook } from 'react-icons/fi';
+import { FiHome } from 'react-icons/fi';
+import { useAuth } from '@/contexts/AuthContext';
 import path from 'path';
 
 const Sidebar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const router = useRouter();
+  const { userType } = useAuth();
 
-  const menuItems = [
+  // Teacher 메뉴
+  const teacherMenuItems = [
     { icon: <FiCalendar />, text: '캘린더' },
     { icon: <FiList />, text: '리스트' },
     { icon: <FiMail />, text: '메일' },
     { icon: <FiClipboard />, text: '문제 관리', path: '/question/bank' },
-    { icon: <FiBook />, text: '과제 풀이', path: '/test' },
     { icon: <FiEdit />, text: '문제 생성', path: '/question/create' },
     { icon: <FiUsers />, text: '학생 관리', path: '/class/create' },
     { icon: <FiShoppingCart />, text: '마켓플레이스' },
   ];
 
+  // Student 메뉴
+  const studentMenuItems = [
+    { icon: <FiCalendar />, text: '캘린더' },
+    { icon: <FiList />, text: '리스트' },
+    { icon: <FiMail />, text: '메일' },
+    { icon: <FiBook />, text: '과제 풀이', path: '/test' },
+    { icon: <FiHome />, text: '내 클래스', path: '/class' },
+  ];
+
+  const menuItems = userType === 'teacher' ? teacherMenuItems : studentMenuItems;
+
   return (
     <motion.div
-      className="bg-white h-screen flex flex-col border-r border-[#D1D1D1]"
+      className="bg-white flex flex-col border-r border-[#D1D1D1]"
       animate={{ width: isOpen ? '240px' : '80px' }}
       transition={{ duration: 0.3, ease: 'easeInOut' }}
+      style={{ height: 'calc(100vh - 60px)' }}
     >
       <div className="p-5 flex-1 flex flex-col gap-4">
         {/* Toggle Button */}

@@ -1,24 +1,34 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { studentClassService } from '@/services/authService';
+import { useAuth } from '@/contexts/AuthContext';
 import { Users, Plus } from 'lucide-react';
 
 export default function ClassJoinPage() {
   const router = useRouter();
+  const { isAuthenticated, userType } = useAuth();
   const [classCode, setClassCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  // 로그인 확인
+  useEffect(() => {
+    if (!isAuthenticated || userType !== 'student') {
+      router.push('/login');
+      return;
+    }
+  }, [isAuthenticated, userType, router]);
+
   const handleJoinClass = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!classCode.trim()) {
       setError('클래스 코드를 입력해주세요.');
       return;
@@ -30,9 +40,9 @@ export default function ClassJoinPage() {
 
     try {
       await studentClassService.requestJoinClass({
-        class_code: classCode.trim()
+        class_code: classCode.trim(),
       });
-      
+
       setSuccess('클래스 가입 요청이 완료되었습니다! 선생님의 승인을 기다려주세요.');
       setClassCode('');
     } catch (error: any) {
@@ -44,7 +54,7 @@ export default function ClassJoinPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="flex flex-col">
       {/* 헤더 영역 */}
       <PageHeader
         icon={<Users />}
@@ -80,7 +90,10 @@ export default function ClassJoinPage() {
 
               <form onSubmit={handleJoinClass} className="space-y-4">
                 <div>
-                  <label htmlFor="classCode" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label
+                    htmlFor="classCode"
+                    className="block text-sm font-medium text-gray-700 mb-2"
+                  >
                     클래스 코드 *
                   </label>
                   <Input
@@ -101,8 +114,8 @@ export default function ClassJoinPage() {
                   </p>
                 </div>
 
-                <Button 
-                  type="submit" 
+                <Button
+                  type="submit"
                   className="w-full bg-blue-600 hover:bg-blue-700"
                   disabled={isLoading || !classCode.trim()}
                 >

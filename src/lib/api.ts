@@ -2,6 +2,13 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8001';
 const AUTH_API_BASE_URL = process.env.NEXT_PUBLIC_AUTH_API_BASE_URL || 'http://localhost:8003';
 
+// 토큰 만료 처리를 위한 callback
+let onTokenExpired: (() => void) | null = null;
+
+export const setTokenExpiredCallback = (callback: () => void) => {
+  onTokenExpired = callback;
+};
+
 class ApiError extends Error {
   constructor(public status: number, message: string) {
     super(message);
@@ -16,47 +23,42 @@ async function apiRequest<T>(endpoint: string, options: RequestInit = {}, baseUr
   const config: RequestInit = {
     headers: {
       'Content-Type': 'application/json',
-      ...options.headers,
+      ...(options.headers || {}),
     },
     ...options,
   };
 
-  console.log('🌐 API Request:', {
+  console.log('🌐 DEBUG Request:', {
     url,
     method: config.method || 'GET',
     headers: config.headers,
     body: config.body,
-    bodyType: typeof config.body,
-    bodyLength: config.body?.length,
   });
 
   try {
     const response = await fetch(url, config);
 
-    console.log('🌐 API Response:', {
-      status: response.status,
-      statusText: response.statusText,
-      url: response.url,
-    });
-
     if (!response.ok) {
+      // 401 에러 (토큰 만료)인 경우 자동 로그아웃 처리
+      if (response.status === 401 && onTokenExpired) {
+        console.log('🚨 Token expired, logging out...');
+        onTokenExpired();
+      }
+      
       // Try to get the error response body
       let errorMessage = `API 요청 실패: ${response.status}`;
       try {
         const errorBody = await response.text();
-        console.log('🚨 Error Response Body:', errorBody);
         errorMessage += ` - ${errorBody}`;
       } catch (e) {
-        console.log('🚨 Could not parse error response');
+        // Error reading response body
       }
       throw new ApiError(response.status, errorMessage);
     }
 
     const data = await response.json();
-    console.log('✅ API Success:', data);
     return data;
   } catch (error) {
-    console.log('🚨 API Error:', error);
     if (error instanceof ApiError) {
       throw error;
     }
