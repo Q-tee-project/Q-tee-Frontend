@@ -12,14 +12,14 @@ export class QuestionService {
     // 현재 로그인한 사용자 정보 가져오기
     const currentUser = JSON.parse(localStorage.getItem('user_profile') || '{}');
     const userId = currentUser?.id;
-    
+
     if (!userId) {
       throw new Error('로그인이 필요합니다.');
     }
-    
-    return apiRequest<{ worksheets: any[] }>(`/api/math-generation/worksheets?user_id=${userId}`).then(
-      (response) => response.worksheets,
-    );
+
+    return apiRequest<{ worksheets: any[] }>(
+      `/api/math-generation/worksheets?user_id=${userId}`,
+    ).then((response) => response.worksheets);
   }
 
   // 특정 워크시트의 상세 정보 가져오기 (문제 포함)
@@ -27,11 +27,11 @@ export class QuestionService {
     // 현재 로그인한 사용자 정보 가져오기
     const currentUser = JSON.parse(localStorage.getItem('user_profile') || '{}');
     const userId = currentUser?.id;
-    
+
     if (!userId) {
       throw new Error('로그인이 필요합니다.');
     }
-    
+
     return apiRequest<any>(`/api/math-generation/worksheets/${worksheetId}?user_id=${userId}`);
   }
 
@@ -314,5 +314,95 @@ export class QuestionService {
   // 학생의 시험 기록 조회 (채점 기록 목록)
   static async getTestHistory(): Promise<any> {
     return apiRequest<any>('/api/math-generation/grading-history');
+  }
+
+  // ===== 과제 배포 관련 API =====
+
+  // 과제 배포
+  static async deployAssignment(data: {
+    assignmentId: number;
+    studentIds: number[];
+    classroomId: number;
+  }): Promise<any> {
+    // 백엔드가 snake_case를 기대하므로 변환하고, assignmentId를 정수로 변환
+    const requestData = {
+      assignment_id: Math.floor(data.assignmentId), // 정수로 변환
+      student_ids: data.studentIds,
+      classroom_id: data.classroomId,
+    };
+
+    console.log('📤 Deploy Assignment - Original data:', data);
+    console.log('📤 Deploy Assignment - Transformed data:', requestData);
+
+    return apiRequest<any>('/api/math-generation/assignments/deploy', {
+      method: 'POST',
+      body: JSON.stringify(requestData),
+    });
+  }
+
+  // 학생용 과제 목록 조회
+  static async getStudentAssignments(): Promise<any[]> {
+    try {
+      const currentUser = JSON.parse(localStorage.getItem('user_profile') || '{}');
+      const studentId = currentUser?.id;
+
+      console.log('🔍 학생 과제 목록 조회 시작');
+      console.log('현재 사용자 정보:', currentUser);
+      console.log('학생 ID:', studentId);
+
+      if (!studentId) {
+        throw new Error('로그인이 필요합니다.');
+      }
+
+      const url = `/api/math-generation/assignments/student/${studentId}`;
+      console.log('📡 요청 URL:', url);
+
+      const result = await apiRequest<any[]>(url);
+      console.log('✅ 과제 목록 조회 결과:', result);
+      console.log('📊 조회된 과제 수:', result?.length || 0);
+
+      return result || [];
+    } catch (error: any) {
+      console.error('❌ 학생 과제 목록 조회 오류:', error);
+      console.error('❌ 에러 상세:', {
+        message: error.message,
+        status: error.status,
+        stack: error.stack,
+      });
+      throw error;
+    }
+  }
+
+  // 과제 상세 정보 조회 (학생용)
+  static async getAssignmentDetail(assignmentId: number): Promise<any> {
+    try {
+      const currentUser = JSON.parse(localStorage.getItem('user_profile') || '{}');
+      const studentId = currentUser?.id;
+
+      console.log('📚 과제 상세 조회 요청 시작');
+      console.log('📚 학생 ID:', studentId, '과제 ID:', assignmentId);
+
+      const url = `/api/math-generation/assignments/${assignmentId}/student/${studentId}`;
+      console.log('📚 요청 URL:', url);
+
+      if (!studentId) {
+        throw new Error('로그인이 필요합니다.');
+      }
+
+      console.log('📚 API 요청 시작...');
+      const result = await apiRequest<any>(url);
+      console.log('✅ 과제 상세 조회 성공:', result);
+      console.log('📊 문제 개수:', result?.problems?.length || 0);
+
+      return result;
+    } catch (error: any) {
+      console.error('❌ 과제 상세 조회 오류:', error);
+      console.error('❌ 에러 상세:', {
+        message: error.message,
+        status: error.status,
+        stack: error.stack,
+      });
+      throw error;
+    }
   }
 }

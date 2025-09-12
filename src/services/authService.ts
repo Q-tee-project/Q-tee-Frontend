@@ -138,7 +138,7 @@ const getAuthHeaders = (): Record<string, string> => {
   const token = tokenStorage.getToken();
   return {
     'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {})
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 };
 
@@ -288,6 +288,13 @@ export const classroomService = {
       headers: getAuthHeaders(),
     });
   },
+
+  // 특정 클래스룸 정보 조회
+  async getClassroom(classroomId: number): Promise<Classroom> {
+    return authApiRequest<Classroom>(`/api/classrooms/${classroomId}`, {
+      headers: getAuthHeaders(),
+    });
+  },
 };
 
 // 학생 클래스 가입 API 서비스 (Student용)
@@ -303,7 +310,7 @@ export const studentClassService = {
 
   // 내가 속한 클래스 목록 조회
   async getMyClasses(): Promise<Classroom[]> {
-    return authApiRequest<Classroom[]>('/api/classrooms/my-classrooms', {
+    return authApiRequest<Classroom[]>('/api/classrooms/my-classrooms/student', {
       headers: getAuthHeaders(),
     });
   },

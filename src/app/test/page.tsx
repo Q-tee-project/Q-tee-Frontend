@@ -71,7 +71,7 @@ export default function TestPage() {
       setTimeRemaining((prev) => {
         if (prev <= 0) {
           clearInterval(timer);
-          alert('시험 시간이 종료되었습니다.');
+          alert('과제 시간이 종료되었습니다.');
           return 0;
         }
         return prev - 1;
@@ -89,19 +89,53 @@ export default function TestPage() {
       return;
     }
 
-    console.log('배포된 문제지 로드 시작...');
+    console.log('배포된 과제 로드 시작...');
     setIsLoading(true);
     try {
-      const worksheetData = await QuestionService.getWorksheets();
-      console.log('문제지 데이터:', worksheetData);
+      // 학생용 과제 목록 가져오기
+      const assignmentData = await QuestionService.getStudentAssignments();
+      console.log('과제 데이터:', assignmentData);
+
+      // 과제 데이터를 워크시트 형식으로 변환
+      const worksheetData = assignmentData.map((assignment: any) => ({
+        id: assignment.assignment_id,
+        title: assignment.title,
+        unit_name: assignment.unit_name,
+        chapter_name: assignment.chapter_name,
+        problem_count: assignment.problem_count,
+        status: assignment.status,
+        deployed_at: assignment.deployed_at,
+        created_at: assignment.deployed_at,
+        school_level: '중학교', // 기본값
+        grade: 1, // 기본값
+        semester: 1, // 기본값
+      }));
+
+      console.log('📋 변환된 워크시트 데이터:', worksheetData);
+
       setWorksheets(worksheetData);
       if (worksheetData.length > 0) {
         setSelectedWorksheet(worksheetData[0]);
         await loadWorksheetProblems(worksheetData[0].id);
       }
     } catch (error: any) {
-      console.error('문제지 로드 실패:', error);
-      setError(`문제지 데이터를 불러올 수 없습니다: ${error.message}`);
+      console.error('❌ 과제 로드 실패:', error);
+      console.error('❌ 에러 상세:', {
+        message: error.message,
+        status: error.status,
+        stack: error.stack,
+      });
+
+      let errorMessage = '과제 데이터를 불러올 수 없습니다.';
+      if (error.status === 404) {
+        errorMessage = '과제가 배포되지 않았거나 접근 권한이 없습니다.';
+      } else if (error.status === 401) {
+        errorMessage = '로그인이 필요합니다. 다시 로그인해주세요.';
+      } else if (error.message) {
+        errorMessage = `과제 데이터를 불러올 수 없습니다: ${error.message}`;
+      }
+
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -110,16 +144,53 @@ export default function TestPage() {
   // 워크시트의 문제들 로드
   const loadWorksheetProblems = async (worksheetId: number) => {
     try {
-      const worksheetDetail = await QuestionService.getWorksheetDetail(worksheetId);
-      setWorksheetProblems(worksheetDetail.problems || []);
+      console.log('📚 과제 문제 로드 시작 - worksheetId:', worksheetId);
+
+      // 학생용 과제 상세 정보 가져오기
+      console.log('📚 API 호출 시작...');
+      const assignmentDetail = await QuestionService.getAssignmentDetail(worksheetId);
+      console.log('📚 과제 상세 정보 전체:', assignmentDetail);
+      console.log('📚 과제 정보:', assignmentDetail?.assignment);
+      console.log('📚 배포 정보:', assignmentDetail?.deployment);
+      console.log('📚 문제 목록:', assignmentDetail?.problems);
+      console.log('📚 문제 개수:', assignmentDetail?.problems?.length || 0);
+
+      // 응답 구조 확인
+      if (assignmentDetail) {
+        console.log('📚 응답 키들:', Object.keys(assignmentDetail));
+        if (assignmentDetail.problems) {
+          console.log('📚 첫 번째 문제:', assignmentDetail.problems[0]);
+        }
+      }
+
+      if (!assignmentDetail.problems || assignmentDetail.problems.length === 0) {
+        console.warn('⚠️ 문제가 없습니다. 과제가 제대로 생성되었는지 확인하세요.');
+        setError('과제에 문제가 없습니다. 선생님에게 문의하세요.');
+      }
+
+      setWorksheetProblems(assignmentDetail.problems || []);
     } catch (error: any) {
-      console.error('워크시트 문제 로드 실패:', error);
-      setError('워크시트 문제를 불러올 수 없습니다.');
+      console.error('❌ 과제 문제 로드 실패:', error);
+      console.error('❌ 에러 상세:', {
+        message: error.message,
+        status: error.status,
+        stack: error.stack,
+      });
+
+      let errorMessage = '과제 문제를 불러올 수 없습니다.';
+      if (error.status === 404) {
+        errorMessage = '과제가 배포되지 않았거나 접근 권한이 없습니다.';
+      } else if (error.message) {
+        errorMessage = `과제 문제를 불러올 수 없습니다: ${error.message}`;
+      }
+
+      setError(errorMessage);
     }
   };
 
   // 문제지 선택 핸들러
   const handleWorksheetSelect = async (worksheet: Worksheet) => {
+    console.log('📝 과제 선택:', worksheet);
     setSelectedWorksheet(worksheet);
     await loadWorksheetProblems(worksheet.id);
     setCurrentProblemIndex(0);
@@ -129,7 +200,7 @@ export default function TestPage() {
     setTestResult(null);
   };
 
-  // 시험 시작
+  // 과제 시작
   const startTest = async () => {
     if (!selectedWorksheet) return;
 
@@ -149,10 +220,10 @@ export default function TestPage() {
 
       setTestSession(session);
       setIsTestStarted(true);
-      console.log('시험 세션 시작:', session);
+      console.log('과제 세션 시작:', session);
     } catch (error: any) {
-      console.error('시험 시작 실패:', error);
-      setError('시험을 시작할 수 없습니다: ' + error.message);
+      console.error('과제 시작 실패:', error);
+      setError('과제를 시작할 수 없습니다: ' + error.message);
     } finally {
       setIsLoading(false);
     }
@@ -165,7 +236,7 @@ export default function TestPage() {
       [problemId]: answer,
     }));
 
-    // 백엔드에 답안 임시 저장 (시험이 시작된 경우에만)
+    // 백엔드에 답안 임시 저장 (과제가 시작된 경우에만)
     if (testSession && isTestStarted) {
       try {
         await QuestionService.saveAnswer(testSession.session_id, problemId, answer);
@@ -191,10 +262,10 @@ export default function TestPage() {
     }
   };
 
-  // 시험 제출
+  // 과제 제출
   const submitTest = async () => {
     if (!testSession || !isTestStarted) {
-      alert('시험을 먼저 시작해주세요.');
+      alert('과제를 먼저 시작해주세요.');
       return;
     }
 
@@ -220,8 +291,8 @@ export default function TestPage() {
       // 결과 모달 표시
       setShowResultModal(true);
     } catch (error: any) {
-      console.error('시험 제출 실패:', error);
-      setError('시험 제출에 실패했습니다: ' + error.message);
+      console.error('과제 제출 실패:', error);
+      setError('과제 제출에 실패했습니다: ' + error.message);
     } finally {
       setIsSubmitting(false);
     }
@@ -244,9 +315,9 @@ export default function TestPage() {
       {/* 헤더 영역 */}
       <PageHeader
         icon={<CheckCircle />}
-        title="시험 응시"
+        title="과제 풀이"
         variant="question"
-        description="배포된 문제지를 확인하고 시험을 응시할 수 있습니다"
+        description="배포된 과제를 확인하고 풀이할 수 있습니다"
       />
 
       {/* 메인 컨텐츠 영역 */}
@@ -297,7 +368,7 @@ export default function TestPage() {
                   </SelectContent>
                 </Select>
 
-                {/* 시험 시작 버튼 */}
+                {/* 과제 시작 버튼 */}
                 {selectedWorksheet &&
                   worksheetProblems.length > 0 &&
                   !isTestStarted &&
@@ -308,28 +379,28 @@ export default function TestPage() {
                         disabled={isLoading}
                         className="w-full bg-[#0072CE] hover:bg-[#0056A3] text-white"
                       >
-                        {isLoading ? '시작 중...' : ' 시험 시작하기'}
+                        {isLoading ? '시작 중...' : '과제 시작하기'}
                       </Button>
                       <div className="text-xs text-gray-500 text-center">
-                        시험을 시작하면 타이머가 작동합니다
+                        과제를 시작하면 타이머가 작동합니다
                       </div>
                     </div>
                   )}
 
-                {/* 시험 상태 표시 */}
+                {/* 과제 진행 상태 표시 */}
                 {isTestStarted && (
                   <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                      <span className="text-sm font-medium text-green-700">시험 진행 중</span>
+                      <span className="text-sm font-medium text-green-700">과제 진행 중</span>
                     </div>
                   </div>
                 )}
 
-                {/* 시험 결과 표시 */}
+                {/* 과제 완료 결과 표시 */}
                 {testResult && (
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-3">
-                    <h4 className="text-sm font-medium text-blue-700">시험 완료</h4>
+                    <h4 className="text-sm font-medium text-blue-700">과제 완료</h4>
                     <div className="text-xs text-blue-600 space-y-1">
                       <div>
                         정답: {testResult.correct_count || 0}개 / {testResult.total_problems || 0}개
@@ -467,7 +538,8 @@ export default function TestPage() {
                         {/* 답안 입력 영역 */}
                         <div className="space-y-4">
                           {currentProblem.problem_type === 'multiple_choice' &&
-                          currentProblem.choices ? (
+                          currentProblem.choices &&
+                          Array.isArray(currentProblem.choices) ? (
                             <div className="space-y-3">
                               {currentProblem.choices.map((choice, index) => {
                                 const optionLabel = String.fromCharCode(65 + index);
@@ -572,7 +644,7 @@ export default function TestPage() {
                         disabled={isSubmitting}
                         className="bg-[#0072CE] hover:bg-[#0056A3] text-white"
                       >
-                        {isSubmitting ? '제출 중...' : '📝 시험 제출'}
+                        {isSubmitting ? '제출 중...' : '📝 과제 제출'}
                       </Button>
                     </div>
                   )}
@@ -597,7 +669,7 @@ export default function TestPage() {
                       {selectedWorksheet.title}
                     </div>
                     <div className="text-gray-500 text-sm mb-4">
-                      왼쪽에서 "시험 시작하기" 버튼을 눌러 시험을 시작하세요
+                      왼쪽에서 "과제 시작하기" 버튼을 눌러 과제를 시작하세요
                     </div>
                     <div className="text-gray-400 text-xs">
                       문제 수: {worksheetProblems.length}개 | 제한 시간: 60분
@@ -606,13 +678,13 @@ export default function TestPage() {
                 ) : testResult ? (
                   <>
                     <div className="text-green-400 text-lg mb-2">✅</div>
-                    <div className="text-gray-700 text-lg font-medium mb-2">시험 완료!</div>
+                    <div className="text-gray-700 text-lg font-medium mb-2">과제 완료!</div>
                     <div className="text-gray-500 text-sm">결과가 왼쪽에 표시됩니다</div>
                   </>
                 ) : (
                   <>
                     <div className="text-gray-400 text-lg mb-2">📝</div>
-                    <div className="text-gray-500 text-sm">문제지를 선택하세요</div>
+                    <div className="text-gray-500 text-sm">과제를 선택하세요</div>
                   </>
                 )}
               </div>
@@ -641,8 +713,13 @@ export default function TestPage() {
               </svg>
             </div>
             <div className="flex-1">
-              <p className="text-sm font-medium text-gray-900">오류가 발생했습니다</p>
+              <p className="text-sm font-medium text-gray-900">⚠️ 문제가 발생했습니다</p>
               <p className="text-sm text-gray-600 mt-1">{error}</p>
+              <div className="text-xs text-gray-500 mt-2 space-y-1">
+                <div>• 학생이 클래스에 가입되어 있는지 확인하세요</div>
+                <div>• 선생님이 과제를 배포했는지 확인하세요</div>
+                <div>• 브라우저 개발자 도구의 콘솔을 확인하세요</div>
+              </div>
             </div>
             <Button
               onClick={() => setError(null)}
@@ -687,7 +764,7 @@ export default function TestPage() {
           <div className="bg-white rounded-lg p-6 shadow-xl">
             <div className="flex items-center gap-3">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-              <span className="text-sm font-medium text-gray-700">처리 중입니다...</span>
+              <span className="text-sm font-medium text-gray-700">과제 처리 중입니다...</span>
             </div>
           </div>
         </div>
