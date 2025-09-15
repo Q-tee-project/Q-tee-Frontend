@@ -498,7 +498,8 @@ export default function Header() {
                       )}
                     </div>
                     <div style={{ height: '1px', background: '#EFEFEF' }} />
-                    <button
+                    <Link
+                      href="/profile"
                       role="menuitem"
                       style={{
                         all: 'unset',
@@ -508,6 +509,7 @@ export default function Header() {
                         padding: '12px 16px',
                         cursor: 'pointer',
                         color: '#1F2937',
+                        textDecoration: 'none',
                       }}
                       onClick={() => {
                         setIsProfileOpen(false);
@@ -515,7 +517,7 @@ export default function Header() {
                     >
                       <LuUser size={18} aria-hidden />
                       <span>프로필</span>
-                    </button>
+                    </Link>
                     <div style={{ height: '1px', background: '#EFEFEF' }} />
                     <button
                       role="menuitem"

@@ -11,8 +11,8 @@ interface MainLayoutWrapperProps {
 export default function MainLayoutWrapper({ children }: MainLayoutWrapperProps) {
   const pathname = usePathname();
 
-  // login과 join 페이지는 레이아웃을 적용하지 않음
-  const excludeLayoutPaths = ['/login', '/join'];
+  // login, join, 홈페이지는 레이아웃을 적용하지 않음
+  const excludeLayoutPaths = ['/login', '/join', '/'];
   const shouldExcludeLayout = excludeLayoutPaths.includes(pathname);
 
   if (shouldExcludeLayout) {
