@@ -7,14 +7,24 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
+import { authService } from '@/services/authService'
+import { useAuth } from '@/contexts/AuthContext'
 
 export default function LoginPage() {
+  const router = useRouter()
+  const { login } = useAuth()
+  const [userType, setUserType] = useState<'teacher' | 'student'>('teacher')
   const [formData, setFormData] = useState({
-    id: '',
+    username: '',
     password: ''
   })
   const [keepLogin, setKeepLogin] = useState(false)
+<<<<<<< HEAD
   const router = useRouter()
+=======
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState('')
+>>>>>>> d361f40c3e897bcd03c35bd671acc562816281d7
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -22,11 +32,42 @@ export default function LoginPage() {
       ...prev,
       [name]: value
     }))
+    setError('')
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    console.log('Login submitted:', { ...formData, keepLogin })
+    setIsLoading(true)
+    setError('')
+    
+    try {
+      if (userType === 'teacher') {
+        await authService.teacherLogin({
+          username: formData.username,
+          password: formData.password
+        })
+        const profile = await authService.getTeacherProfile()
+        login('teacher', profile)
+        router.push('/question/bank') // 선생님은 문제 관리 페이지로
+      } else {
+        await authService.studentLogin({
+          username: formData.username,
+          password: formData.password
+        })
+        const profile = await authService.getStudentProfile()
+        login('student', profile)
+        router.push('/test') // 학생은 시험 페이지로
+      }
+    } catch (error: any) {
+      console.error('Login error:', error)
+      setError(error?.message || '로그인에 실패했습니다. 아이디와 비밀번호를 확인해주세요.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleSignupClick = () => {
+    router.push('/join')
   }
 
   return (
@@ -49,17 +90,51 @@ export default function LoginPage() {
           <h2 className="text-lg font-medium text-center mb-6">로그인</h2>
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* 사용자 유형 선택 */}
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-3 block">사용자 유형</label>
+              <div className="grid grid-cols-2 gap-3">
+                <div
+                  className={`border-2 rounded-lg p-3 cursor-pointer text-center transition-all ${
+                    userType === 'teacher'
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                  onClick={() => setUserType('teacher')}
+                >
+                  <div className="font-medium text-sm">선생님</div>
+                </div>
+                <div
+                  className={`border-2 rounded-lg p-3 cursor-pointer text-center transition-all ${
+                    userType === 'student'
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                  onClick={() => setUserType('student')}
+                >
+                  <div className="font-medium text-sm">학생</div>
+                </div>
+              </div>
+            </div>
+            {/* 에러 메시지 */}
+            {error && (
+              <div className="text-red-500 text-sm text-center bg-red-50 p-2 rounded">
+                {error}
+              </div>
+            )}
+
             {/* 아이디 */}
             <div>
-              <label htmlFor="id" className="text-sm font-medium text-gray-700 mb-2 block">아이디</label>
+              <label htmlFor="username" className="text-sm font-medium text-gray-700 mb-2 block">아이디</label>
               <Input
-                id="id"
-                name="id"
+                id="username"
+                name="username"
                 type="text"
                 placeholder="아이디를 입력해 주세요"
-                value={formData.id}
+                value={formData.username}
                 onChange={handleInputChange}
                 className="w-full"
+                disabled={isLoading}
               />
             </div>
 
@@ -74,6 +149,7 @@ export default function LoginPage() {
                 value={formData.password}
                 onChange={handleInputChange}
                 className="w-full"
+                disabled={isLoading}
               />
             </div>
 
@@ -97,8 +173,9 @@ export default function LoginPage() {
               <Button 
                 type="submit" 
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                disabled={isLoading}
               >
-                로그인
+                {isLoading ? '로그인 중...' : '로그인'}
               </Button>
             </div>
 
@@ -108,7 +185,12 @@ export default function LoginPage() {
                 type="button" 
                 variant="outline" 
                 className="w-full"
+<<<<<<< HEAD
                 onClick={() => router.push('/join')}
+=======
+                onClick={handleSignupClick}
+                disabled={isLoading}
+>>>>>>> d361f40c3e897bcd03c35bd671acc562816281d7
               >
                 회원가입
               </Button>

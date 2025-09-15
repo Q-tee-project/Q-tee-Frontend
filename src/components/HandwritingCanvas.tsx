@@ -19,7 +19,7 @@ export const HandwritingCanvas: React.FC<HandwritingCanvasProps> = ({
   onStrokeChange,
   className = '',
   value,
-  onChange
+  onChange,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -55,7 +55,7 @@ export const HandwritingCanvas: React.FC<HandwritingCanvasProps> = ({
 
     ctx.beginPath();
     ctx.moveTo(x, y);
-    
+
     if (currentTool === 'pen') {
       ctx.globalCompositeOperation = 'source-over';
       ctx.strokeStyle = '#000000';
@@ -64,14 +64,14 @@ export const HandwritingCanvas: React.FC<HandwritingCanvasProps> = ({
       ctx.globalCompositeOperation = 'destination-out';
       ctx.lineWidth = 10;
     }
-    
+
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
   };
 
   const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!isDrawing) return;
-    
+
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -92,7 +92,7 @@ export const HandwritingCanvas: React.FC<HandwritingCanvasProps> = ({
       const canvas = canvasRef.current;
       if (canvas) {
         const newStroke = canvas.toDataURL();
-        setStrokes(prev => [...prev, newStroke]);
+        setStrokes((prev) => [...prev, newStroke]);
         onChange?.(newStroke);
         onStrokeChange?.(true);
       }
@@ -122,8 +122,7 @@ export const HandwritingCanvas: React.FC<HandwritingCanvasProps> = ({
           onClick={() => setCurrentTool('pen')}
           className="flex items-center gap-1"
         >
-          <Pen className="w-4 h-4" />
-          펜
+          <Pen className="w-4 h-4" />펜
         </Button>
         <Button
           size="sm"

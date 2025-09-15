@@ -2,81 +2,135 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
 import { IoIosArrowDropright } from 'react-icons/io';
-import { CiCalendar } from 'react-icons/ci';
-import { AiOutlineBars } from 'react-icons/ai';
-import { CiMail } from 'react-icons/ci';
-import { FaRegPenToSquare } from 'react-icons/fa6';
-import { RiGroupLine } from 'react-icons/ri';
+import { FiCalendar } from 'react-icons/fi';
+import { FiList } from 'react-icons/fi';
+import { FiMail } from 'react-icons/fi';
+import { FiEdit } from 'react-icons/fi';
+import { FiUsers } from 'react-icons/fi';
 import { FiShoppingCart } from 'react-icons/fi';
-import { FaClipboardList } from 'react-icons/fa';
-import { FaGraduationCap } from 'react-icons/fa';
+import { FiClipboard } from 'react-icons/fi';
+import { FiBook } from 'react-icons/fi';
+import { FiHome } from 'react-icons/fi';
+import { useAuth } from '@/contexts/AuthContext';
+import path from 'path';
 
 const Sidebar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const router = useRouter();
+  const { userType } = useAuth();
 
-  const menuItems = [
-    { icon: <CiCalendar />, text: '캘린더' },
-    { icon: <AiOutlineBars />, text: '리스트' },
-    { icon: <CiMail />, text: '메일' },
-    { icon: <FaClipboardList />, text: '문제 관리', path: '/question/bank' },
-    { icon: <FaGraduationCap />, text: '과제 풀이', path: '/test' },
-    { icon: <FaRegPenToSquare />, text: '문제 생성' },
-    { icon: <RiGroupLine />, text: '학생 관리' },
+  // Teacher 메뉴
+  const teacherMenuItems = [
+    { icon: <FiCalendar />, text: '캘린더' },
+    { icon: <FiList />, text: '리스트' },
+    { icon: <FiMail />, text: '메일' },
+    { icon: <FiClipboard />, text: '문제 관리', path: '/question/bank' },
+    { icon: <FiEdit />, text: '문제 생성', path: '/question/create' },
+    { icon: <FiUsers />, text: '학생 관리', path: '/class/create' },
     { icon: <FiShoppingCart />, text: '마켓플레이스' },
   ];
 
+  // Student 메뉴
+  const studentMenuItems = [
+    { icon: <FiCalendar />, text: '캘린더' },
+    { icon: <FiList />, text: '리스트' },
+    { icon: <FiMail />, text: '메일' },
+    { icon: <FiBook />, text: '과제 풀이', path: '/test' },
+    { icon: <FiHome />, text: '내 클래스', path: '/class' },
+  ];
+
+  const menuItems = userType === 'teacher' ? teacherMenuItems : studentMenuItems;
+
   return (
-    <div
-      className={`bg-white h-screen flex flex-col border-r border-[#D1D1D1] transition-all duration-300 ${
-        isOpen ? 'w-60' : 'w-16'
-      }`}
+    <motion.div
+      className="bg-white flex flex-col border-r border-[#D1D1D1]"
+      animate={{ width: isOpen ? '240px' : '80px' }}
+      transition={{ duration: 0.3, ease: 'easeInOut' }}
+      style={{ height: 'calc(100vh - 60px)' }}
     >
-      <div className="p-5 flex-1 flex flex-col gap-5">
+      <div className="p-2.5 flex-1 flex flex-col gap-4">
         {/* Toggle Button */}
-        <div className="flex items-center justify-center">
-          <button
+        <div className="flex items-center">
+          <motion.button
             onClick={() => setIsOpen(!isOpen)}
-            className="flex items-center justify-center w-6 h-6 rounded-md cursor-pointer hover:bg-gray-100 transition-colors"
+            className="flex items-center justify-center rounded-md cursor-pointer hover:bg-gray-50 transition-colors"
+            style={{ padding: '10px' }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
           >
-            <IoIosArrowDropright
-              className="text-[#333] text-6 transition-transform duration-300"
-              style={{
-                transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-              }}
-            />
-          </button>
+            <motion.div
+              animate={{ rotate: isOpen ? 180 : 0 }}
+              transition={{ duration: 0.3, ease: 'easeInOut' }}
+            >
+              <IoIosArrowDropright
+                className="text-[#333] text-6"
+                style={{
+                  width: '20px',
+                  height: '20px',
+                  color: '#333',
+                }}
+              />
+            </motion.div>
+          </motion.button>
         </div>
 
         {/* Menu Items */}
         {menuItems.map((item, index) => (
           <React.Fragment key={index}>
-            <div className="flex items-center gap-4">
-              <button
-                className="flex items-center justify-center w-6 h-6 rounded-md cursor-pointer hover:bg-gray-100 transition-colors flex-shrink-0"
-                onClick={() => item.path && router.push(item.path)}
-              >
+            <motion.div
+              className="flex items-center gap-4 rounded-md cursor-pointer hover:bg-gray-50 transition-colors"
+              onClick={() => item.path && router.push(item.path)}
+              style={{ padding: '10px' }}
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{
+                duration: 0.3,
+                delay: index * 0.05,
+                ease: 'easeOut',
+              }}
+              whileHover={{
+                scale: 1.02,
+                transition: { duration: 0.2 },
+              }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <button className="flex items-center justify-center flex-shrink-0">
                 <span className="text-[#333] text-6 flex items-center justify-center">
-                  {item.icon}
+                  {React.cloneElement(item.icon, {
+                    style: { width: '20px', height: '20px', color: '#333' },
+                  })}
                 </span>
               </button>
-              {isOpen && (
-                <span
-                  className="text-sm text-[#333] whitespace-nowrap cursor-pointer hover:text-[#0072CE] transition-colors"
-                  onClick={() => item.path && router.push(item.path)}
-                >
-                  {item.text}
-                </span>
-              )}
-            </div>
+              <AnimatePresence>
+                {isOpen && (
+                  <motion.span
+                    className="text-sm text-[#333] whitespace-nowrap"
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -10 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    {item.text}
+                  </motion.span>
+                )}
+              </AnimatePresence>
+            </motion.div>
 
             {/* Separator after 메일 (3rd item) */}
-            {index === 2 && <div className="border-b border-[#D1D1D1] mx-2"></div>}
+            {index === 2 && (
+              <motion.div
+                className="border-b border-[#D1D1D1]"
+                initial={{ scaleX: 0 }}
+                animate={{ scaleX: 1 }}
+                transition={{ duration: 0.3, delay: 0.2 }}
+              />
+            )}
           </React.Fragment>
         ))}
       </div>
-    </div>
+    </motion.div>
   );
 };
 

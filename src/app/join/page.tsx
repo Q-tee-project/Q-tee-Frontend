@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
+import { authService } from '@/services/authService';
 
 const BLUE = 'text-blue-600';
 const RED = 'text-red-500';
@@ -15,6 +16,7 @@ const GRADE_LIST = ['학년 선택', '1학년', '2학년', '3학년'];
 
 export default function JoinPage() {
   const router = useRouter();
+<<<<<<< HEAD
   const [userType, setUserType] = useState('teacher'); // 기본값 '선생님'
   const [formData, setFormData] = useState({
     name: '',
@@ -92,10 +94,59 @@ export default function JoinPage() {
     } else {
       setPwMsg('');
     }
+=======
+  const [userType, setUserType] = useState<'teacher' | 'student'>('teacher');
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    username: '',
+    password: '',
+    confirmPassword: '',
+    parent_phone: '',
+    school_level: 'middle' as 'middle' | 'high',
+    grade: 1,
+  });
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: name === 'grade' ? Number(value) : value,
+    }));
+    setError('');
+>>>>>>> d361f40c3e897bcd03c35bd671acc562816281d7
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const validateForm = () => {
+    if (!userType) {
+      setError('가입 유형을 선택해주세요.');
+      return false;
+    }
+    if (!formData.name || !formData.email || !formData.phone || !formData.username || !formData.password) {
+      setError('모든 필수 항목을 입력해주세요.');
+      return false;
+    }
+    if (formData.password !== formData.confirmPassword) {
+      setError('비밀번호가 일치하지 않습니다.');
+      return false;
+    }
+    if (userType === 'student' && !formData.parent_phone) {
+      setError('학부모 연락처를 입력해주세요.');
+      return false;
+    }
+    if (formData.password.length < 8) {
+      setError('비밀번호는 8자 이상이어야 합니다.');
+      return false;
+    }
+    return true;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+<<<<<<< HEAD
     const newEmptyFields: {[key:string]:boolean} = {};
     if (!formData.name) newEmptyFields.name = true;
     if (!formData.email) newEmptyFields.email = true;
@@ -118,6 +169,49 @@ export default function JoinPage() {
     }
     // TODO: 회원가입 처리
     alert('회원가입 완료!');
+=======
+    
+    if (!validateForm()) {
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+    
+    try {
+      if (userType === 'teacher') {
+        await authService.teacherSignup({
+          username: formData.username,
+          email: formData.email,
+          name: formData.name,
+          phone: formData.phone,
+          password: formData.password,
+        });
+      } else {
+        await authService.studentSignup({
+          username: formData.username,
+          email: formData.email,
+          name: formData.name,
+          phone: formData.phone,
+          parent_phone: formData.parent_phone,
+          school_level: formData.school_level,
+          grade: formData.grade,
+          password: formData.password,
+        });
+      }
+      
+      // 회원가입 성공 후 로그인 페이지로 이동
+      router.push('/login');
+    } catch (error: any) {
+      console.error('Signup error:', error);
+      setError(error?.message || '회원가입에 실패했습니다. 다시 시도해주세요.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleBackClick = () => {
+>>>>>>> d361f40c3e897bcd03c35bd671acc562816281d7
     router.push('/login');
   };
 
@@ -151,15 +245,42 @@ export default function JoinPage() {
                 </div>
               </div>
             </div>
+<<<<<<< HEAD
             {/* 이름 */}
             <div>
               <label htmlFor="name" className="text-sm font-medium text-gray-700 mb-2 block">이름</label>
               {/* 자동완성/자동저장/자동수정 off */}
               <Input id="name" name="name" type="text" placeholder="이름" value={formData.name} onChange={handleInputChange} className={`w-full${emptyFields.name ? ' border-red-500' : ''}`} autoComplete="off" autoCorrect="off" spellCheck="false" />
               {emptyFields.name && <p className="text-xs mt-1 text-red-500">이름이 입력되지 않았습니다.</p>}
+=======
+
+            {/* 에러 메시지 */}
+            {error && (
+              <div className="text-red-500 text-sm text-center bg-red-50 p-2 rounded">
+                {error}
+              </div>
+            )}
+
+            {/* 이름 */}
+            <div>
+              <label htmlFor="name" className="text-sm font-medium text-gray-700 mb-2 block">
+                이름
+              </label>
+              <Input
+                id="name"
+                name="name"
+                type="text"
+                placeholder="이름"
+                value={formData.name}
+                onChange={handleInputChange}
+                className="w-full"
+                disabled={isLoading}
+              />
+>>>>>>> d361f40c3e897bcd03c35bd671acc562816281d7
             </div>
             {/* 이메일 */}
             <div>
+<<<<<<< HEAD
               <label htmlFor="email" className="text-sm font-medium text-gray-700 mb-2 block">이메일</label>
               {/* 자동완성/자동저장/자동수정 off */}
               <Input id="email" name="email" type="email" placeholder="이메일을 입력해 주세요" value={formData.email} onChange={handleInputChange} onBlur={handleEmailBlur} className={`w-full${emptyFields.email ? ' border-red-500' : ''}`} autoComplete="off" autoCorrect="off" spellCheck="false" />
@@ -216,9 +337,59 @@ export default function JoinPage() {
               </div>
               {emptyFields.userId && <p className="text-xs mt-1 text-red-500">아이디가 입력되지 않았습니다.</p>}
               {idMsg && <p className={`text-xs mt-1 ${idMsgColor}`}>{idMsg}</p>}
+=======
+              <label htmlFor="email" className="text-sm font-medium text-gray-700 mb-2 block">
+                이메일
+              </label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                placeholder="이메일을 입력해 주세요"
+                value={formData.email}
+                onChange={handleInputChange}
+                className="w-full"
+                disabled={isLoading}
+              />
+            </div>
+
+            {/* 연락처 */}
+            <div>
+              <label htmlFor="phone" className="text-sm font-medium text-gray-700 mb-2 block">
+                연락처
+              </label>
+              <Input
+                id="phone"
+                name="phone"
+                type="tel"
+                placeholder="연락처를 입력해 주세요"
+                value={formData.phone}
+                onChange={handleInputChange}
+                className="w-full"
+                disabled={isLoading}
+              />
+            </div>
+
+            {/* 아이디 */}
+            <div>
+              <label htmlFor="username" className="text-sm font-medium text-gray-700 mb-2 block">
+                아이디
+              </label>
+              <Input
+                id="username"
+                name="username"
+                type="text"
+                placeholder="아이디를 입력해 주세요"
+                value={formData.username}
+                onChange={handleInputChange}
+                className="w-full"
+                disabled={isLoading}
+              />
+>>>>>>> d361f40c3e897bcd03c35bd671acc562816281d7
             </div>
             {/* 비밀번호 */}
             <div>
+<<<<<<< HEAD
               <label htmlFor="password" className="text-sm font-medium text-gray-700 mb-2 block">비밀번호</label>
               {/* 자동완성/자동저장/자동수정 off */}
               <Input id="password" name="password" type="password" placeholder="비밀번호를 입력해 주세요" value={formData.password} onChange={handleInputChange} className={`w-full${emptyFields.password || !pwValid ? ' border-red-500' : ''}`} autoComplete="new-password" autoCorrect="off" spellCheck="false" />
@@ -226,9 +397,28 @@ export default function JoinPage() {
               {!pwValid && <p className="text-xs mt-1 text-red-500">비밀번호는 영어와 숫자를 혼합하여 4자 이상 입력해야 합니다.</p>}
               {/* 안내문구 */}
               <p className="text-xs text-gray-500 mt-1">영어와 숫자를 혼합하여 4자 이상 입력하세요.</p>
+=======
+              <label htmlFor="password" className="text-sm font-medium text-gray-700 mb-2 block">
+                비밀번호
+              </label>
+              <Input
+                id="password"
+                name="password"
+                type="password"
+                placeholder="비밀번호를 입력해 주세요"
+                value={formData.password}
+                onChange={handleInputChange}
+                className="w-full"
+                disabled={isLoading}
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                숫자, 문자, 특수문자 혼합으로 8-15 자리 입력하세요. (20자 제한)
+              </p>
+>>>>>>> d361f40c3e897bcd03c35bd671acc562816281d7
             </div>
             {/* 비밀번호 확인 */}
             <div>
+<<<<<<< HEAD
               <label htmlFor="confirmPassword" className="text-sm font-medium text-gray-700 mb-2 block">비밀번호 확인</label>
               {/* 자동완성/자동저장/자동수정 off */}
               <Input id="confirmPassword" name="confirmPassword" type="password" placeholder="비밀번호를 입력해 주세요" value={formData.confirmPassword} onChange={handleInputChange} onBlur={handlePwCheck} className={`w-full${emptyFields.confirmPassword ? ' border-red-500' : ''}`} autoComplete="new-password" autoCorrect="off" spellCheck="false" />
@@ -239,6 +429,103 @@ export default function JoinPage() {
             <div className="flex gap-3 pt-4">
               <Button type="button" variant="outline" className="flex-1" onClick={() => router.back()}>이전</Button>
               <Button type="submit" className="flex-1 bg-blue-600 hover:bg-blue-700 text-white">회원가입</Button>
+=======
+              <label
+                htmlFor="confirmPassword"
+                className="text-sm font-medium text-gray-700 mb-2 block"
+              >
+                비밀번호 확인
+              </label>
+              <Input
+                id="confirmPassword"
+                name="confirmPassword"
+                type="password"
+                placeholder="비밀번호를 입력해 주세요"
+                value={formData.confirmPassword}
+                onChange={handleInputChange}
+                className="w-full"
+                disabled={isLoading}
+              />
+            </div>
+
+            {/* 학생 전용 필드들 */}
+            {userType === 'student' && (
+              <>
+                {/* 학부모 연락처 */}
+                <div>
+                  <label htmlFor="parent_phone" className="text-sm font-medium text-gray-700 mb-2 block">
+                    학부모 연락처 *
+                  </label>
+                  <Input
+                    id="parent_phone"
+                    name="parent_phone"
+                    type="tel"
+                    placeholder="학부모 연락처를 입력해 주세요"
+                    value={formData.parent_phone}
+                    onChange={handleInputChange}
+                    className="w-full"
+                    disabled={isLoading}
+                  />
+                </div>
+
+                {/* 학교급 선택 */}
+                <div>
+                  <label htmlFor="school_level" className="text-sm font-medium text-gray-700 mb-2 block">
+                    학교급 *
+                  </label>
+                  <select
+                    id="school_level"
+                    name="school_level"
+                    value={formData.school_level}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    disabled={isLoading}
+                  >
+                    <option value="middle">중등학교</option>
+                    <option value="high">고등학교</option>
+                  </select>
+                </div>
+
+                {/* 학년 선택 */}
+                <div>
+                  <label htmlFor="grade" className="text-sm font-medium text-gray-700 mb-2 block">
+                    학년 *
+                  </label>
+                  <select
+                    id="grade"
+                    name="grade"
+                    value={formData.grade}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    disabled={isLoading}
+                  >
+                    <option value={1}>1학년</option>
+                    <option value={2}>2학년</option>
+                    <option value={3}>3학년</option>
+                  </select>
+                </div>
+              </>
+            )}
+
+            {/* 버튼 */}
+            <div className="flex gap-3 pt-4">
+              <Button 
+                type="button" 
+                variant="outline" 
+                className="flex-1"
+                onClick={handleBackClick}
+                disabled={isLoading}
+              >
+                이전
+              </Button>
+              <Button 
+                type="submit" 
+                className="flex-1 bg-blue-600 hover:bg-blue-700"
+                disabled={isLoading}
+              >
+                {isLoading ? '가입 중...' : '회원가입'}
+              </Button>
+>>>>>>> d361f40c3e897bcd03c35bd671acc562816281d7
             </div>
           </form>
         </CardContent>

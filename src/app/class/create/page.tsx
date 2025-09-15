@@ -1,621 +1,383 @@
 'use client';
 
-import React, { useState } from 'react';
-import { IoCloseCircleOutline } from 'react-icons/io5';
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent } from '@/components/ui/card';
+import { PageHeader } from '@/components/layout/PageHeader';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { classroomService } from '@/services/authService';
+import type { Classroom } from '@/services/authService';
+import { useAuth } from '@/contexts/AuthContext';
+import { Users, Plus, Code, Copy, CheckCircle } from 'lucide-react';
 
-export default function classCreatePage() {
-  const [selectAll, setSelectAll] = useState(false);
-  const [selectedRows, setSelectedRows] = useState<boolean[]>(Array(2).fill(false));
-  const [isModalOpen, setIsModalOpen] = useState(false);
+export default function ClassCreatePage() {
+  const router = useRouter();
+  const { isAuthenticated, userType } = useAuth();
+  const [classes, setClasses] = useState<Classroom[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const handleSelectAll = () => {
-    const newSelectAll = !selectAll;
-    setSelectAll(newSelectAll);
-    setSelectedRows(Array(2).fill(newSelectAll));
+  // 모달 상태
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isCodeModalOpen, setIsCodeModalOpen] = useState(false);
+  const [selectedClass, setSelectedClass] = useState<Classroom | null>(null);
+
+  // 폼 데이터
+  const [formData, setFormData] = useState({
+    name: '',
+    school_level: 'middle' as 'middle' | 'high',
+    grade: 1,
+  });
+
+  // 코드 복사 상태
+  const [copied, setCopied] = useState(false);
+
+  // 로그인 확인
+  useEffect(() => {
+    if (!isAuthenticated || userType !== 'teacher') {
+      router.push('/login');
+      return;
+    }
+
+    loadClasses();
+  }, [isAuthenticated, userType, router]);
+
+  // 클래스 목록 로드
+  const loadClasses = async () => {
+    setIsLoading(true);
+    try {
+      const classData = await classroomService.getMyClassrooms();
+      setClasses(classData);
+    } catch (error: any) {
+      console.error('클래스 로드 실패:', error);
+      setError('클래스 목록을 불러오는데 실패했습니다.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleRowSelect = (index: number) => {
-    const newSelectedRows = [...selectedRows];
-    newSelectedRows[index] = !newSelectedRows[index];
-    setSelectedRows(newSelectedRows);
-
-    // 모든 행이 선택되었는지 확인
-    const allSelected = newSelectedRows.every((selected) => selected);
-    setSelectAll(allSelected);
+  // 폼 데이터 변경 핸들러
+  const handleInputChange = (field: string, value: string | number) => {
+    setFormData((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+    setError('');
   };
+
+  // 클래스 생성
+  const handleCreateClass = async () => {
+    if (!formData.name.trim()) {
+      setError('클래스명을 입력해주세요.');
+      return;
+    }
+
+    try {
+      await classroomService.createClassroom({
+        name: formData.name,
+        school_level: formData.school_level,
+        grade: formData.grade,
+      });
+
+      // 성공 후 목록 새로고침
+      await loadClasses();
+      setIsCreateModalOpen(false);
+      setFormData({
+        name: '',
+        school_level: 'middle',
+        grade: 1,
+      });
+      setError('');
+    } catch (error: any) {
+      console.error('클래스 생성 실패:', error);
+      setError(error?.message || '클래스 생성에 실패했습니다.');
+    }
+  };
+
+  // 코드 모달 열기
+  const handleShowCode = (classroom: Classroom) => {
+    setSelectedClass(classroom);
+    setIsCodeModalOpen(true);
+    setCopied(false);
+  };
+
+  // 코드 복사
+  const handleCopyCode = async () => {
+    if (!selectedClass) return;
+
+    try {
+      await navigator.clipboard.writeText(selectedClass.class_code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (error) {
+      alert('코드 복사에 실패했습니다.');
+    }
+  };
+
+  // 클래스 상세보기
+  const handleClassClick = (classroom: Classroom) => {
+    router.push(`/class/${classroom.id}`);
+  };
+
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#EFF0F5', padding: '40px 60px' }}>
-      {/* 페이지 제목 */}
-      <h1 className="text-3xl font-bold text-gray-800 mb-8">수업 관리</h1>
+    <div className="flex flex-col">
+      {/* 헤더 */}
+      <PageHeader
+        icon={<Users />}
+        title="수업 관리"
+        variant="class"
+        description="클래스를 생성하고 관리하세요"
+      />
 
-      {/* 메인 콘텐츠 영역 */}
-      <div
-        className="bg-white shadow-sm"
-        style={{
-          padding: '40px 50px',
-          borderRadius: '5px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '30px',
-        }}
-      >
-        {/* 검색 및 생성 버튼 영역 */}
-        <div className="flex justify-between items-center mb-6">
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="클래스 명 검색"
-              className="pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              style={{ width: '400px' }}
-            />
-            <div
-              className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"
-              style={{
-                padding: '0 10px',
-                width: '100%',
-                alignItems: 'center',
-                justifyContent: 'flex-end',
-              }}
+      {/* 메인 컨텐츠 */}
+      <div className="flex-1 p-6">
+        <div className="max-w-6xl mx-auto">
+          {/* 상단 액션 버튼 */}
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-lg font-semibold text-gray-900">내 클래스 목록</h2>
+            <Button
+              onClick={() => setIsCreateModalOpen(true)}
+              className="bg-green-600 hover:bg-green-700"
             >
-              <svg
-                className="h-5 w-5 text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </svg>
-            </div>
+              <Plus className="w-4 h-4 mr-2" />
+              신규 수업 생성하기
+            </Button>
           </div>
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium"
-          >
-            신규 수업 생성하기
-          </button>
-        </div>
 
-        <div>
-          {/* 수업 목록 카드 */}
-          <div
-            className="bg-white border border-gray-200 rounded-lg shadow-sm"
-            style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px' }}
-          >
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-800">수업 목록</h2>
-            </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead style={{ background: '#fff', borderBottom: '1px solid #E1E1E1' }}>
-                  <tr>
-                    <th className="px-6 py-4 text-left">
-                      <span
-                        style={{
-                          padding: '10px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectAll}
-                          onChange={handleSelectAll}
-                          style={{
-                            width: '16px',
-                            height: '16px',
-                            border: 'none',
-                            outline: 'none',
-                            accentColor: '#0085FF',
-                            boxShadow: 'none',
-                          }}
-                        />
-                      </span>
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-medium uppercase tracking-wider">
-                      <span
-                        style={{
-                          padding: '10px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '16px',
-                          color: '#333',
-                        }}
-                      >
-                        클래스명
-                      </span>
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-medium uppercase tracking-wider">
-                      <span
-                        style={{
-                          padding: '10px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '16px',
-                          color: '#333',
-                        }}
-                      >
-                        학교
-                      </span>
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-medium uppercase tracking-wider">
-                      <span
-                        style={{
-                          padding: '10px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '16px',
-                          color: '#333',
-                        }}
-                      >
-                        학년
-                      </span>
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-medium uppercase tracking-wider">
-                      <span
-                        style={{
-                          padding: '10px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '16px',
-                          color: '#333',
-                        }}
-                      >
-                        개설 일자
-                      </span>
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-medium uppercase tracking-wider">
-                      <span
-                        style={{
-                          padding: '10px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '16px',
-                          color: '#333',
-                        }}
-                      >
-                        학생 수
-                      </span>
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-medium uppercase tracking-wider">
-                      <span
-                        style={{
-                          padding: '10px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '16px',
-                          color: '#333',
-                        }}
-                      >
-                        수정
-                      </span>
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-medium uppercase tracking-wider">
-                      <span
-                        style={{
-                          padding: '10px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '16px',
-                          color: '#333',
-                        }}
-                      >
-                        삭제
-                      </span>
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-medium uppercase tracking-wider">
-                      <span
-                        style={{
-                          padding: '10px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '16px',
-                          color: '#333',
-                        }}
-                      >
-                        코드
-                      </span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {/* 테이블 행들 */}
-                  {Array.from({ length: 2 }, (_, index) => (
-                    <tr key={index} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          style={{
-                            padding: '10px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={selectedRows[index]}
-                            onChange={() => handleRowSelect(index)}
-                            style={{
-                              width: '16px',
-                              height: '16px',
-                              border: 'none',
-                              outline: 'none',
-                              accentColor: '#0085FF',
-                              boxShadow: 'none',
-                            }}
-                          />
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <span
-                          style={{
-                            padding: '10px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '14px',
-                            color: '#666',
-                          }}
-                        >
-                          중등 수학 (화, 목)
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          style={{
-                            padding: '10px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '14px',
-                          }}
-                        >
-                          <p
-                            style={{
-                              padding: '4px 14px',
-                              margin: '0',
-                              borderRadius: '5px',
-                              backgroundColor: index % 2 === 0 ? '#E6F3FF' : '#FFF5E9',
-                              border: index % 2 === 0 ? '1px solid #0085FF' : '1px solid #FF9F2D',
-                              color: index % 2 === 0 ? '#0085FF' : '#FF9F2D',
-                            }}
-                          >
-                            {index % 2 === 0 ? '중등' : '고등'}
-                          </p>
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          style={{
-                            padding: '10px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '14px',
-                          }}
-                        >
-                          <p
-                            style={{
-                              padding: '4px 14px',
-                              margin: '0',
-                              borderRadius: '5px',
-                              backgroundColor: '#fff',
-                              border: '1px solid #999999',
-                              color: '#999999',
-                            }}
-                          >
-                            1학년
-                          </p>
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <span
-                          style={{
-                            padding: '10px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '14px',
-                            color: '#666',
-                          }}
-                        >
-                          2025.09.03 15:00:00
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <span
-                          style={{
-                            padding: '10px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '14px',
-                            color: '#666',
-                          }}
-                        >
-                          총 3명
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <span
-                          style={{
-                            padding: '10px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}
-                        >
-                          <button
-                            style={{
-                              background: 'none',
-                              border: 'none',
-                              padding: '0',
-                              cursor: 'pointer',
-                            }}
-                          >
-                            <svg className="h-5 w-5" fill="none" stroke="#666" viewBox="0 0 24 24">
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                              />
-                            </svg>
-                          </button>
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <span
-                          style={{
-                            padding: '10px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}
-                        >
-                          <button
-                            style={{
-                              background: 'none',
-                              border: 'none',
-                              padding: '0',
-                              cursor: 'pointer',
-                            }}
-                          >
-                            <svg className="h-5 w-5" fill="none" stroke="#666" viewBox="0 0 24 24">
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                              />
-                            </svg>
-                          </button>
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <span
-                          style={{
-                            padding: '10px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}
-                        >
-                          <button
-                            style={{
-                              background: 'none',
-                              border: 'none',
-                              padding: '0',
-                              cursor: 'pointer',
-                            }}
-                          >
-                            <svg className="h-5 w-5" fill="none" stroke="#666" viewBox="0 0 24 24">
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                              />
-                            </svg>
-                          </button>
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          {/* 에러 메시지 */}
+          {error && (
+            <div className="text-red-600 text-sm bg-red-50 p-3 rounded mb-4 border border-red-200">
+              {error}
             </div>
-          </div>
+          )}
+
+          {/* 로딩 */}
+          {isLoading ? (
+            <div className="text-center py-8">
+              <div className="text-gray-500">클래스 목록을 불러오는 중...</div>
+            </div>
+          ) : classes.length === 0 ? (
+            <Card>
+              <CardContent className="text-center py-12">
+                <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">생성된 클래스가 없습니다</h3>
+                <p className="text-gray-500 mb-4">첫 번째 클래스를 생성해보세요!</p>
+                <Button
+                  onClick={() => setIsCreateModalOpen(true)}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  신규 수업 생성하기
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            /* 클래스 테이블 */
+            <Card>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>클래스명</TableHead>
+                      <TableHead>학교급</TableHead>
+                      <TableHead>학년</TableHead>
+                      <TableHead>생성일</TableHead>
+                      <TableHead>상태</TableHead>
+                      <TableHead className="text-center">액션</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {classes.map((classroom) => (
+                      <TableRow
+                        key={classroom.id}
+                        className="cursor-pointer hover:bg-gray-50"
+                        onClick={() => handleClassClick(classroom)}
+                      >
+                        <TableCell className="font-medium">{classroom.name}</TableCell>
+                        <TableCell>
+                          {classroom.school_level === 'middle' ? '중학교' : '고등학교'}
+                        </TableCell>
+                        <TableCell>{classroom.grade}학년</TableCell>
+                        <TableCell>
+                          {new Date(classroom.created_at).toLocaleDateString('ko-KR')}
+                        </TableCell>
+                        <TableCell>
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            활성
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleShowCode(classroom);
+                            }}
+
+                          >
+                            <Code className="w-4 h-4 mr-1" />
+                            코드
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
 
-      {/* 클래스 생성 모달창 */}
-      {isModalOpen && (
-        <div
-          className="fixed inset-0 flex items-center justify-center z-50"
-          style={{
-            width: '100%',
-            height: '100%',
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          }}
-        >
-          {/* modal-container */}
-          <div
-            className="shadow-xl w-full max-w-md mx-4"
-            style={{
-              backgroundColor: '#fff',
-              borderRadius: '5px',
-              padding: '40px',
-            }}
-          >
-            {/* modal-header */}
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-semibold text-gray-800">클래스 생성</h2>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  padding: '0',
-                  cursor: 'pointer',
-                  color: '#000',
-                }}
-              >
-                <IoCloseCircleOutline size={24} />
-              </button>
+      {/* 클래스 생성 모달 */}
+      <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Plus className="w-5 h-5" />
+              신규 클래스 생성
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <label htmlFor="className" className="block text-sm font-medium text-gray-700 mb-2">
+                클래스명 *
+              </label>
+              <Input
+                id="className"
+                placeholder="예: 중1-1반, 수학심화반 등"
+                value={formData.name}
+                onChange={(e) => handleInputChange('name', e.target.value)}
+              />
             </div>
 
-            {/* modal-body */}
-            <div className="space-y-4">
-              {/* 입력과 선택 부분 */}
-              <div className="space-y-4">
-                {/* 클래스명 */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">클래스명</label>
-                  <input
-                    type="text"
-                    placeholder="클래스 이름을 입력해 주세요."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
+            <div>
+              <label htmlFor="school" className="block text-sm font-medium text-gray-700 mb-2">
+                학교급 *
+              </label>
+              <Select
+                value={formData.school_level}
+                onValueChange={(value: 'middle' | 'high') =>
+                  handleInputChange('school_level', value)
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="middle">중학교</SelectItem>
+                  <SelectItem value="high">고등학교</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-                {/* 학년 */}
-                <div className="flex gap-2">
-                  <div className="flex-1">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">학년</label>
-                    <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                      <option>중학교</option>
-                      <option>고등학교</option>
-                    </select>
-                  </div>
-                  <div className="flex-1">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">학년</label>
-                    <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                      <option>1학년</option>
-                      <option>2학년</option>
-                      <option>3학년</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* 요일 선택 */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">요일 선택</label>
-                  <div className="flex gap-2">
-                    {['월', '화', '수', '목', '금', '토', '일'].map((day, index) => (
-                      <button
-                        key={day}
-                        style={{
-                          background: 'none',
-                          border: index < 2 ? '1px solid #0072CE' : '1px solid #D1D1D1',
-                          borderRadius: '5px',
-                          padding: '10px',
-                          cursor: 'pointer',
-                          color: index < 2 ? '#0072CE' : '#666',
-                          fontSize: '14px',
-                          fontWeight: '500',
-                        }}
-                      >
-                        {day}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* 시작 시간 */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">시작 시간</label>
-                  <div className="flex gap-2">
-                    <select className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                      <option>오전</option>
-                      <option>오후</option>
-                    </select>
-                    <select className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                      <option>9시</option>
-                      <option>10시</option>
-                      <option>11시</option>
-                      <option>12시</option>
-                    </select>
-                    <select className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                      <option>00분</option>
-                      <option>30분</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* 종료 시간 */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">종료 시간</label>
-                  <div className="flex gap-2">
-                    <select className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                      <option>오전</option>
-                      <option>오후</option>
-                    </select>
-                    <select className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                      <option>9시</option>
-                      <option>10시</option>
-                      <option>11시</option>
-                      <option>12시</option>
-                    </select>
-                    <select className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                      <option>00분</option>
-                      <option>30분</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              {/* 하단의 버튼 */}
-              <div className="flex justify-end gap-3 pt-4">
-                <button
-                  onClick={() => setIsModalOpen(false)}
-                  style={{
-                    background: '#F5F5F5',
-                    border: 'none',
-                    borderRadius: '5px',
-                    padding: '10px 16px',
-                    cursor: 'pointer',
-                    color: '#666',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                  }}
-                >
-                  취소
-                </button>
-                <button
-                  onClick={() => setIsModalOpen(false)}
-                  style={{
-                    background: '#0072CE',
-                    border: 'none',
-                    borderRadius: '5px',
-                    padding: '10px 16px',
-                    cursor: 'pointer',
-                    color: '#fff',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                  }}
-                >
-                  생성
-                </button>
-              </div>
+            <div>
+              <label htmlFor="grade" className="block text-sm font-medium text-gray-700 mb-2">
+                학년 *
+              </label>
+              <Select
+                value={formData.grade.toString()}
+                onValueChange={(value) => handleInputChange('grade', parseInt(value))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">1학년</SelectItem>
+                  <SelectItem value="2">2학년</SelectItem>
+                  <SelectItem value="3">3학년</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
-        </div>
-      )}
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setIsCreateModalOpen(false)}>
+              취소
+            </Button>
+            <Button onClick={handleCreateClass} className="bg-green-600 hover:bg-green-700">
+              생성하기
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 클래스 코드 모달 */}
+      <Dialog open={isCodeModalOpen} onOpenChange={setIsCodeModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Code className="w-5 h-5" />
+              클래스 코드
+            </DialogTitle>
+          </DialogHeader>
+
+          {selectedClass && (
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm text-gray-600 mb-2">클래스: {selectedClass.name}</p>
+                <div className="bg-gray-50 p-4 rounded-lg text-center">
+                  <p className="text-xs text-gray-500 mb-1">학생들이 입력할 코드</p>
+                  <p className="text-2xl font-mono font-bold text-gray-900 tracking-wider">
+                    {selectedClass.class_code}
+                  </p>
+                </div>
+              </div>
+
+              <div className="text-xs text-gray-500 space-y-1">
+                <p>• 이 코드를 학생들에게 공유하세요</p>
+                <p>• 학생은 클래스 가입 페이지에서 이 코드를 입력할 수 있습니다</p>
+                <p>• 가입 요청 후 선생님의 승인이 필요합니다</p>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCodeModalOpen(false)}>
+              닫기
+            </Button>
+            <Button onClick={handleCopyCode} className="bg-blue-600 hover:bg-blue-700">
+              {copied ? (
+                <>
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  복사됨!
+                </>
+              ) : (
+                <>
+                  <Copy className="w-4 h-4 mr-2" />
+                  코드 복사
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
