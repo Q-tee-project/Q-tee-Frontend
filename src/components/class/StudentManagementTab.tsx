@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/table';
 import { classroomService } from '@/services/authService';
@@ -9,17 +10,19 @@ import type { StudentProfile } from '@/services/authService';
 
 interface StudentManagementTabProps {
   classId: string;
+  refreshTrigger?: number; // 새로고침 트리거
 }
 
-export function StudentManagementTab({ classId }: StudentManagementTabProps) {
+export function StudentManagementTab({ classId, refreshTrigger }: StudentManagementTabProps) {
   const [students, setStudents] = useState<StudentProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const router = useRouter();
 
   // 클래스 학생 목록 로드
   useEffect(() => {
     loadStudents();
-  }, [classId]);
+  }, [classId, refreshTrigger]);
 
   const loadStudents = async () => {
     setIsLoading(true);
@@ -41,7 +44,10 @@ export function StudentManagementTab({ classId }: StudentManagementTabProps) {
         <h3 className="text-lg font-semibold text-gray-800" style={{ padding: '0 10px' }}>
           학생 목록 ({students.length})
         </h3>
-        <button className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+        <button 
+          onClick={() => router.push(`/class/${classId}/register`)}
+          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+        >
           학생 등록
         </button>
       </div>
@@ -87,9 +93,6 @@ export function StudentManagementTab({ classId }: StudentManagementTabProps) {
                 </TableHead>
                 <TableHead className="text-center text-base font-bold" style={{ color: '#666' }}>
                   가입일
-                </TableHead>
-                <TableHead className="text-center text-base font-bold" style={{ color: '#666' }}>
-                  상태
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -142,19 +145,6 @@ export function StudentManagementTab({ classId }: StudentManagementTabProps) {
                   </TableCell>
                   <TableCell className="text-center text-sm text-gray-600">
                     {new Date(student.created_at).toLocaleDateString('ko-KR')}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <Badge
-                      className="text-xs"
-                      style={{
-                        backgroundColor: student.is_active ? '#D1FAE5' : '#FEE2E2',
-                        color: student.is_active ? '#065F46' : '#DC2626',
-                        border: 'none',
-                        padding: '4px 8px'
-                      }}
-                    >
-                      {student.is_active ? '활성' : '비활성'}
-                    </Badge>
                   </TableCell>
                 </TableRow>
               ))}

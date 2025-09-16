@@ -2,11 +2,31 @@
 
 import React, { useState, use, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { FiArrowLeft } from 'react-icons/fi';
+import { FaArrowLeft } from "react-icons/fa6";
+import { HiOutlinePencilSquare } from "react-icons/hi2";
+import { Users } from 'lucide-react';
 import { AssignmentTab } from '@/components/class/AssignmentTab';
 import { StudentManagementTab } from '@/components/class/StudentManagementTab';
 import { ApprovalTab } from '@/components/class/ApprovalTab';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { classroomService, Classroom } from '@/services/authService';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { IoIosClose } from "react-icons/io";
 
 interface ClassDetailPageProps {
   params: Promise<{
@@ -18,10 +38,31 @@ export default function ClassDetailPage({ params }: ClassDetailPageProps) {
   const [activeTab, setActiveTab] = useState('assignment');
   const [classroom, setClassroom] = useState<Classroom | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [error, setError] = useState('');
+  const [studentRefreshTrigger, setStudentRefreshTrigger] = useState(0);
   const router = useRouter();
 
   const resolvedParams = use(params);
   const classId = resolvedParams.id;
+
+  // URL 파라미터에서 탭 확인
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const tabParam = urlParams.get('tab');
+    
+    if (tabParam && ['assignment', 'student', 'approval'].includes(tabParam)) {
+      setActiveTab(tabParam);
+    }
+  }, []);
+
+  // 수정 폼 데이터
+  const [editFormData, setEditFormData] = useState({
+    name: '',
+    school_level: 'middle' as 'middle' | 'high',
+    grade: 1,
+  });
 
   // 클래스 정보 로드
   useEffect(() => {
@@ -30,6 +71,12 @@ export default function ClassDetailPage({ params }: ClassDetailPageProps) {
         setIsLoading(true);
         const classroomData = await classroomService.getClassroom(parseInt(classId));
         setClassroom(classroomData);
+        // 수정 폼 데이터 초기화
+        setEditFormData({
+          name: classroomData.name,
+          school_level: classroomData.school_level,
+          grade: classroomData.grade,
+        });
       } catch (error) {
         console.error('클래스 정보 로드 실패:', error);
       } finally {
@@ -40,6 +87,75 @@ export default function ClassDetailPage({ params }: ClassDetailPageProps) {
     loadClassroom();
   }, [classId]);
 
+  // 수정 모달 열기
+  const handleEditModalOpen = () => {
+    if (classroom) {
+      setEditFormData({
+        name: classroom.name,
+        school_level: classroom.school_level,
+        grade: classroom.grade,
+      });
+      setError('');
+      setIsEditModalOpen(true);
+    }
+  };
+
+  // 폼 데이터 변경 핸들러
+  const handleInputChange = (field: string, value: string | number) => {
+    setEditFormData((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+    setError('');
+  };
+
+  // 클래스 정보 수정
+  const handleUpdateClass = async () => {
+    if (!editFormData.name.trim()) {
+      setError('수업명을 입력해주세요.');
+      return;
+    }
+
+    try {
+      // 백엔드 API가 구현되지 않았으므로 로컬 상태만 업데이트
+      const updatedClassroom = {
+        ...classroom!,
+        name: editFormData.name,
+        school_level: editFormData.school_level,
+        grade: editFormData.grade,
+      };
+      setClassroom(updatedClassroom);
+      setIsEditModalOpen(false);
+      setError('');
+      
+      // TODO: 백엔드 API 구현 후 실제 API 호출로 변경
+      console.log('클래스 정보가 로컬에서 수정되었습니다:', updatedClassroom);
+    } catch (error: any) {
+      console.error('클래스 수정 실패:', error);
+      setError(error?.message || '클래스 수정에 실패했습니다.');
+    }
+  };
+
+  // 클래스 삭제
+  const handleDeleteClass = async () => {
+    try {
+      // 백엔드 API가 구현되지 않았으므로 로컬에서만 처리
+      setIsDeleteModalOpen(false);
+      router.push('/class/create');
+      
+      // TODO: 백엔드 API 구현 후 실제 API 호출로 변경
+      console.log('클래스가 로컬에서 삭제되었습니다:', classId);
+    } catch (error: any) {
+      console.error('클래스 삭제 실패:', error);
+      setError(error?.message || '클래스 삭제에 실패했습니다.');
+    }
+  };
+
+  // 학생 승인 후 콜백
+  const handleStudentApproved = () => {
+    setStudentRefreshTrigger(prev => prev + 1);
+  };
+
   const tabs = [
     { id: 'assignment', label: '과제 목록', count: 0 },
     { id: 'student', label: '학생 관리', count: 0 },
@@ -47,17 +163,28 @@ export default function ClassDetailPage({ params }: ClassDetailPageProps) {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="flex flex-col">
       {/* 헤더 */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
+      <PageHeader
+        icon={<Users />}
+        title="수업 관리"
+        variant="class"
+        description="수업을 생성하고 관리하세요"
+      />
+
+      {/* 메인 컨텐츠 */}
+      <div className="flex-1 p-6">
+        <div className="mx-auto">
+          {/* 전체 콘텐츠 컨테이너 */}
+          <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-6" style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
+            {/* 이전으로 돌아가기 및 클래스명 */}
             <div className="flex items-center">
               <button
                 onClick={() => router.push('/class/create')}
-                className="mr-4 p-2 rounded-md text-gray-400 hover:text-gray-600"
+                className="mr-4 p-2 rounded-md text-gray-400 hover:text-gray-600 transition-colors duration-200"
+                style={{ backgroundColor: '#f5f5f5', borderRadius: '50%', cursor: 'pointer' }}
               >
-                <FiArrowLeft className="h-5 w-5" />
+                <FaArrowLeft className="h-5 w-5" />
               </button>
 
               <h1 className="text-xl font-semibold text-gray-900">
@@ -69,43 +196,232 @@ export default function ClassDetailPage({ params }: ClassDetailPageProps) {
                     } ${classroom.grade}학년)`
                   : `클래스 상세 정보 (ID: ${classId})`}
               </h1>
+
+              {/* 클래스 정보 수정 버튼 */}
+              <button
+                onClick={handleEditModalOpen}
+                className="ml-3 p-2 rounded-md hover:text-gray-600 transition-colors duration-200"
+                style={{ color: '#666666', cursor: 'pointer' }}
+              >
+                <HiOutlinePencilSquare className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* 탭 네비게이션 */}
+            <div className="border-b border-gray-200">
+              <div className="flex">
+                {tabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`border-b-2 font-medium text-sm ${
+                      activeTab === tab.id
+                        ? 'border-blue-500 text-blue-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                    style={{ padding: '10px 20px' }}
+                  >
+                    {tab.label}
+                    {tab.count > 0 && (
+                      <span className="ml-2 bg-gray-100 text-gray-900 py-0.5 px-2.5 rounded-full text-xs">
+                        {tab.count}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 탭 내용 */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              {activeTab === 'assignment' && <AssignmentTab classId={classId} />}
+              {activeTab === 'student' && <StudentManagementTab classId={classId} refreshTrigger={studentRefreshTrigger} />}
+              {activeTab === 'approval' && <ApprovalTab classId={classId} onStudentApproved={handleStudentApproved} />}
             </div>
           </div>
         </div>
       </div>
 
-      {/* 탭 네비게이션 */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex space-x-8">
-            {tabs.map((tab) => (
+      {/* 클래스 정보 수정 모달 */}
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent className="max-w-md" showCloseButton={false}>
+          <DialogHeader>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <DialogTitle>
+                클래스 정보 수정
+              </DialogTitle>
               <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === tab.id
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
+                onClick={() => setIsEditModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600"
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >
-                {tab.label}
-                {tab.count > 0 && (
-                  <span className="ml-2 bg-gray-100 text-gray-900 py-0.5 px-2.5 rounded-full text-xs">
-                    {tab.count}
-                  </span>
-                )}
+                <IoIosClose />
               </button>
-            ))}
-          </div>
-        </div>
-      </div>
+            </div>
+          </DialogHeader>
 
-      {/* 탭 내용 */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {activeTab === 'assignment' && <AssignmentTab classId={classId} />}
-        {activeTab === 'student' && <StudentManagementTab classId={classId} />}
-        {activeTab === 'approval' && <ApprovalTab classId={classId} />}
-      </div>
+          <div className="space-y-4">
+            {/* 에러 메시지 */}
+            {error && (
+              <div className="text-red-600 text-sm bg-red-50 p-3 rounded border border-red-200">
+                {error}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+              <div>
+                <label htmlFor="className" className="block text-sm font-medium text-gray-700 mb-2">
+                  수업명 <span style={{ color: '#FF0000' }}>*</span>
+                </label>
+                <Input
+                  id="className"
+                  placeholder="예: 중1-1반, 수학심화반 등"
+                  value={editFormData.name}
+                  onChange={(e) => handleInputChange('name', e.target.value)}
+                />
+              </div>
+
+              <div className="flex gap-[15px]">
+                <div className="flex-1">
+                  <label htmlFor="school" className="block text-sm font-medium text-gray-700 mb-2">
+                    학교 <span style={{ color: '#FF0000' }}>*</span>
+                  </label>
+                  <Select
+                    value={editFormData.school_level}
+                    onValueChange={(value: 'middle' | 'high') =>
+                      handleInputChange('school_level', value)
+                    }
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="middle">중학교</SelectItem>
+                      <SelectItem value="high">고등학교</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex-1">
+                  <label htmlFor="grade" className="block text-sm font-medium text-gray-700 mb-2">
+                    학년 <span style={{ color: '#FF0000' }}>*</span>
+                  </label>
+                  <Select
+                    value={editFormData.grade.toString()}
+                    onValueChange={(value) => handleInputChange('grade', parseInt(value))}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">1학년</SelectItem>
+                      <SelectItem value="2">2학년</SelectItem>
+                      <SelectItem value="3">3학년</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* 삭제하기 버튼 */}
+              <div style={{ borderBottom: '1px solid #D1D1D1', paddingBottom: '15px' }}>
+                <button
+                  onClick={() => {
+                    setIsEditModalOpen(false);
+                    setIsDeleteModalOpen(true);
+                  }}
+                  style={{
+                    backgroundColor: '#EAEAEA',
+                    color: '#0072CE',
+                    borderRadius: '5px',
+                    padding: '7px 14px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '500'
+                  }}
+                >
+                  삭제하기
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter style={{ display: 'flex', gap: '15px' }}>
+            <button
+              onClick={() => setIsEditModalOpen(false)}
+              className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
+              style={{ flex: 1 }}
+            >
+              취소
+            </button>
+            <button
+              onClick={handleUpdateClass}
+              className="px-4 py-2 rounded-md transition-colors"
+              style={{ 
+                flex: 1,
+                backgroundColor: '#0072CE',
+                color: '#ffffff'
+              }}
+            >
+              수정하기
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 클래스 삭제 확인 모달 */}
+      <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+        <DialogContent className="max-w-md" showCloseButton={false}>
+          <DialogHeader>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <DialogTitle>
+                클래스 삭제
+              </DialogTitle>
+              <button
+                onClick={() => setIsDeleteModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600"
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                <IoIosClose />
+              </button>
+            </div>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <p className="text-gray-600">
+              정말로 이 클래스를 삭제하시겠습니까?
+            </p>
+            <p className="text-sm text-gray-500">
+              • 삭제된 클래스는 복구할 수 없습니다.
+              <br />
+              • 클래스에 속한 모든 학생들이 자동으로 제거됩니다.
+              <br />
+              • 클래스와 관련된 모든 데이터가 삭제됩니다.
+            </p>
+          </div>
+
+          <DialogFooter style={{ display: 'flex', gap: '15px' }}>
+            <button
+              onClick={() => setIsDeleteModalOpen(false)}
+              className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
+              style={{ flex: 1 }}
+            >
+              취소
+            </button>
+            <button
+              onClick={handleDeleteClass}
+              className="px-4 py-2 rounded-md transition-colors"
+              style={{ 
+                flex: 1,
+                backgroundColor: '#dc2626',
+                color: '#ffffff'
+              }}
+            >
+              삭제하기
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
