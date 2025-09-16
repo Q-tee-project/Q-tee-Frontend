@@ -15,7 +15,7 @@ const SCHOOL_OPTIONS = ['중학교', '고등학교'];
 const GRADE_OPTIONS = ['1학년', '2학년', '3학년'];
 const SEMESTER_OPTIONS = ['1학기', '2학기'];
 const DIFFICULTY = ['전체', '상', '중', '하'];
-const KOREAN_TYPES = ['전체', '시', '소설', '수필 / 비문학', '말하기 / 듣기 / 쓰기 / 매체', '문법'];
+const KOREAN_TYPES = ['전체', '시', '소설', '수필/비문학', '문법'];
 const QUESTION_COUNTS = [10, 20];
 
 interface KoreanGeneratorProps {
@@ -63,19 +63,22 @@ export default function KoreanGenerator({ onGenerate, isGenerating }: KoreanGene
   const handleGenerate = () => {
     if (!isReadyToGenerate) return;
 
-    // 임시로 목업 데이터 반환 (나중에 백엔드 연결 시 실제 API 호출로 변경)
-    const mockData = {
-      subject: '국어',
-      school,
-      grade,
-      semester,
-      type,
-      difficulty,
-      requirements,
-      questionCount,
+    // 백엔드 스키마에 맞게 데이터 구성
+    const requestData = {
+      school_level: school,
+      grade: parseInt(grade.replace('학년', '')),
+      semester: semester,
+      korean_type: type === '전체' ? '시' : type, // 전체인 경우 기본값 설정
+      question_type: '객관식', // 기본값 (추후 문제 형식 선택 기능 추가 시 수정)
+      difficulty: difficulty === '전체' ? '중' : difficulty, // 전체인 경우 기본값 설정
+      problem_count: questionCount || 10,
+      user_text: requirements || '',
+      korean_type_ratio: type === '전체' ? typeRatios : null,
+      question_type_ratio: null, // 현재는 단일 문제 형식만 지원
+      difficulty_ratio: difficulty === '전체' ? diffRatios : null,
     };
 
-    onGenerate(mockData);
+    onGenerate(requestData);
   };
 
   return (
@@ -136,8 +139,7 @@ export default function KoreanGenerator({ onGenerate, isGenerating }: KoreanGene
               <div className="max-w-xs">
                 <p className="font-medium mb-1">문제 유형 설정 팁</p>
                 <p className="text-xs">
-                  • <strong>전체</strong>를 선택하면 시, 소설, 수필/비문학, 말하기/듣기/쓰기/매체,
-                  문법의 비율을 설정할 수 있습니다
+                  • <strong>전체</strong>를 선택하면 시, 소설, 수필/비문학, 문법의 비율을 설정할 수 있습니다
                   <br />
                   • 각 유형별로 10% 단위로 비율을 조정할 수 있습니다
                   <br />• 총 비율은 100%가 되어야 합니다

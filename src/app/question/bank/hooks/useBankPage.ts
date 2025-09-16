@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { QuestionService } from '@/services/questionService';
+import { MathService } from '@/services/mathService';
+import { KoreanService } from '@/services/koreanService';
+import { EnglishService } from '@/services/englishService';
 import { Worksheet, MathProblem, Subject } from '@/types/math';
 
 export const useBankPage = () => {
@@ -18,17 +20,29 @@ export const useBankPage = () => {
   }, [selectedSubject]);
 
   const loadWorksheets = async () => {
-    if (selectedSubject !== Subject.MATH) {
-      setWorksheets([]);
-      setSelectedWorksheet(null);
-      setWorksheetProblems([]);
-      return;
-    }
-
     console.log('워크시트 로드 시작...');
     setIsLoading(true);
     try {
-      const worksheetData = await QuestionService.getWorksheets();
+      let worksheetData: any[] = [];
+
+      switch (selectedSubject) {
+        case Subject.MATH:
+        case '수학':
+          worksheetData = await MathService.getMathWorksheets();
+          break;
+        case '국어':
+          worksheetData = await KoreanService.getKoreanWorksheets();
+          break;
+        case '영어':
+          worksheetData = await EnglishService.getEnglishWorksheets();
+          break;
+        default:
+          setWorksheets([]);
+          setSelectedWorksheet(null);
+          setWorksheetProblems([]);
+          return;
+      }
+
       console.log('워크시트 데이터:', worksheetData);
       setWorksheets(worksheetData);
       if (worksheetData.length > 0) {
@@ -45,7 +59,23 @@ export const useBankPage = () => {
 
   const loadWorksheetProblems = async (worksheetId: number) => {
     try {
-      const worksheetDetail = await QuestionService.getWorksheetDetail(worksheetId);
+      let worksheetDetail: any;
+
+      switch (selectedSubject) {
+        case Subject.MATH:
+        case '수학':
+          worksheetDetail = await MathService.getMathWorksheetDetail(worksheetId);
+          break;
+        case '국어':
+          worksheetDetail = await KoreanService.getKoreanWorksheetDetail(worksheetId);
+          break;
+        case '영어':
+          worksheetDetail = await EnglishService.getEnglishWorksheetDetail(worksheetId);
+          break;
+        default:
+          return;
+      }
+
       setWorksheetProblems(worksheetDetail.problems || []);
     } catch (error: any) {
       console.error('워크시트 문제 로드 실패:', error);
@@ -69,7 +99,21 @@ export const useBankPage = () => {
 
     try {
       setIsLoading(true);
-      await QuestionService.deleteWorksheet(worksheet.id);
+
+      switch (selectedSubject) {
+        case Subject.MATH:
+        case '수학':
+          await MathService.deleteMathWorksheet(worksheet.id);
+          break;
+        case '국어':
+          // Korean delete not implemented yet
+          throw new Error('국어 워크시트 삭제 기능은 아직 구현되지 않았습니다.');
+        case '영어':
+          // English delete not implemented yet
+          throw new Error('영어 워크시트 삭제 기능은 아직 구현되지 않았습니다.');
+        default:
+          throw new Error('지원하지 않는 과목입니다.');
+      }
 
       if (selectedWorksheet?.id === worksheet.id) {
         setSelectedWorksheet(null);

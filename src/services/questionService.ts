@@ -2,7 +2,7 @@ import { apiRequest, API_BASE_URL } from '@/lib/api';
 import { Categories, QuestionFormData, QuestionGenerationResponse, Question } from '@/types/api';
 
 export class QuestionService {
-  // 카테고리 정보 가져오기 (영어 서비스용)
+  // 카테고리 정보 가져오기 (수학 서비스용)
   static async getCategories(): Promise<Categories> {
     return apiRequest<Categories>('/categories');
   }
@@ -173,6 +173,7 @@ export class QuestionService {
       message: response.message,
     }));
   }
+
 
   // ===== 시험 관련 API =====
 

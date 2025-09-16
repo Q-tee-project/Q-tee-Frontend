@@ -133,6 +133,55 @@ export default function CreatePage() {
     }
   };
 
+  // 국어 문제 생성 API 호출
+  const generateKoreanProblems = async (requestData: any) => {
+    try {
+      setIsGenerating(true);
+      setGenerationProgress(0);
+      setPreviewQuestions([]);
+
+      console.log('🚀 국어 문제 생성 요청 데이터:', requestData);
+
+      // 현재 로그인한 사용자 정보 가져오기
+      const currentUser = JSON.parse(localStorage.getItem('user_profile') || '{}');
+      const userId = currentUser?.id;
+
+      if (!userId) {
+        throw new Error('로그인이 필요합니다.');
+      }
+
+      // 생성 데이터 저장 (재생성에 사용)
+      setLastGenerationData(requestData);
+
+      // 국어 문제 생성 API 호출
+      const response = await fetch(
+        `http://localhost:8004/api/korean-generation/generate?user_id=${userId}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(requestData),
+        },
+      );
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        console.error('❌ API 응답 오류:', response.status, errorData);
+        throw new Error(`국어 문제 생성 요청 실패: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      // 진행 상황 폴링
+      await pollTaskStatus(data.task_id, 'korean');
+    } catch (error) {
+      console.error('국어 문제 생성 오류:', error);
+      setErrorMessage('국어 문제 생성 중 오류가 발생했습니다. 다시 시도해주세요.');
+      setIsGenerating(false);
+    }
+  };
+
   // 수학 문제 생성 API 호출
   const generateMathProblems = async (requestData: any) => {
     try {
@@ -183,13 +232,16 @@ export default function CreatePage() {
   };
 
   // 태스크 상태 폴링
-  const pollTaskStatus = async (taskId: string) => {
+  const pollTaskStatus = async (taskId: string, subject_type: string = 'math') => {
     let attempts = 0;
     const maxAttempts = 600; // 10분 최대 대기 (600초)
 
     const poll = async () => {
       try {
-        const response = await fetch(`http://localhost:8001/api/math-generation/tasks/${taskId}`);
+        const apiUrl = subject_type === 'korean'
+          ? `http://localhost:8004/api/korean-generation/tasks/${taskId}`
+          : `http://localhost:8001/api/math-generation/tasks/${taskId}`;
+        const response = await fetch(apiUrl);
         const data = await response.json();
 
         console.log('📊 태스크 상태:', data);
@@ -200,7 +252,7 @@ export default function CreatePage() {
           console.log('✅ 문제 생성 성공:', data.result);
           // 성공 시 워크시트 상세 조회
           if (data.result && data.result.worksheet_id) {
-            await fetchWorksheetResult(data.result.worksheet_id);
+            await fetchWorksheetResult(data.result.worksheet_id, subject_type);
           } else {
             console.error('❌ 성공했지만 worksheet_id가 없음:', data);
             setErrorMessage(
@@ -230,7 +282,7 @@ export default function CreatePage() {
   };
 
   // 워크시트 결과 조회
-  const fetchWorksheetResult = async (worksheetId: number) => {
+  const fetchWorksheetResult = async (worksheetId: number, subject_type: string = 'math') => {
     try {
       // 현재 로그인한 사용자 정보 가져오기
       const currentUser = JSON.parse(localStorage.getItem('user_profile') || '{}');
@@ -240,9 +292,10 @@ export default function CreatePage() {
         throw new Error('로그인이 필요합니다.');
       }
 
-      const response = await fetch(
-        `http://localhost:8001/api/math-generation/worksheets/${worksheetId}?user_id=${userId}`,
-      );
+      const apiUrl = subject_type === 'korean'
+        ? `http://localhost:8004/api/korean-generation/worksheets/${worksheetId}?user_id=${userId}`
+        : `http://localhost:8001/api/math-generation/worksheets/${worksheetId}?user_id=${userId}`;
+      const response = await fetch(apiUrl);
       const data = await response.json();
 
       console.log('🔍 워크시트 조회 결과:', data);
@@ -496,8 +549,10 @@ export default function CreatePage() {
   const handleGenerate = (data: any) => {
     if (subject === '수학') {
       generateMathProblems(data);
+    } else if (subject === '국어') {
+      generateKoreanProblems(data);
     } else {
-      // 국어, 영어는 임시 목업 생성
+      // 영어는 임시 목업 생성
       generateMockProblems(data);
     }
   };
