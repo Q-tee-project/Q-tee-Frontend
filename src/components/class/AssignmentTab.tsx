@@ -170,7 +170,6 @@ export function AssignmentTab({ classId }: AssignmentTabProps) {
           onClick={() => setIsModalOpen(true)}
           className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
         >
-          <Plus className="w-4 h-4" />
           과제 생성
         </Button>
       </div>
@@ -181,11 +180,7 @@ export function AssignmentTab({ classId }: AssignmentTabProps) {
           <CardContent className="text-center py-12">
             <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">생성된 과제가 없습니다</h3>
-            <p className="text-gray-500 mb-4">과제를 생성하여 학생들에게 배정해보세요!</p>
-            <Button onClick={() => setIsModalOpen(true)} className="bg-blue-600 hover:bg-blue-700">
-              <Plus className="w-4 h-4 mr-2" />
-              과제 생성하기
-            </Button>
+            <p className="text-gray-500 mb-4">과제를 생성하여 학생들에게 배포해보세요!</p>
           </CardContent>
         </Card>
       ) : (

@@ -78,7 +78,7 @@ export interface StudentJoinRequest {
   id: number;
   student_id: number;
   classroom_id: number;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'pending' | 'approved' | 'rejected' | 'invited';
   requested_at: string;
   processed_at?: string;
   student: StudentProfile;
@@ -292,6 +292,23 @@ export const classroomService = {
   // 특정 클래스룸 정보 조회
   async getClassroom(classroomId: number): Promise<Classroom> {
     return authApiRequest<Classroom>(`/api/classrooms/${classroomId}`, {
+      headers: getAuthHeaders(),
+    });
+  },
+
+  // 클래스룸 정보 수정
+  async updateClassroom(classroomId: number, data: ClassroomCreateData): Promise<Classroom> {
+    return authApiRequest<Classroom>(`/api/classrooms/${classroomId}`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+  },
+
+  // 클래스룸 삭제
+  async deleteClassroom(classroomId: number): Promise<void> {
+    return authApiRequest<void>(`/api/classrooms/${classroomId}`, {
+      method: 'DELETE',
       headers: getAuthHeaders(),
     });
   },

@@ -7,12 +7,14 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { classroomService } from '@/services/authService';
 import type { StudentJoinRequest } from '@/services/authService';
+import { IoIosClose } from "react-icons/io";
 
 interface ApprovalTabProps {
   classId: string;
+  onStudentApproved?: () => void; // 승인 후 콜백 함수
 }
 
-export function ApprovalTab({ classId }: ApprovalTabProps) {
+export function ApprovalTab({ classId, onStudentApproved }: ApprovalTabProps) {
   const [pendingRequests, setPendingRequests] = useState<StudentJoinRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -32,8 +34,29 @@ export function ApprovalTab({ classId }: ApprovalTabProps) {
     setIsLoading(true);
     try {
       const requests = await classroomService.getPendingJoinRequests();
-      setPendingRequests(requests);
-      setSelectedApprovals(Array(requests.length).fill(false));
+      
+      // localStorage에서 초대 완료 상태의 학생들 가져오기
+      const invitedStudents = JSON.parse(localStorage.getItem(`invited_students_${classId}`) || '[]');
+      
+      // 중복 제거: 같은 이메일을 가진 학생이 있으면 백엔드 요청을 우선시
+      const mergedRequests = [...invitedStudents];
+      
+      requests.forEach(backendRequest => {
+        const existingIndex = mergedRequests.findIndex(
+          invited => invited.student.email === backendRequest.student.email
+        );
+        
+        if (existingIndex !== -1) {
+          // 기존 초대 완료 항목을 백엔드 요청으로 교체
+          mergedRequests[existingIndex] = backendRequest;
+        } else {
+          // 새로운 항목 추가
+          mergedRequests.push(backendRequest);
+        }
+      });
+      
+      setPendingRequests(mergedRequests);
+      setSelectedApprovals(Array(mergedRequests.length).fill(false));
     } catch (error: any) {
       console.error('승인 대기 목록 로드 실패:', error);
       setError('승인 대기 목록을 불러오는데 실패했습니다.');
@@ -69,8 +92,20 @@ export function ApprovalTab({ classId }: ApprovalTabProps) {
       const status = approvalAction === 'approve' ? 'approved' : 'rejected';
       await classroomService.approveJoinRequest(approvingRequest.id, status);
       
+      // localStorage에서 해당 학생 제거 (초대 완료 상태였다면)
+      const invitedStudents = JSON.parse(localStorage.getItem(`invited_students_${classId}`) || '[]');
+      const updatedInvitedStudents = invitedStudents.filter(
+        (invited: any) => invited.student.email !== approvingRequest.student.email
+      );
+      localStorage.setItem(`invited_students_${classId}`, JSON.stringify(updatedInvitedStudents));
+      
       // 목록 새로고침
       await loadPendingRequests();
+      
+      // 승인된 경우 부모 컴포넌트에 알림
+      if (approvalAction === 'approve' && onStudentApproved) {
+        onStudentApproved();
+      }
       
       setIsApprovalModalOpen(false);
       setApprovingRequest(null);
@@ -81,7 +116,10 @@ export function ApprovalTab({ classId }: ApprovalTabProps) {
   };
 
   const handleBatchApproval = async (action: 'approve' | 'reject') => {
-    const selectedRequests = pendingRequests.filter((_, index) => selectedApprovals[index]);
+    // "초대 완료" 상태가 아닌 항목들만 필터링
+    const selectedRequests = pendingRequests.filter((request, index) => 
+      selectedApprovals[index] && request.status !== 'invited'
+    );
     
     if (selectedRequests.length === 0) return;
 
@@ -95,8 +133,20 @@ export function ApprovalTab({ classId }: ApprovalTabProps) {
         )
       );
       
+      // localStorage에서 처리된 학생들 제거
+      const invitedStudents = JSON.parse(localStorage.getItem(`invited_students_${classId}`) || '[]');
+      const updatedInvitedStudents = invitedStudents.filter(
+        (invited: any) => !selectedRequests.some(request => request.student.email === invited.student.email)
+      );
+      localStorage.setItem(`invited_students_${classId}`, JSON.stringify(updatedInvitedStudents));
+      
       // 목록 새로고침
       await loadPendingRequests();
+      
+      // 승인된 경우 부모 컴포넌트에 알림
+      if (action === 'approve' && onStudentApproved) {
+        onStudentApproved();
+      }
       
     } catch (error: any) {
       console.error('일괄 처리 실패:', error);
@@ -115,14 +165,26 @@ export function ApprovalTab({ classId }: ApprovalTabProps) {
           <button
             onClick={() => handleBatchApproval('approve')}
             disabled={!selectedApprovals.some(selected => selected)}
-            className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{
+              backgroundColor: '#E8FFE8',
+              color: '#04AA04',
+              border: 'none',
+              padding: '6px 12px'
+            }}
           >
             일괄 승인
           </button>
           <button
             onClick={() => handleBatchApproval('reject')}
             disabled={!selectedApprovals.some(selected => selected)}
-            className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{
+              backgroundColor: '#FFEEEE',
+              color: '#FF0004',
+              border: 'none',
+              padding: '6px 12px'
+            }}
           >
             일괄 거절
           </button>
@@ -153,7 +215,7 @@ export function ApprovalTab({ classId }: ApprovalTabProps) {
           <Table>
             <TableHeader style={{ background: '#fff', borderBottom: '1px solid #666' }}>
               <TableRow className="hover:bg-transparent">
-                <TableHead className="text-left">
+                <TableHead className="text-left" style={{ borderBottom: '1px solid #666', padding: '10px 12px' }}>
                   <div className="flex items-center justify-center">
                     <Checkbox
                       checked={approvalSelectAll}
@@ -162,48 +224,49 @@ export function ApprovalTab({ classId }: ApprovalTabProps) {
                     />
                   </div>
                 </TableHead>
-                <TableHead className="text-center text-base font-bold" style={{ color: '#666' }}>
+                <TableHead className="text-center text-base font-bold" style={{ color: '#666', borderBottom: '1px solid #666', padding: '10px 12px' }}>
                   학생명
                 </TableHead>
-                <TableHead className="text-center text-base font-bold" style={{ color: '#666' }}>
+                <TableHead className="text-center text-base font-bold" style={{ color: '#666', borderBottom: '1px solid #666', padding: '10px 12px' }}>
                   학교/학년
                 </TableHead>
-                <TableHead className="text-center text-base font-bold" style={{ color: '#666' }}>
+                <TableHead className="text-center text-base font-bold" style={{ color: '#666', borderBottom: '1px solid #666', padding: '10px 12px' }}>
                   이메일
                 </TableHead>
-                <TableHead className="text-center text-base font-bold" style={{ color: '#666' }}>
+                <TableHead className="text-center text-base font-bold" style={{ color: '#666', borderBottom: '1px solid #666', padding: '10px 12px' }}>
                   학생 연락처
                 </TableHead>
-                <TableHead className="text-center text-base font-bold" style={{ color: '#666' }}>
+                <TableHead className="text-center text-base font-bold" style={{ color: '#666', borderBottom: '1px solid #666', padding: '10px 12px' }}>
                   학부모 연락처
                 </TableHead>
-                <TableHead className="text-center text-base font-bold" style={{ color: '#666' }}>
+                <TableHead className="text-center text-base font-bold" style={{ color: '#666', borderBottom: '1px solid #666', padding: '10px 12px' }}>
                   신청일시
                 </TableHead>
-                <TableHead className="text-center text-base font-bold" style={{ color: '#666' }}>
+                <TableHead className="text-center text-base font-bold" style={{ color: '#666', borderBottom: '1px solid #666', padding: '10px 12px' }}>
                   상태
                 </TableHead>
-                <TableHead className="text-center text-base font-bold" style={{ color: '#666' }}>
-                  액션
+                <TableHead className="text-center text-base font-bold" style={{ color: '#666', borderBottom: '1px solid #666', padding: '10px 12px' }}>
+                  승인 / 거절
                 </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody className="bg-white divide-y divide-gray-200">
               {pendingRequests.map((request, index) => (
                 <TableRow key={request.id} className="hover:bg-gray-50">
-                  <TableCell className="whitespace-nowrap">
+                  <TableCell className="whitespace-nowrap" style={{ padding: '10px 12px' }}>
                     <div className="flex items-center justify-center">
                       <Checkbox
                         checked={selectedApprovals[index] || false}
                         onCheckedChange={(checked: boolean) => handleApprovalRowSelect(index, checked)}
+                        disabled={request.status === 'invited'}
                         className="data-[state=checked]:bg-[#0085FF] data-[state=checked]:border-[#0085FF]"
                       />
                     </div>
                   </TableCell>
-                  <TableCell className="text-center text-sm text-gray-600 font-medium">
+                  <TableCell className="text-center text-sm text-gray-600 font-medium" style={{ padding: '10px 12px' }}>
                     {request.student.name}
                   </TableCell>
-                  <TableCell className="whitespace-nowrap">
+                  <TableCell className="whitespace-nowrap" style={{ padding: '10px 12px' }}>
                     <div className="flex items-center justify-center">
                       <div className="flex gap-2">
                         <Badge
@@ -235,16 +298,16 @@ export function ApprovalTab({ classId }: ApprovalTabProps) {
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="text-center text-sm text-gray-600">
+                  <TableCell className="text-center text-sm text-gray-600" style={{ padding: '10px 12px' }}>
                     {request.student.email}
                   </TableCell>
-                  <TableCell className="text-center text-sm text-gray-600">
+                  <TableCell className="text-center text-sm text-gray-600" style={{ padding: '10px 12px' }}>
                     {request.student.phone}
                   </TableCell>
-                  <TableCell className="text-center text-sm text-gray-600">
+                  <TableCell className="text-center text-sm text-gray-600" style={{ padding: '10px 12px' }}>
                     {request.student.parent_phone}
                   </TableCell>
-                  <TableCell className="text-center text-sm text-gray-600">
+                  <TableCell className="text-center text-sm text-gray-600" style={{ padding: '10px 12px' }}>
                     {new Date(request.requested_at).toLocaleDateString('ko-KR', {
                       year: 'numeric',
                       month: '2-digit',
@@ -253,34 +316,52 @@ export function ApprovalTab({ classId }: ApprovalTabProps) {
                       minute: '2-digit'
                     })}
                   </TableCell>
-                  <TableCell className="text-center">
+                  <TableCell className="text-center" style={{ padding: '10px 12px' }}>
                     <Badge
-                      className="text-xs"
+                      className="text-sm"
                       style={{
-                        backgroundColor: '#FEF3C7',
-                        color: '#D97706',
+                        backgroundColor: request.status === 'invited' ? '#E0F2FE' : '#FEF3C7',
+                        color: request.status === 'invited' ? '#0369A1' : '#D97706',
                         border: 'none',
-                        padding: '4px 8px'
+                        padding: '6px 12px'
                       }}
                     >
-                      대기중
+                      {request.status === 'invited' ? '초대 완료' : '승인 대기'}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-center">
-                    <div className="flex items-center justify-center gap-2">
-                      <button
-                        onClick={() => handleApprovalAction(request, 'approve')}
-                        className="px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition-colors"
-                      >
-                        승인
-                      </button>
-                      <button
-                        onClick={() => handleApprovalAction(request, 'reject')}
-                        className="px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors"
-                      >
-                        거절
-                      </button>
-                    </div>
+                  <TableCell className="text-center" style={{ padding: '10px 12px' }}>
+                    {request.status === 'invited' ? (
+                      <span className="text-sm text-gray-400">학생 코드 입력전</span>
+                    ) : (
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          onClick={() => handleApprovalAction(request, 'approve')}
+                          className="text-sm rounded"
+                          style={{
+                            backgroundColor: '#E8FFE8',
+                            color: '#04AA04',
+                            border: 'none',
+                            padding: '6px 12px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          승인
+                        </button>
+                        <button
+                          onClick={() => handleApprovalAction(request, 'reject')}
+                          className="text-sm rounded"
+                          style={{
+                            backgroundColor: '#FFEEEE',
+                            color: '#FF0004',
+                            border: 'none',
+                            padding: '6px 12px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          거절
+                        </button>
+                      </div>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}
@@ -291,11 +372,20 @@ export function ApprovalTab({ classId }: ApprovalTabProps) {
 
       {/* 승인/거절 확인 모달 */}
       <Dialog open={isApprovalModalOpen} onOpenChange={setIsApprovalModalOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md" showCloseButton={false}>
           <DialogHeader>
-            <DialogTitle>
-              {approvalAction === 'approve' ? '가입 승인' : '가입 거절'}
-            </DialogTitle>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <DialogTitle>
+                {approvalAction === 'approve' ? '가입 승인' : '가입 거절'}
+              </DialogTitle>
+              <button
+                onClick={() => setIsApprovalModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600"
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                <IoIosClose />
+              </button>
+            </div>
           </DialogHeader>
           <div className="space-y-4">
             {approvingRequest && (
@@ -305,8 +395,8 @@ export function ApprovalTab({ classId }: ApprovalTabProps) {
                   {approvalAction === 'approve' ? '승인' : '거절'}하시겠습니까?
                 </p>
                 
-                <div className="bg-gray-50 p-3 rounded-lg text-sm">
-                  <div className="grid grid-cols-2 gap-2">
+                <div className="p-3 rounded-lg text-sm" style={{ background: '#f5f5f5' }}>
+                  <div className="grid grid-cols-2 gap-2" style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                     <div>
                       <span className="text-gray-500">이메일:</span>
                       <span className="ml-2">{approvingRequest.student.email}</span>
@@ -336,20 +426,22 @@ export function ApprovalTab({ classId }: ApprovalTabProps) {
               </div>
             )}
           </div>
-          <DialogFooter>
+          <DialogFooter style={{ display: 'flex', gap: '15px' }}>
             <button
               onClick={() => setIsApprovalModalOpen(false)}
               className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
+              style={{ flex: 1 }}
             >
               취소
             </button>
             <button
               onClick={confirmApprovalAction}
-              className={`px-4 py-2 text-white rounded-md transition-colors ${
-                approvalAction === 'approve' 
-                  ? 'bg-green-600 hover:bg-green-700' 
-                  : 'bg-red-600 hover:bg-red-700'
-              }`}
+              className="px-4 py-2 rounded-md transition-colors"
+              style={{ 
+                flex: 1,
+                backgroundColor: approvalAction === 'approve' ? '#0b7300' : '#d30f0f',
+                color: '#ffffff'
+              }}
             >
               {approvalAction === 'approve' ? '승인' : '거절'}
             </button>
