@@ -143,7 +143,15 @@ export class QuestionService {
     worksheetId: number,
     updateData: any,
   ): Promise<{ success: boolean; message: string }> {
-    return apiRequest<any>(`/api/math-generation/worksheets/${worksheetId}`, {
+    // 현재 로그인한 사용자 정보 가져오기
+    const currentUser = JSON.parse(localStorage.getItem('user_profile') || '{}');
+    const userId = currentUser?.id;
+
+    if (!userId) {
+      throw new Error('로그인이 필요합니다.');
+    }
+
+    return apiRequest<any>(`/api/math-generation/worksheets/${worksheetId}?user_id=${userId}`, {
       method: 'PUT',
       body: JSON.stringify(updateData),
     }).then((response) => ({
@@ -173,7 +181,6 @@ export class QuestionService {
       message: response.message,
     }));
   }
-
 
   // ===== 시험 관련 API =====
 

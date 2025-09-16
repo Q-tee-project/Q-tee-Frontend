@@ -1,0 +1,61 @@
+import { useState } from 'react';
+
+export interface PreviewQuestion {
+  id: number;
+  title: string;
+  options?: string[];
+  answerIndex?: number;
+  explanation: string;
+  correct_answer?: string;
+  choices?: string[];
+  question?: string;
+  backendId?: number;
+}
+
+export interface GenerationState {
+  isGenerating: boolean;
+  generationProgress: number;
+  previewQuestions: PreviewQuestion[];
+  regeneratingQuestionId: number | null;
+  regenerationPrompt: string;
+  showRegenerationInput: number | null;
+  lastGenerationData: any;
+  errorMessage: string | null;
+}
+
+export const useProblemGeneration = () => {
+  const [state, setState] = useState<GenerationState>({
+    isGenerating: false,
+    generationProgress: 0,
+    previewQuestions: [],
+    regeneratingQuestionId: null,
+    regenerationPrompt: '',
+    showRegenerationInput: null,
+    lastGenerationData: null,
+    errorMessage: null,
+  });
+
+  const updateState = (updates: Partial<GenerationState>) => {
+    setState((prev) => ({ ...prev, ...updates }));
+  };
+
+  const resetGeneration = () => {
+    setState((prev) => ({
+      ...prev,
+      previewQuestions: [],
+      generationProgress: 0,
+      errorMessage: null,
+    }));
+  };
+
+  const clearError = () => {
+    setState((prev) => ({ ...prev, errorMessage: null }));
+  };
+
+  return {
+    ...state,
+    updateState,
+    resetGeneration,
+    clearError,
+  };
+};

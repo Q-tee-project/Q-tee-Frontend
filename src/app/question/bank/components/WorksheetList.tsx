@@ -1,22 +1,28 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { DataTable } from '../data-table';
 import { columns } from '../columns';
 import { Worksheet, Subject } from '@/types/math';
+import { KoreanWorksheet } from '@/types/korean';
+import { EnglishWorksheet } from '@/types/english';
+import { BaseWorksheet } from '@/types/common';
 import { Trash2, RefreshCw } from 'lucide-react';
 
+type AnyWorksheet = Worksheet | KoreanWorksheet | EnglishWorksheet;
+
 interface WorksheetListProps {
-  worksheets: Worksheet[];
-  selectedWorksheet: Worksheet | null;
+  worksheets: AnyWorksheet[];
+  selectedWorksheet: AnyWorksheet | null;
   selectedSubject: string;
   isLoading: boolean;
   error: string | null;
-  onWorksheetSelect: (worksheet: Worksheet) => void;
-  onDeleteWorksheet: (worksheet: Worksheet, event: React.MouseEvent) => void;
+  onWorksheetSelect: (worksheet: AnyWorksheet) => void;
+  onDeleteWorksheet: (worksheet: AnyWorksheet, event: React.MouseEvent) => void;
+  onBatchDeleteWorksheets: (worksheets: AnyWorksheet[]) => void;
   onRefresh: () => void;
 }
 
@@ -28,20 +34,57 @@ export const WorksheetList: React.FC<WorksheetListProps> = ({
   error,
   onWorksheetSelect,
   onDeleteWorksheet,
+  onBatchDeleteWorksheets,
   onRefresh,
 }) => {
-  // 국어/영어 과목의 경우 카드 높이를 자동으로 조정
-  const isNonMathSubject = selectedSubject !== Subject.MATH;
+  const [selectedWorksheets, setSelectedWorksheets] = useState<AnyWorksheet[]>([]);
+  const [clearSelection, setClearSelection] = useState(false);
+
+  // 데이터가 없는 경우에만 카드 높이를 자동으로 조정
   const hasNoData = worksheets.length === 0;
+
+  const handleRowSelectionChange = useCallback((selectedRows: AnyWorksheet[]) => {
+    setSelectedWorksheets(selectedRows);
+  }, []);
+
+  // clearSelection이 true가 된 후 다시 false로 리셋
+  React.useEffect(() => {
+    if (clearSelection) {
+      setClearSelection(false);
+    }
+  }, [clearSelection]);
+
+  const handleBatchDelete = () => {
+    if (selectedWorksheets.length === 0) {
+      alert('삭제할 워크시트를 선택해주세요.');
+      return;
+    }
+
+    const worksheetTitles = selectedWorksheets.map((w) => w.title).join(', ');
+    if (
+      confirm(
+        `선택된 ${selectedWorksheets.length}개의 워크시트를 삭제하시겠습니까?\n\n${worksheetTitles}\n\n이 작업은 되돌릴 수 없습니다.`,
+      )
+    ) {
+      onBatchDeleteWorksheets(selectedWorksheets);
+      setSelectedWorksheets([]); // 선택 초기화
+      setClearSelection(true); // 테이블 선택 상태 초기화 트리거
+    }
+  };
 
   return (
     <Card
-      className={`w-1/3 flex flex-col shadow-sm ${
-        isNonMathSubject || hasNoData ? 'h-auto' : 'h-[calc(100vh-200px)]'
-      }`}
+      className={`w-1/3 flex flex-col shadow-sm ${hasNoData ? 'h-auto' : 'h-[calc(100vh-200px)]'}`}
     >
       <CardHeader className="flex flex-row items-center justify-between py-6 px-6 border-b border-gray-100">
-        <CardTitle className="text-lg font-medium">문제 목록</CardTitle>
+        <CardTitle className="text-lg font-medium">
+          문제 목록
+          {selectedWorksheets.length > 0 && (
+            <span className="ml-2 text-sm text-[#0072CE]">
+              ({selectedWorksheets.length}개 선택됨)
+            </span>
+          )}
+        </CardTitle>
         <div className="flex items-center gap-2">
           <Button
             onClick={onRefresh}
@@ -52,33 +95,38 @@ export const WorksheetList: React.FC<WorksheetListProps> = ({
           >
             <RefreshCw className="w-4 h-4" />
           </Button>
-          <Button
-            onClick={(e) => selectedWorksheet && onDeleteWorksheet(selectedWorksheet, e)}
-            disabled={!selectedWorksheet}
-            variant="ghost"
-            size="icon"
-            className="text-[#0072CE] hover:text-[#0056A3] hover:bg-[#EBF6FF]"
-            title="선택된 워크시트 삭제"
-          >
-            <Trash2 className="w-4 h-4" />
-          </Button>
+          {selectedWorksheets.length > 0 ? (
+            <Button
+              onClick={handleBatchDelete}
+              variant="ghost"
+              size="sm"
+              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+              title="선택된 워크시트들 일괄 삭제"
+            >
+              <Trash2 className="w-4 h-4 mr-1" />
+              일괄 삭제
+            </Button>
+          ) : (
+            <Button
+              onClick={(e) => selectedWorksheet && onDeleteWorksheet(selectedWorksheet, e)}
+              disabled={!selectedWorksheet}
+              variant="ghost"
+              size="icon"
+              className="text-[#0072CE] hover:text-[#0056A3] hover:bg-[#EBF6FF]"
+              title="선택된 워크시트 삭제"
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          )}
         </div>
       </CardHeader>
-      <CardContent
-        className={`p-0 ${isNonMathSubject || hasNoData ? 'flex-none' : 'flex-1 overflow-hidden'}`}
-      >
-        {isNonMathSubject || hasNoData ? (
+      <CardContent className={`p-0 ${hasNoData ? 'flex-none' : 'flex-1 overflow-hidden'}`}>
+        {hasNoData ? (
           <div className="p-4">
-            {selectedSubject !== Subject.MATH ? (
-              <div className="px-4 py-8 text-center text-gray-400 text-sm">
-                {selectedSubject} 과목은 준비 중입니다
-              </div>
-            ) : (
-              <div className="px-4 py-8 text-center text-gray-400 text-sm">
-                저장된 워크시트가 없습니다 (로딩 상태: {isLoading ? '로딩 중' : '로딩 완료'}, 과목:{' '}
-                {selectedSubject}){error && <div className="text-red-500 mt-2">오류: {error}</div>}
-              </div>
-            )}
+            <div className="px-4 py-8 text-center text-gray-400 text-sm">
+              저장된 워크시트가 없습니다 (로딩 상태: {isLoading ? '로딩 중' : '로딩 완료'}, 과목:{' '}
+              {selectedSubject}){error && <div className="text-red-500 mt-2">오류: {error}</div>}
+            </div>
           </div>
         ) : (
           <ScrollArea style={{ height: 'calc(100vh - 350px)' }} className="w-full">
@@ -88,6 +136,8 @@ export const WorksheetList: React.FC<WorksheetListProps> = ({
                 data={worksheets}
                 onRowClick={onWorksheetSelect}
                 selectedRowId={selectedWorksheet?.id}
+                onRowSelectionChange={handleRowSelectionChange}
+                clearSelection={clearSelection}
               />
             </div>
           </ScrollArea>

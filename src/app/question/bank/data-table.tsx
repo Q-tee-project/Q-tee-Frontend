@@ -29,6 +29,8 @@ interface DataTableProps<TData, TValue> {
   data: TData[];
   onRowClick?: (row: TData) => void;
   selectedRowId?: number;
+  onRowSelectionChange?: (selectedRows: TData[]) => void;
+  clearSelection?: boolean; // 선택 상태 초기화 트리거
 }
 
 export function DataTable<TData, TValue>({
@@ -36,6 +38,8 @@ export function DataTable<TData, TValue>({
   data,
   onRowClick,
   selectedRowId,
+  onRowSelectionChange,
+  clearSelection,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
@@ -48,7 +52,6 @@ export function DataTable<TData, TValue>({
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
@@ -59,7 +62,24 @@ export function DataTable<TData, TValue>({
       columnVisibility,
       rowSelection,
     },
+    // 페이지네이션 비활성화 - 모든 데이터 표시
+    enablePagination: false,
   });
+
+  // 선택 상태 초기화
+  React.useEffect(() => {
+    if (clearSelection) {
+      setRowSelection({});
+    }
+  }, [clearSelection]);
+
+  // 선택된 행들이 변경될 때마다 부모 컴포넌트에 알림
+  React.useEffect(() => {
+    if (onRowSelectionChange) {
+      const selectedRows = table.getSelectedRowModel().rows.map((row) => row.original);
+      onRowSelectionChange(selectedRows);
+    }
+  }, [rowSelection]); // rowSelection만 의존성으로 설정
 
   return (
     <div>

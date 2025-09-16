@@ -1,51 +1,18 @@
+import {
+  EnglishFormData,
+  EnglishGenerationResponse,
+  EnglishWorksheet,
+  EnglishProblem,
+  EnglishWorksheetDetail,
+} from '@/types/english';
 
 const ENGLISH_API_BASE = 'http://localhost:8002/api/english-generation';
 
-export interface EnglishFormData {
-  school_level: string;
-  grade: number;
-  semester: string;
-  english_type: string;
-  english_sub_type?: string;
-  english_ratios?: Record<string, number>;
-  difficulty: string;
-  difficulty_ratios?: Record<string, number>;
-  requirements?: string;
-  problem_count: number;
-}
-
-export interface EnglishGenerationResponse {
-  task_id: string;
-  status: string;
-  message: string;
-}
-
-export interface EnglishWorksheet {
-  id: number;
-  title: string;
-  school_level: string;
-  grade: number;
-  english_type: string;
-  problem_count: number;
-  status: string;
-  created_at: string;
-}
-
-export interface EnglishProblem {
-  id: number;
-  worksheet_id: number;
-  problem_number: number;
-  problem_type: string;
-  content: string;
-  options?: string[];
-  correct_answer: string;
-  explanation?: string;
-  difficulty: string;
-}
-
 export class EnglishService {
   // 영어 문제 생성
-  static async generateEnglishProblems(formData: EnglishFormData): Promise<EnglishGenerationResponse> {
+  static async generateEnglishProblems(
+    formData: EnglishFormData,
+  ): Promise<EnglishGenerationResponse> {
     const currentUser = JSON.parse(localStorage.getItem('user_profile') || '{}');
     const userId = currentUser?.id;
 
@@ -77,7 +44,7 @@ export class EnglishService {
       throw new Error('로그인이 필요합니다.');
     }
 
-    const response = await fetch(`${ENGLISH_API_BASE}/worksheets?user_id=${userId}`);
+    const response = await fetch(`${ENGLISH_API_BASE}/worksheets?user_id=${userId}&limit=100`);
 
     if (!response.ok) {
       throw new Error(`English API Error: ${response.status}`);
@@ -88,7 +55,9 @@ export class EnglishService {
   }
 
   // 영어 워크시트 상세 정보 가져오기
-  static async getEnglishWorksheetDetail(worksheetId: number): Promise<{ worksheet: EnglishWorksheet; problems: EnglishProblem[] }> {
+  static async getEnglishWorksheetDetail(
+    worksheetId: number,
+  ): Promise<{ worksheet: EnglishWorksheet; problems: EnglishProblem[] }> {
     const currentUser = JSON.parse(localStorage.getItem('user_profile') || '{}');
     const userId = currentUser?.id;
 
@@ -114,6 +83,44 @@ export class EnglishService {
     }
 
     return response.json();
+  }
+
+  // 영어 워크시트 업데이트
+  static async updateEnglishWorksheet(
+    worksheetId: number,
+    updateData: any,
+  ): Promise<{ success: boolean; message: string }> {
+    const currentUser = JSON.parse(localStorage.getItem('user_profile') || '{}');
+    const userId = currentUser?.id;
+
+    if (!userId) {
+      throw new Error('로그인이 필요합니다.');
+    }
+
+    const response = await fetch(
+      `${ENGLISH_API_BASE}/worksheets/${worksheetId}?user_id=${userId}`,
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updateData),
+      },
+    );
+
+    if (!response.ok) {
+      let errorMessage = `English API Error: ${response.status}`;
+      try {
+        const errorData = await response.text();
+        errorMessage += ` - ${errorData}`;
+      } catch (e) {
+        // JSON 파싱 실패 시 기본 메시지 사용
+      }
+      throw new Error(errorMessage);
+    }
+
+    const result = await response.json();
+    return { success: true, message: result.message || '영어 워크시트가 업데이트되었습니다.' };
   }
 
   // 영어 서비스 헬스체크

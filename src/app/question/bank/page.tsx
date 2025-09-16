@@ -1,10 +1,12 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Subject } from '@/types/math';
 import { FileText } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { useBankPage } from './hooks/useBankPage';
+import { useMathBank } from '@/hooks/useMathBank';
+import { useKoreanBank } from '@/hooks/useKoreanBank';
+import { useEnglishBank } from '@/hooks/useEnglishBank';
 import { useWorksheetEdit } from './hooks/useWorksheetEdit';
 import { useDistribution } from './hooks/useDistribution';
 import { WorksheetList } from './components/WorksheetList';
@@ -15,21 +17,22 @@ import { ErrorToast } from './components/ErrorToast';
 import { LoadingOverlay } from './components/LoadingOverlay';
 
 export default function BankPage() {
-  const {
-    worksheets,
-    selectedWorksheet,
-    worksheetProblems,
-    isLoading,
-    error,
-    selectedSubject,
-    showAnswerSheet,
-    setSelectedSubject,
-    setShowAnswerSheet,
-    setError,
-    loadWorksheets,
-    handleWorksheetSelect,
-    handleDeleteWorksheet,
-  } = useBankPage();
+  const [selectedSubject, setSelectedSubject] = useState<string>('국어');
+
+  // 과목별 Bank 훅들
+  const mathBank = useMathBank();
+  const koreanBank = useKoreanBank();
+  const englishBank = useEnglishBank();
+
+  // 현재 선택된 과목에 따른 상태
+  const currentBank =
+    selectedSubject === '수학' ? mathBank : selectedSubject === '국어' ? koreanBank : englishBank;
+
+  // 각 Bank 훅에서 자동으로 데이터를 로드하므로 별도의 useEffect 불필요
+
+  const handleSubjectChange = (newSubject: string) => {
+    setSelectedSubject(newSubject);
+  };
 
   const {
     isEditDialogOpen,
@@ -47,7 +50,7 @@ export default function BankPage() {
     handleStartEditTitle,
     handleCancelEditTitle,
     handleSaveTitle,
-  } = useWorksheetEdit();
+  } = useWorksheetEdit(selectedSubject);
 
   const {
     isDistributeDialogOpen,
@@ -76,7 +79,7 @@ export default function BankPage() {
           {[Subject.KOREAN, Subject.ENGLISH, Subject.MATH].map((subject) => (
             <button
               key={subject}
-              onClick={() => setSelectedSubject(subject)}
+              onClick={() => handleSubjectChange(subject)}
               className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
                 selectedSubject === subject
                   ? 'border-[#0072CE] text-[#0072CE]'
@@ -93,38 +96,42 @@ export default function BankPage() {
       <div className="flex-1 p-4 min-h-0">
         <div className="flex gap-4 h-full">
           <WorksheetList
-            worksheets={worksheets}
-            selectedWorksheet={selectedWorksheet}
+            worksheets={currentBank.worksheets}
+            selectedWorksheet={currentBank.selectedWorksheet}
             selectedSubject={selectedSubject}
-            isLoading={isLoading}
-            error={error}
-            onWorksheetSelect={handleWorksheetSelect}
-            onDeleteWorksheet={handleDeleteWorksheet}
-            onRefresh={loadWorksheets}
+            isLoading={currentBank.isLoading}
+            error={currentBank.error}
+            onWorksheetSelect={currentBank.handleWorksheetSelect as any}
+            onDeleteWorksheet={currentBank.handleDeleteWorksheet as any}
+            onBatchDeleteWorksheets={currentBank.handleBatchDeleteWorksheets as any}
+            onRefresh={currentBank.loadWorksheets}
           />
 
           <WorksheetDetail
-            selectedWorksheet={selectedWorksheet}
-            worksheetProblems={worksheetProblems}
-            showAnswerSheet={showAnswerSheet}
+            selectedWorksheet={currentBank.selectedWorksheet}
+            worksheetProblems={currentBank.worksheetProblems}
+            showAnswerSheet={currentBank.showAnswerSheet}
             isEditingTitle={isEditingTitle}
             editedTitle={editedTitle}
-            onToggleAnswerSheet={() => setShowAnswerSheet(!showAnswerSheet)}
+            onToggleAnswerSheet={() => currentBank.setShowAnswerSheet(!currentBank.showAnswerSheet)}
             onOpenDistributeDialog={() => setIsDistributeDialogOpen(true)}
             onOpenEditDialog={() => setIsEditDialogOpen(true)}
             onEditProblem={handleEditProblem}
-            onStartEditTitle={() => handleStartEditTitle(selectedWorksheet?.title || '')}
+            onStartEditTitle={() =>
+              handleStartEditTitle(currentBank.selectedWorksheet?.title || '')
+            }
             onCancelEditTitle={handleCancelEditTitle}
             onSaveTitle={() =>
-              selectedWorksheet && handleSaveTitle(selectedWorksheet.id, loadWorksheets)
+              currentBank.selectedWorksheet &&
+              handleSaveTitle(currentBank.selectedWorksheet.id, currentBank.loadWorksheets)
             }
             onEditedTitleChange={setEditedTitle}
           />
         </div>
       </div>
 
-      <ErrorToast error={error} onClose={() => setError(null)} />
-      <LoadingOverlay isLoading={isLoading} />
+      <ErrorToast error={currentBank.error} onClose={() => currentBank.clearError()} />
+      <LoadingOverlay isLoading={currentBank.isLoading} />
 
       <DistributionDialog
         isOpen={isDistributeDialogOpen}
@@ -147,8 +154,8 @@ export default function BankPage() {
         onChoiceChange={handleChoiceChange}
         onSave={() =>
           handleSaveProblem(async () => {
-            if (selectedWorksheet) {
-              await loadWorksheets();
+            if (currentBank.selectedWorksheet) {
+              await currentBank.loadWorksheets();
             }
           })
         }

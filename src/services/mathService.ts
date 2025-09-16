@@ -5,7 +5,9 @@ const MATH_API_BASE = 'http://localhost:8001/api/math-generation';
 
 export class MathService {
   // 수학 문제 생성
-  static async generateMathProblems(formData: QuestionFormData): Promise<QuestionGenerationResponse> {
+  static async generateMathProblems(
+    formData: QuestionFormData,
+  ): Promise<QuestionGenerationResponse> {
     const currentUser = JSON.parse(localStorage.getItem('user_profile') || '{}');
     const userId = currentUser?.id;
 
@@ -37,7 +39,7 @@ export class MathService {
       throw new Error('로그인이 필요합니다.');
     }
 
-    const response = await fetch(`${MATH_API_BASE}/worksheets?user_id=${userId}`);
+    const response = await fetch(`${MATH_API_BASE}/worksheets?user_id=${userId}&limit=100`);
 
     if (!response.ok) {
       throw new Error(`Math API Error: ${response.status}`);
@@ -82,7 +84,9 @@ export class MathService {
   }
 
   // 워크시트 삭제
-  static async deleteMathWorksheet(worksheetId: number): Promise<{ success: boolean; message: string }> {
+  static async deleteMathWorksheet(
+    worksheetId: number,
+  ): Promise<{ success: boolean; message: string }> {
     const currentUser = JSON.parse(localStorage.getItem('user_profile') || '{}');
     const userId = currentUser?.id;
 
@@ -95,7 +99,14 @@ export class MathService {
     });
 
     if (!response.ok) {
-      throw new Error(`Math API Error: ${response.status}`);
+      let errorMessage = `Math API Error: ${response.status}`;
+      try {
+        const errorData = await response.text();
+        errorMessage += ` - ${errorData}`;
+      } catch (e) {
+        // JSON 파싱 실패 시 기본 메시지 사용
+      }
+      throw new Error(errorMessage);
     }
 
     const result = await response.json();
@@ -103,7 +114,10 @@ export class MathService {
   }
 
   // 워크시트 업데이트
-  static async updateMathWorksheet(worksheetId: number, updateData: any): Promise<{ success: boolean; message: string }> {
+  static async updateMathWorksheet(
+    worksheetId: number,
+    updateData: any,
+  ): Promise<{ success: boolean; message: string }> {
     const currentUser = JSON.parse(localStorage.getItem('user_profile') || '{}');
     const userId = currentUser?.id;
 
@@ -128,7 +142,10 @@ export class MathService {
   }
 
   // 개별 문제 업데이트
-  static async updateMathProblem(problemId: number, updateData: any): Promise<{ success: boolean; message: string }> {
+  static async updateMathProblem(
+    problemId: number,
+    updateData: any,
+  ): Promise<{ success: boolean; message: string }> {
     const currentUser = JSON.parse(localStorage.getItem('user_profile') || '{}');
     const userId = currentUser?.id;
 

@@ -7,18 +7,23 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { LaTeXRenderer } from '@/components/LaTeXRenderer';
 import { Worksheet, MathProblem, ProblemType } from '@/types/math';
+import { KoreanWorksheet, KoreanProblem } from '@/types/korean';
+import { EnglishWorksheet, EnglishProblem } from '@/types/english';
 import { Edit3 } from 'lucide-react';
 
+type AnyWorksheet = Worksheet | KoreanWorksheet | EnglishWorksheet;
+type AnyProblem = MathProblem | KoreanProblem | EnglishProblem;
+
 interface WorksheetDetailProps {
-  selectedWorksheet: Worksheet | null;
-  worksheetProblems: MathProblem[];
+  selectedWorksheet: AnyWorksheet | null;
+  worksheetProblems: AnyProblem[];
   showAnswerSheet: boolean;
   isEditingTitle: boolean;
   editedTitle: string;
   onToggleAnswerSheet: () => void;
   onOpenDistributeDialog: () => void;
   onOpenEditDialog: () => void;
-  onEditProblem: (problem: MathProblem) => void;
+  onEditProblem: (problem: AnyProblem) => void;
   onStartEditTitle: () => void;
   onCancelEditTitle: () => void;
   onSaveTitle: () => void;
@@ -169,7 +174,12 @@ export const WorksheetDetail: React.FC<WorksheetDetailProps> = ({
                         <div className="flex justify-between items-start mb-3">
                           <div className="flex items-center gap-3">
                             <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-medium">
-                              {getProblemTypeInKorean(problem.problem_type)}
+                              {getProblemTypeInKorean(
+                                (problem as any).problem_type ||
+                                  (problem as any).korean_type ||
+                                  (problem as any).english_type ||
+                                  '객관식',
+                              )}
                             </span>
                             <span
                               className={`px-2 py-1 rounded text-xs font-medium ${
@@ -250,7 +260,9 @@ export const WorksheetDetail: React.FC<WorksheetDetailProps> = ({
 
                         {(!problem.choices || problem.choices.length === 0) && (
                           <div className="mt-4 ml-4">
-                            {problem.problem_type === 'short_answer' ? (
+                            {((problem as any).problem_type ||
+                              (problem as any).korean_type ||
+                              (problem as any).english_type) === 'short_answer' ? (
                               <>
                                 <div className="flex items-center gap-2">
                                   <span className="text-gray-700">답:</span>

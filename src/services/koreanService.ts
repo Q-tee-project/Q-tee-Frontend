@@ -1,4 +1,9 @@
-import { KoreanFormData, KoreanGenerationResponse, KoreanWorksheet, KoreanProblem } from '@/types/korean';
+import {
+  KoreanFormData,
+  KoreanGenerationResponse,
+  KoreanWorksheet,
+  KoreanProblem,
+} from '@/types/korean';
 
 const KOREAN_API_BASE = 'http://localhost:8004/api/korean-generation';
 
@@ -36,7 +41,7 @@ export class KoreanService {
       throw new Error('로그인이 필요합니다.');
     }
 
-    const response = await fetch(`${KOREAN_API_BASE}/worksheets?user_id=${userId}`);
+    const response = await fetch(`${KOREAN_API_BASE}/worksheets?user_id=${userId}&limit=100`);
 
     if (!response.ok) {
       throw new Error(`Korean API Error: ${response.status}`);
@@ -47,7 +52,9 @@ export class KoreanService {
   }
 
   // 국어 워크시트 상세 정보 가져오기
-  static async getKoreanWorksheetDetail(worksheetId: number): Promise<{ worksheet: KoreanWorksheet; problems: KoreanProblem[] }> {
+  static async getKoreanWorksheetDetail(
+    worksheetId: number,
+  ): Promise<{ worksheet: KoreanWorksheet; problems: KoreanProblem[] }> {
     const currentUser = JSON.parse(localStorage.getItem('user_profile') || '{}');
     const userId = currentUser?.id;
 
@@ -73,6 +80,41 @@ export class KoreanService {
     }
 
     return response.json();
+  }
+
+  // 국어 워크시트 업데이트
+  static async updateKoreanWorksheet(
+    worksheetId: number,
+    updateData: any,
+  ): Promise<{ success: boolean; message: string }> {
+    const currentUser = JSON.parse(localStorage.getItem('user_profile') || '{}');
+    const userId = currentUser?.id;
+
+    if (!userId) {
+      throw new Error('로그인이 필요합니다.');
+    }
+
+    const response = await fetch(`${KOREAN_API_BASE}/worksheets/${worksheetId}?user_id=${userId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(updateData),
+    });
+
+    if (!response.ok) {
+      let errorMessage = `Korean API Error: ${response.status}`;
+      try {
+        const errorData = await response.text();
+        errorMessage += ` - ${errorData}`;
+      } catch (e) {
+        // JSON 파싱 실패 시 기본 메시지 사용
+      }
+      throw new Error(errorMessage);
+    }
+
+    const result = await response.json();
+    return { success: true, message: result.message || '국어 워크시트가 업데이트되었습니다.' };
   }
 
   // 국어 서비스 헬스체크
