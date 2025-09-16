@@ -47,16 +47,20 @@ export const useMathBank = () => {
   };
 
   const loadWorksheetProblems = async (worksheetId: number) => {
+    console.log('🔍 수학 워크시트 문제 로드 시작, ID:', worksheetId);
     try {
       const worksheetDetail = await MathService.getMathWorksheetDetail(worksheetId);
+      console.log('✅ 수학 워크시트 상세 데이터:', worksheetDetail);
+      console.log('📝 수학 문제 개수:', worksheetDetail.problems?.length || 0);
       updateState({ worksheetProblems: worksheetDetail.problems || [] });
     } catch (error: any) {
-      console.error('수학 워크시트 문제 로드 실패:', error);
+      console.error('❌ 수학 워크시트 문제 로드 실패:', error);
       updateState({ error: '수학 워크시트 문제를 불러올 수 없습니다.' });
     }
   };
 
   const handleWorksheetSelect = async (worksheet: Worksheet) => {
+    console.log('🎯 수학 워크시트 선택됨:', worksheet.title, 'ID:', worksheet.id);
     updateState({ selectedWorksheet: worksheet });
     await loadWorksheetProblems(worksheet.id);
   };

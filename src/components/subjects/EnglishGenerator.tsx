@@ -13,7 +13,6 @@ import { HelpCircle } from 'lucide-react';
 
 const SCHOOL_OPTIONS = ['중학교', '고등학교'];
 const GRADE_OPTIONS = ['1학년', '2학년', '3학년'];
-const SEMESTER_OPTIONS = ['1학기', '2학기'];
 const DIFFICULTY = ['전체', '상', '중', '하'];
 const QUESTION_COUNTS = [10, 20];
 
@@ -63,7 +62,6 @@ interface EnglishGeneratorProps {
 export default function EnglishGenerator({ onGenerate, isGenerating }: EnglishGeneratorProps) {
   const [school, setSchool] = useState<string>('');
   const [grade, setGrade] = useState<string>('');
-  const [semester, setSemester] = useState<string>('');
   const [difficulty, setDifficulty] = useState<string>('');
   const [requirements, setRequirements] = useState<string>('');
   const [questionCount, setQuestionCount] = useState<number | null>(null);
@@ -104,7 +102,6 @@ export default function EnglishGenerator({ onGenerate, isGenerating }: EnglishGe
   const isReadyToGenerate =
     school &&
     grade &&
-    semester &&
     englishMainType &&
     (englishMainType === '전체' ? englishRatioSum === 100 : englishSubType) &&
     difficulty &&
@@ -119,7 +116,6 @@ export default function EnglishGenerator({ onGenerate, isGenerating }: EnglishGe
       subject: '영어',
       school,
       grade,
-      semester,
       englishMainType,
       englishSubType,
       englishRatios,
@@ -157,19 +153,6 @@ export default function EnglishGenerator({ onGenerate, isGenerating }: EnglishGe
               {GRADE_OPTIONS.map((g) => (
                 <SelectItem key={g} value={g}>
                   {g}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select value={semester} onValueChange={setSemester}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="학기 선택" />
-            </SelectTrigger>
-            <SelectContent>
-              {SEMESTER_OPTIONS.map((s) => (
-                <SelectItem key={s} value={s}>
-                  {s}
                 </SelectItem>
               ))}
             </SelectContent>

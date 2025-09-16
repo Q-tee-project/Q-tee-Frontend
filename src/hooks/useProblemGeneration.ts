@@ -10,6 +10,10 @@ export interface PreviewQuestion {
   choices?: string[];
   question?: string;
   backendId?: number;
+  problem_type?: string;
+  source_text?: string;
+  source_title?: string;
+  source_author?: string;
 }
 
 export interface GenerationState {

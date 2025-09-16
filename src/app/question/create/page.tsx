@@ -16,6 +16,20 @@ import { useWorksheetSave } from '@/hooks/useWorksheetSave';
 
 const SUBJECTS = ['국어', '영어', '수학'];
 
+// 과목명을 영어 코드로 변환하는 함수
+const getSubjectCode = (subjectName: string): 'korean' | 'math' | 'english' => {
+  switch (subjectName) {
+    case '국어':
+      return 'korean';
+    case '수학':
+      return 'math';
+    case '영어':
+      return 'english';
+    default:
+      return 'math'; // 기본값
+  }
+};
+
 export default function CreatePage() {
   const [subject, setSubject] = useState<string>('');
 
@@ -159,6 +173,7 @@ export default function CreatePage() {
             </CardHeader>
             <CardContent className="flex-1 flex flex-col">
               <QuestionPreview
+                subject={getSubjectCode(subject)}
                 previewQuestions={currentGeneration.previewQuestions}
                 isGenerating={currentGeneration.isGenerating}
                 generationProgress={currentGeneration.generationProgress}

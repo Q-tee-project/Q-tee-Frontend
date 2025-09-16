@@ -168,6 +168,9 @@ export const useKoreanGeneration = () => {
             question: problem.question,
             choices: problem.choices,
             backendId: problem.id, // 백엔드 ID는 별도 저장
+            source_text: problem.source_text, // 지문 텍스트
+            source_title: problem.source_title, // 지문 제목
+            source_author: problem.source_author, // 지문 작가
           }),
         );
 
