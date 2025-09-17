@@ -30,20 +30,40 @@ export interface EnglishProblem {
 export interface EnglishFormData {
   school_level: string;
   grade: number;
-  semester: string;
-  english_type: string;
-  english_sub_type?: string;
-  english_ratios?: Record<string, number>;
-  difficulty: string;
-  difficulty_ratios?: Record<string, number>;
-  requirements?: string;
-  problem_count: number;
+  total_questions: number;
+  subjects: string[];
+  subject_details: {
+    reading_types?: string[];
+    grammar_categories?: string[];
+    grammar_topics?: string[];
+    vocabulary_categories?: string[];
+  };
+  subject_ratios: { subject: string; ratio: number }[];
+  question_format: string;
+  format_ratios: { format: string; ratio: number }[];
+  difficulty_distribution: { difficulty: string; ratio: number }[];
+  additional_requirements?: string;
 }
 
 export interface EnglishGenerationResponse {
-  task_id: string;
-  status: string;
   message: string;
+  status: 'success' | 'error';
+  request_data: EnglishFormData;
+  distribution_summary?: {
+    total_questions: number;
+    validation_passed: boolean;
+    subject_distribution: { subject: string; count: number; ratio: number }[];
+    format_distribution: { format: string; count: number; ratio: number }[];
+    difficulty_distribution: { difficulty: string; count: number; ratio: number }[];
+  };
+  llm_response?: EnglishLLMResponseAndRequest;
+  llm_error?: string;
+  subject_types_validation?: {
+    reading_types: string[];
+    grammar_categories: string[];
+    grammar_topics: string[];
+    vocabulary_categories: string[];
+  };
 }
 
 export interface EnglishWorksheetDetail {
@@ -58,4 +78,118 @@ export interface EnglishWorksheetDetail {
   problems: EnglishProblem[];
   user_prompt?: string;
   generation_id?: string;
+}
+
+export interface EnglishCategories {
+  reading_types: ReadingType[];
+  grammar_categories: GrammarCategory[];
+  vocabulary_categories: VocabularyCategory[];
+}
+
+export interface ReadingType {
+  id: number;
+  name: string;
+  description?: string;
+}
+
+export interface GrammarCategory {
+  id: number;
+  name: string;
+  topics: GrammarTopic[];
+}
+
+export interface GrammarTopic {
+  id: number;
+  name: string;
+}
+
+export interface VocabularyCategory {
+  id: number;
+  name: string;
+}
+
+export interface EnglishLLMResponseAndRequest {
+  worksheet_id: string;
+  teacher_id?: number;
+  worksheet_name: string;
+  worksheet_date: string;
+  worksheet_time: string;
+  worksheet_duration: string;
+  worksheet_subject: string;
+  worksheet_level: string;
+  worksheet_grade: number;
+  total_questions: number;
+  passages: EnglishPassage[];
+  examples: EnglishExample[];
+  questions: EnglishQuestion[];
+}
+
+export interface EnglishWorksheet {
+  worksheet_id: string;
+  worksheet_name: string;
+  worksheet_date: string;
+  worksheet_time: string;
+  worksheet_duration: string;
+  worksheet_subject: string;
+  worksheet_level: string;
+  worksheet_grade: number;
+  total_questions: number;
+  passages: EnglishPassage[];
+  examples: EnglishExample[];
+  questions: EnglishQuestion[];
+}
+
+export interface EnglishPassage {
+  passage_id: number;
+  passage_type: 'article' | 'correspondence' | 'dialogue' | 'informational' | 'review';
+  passage_content: EnglishPassageContent;
+  original_content: EnglishPassageContent;
+  korean_translation: EnglishPassageContent;
+  related_questions: number[];
+}
+
+export interface EnglishPassageContent {
+  metadata?: {
+    sender?: string;
+    recipient?: string;
+    subject?: string;
+    date?: string;
+    participants?: string[];
+    rating?: number;
+    product_name?: string;
+    reviewer?: string;
+  };
+  content: EnglishContentItem[];
+}
+
+export interface EnglishContentItem {
+  type: 'title' | 'paragraph' | 'list' | 'key_value';
+  value?: string;
+  items?: string[];
+  pairs?: { key: string; value: string }[];
+  speaker?: string;
+  line?: string;
+}
+
+export interface EnglishExample {
+  example_id: number;
+  example_content: string;
+  original_content: string;
+  korean_translation: string;
+  related_question: string;
+}
+
+export interface EnglishQuestion {
+  question_id: number;
+  question_text: string;
+  question_type: '객관식' | '주관식';
+  question_subject: string;
+  question_difficulty: '상' | '중' | '하';
+  question_detail_type: string;
+  question_passage_id: number | null;
+  question_example_id: number | null;
+  question_choices: string[];
+  correct_answer: string;
+  explanation: string;
+  learning_point: string;
 }

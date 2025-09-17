@@ -70,7 +70,7 @@ export default function CreatePage() {
     } else if (subject === '국어') {
       koreanGeneration.generateKoreanProblems(data);
     } else if (subject === '영어') {
-      englishGeneration.generateMockProblems(data);
+      englishGeneration.generateEnglishProblems(data);
     }
   };
 

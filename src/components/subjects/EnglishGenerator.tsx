@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { HelpCircle } from 'lucide-react';
+import { EnglishFormData } from '@/types/english';
 
 const SCHOOL_OPTIONS = ['중학교', '고등학교'];
 const GRADE_OPTIONS = ['1학년', '2학년', '3학년'];
@@ -55,7 +56,7 @@ const ENGLISH_TYPES = {
 };
 
 interface EnglishGeneratorProps {
-  onGenerate: (data: any) => void;
+  onGenerate: (data: EnglishFormData) => void;
   isGenerating: boolean;
 }
 
@@ -111,20 +112,36 @@ export default function EnglishGenerator({ onGenerate, isGenerating }: EnglishGe
   const handleGenerate = () => {
     if (!isReadyToGenerate) return;
 
-    // 임시로 목업 데이터 반환 (나중에 백엔드 연결 시 실제 API 호출로 변경)
-    const mockData = {
-      subject: '영어',
-      school,
-      grade,
-      englishMainType,
-      englishSubType,
-      englishRatios,
-      difficulty,
-      requirements,
-      questionCount,
+    // EnglishFormData 형식으로 데이터 변환
+    const formData: EnglishFormData = {
+      school_level: school,
+      grade: parseInt(grade.replace('학년', '')),
+      total_questions: questionCount!,
+      subjects: englishMainType === '전체' ? ['독해', '어휘', '문법'] : [englishMainType],
+      subject_details: {
+        reading_types: englishMainType === '독해' && englishSubType ? [englishSubType] : undefined,
+        grammar_categories: englishMainType === '문법' && englishSubType ? [englishSubType] : undefined,
+        vocabulary_categories: englishMainType === '어휘' && englishSubType ? [englishSubType] : undefined,
+      },
+      subject_ratios: englishMainType === '전체'
+        ? Object.entries(englishRatios)
+            .filter(([_, ratio]) => ratio > 0)
+            .map(([subject, ratio]) => ({ subject, ratio }))
+        : [{ subject: englishMainType, ratio: 100 }],
+      question_format: '혼합형',
+      format_ratios: [
+        { format: '객관식', ratio: 70 },
+        { format: '주관식', ratio: 30 }
+      ],
+      difficulty_distribution: difficulty === '전체'
+        ? Object.entries(diffRatios)
+            .filter(([_, ratio]) => ratio > 0)
+            .map(([difficulty, ratio]) => ({ difficulty, ratio }))
+        : [{ difficulty, ratio: 100 }],
+      additional_requirements: requirements || undefined,
     };
 
-    onGenerate(mockData);
+    onGenerate(formData);
   };
 
   return (

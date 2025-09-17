@@ -6,7 +6,7 @@ import {
   EnglishWorksheetDetail,
 } from '@/types/english';
 
-const ENGLISH_API_BASE = 'http://localhost:8002/api/english-generation';
+const ENGLISH_API_BASE = 'http://localhost:8002/api/v1';
 
 export class EnglishService {
   // 영어 문제 생성
@@ -20,7 +20,7 @@ export class EnglishService {
       throw new Error('로그인이 필요합니다.');
     }
 
-    const response = await fetch(`${ENGLISH_API_BASE}/generate?user_id=${userId}`, {
+    const response = await fetch(`${ENGLISH_API_BASE}/question-generate?user_id=${userId}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
