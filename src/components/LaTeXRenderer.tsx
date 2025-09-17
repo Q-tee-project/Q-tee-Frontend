@@ -17,144 +17,146 @@ export const LaTeXRenderer: React.FC<LaTeXRendererProps> = ({
     if (!text) return '';
 
     try {
-      // 이스케이프된 문자들을 단계적으로 정리
-      let processedText = text;
+      // 1단계: 기본 정리
+      let processedText = cleanBasicPatterns(text);
 
-      // 1단계: 이중 이스케이프된 백슬래시 정리 (\\\\ -> \)
-      processedText = processedText.replace(/\\\\/g, '\\');
+      // 2단계: 줄바꿈 처리
+      processedText = handleLineBreaks(processedText);
 
-      // 2단계: 이스케이프된 $ 기호 정리 (\$ -> $)
-      processedText = processedText.replace(/\\\$/g, '$');
+      // 3단계: 수식과 일반 텍스트 분리 처리
+      processedText = renderMixedContent(processedText);
 
-      // 3단계: 남은 이스케이프된 백슬래시 정리 (\\ -> \)
-      processedText = processedText.replace(/\\\\/g, '\\');
-
-      // 4단계: 특수한 경우 처리 (stars, frac 등이 그대로 보이는 경우)
-      processedText = processedText.replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '\\frac{$1}{$2}');
-      processedText = processedText.replace(/\\neq/g, '\\neq');
-      processedText = processedText.replace(/\\times/g, '\\times');
-
-      // 5단계: 복잡한 이스케이프 패턴 처리
-      // \$\\frac -> \frac
-      processedText = processedText.replace(/\\\$\\frac/g, '\\frac');
-      // \\$\\frac -> \frac
-      processedText = processedText.replace(/\\\\\$\\frac/g, '\\frac');
-
-      // 추가 패턴: \$\\frac${...} -> \frac{...}
-      processedText = processedText.replace(/\\\$\\frac\$\{([^}]+)\}/g, '\\frac{$1}');
-      processedText = processedText.replace(/\\\\\$\\frac\$\{([^}]+)\}/g, '\\frac{$1}');
-
-      // 더 복잡한 패턴: \$\\frac${...} = \$\\frac${...}
-      processedText = processedText.replace(
-        /\\\$\\frac\$\{([^}]+)\}\s*=\s*\\\$\\frac\$\{([^}]+)\}/g,
-        '\\frac{$1} = \\frac{$2}',
-      );
-
-      // 6단계: stars 패턴 처리
-      processedText = processedText.replace(/stars/g, '\\star');
-      processedText = processedText.replace(/\\star/g, '\\star');
-
-      // 7단계: 최종 정리 - 남은 이스케이프 패턴들
-      // \$ 기호가 남아있는 경우 제거
-      processedText = processedText.replace(/\\\$/g, '');
-
-      // 연속된 백슬래시 정리
-      processedText = processedText.replace(/\\\\+/g, '\\');
-
-      // 8단계: 불완전한 LaTeX 수식 정리
-      // $\frac{}{}$ -> $\frac{}{}$
-      processedText = processedText.replace(/\$\\frac\{\}\{\}\$/g, '$\\frac{}{}$');
-
-      // $\frac{}{}${...} -> $\frac{}{...}$
-      processedText = processedText.replace(/\$\\frac\{\}\{\}\$\{([^}]+)\}/g, '$\\frac{}{$1}$');
-
-      // $\frac{}{}${...}{...} -> $\frac{...}{...}$
-      processedText = processedText.replace(
-        /\$\\frac\{\}\{\}\$\{([^}]+)\}\{([^}]+)\}/g,
-        '$\\frac{$1}{$2}$',
-      );
-
-      // 9단계: 추가 LaTeX 패턴 정리
-      // $\frac{}{}${...} -> $\frac{}{...}$
-      processedText = processedText.replace(/\$\\frac\{\}\{\}\$\{([^}]+)\}/g, '$\\frac{}{$1}$');
-
-      // $\frac{}{}${...}{...} -> $\frac{...}{...}$
-      processedText = processedText.replace(
-        /\$\\frac\{\}\{\}\$\{([^}]+)\}\{([^}]+)\}/g,
-        '$\\frac{$1}{$2}$',
-      );
-
-      // $\frac{}{}${...}{...} -> $\frac{...}{...}$
-      processedText = processedText.replace(
-        /\$\\frac\{\}\{\}\$\{([^}]+)\}\{([^}]+)\}/g,
-        '$\\frac{$1}{$2}$',
-      );
-
-      // 10단계: 복잡한 이스케이프 패턴 정리
-      // $\frac{}{}${...} -> $\frac{}{...}$
-      processedText = processedText.replace(/\$\\frac\{\}\{\}\$\{([^}]+)\}/g, '$\\frac{}{$1}$');
-
-      // $\frac{}{}${...}{...} -> $\frac{...}{...}$
-      processedText = processedText.replace(
-        /\$\\frac\{\}\{\}\$\{([^}]+)\}\{([^}]+)\}/g,
-        '$\\frac{$1}{$2}$',
-      );
-
-      // LaTeX 수식을 찾아서 변환 ($$...$$ 또는 $...$)
-      const latexRegex = /\$\$(.*?)\$\$|\$(.*?)\$/g;
-
-      const result = processedText.replace(latexRegex, (match, displayMath, inlineMath) => {
-        const math = displayMath || inlineMath;
-        const isDisplay = !!displayMath;
-
-        try {
-          const rendered = katex.renderToString(math, {
-            displayMode: isDisplay,
-            throwOnError: false,
-            strict: false,
-          });
-          return rendered;
-        } catch (error) {
-          console.warn('LaTeX rendering error:', error, 'for math:', math);
-          return match; // 원본 텍스트 반환
-        }
-      });
-
-      // LaTeX 수식이 감싸져 있지 않은 경우, 수학 표현식인지 확인하고 자동으로 감싸기
-      if (result === processedText && isMathExpression(processedText)) {
-        try {
-          const rendered = katex.renderToString(processedText, {
-            displayMode: false,
-            throwOnError: false,
-            strict: false,
-          });
-          return rendered;
-        } catch (error) {
-          console.warn('자동 감싸기 LaTeX rendering error:', error);
-          return processedText;
-        }
-      }
-
-      return result;
+      return processedText;
     } catch (error) {
       console.warn('LaTeX parsing error:', error);
       return text;
     }
   };
 
-  // 수학 표현식인지 확인하는 함수
-  const isMathExpression = (text: string): boolean => {
-    // 수학 기호나 패턴이 포함되어 있는지 확인
-    const mathPatterns = [
-      /\\[a-zA-Z]+/, // LaTeX 명령어 (예: \neq, \frac)
-      /[a-zA-Z]\s*[=<>≠≤≥]/, // 변수와 비교 연산자
-      /\d+\/\d+/, // 분수 형태
-      /[a-zA-Z]\^/, // 지수
-      /[a-zA-Z]_/, // 아래첨자
-      /[+\-*/]/, // 수학 연산자
-    ];
+  const cleanBasicPatterns = (text: string): string => {
+    // 이중 백슬래시 정리
+    text = text.replace(/\\\\/g, '\\');
 
-    return mathPatterns.some((pattern) => pattern.test(text));
+    // 이스케이프된 $ 기호 정리
+    text = text.replace(/\\\$/g, '$');
+
+    // 백엔드에서 생성된 중복 $ 정리 ($$$ -> $)
+    text = text.replace(/\$+/g, '$');
+
+    // 연속된 LaTeX 수식 병합 ($a$$b$ -> $ab$)
+    text = text.replace(/\$([^$]*)\$\$([^$]*)\$/g, '$$$1$2$$');
+
+    // 빈 LaTeX 수식 제거 ($$)
+    text = text.replace(/\$\s*\$/g, '');
+
+    return text;
+  };
+
+  const handleLineBreaks = (text: string): string => {
+    // 줄바꿈 패턴들을 <br />로 변환
+    text = text.replace(/\\n/g, '<br />');
+    text = text.replace(/\n/g, '<br />');
+
+    // 잘못된 br 태그 수정 (< < 같은 경우)
+    text = text.replace(/\s*<\s*<\s*/g, '<br />');
+    text = text.replace(/\s*<\s*br\s*\/?\s*>\s*/gi, '<br />');
+
+    return text;
+  };
+
+  const renderMixedContent = (text: string): string => {
+    // 텍스트를 $ 기호를 기준으로 분할
+    const parts = text.split(/(\$[^$]*\$|\$\$[^$]*\$\$)/);
+
+    return parts
+      .map((part) => {
+        // $ 기호로 감싸진 부분은 LaTeX로 렌더링
+        if (part.startsWith('$') && part.endsWith('$')) {
+          return renderSingleMathExpression(part);
+        } else {
+          // 일반 텍스트 처리 - 혼합 컨텐츠 고려
+          return processTextContent(part);
+        }
+      })
+      .join('');
+  };
+
+  const processTextContent = (text: string): string => {
+    // 잘못된 $ 기호 제거
+    text = cleanTextContent(text);
+
+    // 혼합 컨텐츠 처리: 변수+한글 (x축, y절편 등)
+    // 이미 백엔드에서 $x$축 형태로 처리되어 올 수 있지만, 혹시 놓친 경우를 위해
+    text = text.replace(/\b([a-zA-Z])([가-힣]+)/g, (match, variable, korean) => {
+      // 단일 변수 + 한글인 경우, 변수만 LaTeX로 렌더링
+      try {
+        const renderedVar = katex.renderToString(variable, {
+          displayMode: false,
+          throwOnError: false,
+          strict: false,
+        });
+        return renderedVar + korean;
+      } catch (error) {
+        return match; // 실패 시 원본 반환
+      }
+    });
+
+    return text;
+  };
+
+  const renderSingleMathExpression = (mathString: string): string => {
+    const isDisplayMode = mathString.startsWith('$$') && mathString.endsWith('$$');
+    let math = isDisplayMode ? mathString.slice(2, -2) : mathString.slice(1, -1);
+
+    // 빈 수식이나 순수 숫자/텍스트는 LaTeX 렌더링하지 않음
+    if (
+      !math.trim() ||
+      /^\d+$/.test(math.trim()) ||
+      /^\d+,\d+/.test(math.trim()) ||
+      /^[가-힣\s,]+$/.test(math.trim())  // 순수 한글만 있는 경우 제외 (변수 포함된 것은 렌더링)
+    ) {
+      return math.trim();
+    }
+
+    // 백엔드에서 처리되지 못한 추가 패턴들 정리
+    // 1. 함수 표현에서 공백 정리: P( x+y , y-x ) -> P(x+y, y-x)
+    math = math.replace(/\(\s+/g, '(').replace(/\s+\)/g, ')').replace(/\s*,\s*/g, ', ');
+
+    // 2. 분수에서 불필요한 공백 제거: \frac{ a+b }{ 2 } -> \frac{a+b}{2}
+    math = math.replace(/\\frac\{\s*/g, '\\frac{').replace(/\s*\}\{\s*/g, '}{').replace(/\s*\}/g, '}');
+
+    // 3. 지수 표현 정리
+    math = math.replace(/(\w+\^\{[^}]+\})\s+(\w+\^\{[^}]+\})/g, '$1 \\cdot $2');
+    math = math.replace(/(\w+)\^\{(\w+)\}\s+(\w+)\^\{(\w+)\}/g, '$1^{$2} \\cdot $3^{$4}');
+
+    // 4. 연산자 주변 공백 정리
+    math = math.replace(/\s*([+\-*/=])\s*/g, ' $1 ').replace(/\s+/g, ' ').trim();
+
+    try {
+      const rendered = katex.renderToString(math, {
+        displayMode: isDisplayMode,
+        throwOnError: false,
+        strict: false,
+      });
+      return rendered;
+    } catch (error) {
+      console.warn('LaTeX rendering error:', error, 'for math:', math);
+      return math; // 수식 부분만 반환 ($ 기호 제거)
+    }
+  };
+
+  const cleanTextContent = (text: string): string => {
+    // 일반 텍스트에서 잘못된 $ 기호 제거
+    // $16,28,40 같은 패턴
+    text = text.replace(/\$(\d+(?:,\d+)*)/g, '$1');
+
+    // 단독 $ 기호 제거
+    text = text.replace(/(?<!\$)\$(?!\$)(?![a-zA-Z\\])/g, '');
+
+    // 남은 LaTeX 명령어들 (백엔드에서 놓친 것들) 제거
+    text = text.replace(/\\[a-zA-Z]+/g, '');
+
+    return text;
   };
 
   const processedContent = renderLaTeX(content);

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { QuestionService } from '@/services/questionService';
+import { MathService } from '@/services/mathService';
 import { useAuth } from '@/contexts/AuthContext';
 import { BookOpen, Calendar, Users, Clock } from 'lucide-react';
 
@@ -42,7 +42,7 @@ export default function AssignmentPage() {
   const loadAssignments = async () => {
     try {
       setIsLoading(true);
-      const assignmentList = await QuestionService.getStudentAssignments();
+      const assignmentList = await MathService.getStudentAssignments();
       setAssignments(assignmentList);
     } catch (error) {
       console.error('과제 목록 로드 실패:', error);

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { QuestionService } from '@/services/questionService';
+import { MathService } from '@/services/mathService';
 import { LaTeXRenderer } from '@/components/LaTeXRenderer';
 import { Worksheet, MathProblem, ProblemType, Subject } from '@/types/math';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -93,7 +93,7 @@ export default function TestPage() {
     setIsLoading(true);
     try {
       // 학생용 과제 목록 가져오기
-      const assignmentData = await QuestionService.getStudentAssignments();
+      const assignmentData = await MathService.getStudentAssignments();
       console.log('과제 데이터:', assignmentData);
 
       // 과제 데이터를 워크시트 형식으로 변환
@@ -148,7 +148,7 @@ export default function TestPage() {
 
       // 학생용 과제 상세 정보 가져오기
       console.log('📚 API 호출 시작...');
-      const assignmentDetail = await QuestionService.getAssignmentDetail(worksheetId);
+      const assignmentDetail = await MathService.getAssignmentDetail(worksheetId);
       console.log('📚 과제 상세 정보 전체:', assignmentDetail);
       console.log('📚 과제 정보:', assignmentDetail?.assignment);
       console.log('📚 배포 정보:', assignmentDetail?.deployment);
@@ -206,7 +206,7 @@ export default function TestPage() {
 
     try {
       setIsLoading(true);
-      const session = await QuestionService.startTest(selectedWorksheet.id);
+      const session = await MathService.startTest(selectedWorksheet.id);
 
       // 세션 데이터를 로컬 스토리지에 저장
       localStorage.setItem(
@@ -239,7 +239,7 @@ export default function TestPage() {
     // 백엔드에 답안 임시 저장 (과제가 시작된 경우에만)
     if (testSession && isTestStarted) {
       try {
-        await QuestionService.saveAnswer(testSession.session_id, problemId, answer);
+        await MathService.saveAnswer(testSession.session_id, problemId, answer);
         console.log('답안 임시 저장 완료:', { problemId, answer });
       } catch (error) {
         console.error('답안 저장 실패:', error);
@@ -284,7 +284,7 @@ export default function TestPage() {
 
     try {
       setIsSubmitting(true);
-      const result = await QuestionService.submitTest(testSession.session_id, answers);
+      const result = await MathService.submitTest(testSession.session_id, answers);
       setTestResult(result);
       setIsTestStarted(false);
 

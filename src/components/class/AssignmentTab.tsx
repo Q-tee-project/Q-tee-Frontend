@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { QuestionService } from '@/services/questionService';
+import { MathService } from '@/services/mathService';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -80,7 +80,7 @@ export function AssignmentTab({ classId }: AssignmentTabProps) {
   const loadWorksheets = async () => {
     try {
       setIsLoading(true);
-      const data = await QuestionService.getWorksheets();
+      const data = await MathService.getMathWorksheets();
       setWorksheets(data);
     } catch (error) {
       console.error('워크시트 로드 실패:', error);

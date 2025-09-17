@@ -29,7 +29,7 @@ const Sidebar = () => {
     { icon: <FiClipboard />, text: '문제 관리', path: '/question/bank' },
     { icon: <FiEdit />, text: '문제 생성', path: '/question/create' },
     { icon: <FiUsers />, text: '학생 관리', path: '/class/create' },
-    { icon: <FiShoppingCart />, text: '마켓플레이스' },
+    { icon: <FiShoppingCart />, text: '마켓플레이스', path: '/market'},
   ];
 
   // Student 메뉴
@@ -46,7 +46,7 @@ const Sidebar = () => {
   return (
     <motion.div
       className="bg-white flex flex-col border-r border-[#D1D1D1]"
-      animate={{ width: isOpen ? '240px' : '80px' }}
+      animate={{ width: isOpen ? '240px' : '60px' }}
       transition={{ duration: 0.3, ease: 'easeInOut' }}
       style={{ height: 'calc(100vh - 60px)' }}
     >

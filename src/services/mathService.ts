@@ -169,6 +169,44 @@ export class MathService {
     return { success: true, message: result.message || '문제가 업데이트되었습니다.' };
   }
 
+  // 학생용 과제 목록 가져오기
+  static async getStudentAssignments(): Promise<any[]> {
+    return apiRequest<any[]>('/assignments/student');
+  }
+
+  // 과제 상세 정보 가져오기
+  static async getAssignmentDetail(assignmentId: number): Promise<any> {
+    return apiRequest<any>(`/assignments/${assignmentId}/detail`);
+  }
+
+  // 과제 시작
+  static async startTest(assignmentId: number): Promise<any> {
+    return apiRequest<any>('/test-sessions', {
+      method: 'POST',
+      body: JSON.stringify({ assignment_id: assignmentId }),
+    });
+  }
+
+  // 답안 저장
+  static async saveAnswer(sessionId: string, problemId: number, answer: string): Promise<any> {
+    return apiRequest<any>('/test-answers', {
+      method: 'POST',
+      body: JSON.stringify({
+        session_id: sessionId,
+        problem_id: problemId,
+        answer: answer,
+      }),
+    });
+  }
+
+  // 과제 제출
+  static async submitTest(sessionId: string, answers: Record<number, string>): Promise<any> {
+    return apiRequest<any>(`/test-sessions/${sessionId}/submit`, {
+      method: 'POST',
+      body: JSON.stringify({ answers }),
+    });
+  }
+
   // 헬스체크
   static async healthCheck(): Promise<{ status: string; message: string }> {
     try {
