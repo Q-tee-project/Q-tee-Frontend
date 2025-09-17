@@ -7,7 +7,7 @@ type PageHeaderProps = {
   icon?: ReactNode;
   title: string;
   description?: string;
-  variant?: 'question' | 'class' | 'test' | 'default';
+  variant?: 'question' | 'class' | 'market' | 'test' | 'default' ;
   children?: ReactNode;
 };
 
@@ -21,8 +21,9 @@ export function PageHeader({
   const variantStyles = {
     question: 'from-blue-500/10 border-blue-500/20 text-blue-600',
     class: 'from-green-500/10 border-green-500/20 text-green-600', 
+    market: 'from-gray-500/10 border-gray-500/20 text-gray-600',
     test: 'from-purple-500/10 border-purple-500/20 text-purple-600',
-    default: 'from-gray-500/10 border-gray-500/20 text-gray-600'
+    default: 'from-gray-500/10 border-gray-500/20 text-gray-600',
   };
 
   return (
