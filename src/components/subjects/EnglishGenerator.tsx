@@ -16,6 +16,7 @@ const SCHOOL_OPTIONS = ['중학교', '고등학교'];
 const GRADE_OPTIONS = ['1학년', '2학년', '3학년'];
 const DIFFICULTY = ['전체', '상', '중', '하'];
 const QUESTION_COUNTS = [10, 20];
+const QUESTION_TYPES = ['전체', '객관식', '단답형', '서술형'];
 
 // 영어 문제 유형 데이터
 const ENGLISH_TYPES = {
@@ -80,6 +81,18 @@ export default function EnglishGenerator({ onGenerate, isGenerating }: EnglishGe
   });
   const [englishRatioError, setEnglishRatioError] = useState<string>('');
 
+  // 문제 유형 선택 상태
+  const [questionType, setQuestionType] = useState<string>('');
+
+  // 문제 유형 비율 설정
+  const [isTypeRatioOpen, setIsTypeRatioOpen] = useState(false);
+  const [typeRatios, setTypeRatios] = useState<Record<string, number>>({
+    객관식: 0,
+    단답형: 0,
+    서술형: 0,
+  });
+  const [typeRatioError, setTypeRatioError] = useState<string>('');
+
   // 난이도 비율 설정
   const [isDiffRatioOpen, setIsDiffRatioOpen] = useState(false);
   const [diffRatios, setDiffRatios] = useState<Record<string, number>>({ 상: 0, 중: 0, 하: 0 });
@@ -99,12 +112,15 @@ export default function EnglishGenerator({ onGenerate, isGenerating }: EnglishGe
 
   const diffSum = ['상', '중', '하'].reduce((s, k) => s + (diffRatios[k] || 0), 0);
   const englishRatioSum = ['독해', '어휘', '문법'].reduce((s, k) => s + (englishRatios[k] || 0), 0);
+  const typeRatioSum = ['객관식', '단답형', '서술형'].reduce((s, k) => s + (typeRatios[k] || 0), 0);
 
   const isReadyToGenerate =
     school &&
     grade &&
     englishMainType &&
     (englishMainType === '전체' ? englishRatioSum === 100 : englishSubType) &&
+    questionType &&
+    (questionType === '전체' ? typeRatioSum === 100 : true) &&
     difficulty &&
     questionCount !== null &&
     (difficulty !== '전체' ? true : diffSum === 100);
@@ -128,11 +144,15 @@ export default function EnglishGenerator({ onGenerate, isGenerating }: EnglishGe
             .filter(([_, ratio]) => ratio > 0)
             .map(([subject, ratio]) => ({ subject, ratio }))
         : [{ subject: englishMainType, ratio: 100 }],
-      question_format: '혼합형',
-      format_ratios: [
-        { format: '객관식', ratio: 70 },
-        { format: '주관식', ratio: 30 }
-      ],
+      question_format: questionType === '전체' ? '혼합형' : questionType,
+      format_ratios: questionType === '전체'
+        ? Object.entries(typeRatios)
+            .filter(([_, ratio]) => ratio > 0)
+            .map(([format, ratio]) => ({
+              format: format === '단답형' ? '주관식' : format === '서술형' ? '주관식' : format,
+              ratio
+            }))
+        : [{ format: questionType === '단답형' || questionType === '서술형' ? '주관식' : questionType, ratio: 100 }],
       difficulty_distribution: difficulty === '전체'
         ? Object.entries(diffRatios)
             .filter(([_, ratio]) => ratio > 0)
@@ -177,21 +197,21 @@ export default function EnglishGenerator({ onGenerate, isGenerating }: EnglishGe
         </div>
       </div>
 
-      {/* 문제 유형 */}
+      {/* 문제 영역 */}
       <div className="mb-4">
         <div className="mb-2 font-semibold flex items-center gap-2">
-          문제 유형
+          문제 영역
           <Tooltip>
             <TooltipTrigger asChild>
               <HelpCircle className="h-4 w-4 text-gray-400 hover:text-gray-600 cursor-help" />
             </TooltipTrigger>
             <TooltipContent>
               <div className="max-w-xs">
-                <p className="font-medium mb-1">문제 유형 설정 팁</p>
+                <p className="font-medium mb-1">문제 영역 설정 팁</p>
                 <p className="text-xs">
                   • <strong>전체</strong>를 선택하면 독해, 어휘, 문법의 비율을 설정할 수 있습니다
                   <br />
-                  • 각 유형별로 10% 단위로 비율을 조정할 수 있습니다
+                  • 각 영역별로 10% 단위로 비율을 조정할 수 있습니다
                   <br />• 총 비율은 100%가 되어야 합니다
                 </p>
               </div>
@@ -240,6 +260,47 @@ export default function EnglishGenerator({ onGenerate, isGenerating }: EnglishGe
               </Select>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* 문제 유형 */}
+      <div className="mb-4">
+        <div className="mb-2 font-semibold flex items-center gap-2">
+          문제 유형
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <HelpCircle className="h-4 w-4 text-gray-400 hover:text-gray-600 cursor-help" />
+            </TooltipTrigger>
+            <TooltipContent>
+              <div className="max-w-xs">
+                <p className="font-medium mb-1">문제 유형 설정 팁</p>
+                <p className="text-xs">
+                  • <strong>전체</strong>를 선택하면 객관식, 단답형, 서술형의 비율을 설정할 수 있습니다
+                  <br />
+                  • 각 유형별로 10% 단위로 비율을 조정할 수 있습니다
+                  <br />• 총 비율은 100%가 되어야 합니다
+                </p>
+              </div>
+            </TooltipContent>
+          </Tooltip>
+        </div>
+        <div className="flex gap-2">
+          {QUESTION_TYPES.map((type) => (
+            <button
+              key={type}
+              onClick={() => {
+                if (type === '전체') {
+                  setTypeRatioError('');
+                  setIsTypeRatioOpen(true);
+                } else {
+                  setQuestionType(type);
+                }
+              }}
+              className={`${chipBase} ${questionType === type ? chipSelected : chipUnselected}`}
+            >
+              {type}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -412,6 +473,98 @@ export default function EnglishGenerator({ onGenerate, isGenerating }: EnglishGe
                     : 'bg-blue-300 cursor-not-allowed'
                 }`}
                 disabled={englishRatioSum !== 100}
+              >
+                저장
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 문제 유형 비율 설정 모달 */}
+      {isTypeRatioOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setIsTypeRatioOpen(false)}
+          />
+          <div className="relative z-10 w-[520px] max-w-[90vw] rounded-xl bg-white shadow-lg p-6">
+            <div className="flex items-start justify-between mb-4">
+              <div className="text-xl font-semibold">문제 유형 비율 설정</div>
+              <button
+                className="text-gray-500 hover:text-gray-700"
+                onClick={() => setIsTypeRatioOpen(false)}
+              >
+                ✕
+              </button>
+            </div>
+            <p className="text-sm text-gray-500 mb-4">
+              전체 선택 시 각 유형의 출제 비율을 지정합니다.
+              <br />
+              합계가 100%가 되어야 저장할 수 있어요.
+            </p>
+
+            <div className="space-y-3">
+              {['객관식', '단답형', '서술형'].map((type) => (
+                <div key={type} className="flex items-center justify-between">
+                  <span className="text-sm text-gray-700">{type}</span>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      step={10}
+                      value={typeRatios[type] ?? 0}
+                      onChange={(e) => {
+                        const v = Number(e.target.value);
+                        setTypeRatios((prev) => {
+                          const others = ['객관식', '단답형', '서술형'].reduce(
+                            (s, k) => (k === type ? s : s + (prev[k] || 0)),
+                            0,
+                          );
+                          const allowed = Math.max(0, 100 - others);
+                          const next = Math.min(Math.max(0, isNaN(v) ? 0 : v), allowed);
+                          return { ...prev, [type]: next };
+                        });
+                      }}
+                      className="w-24 p-2 border rounded-md text-right"
+                    />
+                    <span className="text-sm text-gray-500">%</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex items-center justify-between mt-4">
+              <div
+                className={`text-sm ${typeRatioSum === 100 ? 'text-green-600' : 'text-red-600'}`}
+              >
+                합계: {typeRatioSum}%
+              </div>
+              {typeRatioError && <div className="text-sm text-red-600">{typeRatioError}</div>}
+            </div>
+
+            <div className="mt-6 flex gap-3 justify-end">
+              <button
+                onClick={() => setIsTypeRatioOpen(false)}
+                className="px-5 py-2 rounded-md border bg-gray-100 text-gray-700 hover:bg-gray-200"
+              >
+                취소
+              </button>
+              <button
+                onClick={() => {
+                  if (typeRatioSum !== 100)
+                    return setTypeRatioError('합계가 100%가 되어야 합니다.');
+                  setTypeRatioError('');
+                  setQuestionType('전체');
+                  setIsTypeRatioOpen(false);
+                }}
+                className={`px-5 py-2 rounded-md text-white ${
+                  typeRatioSum === 100
+                    ? 'bg-blue-600 hover:bg-blue-700'
+                    : 'bg-blue-300 cursor-not-allowed'
+                }`}
+                disabled={typeRatioSum !== 100}
               >
                 저장
               </button>
