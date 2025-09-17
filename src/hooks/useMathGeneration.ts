@@ -119,19 +119,44 @@ export const useMathGeneration = () => {
       if (data.regenerated_problem) {
         const updatedQuestions = previewQuestions.map((q) => {
           if (q.id === questionId) {
+            // 문제 유형 자동 수정
+            let problemType = data.regenerated_problem.problem_type;
+            if (data.regenerated_problem.choices && data.regenerated_problem.choices.length > 0) {
+              problemType = 'multiple_choice';
+            } else if (
+              !data.regenerated_problem.choices ||
+              data.regenerated_problem.choices.length === 0
+            ) {
+              problemType = 'short_answer';
+            }
+
             return {
               id: q.id,
               title: data.regenerated_problem.question,
               options: data.regenerated_problem.choices || undefined,
               answerIndex: data.regenerated_problem.choices
-                ? data.regenerated_problem.choices.findIndex(
-                    (choice: string) => choice === data.regenerated_problem.correct_answer,
-                  )
+                ? (() => {
+                    // correct_answer가 A, B, C, D 형태인 경우
+                    if (
+                      data.regenerated_problem.correct_answer &&
+                      data.regenerated_problem.correct_answer.length === 1
+                    ) {
+                      const answerChar = data.regenerated_problem.correct_answer.toUpperCase();
+                      if (answerChar >= 'A' && answerChar <= 'D') {
+                        return answerChar.charCodeAt(0) - 65; // A=0, B=1, C=2, D=3
+                      }
+                    }
+                    // correct_answer가 선택지와 직접 매칭되는 경우
+                    return data.regenerated_problem.choices.findIndex(
+                      (choice: string) => choice === data.regenerated_problem.correct_answer,
+                    );
+                  })()
                 : undefined,
               correct_answer: data.regenerated_problem.correct_answer,
               explanation: data.regenerated_problem.explanation,
               question: data.regenerated_problem.question,
               choices: data.regenerated_problem.choices,
+              problem_type: problemType,
             };
           }
           return q;
@@ -241,19 +266,44 @@ export const useMathGeneration = () => {
 
         // 백엔드 데이터를 프론트엔드 형식으로 변환 (연속 번호 사용)
         const convertedQuestions: PreviewQuestion[] = data.problems.map(
-          (problem: any, index: number) => ({
-            id: index + 1, // 연속 번호 사용 (1, 2, 3...)
-            title: problem.question,
-            options: problem.choices ? problem.choices : undefined,
-            answerIndex: problem.choices
-              ? problem.choices.findIndex((choice: string) => choice === problem.correct_answer)
-              : undefined,
-            correct_answer: problem.correct_answer,
-            explanation: problem.explanation,
-            question: problem.question,
-            choices: problem.choices,
-            backendId: problem.id, // 백엔드 ID는 별도 저장
-          }),
+          (problem: any, index: number) => {
+            // 문제 유형 자동 수정
+            let problemType = problem.problem_type;
+            if (problem.choices && problem.choices.length > 0) {
+              // choices가 있으면 객관식으로 수정
+              problemType = 'multiple_choice';
+            } else if (!problem.choices || problem.choices.length === 0) {
+              // choices가 없으면 주관식으로 수정
+              problemType = 'short_answer';
+            }
+
+            return {
+              id: index + 1, // 연속 번호 사용 (1, 2, 3...)
+              title: problem.question,
+              options: problem.choices ? problem.choices : undefined,
+              answerIndex: problem.choices
+                ? (() => {
+                    // correct_answer가 A, B, C, D 형태인 경우
+                    if (problem.correct_answer && problem.correct_answer.length === 1) {
+                      const answerChar = problem.correct_answer.toUpperCase();
+                      if (answerChar >= 'A' && answerChar <= 'D') {
+                        return answerChar.charCodeAt(0) - 65; // A=0, B=1, C=2, D=3
+                      }
+                    }
+                    // correct_answer가 선택지와 직접 매칭되는 경우
+                    return problem.choices.findIndex(
+                      (choice: string) => choice === problem.correct_answer,
+                    );
+                  })()
+                : undefined,
+              correct_answer: problem.correct_answer,
+              explanation: problem.explanation,
+              question: problem.question,
+              choices: problem.choices,
+              backendId: problem.id, // 백엔드 ID는 별도 저장
+              problem_type: problemType, // 수정된 문제 유형 추가
+            };
+          },
         );
 
         console.log('📈 변환된 문제 데이터:', convertedQuestions);

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { QuestionService } from '@/services/questionService';
+import { MathService } from '@/services/mathService';
 import { KoreanService } from '@/services/koreanService';
 import { EnglishService } from '@/services/englishService';
 import { MathProblem } from '@/types/math';
@@ -67,7 +67,7 @@ export const useWorksheetEdit = (selectedSubject?: string) => {
           : editFormData.explanation,
       };
 
-      await QuestionService.updateProblem(editingProblem.id, updateData);
+      await MathService.updateMathProblem(editingProblem.id, updateData);
       onSuccess();
       setIsEditDialogOpen(false);
       setEditingProblem(null);
@@ -121,7 +121,7 @@ export const useWorksheetEdit = (selectedSubject?: string) => {
         });
       } else {
         // 수학 또는 기본값
-        await QuestionService.updateWorksheet(worksheetId, {
+        await MathService.updateMathWorksheet(worksheetId, {
           title: editedTitle.trim(),
         });
       }

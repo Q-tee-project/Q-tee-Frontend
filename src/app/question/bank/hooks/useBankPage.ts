@@ -31,10 +31,22 @@ export const useBankPage = () => {
           worksheetData = await MathService.getMathWorksheets();
           break;
         case '국어':
-          worksheetData = await KoreanService.getKoreanWorksheets();
+          try {
+            worksheetData = await KoreanService.getKoreanWorksheets();
+          } catch (error: any) {
+            console.error('Korean service error:', error);
+            setError(`국어 워크시트를 불러올 수 없습니다: ${error.message}`);
+            worksheetData = [];
+          }
           break;
         case '영어':
-          worksheetData = await EnglishService.getEnglishWorksheets();
+          try {
+            worksheetData = await EnglishService.getEnglishWorksheets();
+          } catch (error: any) {
+            console.error('English service error:', error);
+            setError(`영어 워크시트를 불러올 수 없습니다: ${error.message}`);
+            worksheetData = [];
+          }
           break;
         default:
           setWorksheets([]);
@@ -58,27 +70,33 @@ export const useBankPage = () => {
   };
 
   const loadWorksheetProblems = async (worksheetId: number) => {
+    console.log('🔍 워크시트 문제 로드 시작, ID:', worksheetId, '과목:', selectedSubject);
     try {
       let worksheetDetail: any;
 
       switch (selectedSubject) {
         case Subject.MATH:
         case '수학':
+          console.log('🔢 수학 워크시트 상세 조회 중...');
           worksheetDetail = await MathService.getMathWorksheetDetail(worksheetId);
           break;
         case '국어':
+          console.log('📚 국어 워크시트 상세 조회 중...');
           worksheetDetail = await KoreanService.getKoreanWorksheetDetail(worksheetId);
           break;
         case '영어':
+          console.log('🔤 영어 워크시트 상세 조회 중...');
           worksheetDetail = await EnglishService.getEnglishWorksheetDetail(worksheetId);
           break;
         default:
           return;
       }
 
+      console.log('✅ 워크시트 상세 데이터:', worksheetDetail);
+      console.log('📝 문제 개수:', worksheetDetail.problems?.length || 0);
       setWorksheetProblems(worksheetDetail.problems || []);
     } catch (error: any) {
-      console.error('워크시트 문제 로드 실패:', error);
+      console.error('❌ 워크시트 문제 로드 실패:', error);
       setError('워크시트 문제를 불러올 수 없습니다.');
     }
   };
