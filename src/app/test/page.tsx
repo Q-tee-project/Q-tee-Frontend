@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { MathService } from '@/services/mathService';
+import { useAuth } from '@/contexts/AuthContext';
 import { LaTeXRenderer } from '@/components/LaTeXRenderer';
 import { Worksheet, MathProblem, ProblemType, Subject } from '@/types/math';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -30,6 +31,7 @@ import { ScratchpadModal } from '@/components/ScratchpadModal';
 import { TestResultModal } from './components/TestResultModal';
 
 export default function TestPage() {
+  const { userProfile } = useAuth();
   const [worksheets, setWorksheets] = useState<Worksheet[]>([]);
   const [selectedWorksheet, setSelectedWorksheet] = useState<Worksheet | null>(null);
   const [worksheetProblems, setWorksheetProblems] = useState<MathProblem[]>([]);
@@ -62,8 +64,10 @@ export default function TestPage() {
 
   // 데이터 로드
   useEffect(() => {
-    loadWorksheets();
-  }, [selectedSubject]);
+    if (userProfile?.id) {
+      loadWorksheets();
+    }
+  }, [selectedSubject, userProfile]);
 
   // 타이머 효과
   useEffect(() => {
@@ -93,7 +97,11 @@ export default function TestPage() {
     setIsLoading(true);
     try {
       // 학생용 과제 목록 가져오기
-      const assignmentData = await MathService.getStudentAssignments();
+      if (!userProfile?.id) {
+        console.error('사용자 정보가 없습니다');
+        return;
+      }
+      const assignmentData = await MathService.getStudentAssignments(userProfile.id);
       console.log('과제 데이터:', assignmentData);
 
       // 과제 데이터를 워크시트 형식으로 변환
@@ -148,7 +156,11 @@ export default function TestPage() {
 
       // 학생용 과제 상세 정보 가져오기
       console.log('📚 API 호출 시작...');
-      const assignmentDetail = await MathService.getAssignmentDetail(worksheetId);
+      if (!userProfile?.id) {
+        console.error('사용자 정보가 없습니다');
+        return;
+      }
+      const assignmentDetail = await MathService.getAssignmentDetail(worksheetId, userProfile.id);
       console.log('📚 과제 상세 정보 전체:', assignmentDetail);
       console.log('📚 과제 정보:', assignmentDetail?.assignment);
       console.log('📚 배포 정보:', assignmentDetail?.deployment);

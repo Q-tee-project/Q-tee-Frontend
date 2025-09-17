@@ -84,12 +84,12 @@ export function StudentAssignmentModal({
       setIsDeploying(true);
 
       // 과제 배포 API 호출 (worksheet_id 사용)
-      await apiRequest('/assignments/deploy', {
+      await apiRequest('/api/math-generation/assignments/deploy', {
         method: 'POST',
         body: JSON.stringify({
-          assignmentId: worksheetId, // worksheet_id를 assignment_id로 사용
-          studentIds: selectedStudents,
-          classroomId: parseInt(classId),
+          assignment_id: worksheetId, // worksheet_id를 assignment_id로 사용
+          student_ids: selectedStudents,
+          classroom_id: parseInt(classId),
         }),
       });
 
