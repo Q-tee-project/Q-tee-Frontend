@@ -3,26 +3,15 @@
 import React, { useState, useEffect } from 'react';
 import { MathService } from '@/services/mathService';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, Calendar, Users, BookOpen, Trash2 } from 'lucide-react';
+import { Plus, BookOpen } from 'lucide-react';
+import { IoSearch } from "react-icons/io5";
 import { StudentAssignmentModal } from './StudentAssignmentModal';
+import { AssignmentList } from './AssignmentList';
+import { AssignmentCreateModal } from './AssignmentCreateModal';
+import { StudentProfile } from '@/services/authService';
 
 interface AssignmentTabProps {
   classId: string;
@@ -40,9 +29,40 @@ interface Worksheet {
   created_at: string;
 }
 
+interface AssignmentStudent {
+  id: number;
+  name: string;
+  school_level: 'middle' | 'high';
+  grade: number;
+  status: 'completed' | 'incomplete';
+  score?: number;
+  time_taken?: number;
+  completed_at?: string;
+}
+
 export function AssignmentTab({ classId }: AssignmentTabProps) {
   const [worksheets, setWorksheets] = useState<Worksheet[]>([]);
-  const [assignments, setAssignments] = useState<any[]>([]);
+  const [assignments, setAssignments] = useState<Array<{
+    id: number;
+    worksheet_id: number;
+    title: string;
+    unit_name: string;
+    chapter_name: string;
+    problem_count: number;
+    created_at: string;
+    students: AssignmentStudent[];
+  }>>([]);
+  const [filteredAssignments, setFilteredAssignments] = useState<Array<{
+    id: number;
+    worksheet_id: number;
+    title: string;
+    unit_name: string;
+    chapter_name: string;
+    problem_count: number;
+    created_at: string;
+    students: AssignmentStudent[];
+  }>>([]);
+  const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedWorksheets, setSelectedWorksheets] = useState<number[]>([]);
@@ -55,6 +75,18 @@ export function AssignmentTab({ classId }: AssignmentTabProps) {
     loadAssignmentsFromStorage();
     loadWorksheets();
   }, [classId]);
+
+  // 검색어에 따른 과제 필터링
+  useEffect(() => {
+    if (searchTerm.trim() === '') {
+      setFilteredAssignments(assignments);
+    } else {
+      const filtered = assignments.filter(assignment =>
+        assignment.title.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      setFilteredAssignments(filtered);
+    }
+  }, [assignments, searchTerm]);
 
   // 로컬 스토리지에서 과제 데이터 로드
   const loadAssignmentsFromStorage = () => {
@@ -159,175 +191,119 @@ export function AssignmentTab({ classId }: AssignmentTabProps) {
     setSelectedAssignment(null);
   };
 
+  // 학생 배정 완료 후 콜백
+  const handleStudentAssignmentComplete = (assignmentId: number, assignedStudents: StudentProfile[]) => {
+    const updatedAssignments = assignments.map(assignment => {
+      if (assignment.id === assignmentId) {
+        // 기존 학생 목록에서 ID 추출
+        const existingStudentIds = assignment.students.map(student => student.id);
+        
+        // 새로 배정된 학생들 중에서 기존에 없는 학생들만 필터링
+        const newStudentsToAdd = assignedStudents.filter(student => 
+          !existingStudentIds.includes(student.id)
+        );
+        
+        // 새로운 학생들을 AssignmentStudent 형태로 변환
+        const newStudents: AssignmentStudent[] = newStudentsToAdd.map(student => ({
+          id: student.id,
+          name: student.name,
+          school_level: student.school_level,
+          grade: student.grade,
+          status: 'incomplete' as const, // 초기 상태는 미완료
+        }));
+        
+        // 기존 학생들과 새로운 학생들을 합치기
+        return {
+          ...assignment,
+          students: [...assignment.students, ...newStudents]
+        };
+      }
+      return assignment;
+    });
+    setAssignments(updatedAssignments);
+    saveAssignmentsToStorage(updatedAssignments);
+  };
+
   return (
-    <div className="space-y-6" style={{ padding: '10px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
       {/* 과제 목록 헤더 */}
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-gray-800" style={{ padding: '0 10px' }}>
-          과제 목록
+      <div>
+        <h3 className="text-lg font-semibold text-gray-800">
+          과제 목록 ({filteredAssignments.length})
         </h3>
-        <Button
-          onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
-        >
-          과제 생성
-        </Button>
+      </div>
+
+      {/* 검색창과 과제 생성 버튼 */}
+      <div className="flex justify-between items-center">
+        <div className="max-w-sm relative">
+          <Input
+            placeholder="과제명 검색"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pr-10"
+          />
+          <IoSearch className="absolute right-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+        </div>
+        <div className="flex items-center gap-2">
+          {searchTerm && (
+            <button
+              onClick={() => setSearchTerm('')}
+              className="px-3 py-2 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+            >
+              검색 초기화
+            </button>
+          )}
+          <Button
+            onClick={() => setIsModalOpen(true)}
+            style={{ backgroundColor: '#0072CE' }}
+            className="hover:opacity-90 ml-4"
+          >
+            과제 생성
+          </Button>
+        </div>
       </div>
 
       {/* 과제 목록 */}
-      {assignments.length === 0 ? (
-        <Card>
-          <CardContent className="text-center py-12">
-            <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">생성된 과제가 없습니다</h3>
-            <p className="text-gray-500 mb-4">과제를 생성하여 학생들에게 배포해보세요!</p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-4">
-          {assignments.map((assignment) => (
-            <Card key={assignment.id}>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <h4 className="text-lg font-semibold text-gray-900 mb-2">{assignment.title}</h4>
-                    <div className="flex items-center gap-4 text-sm text-gray-600">
-                      <div className="flex items-center gap-1">
-                        <Calendar className="w-4 h-4" />
-                        {new Date(assignment.created_at).toLocaleDateString('ko-KR')}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Users className="w-4 h-4" />
-                        {assignment.students.length}명 배정
-                      </div>
-                      <Badge variant="outline">{assignment.problem_count}문제</Badge>
-                    </div>
-                    <div className="mt-2 text-sm text-gray-500">
-                      {assignment.unit_name} &gt; {assignment.chapter_name}
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleOpenStudentModal(assignment)}
-                    >
-                      학생 배정
-                    </Button>
-                    <Button variant="outline" size="sm">
-                      상세보기
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDeleteAssignment(assignment.id)}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+      {filteredAssignments.length === 0 ? (
+        <div style={{ padding: '0 20px' }}>
+          <Card>
+            <CardContent className="text-center py-12">
+              <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+              {searchTerm ? (
+                <>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">'{searchTerm}'에 해당하는 과제를 찾을 수 없습니다</h3>
+                  <p className="text-gray-500 mb-4">다른 검색어를 시도해보세요.</p>
+                </>
+              ) : (
+                <>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">생성된 과제가 없습니다</h3>
+                  <p className="text-gray-500 mb-4">과제를 생성하여 학생들에게 배포해보세요!</p>
+                </>
+              )}
+            </CardContent>
+          </Card>
         </div>
+      ) : (
+        <AssignmentList
+          assignments={filteredAssignments}
+          onOpenStudentModal={handleOpenStudentModal}
+          onDeleteAssignment={handleDeleteAssignment}
+          onStudentAssignmentComplete={handleStudentAssignmentComplete}
+        />
       )}
 
       {/* 과제 선택 모달 */}
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Plus className="w-5 h-5" />
-              과제 생성
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <p className="text-sm text-gray-600">
-              생성된 워크시트 중에서 과제로 사용할 항목을 선택하세요.
-            </p>
-
-            {isLoading ? (
-              <div className="text-center py-8">
-                <div className="text-gray-500">워크시트 목록을 불러오는 중...</div>
-              </div>
-            ) : worksheets.length === 0 ? (
-              <div className="text-center py-8">
-                <div className="text-gray-500 mb-2">생성된 워크시트가 없습니다.</div>
-                <div className="text-sm text-gray-400">
-                  문제 생성 페이지에서 먼저 워크시트를 생성해주세요.
-                </div>
-              </div>
-            ) : (
-              <Card>
-                <CardContent className="p-0">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-12">
-                          <Checkbox checked={selectAll} onCheckedChange={handleSelectAll} />
-                        </TableHead>
-                        <TableHead>제목</TableHead>
-                        <TableHead>학교급/학년</TableHead>
-                        <TableHead>단원</TableHead>
-                        <TableHead>문제수</TableHead>
-                        <TableHead>생성일</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {worksheets.map((worksheet) => (
-                        <TableRow key={worksheet.id}>
-                          <TableCell>
-                            <Checkbox
-                              checked={selectedWorksheets.includes(worksheet.id)}
-                              onCheckedChange={(checked) =>
-                                handleSelectWorksheet(worksheet.id, checked as boolean)
-                              }
-                            />
-                          </TableCell>
-                          <TableCell className="font-medium">{worksheet.title}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline">
-                              {worksheet.school_level === 'middle' ? '중등' : '고등'}{' '}
-                              {worksheet.grade}학년
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div className="text-sm">
-                              <div className="font-medium">{worksheet.unit_name}</div>
-                              <div className="text-gray-500">{worksheet.chapter_name}</div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="secondary">{worksheet.problem_count}문제</Badge>
-                          </TableCell>
-                          <TableCell className="text-sm text-gray-600">
-                            {new Date(worksheet.created_at).toLocaleDateString('ko-KR')}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsModalOpen(false)}>
-              취소
-            </Button>
-            <Button
-              onClick={handleCreateAssignments}
-              disabled={selectedWorksheets.length === 0}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              과제 생성 ({selectedWorksheets.length}개 선택됨)
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AssignmentCreateModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        worksheets={worksheets}
+        isLoading={isLoading}
+        selectedWorksheets={selectedWorksheets}
+        selectAll={selectAll}
+        onSelectAll={handleSelectAll}
+        onSelectWorksheet={handleSelectWorksheet}
+        onCreateAssignments={handleCreateAssignments}
+      />
 
       {/* 학생 배정 모달 */}
       {selectedAssignment && (
@@ -338,6 +314,7 @@ export function AssignmentTab({ classId }: AssignmentTabProps) {
           worksheetId={selectedAssignment.worksheet_id}
           assignmentTitle={selectedAssignment.title}
           classId={classId}
+          onAssignmentComplete={handleStudentAssignmentComplete}
         />
       )}
     </div>

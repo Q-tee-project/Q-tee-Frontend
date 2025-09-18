@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { PageHeader } from '@/components/layout/PageHeader';
+import CreateClassModal from '@/components/class/CreateClassModal';
 import {
   Dialog,
   DialogContent,
@@ -14,13 +15,6 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -32,7 +26,7 @@ import {
 import { classroomService } from '@/services/authService';
 import type { Classroom } from '@/services/authService';
 import { useAuth } from '@/contexts/AuthContext';
-import { Users, Plus, Code, Copy, CheckCircle } from 'lucide-react';
+import { Users, CheckCircle } from 'lucide-react';
 import { IoCopyOutline, IoSearch } from "react-icons/io5";
 import { IoIosClose } from "react-icons/io";
 
@@ -49,15 +43,9 @@ export default function ClassCreatePage() {
   const [isCodeModalOpen, setIsCodeModalOpen] = useState(false);
   const [selectedClass, setSelectedClass] = useState<Classroom | null>(null);
 
-  // 폼 데이터
-  const [formData, setFormData] = useState({
-    name: '',
-    school_level: 'middle' as 'middle' | 'high',
-    grade: 1,
-  });
-
   // 코드 복사 상태
   const [copied, setCopied] = useState(false);
+
 
   // 검색 상태
   const [searchTerm, setSearchTerm] = useState('');
@@ -99,22 +87,12 @@ export default function ClassCreatePage() {
     }
   };
 
-  // 폼 데이터 변경 핸들러
-  const handleInputChange = (field: string, value: string | number) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-    setError('');
-  };
-
   // 수업 생성
-  const handleCreateClass = async () => {
-    if (!formData.name.trim()) {
-      setError('수업명을 입력해주세요.');
-      return;
-    }
-
+  const handleCreateClass = async (formData: {
+    name: string;
+    school_level: 'middle' | 'high';
+    grade: number;
+  }) => {
     try {
       await classroomService.createClassroom({
         name: formData.name,
@@ -125,15 +103,11 @@ export default function ClassCreatePage() {
       // 성공 후 목록 새로고침
       await loadClasses();
       setIsCreateModalOpen(false);
-      setFormData({
-        name: '',
-        school_level: 'middle',
-        grade: 1,
-      });
       setError('');
     } catch (error: any) {
       console.error('수업 생성 실패:', error);
       setError(error?.message || '수업 생성에 실패했습니다.');
+      throw error; // 모달에서 에러를 처리할 수 있도록 에러를 다시 던짐
     }
   };
 
@@ -421,100 +395,12 @@ export default function ClassCreatePage() {
       </div>
 
       {/* 수업 생성 모달 */}
-      <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-        <DialogContent className="max-w-md" showCloseButton={false}>
-          <DialogHeader>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <DialogTitle>
-                수업 생성
-              </DialogTitle>
-              <button
-                onClick={() => setIsCreateModalOpen(false)}
-                className="text-gray-400 hover:text-gray-600"
-                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-              >
-                <IoIosClose />
-              </button>
-            </div>
-          </DialogHeader>
-
-          <div className="space-y-4">
-              <div>
-                <label htmlFor="className" className="block text-sm font-medium text-gray-700 mb-2">
-                수업명 <span style={{ color: '#FF0000' }}>*</span>
-                </label>
-              <Input
-                id="className"
-                placeholder="예: 중1-1반, 수학심화반 등"
-                value={formData.name}
-                onChange={(e) => handleInputChange('name', e.target.value)}
-              />
-            </div>
-
-            <div className="flex gap-[15px] pb-4" style={{ borderBottom: '1px solid #D1D1D1' }}>
-              <div className="flex-1">
-                <label htmlFor="school" className="block text-sm font-medium text-gray-700 mb-2">
-                  학교 <span style={{ color: '#FF0000' }}>*</span>
-                </label>
-                <Select
-                  value={formData.school_level}
-                  onValueChange={(value: 'middle' | 'high') =>
-                    handleInputChange('school_level', value)
-                  }
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="middle">중학교</SelectItem>
-                    <SelectItem value="high">고등학교</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="flex-1">
-                <label htmlFor="grade" className="block text-sm font-medium text-gray-700 mb-2">
-                  학년 <span style={{ color: '#FF0000' }}>*</span>
-                </label>
-                <Select
-                  value={formData.grade.toString()}
-                  onValueChange={(value) => handleInputChange('grade', parseInt(value))}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1">1학년</SelectItem>
-                    <SelectItem value="2">2학년</SelectItem>
-                    <SelectItem value="3">3학년</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
-
-          <DialogFooter style={{ display: 'flex', gap: '15px' }}>
-            <button
-              onClick={() => setIsCreateModalOpen(false)}
-              className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
-              style={{ flex: 1 }}
-            >
-              취소
-            </button>
-            <button
-              onClick={handleCreateClass}
-              className="px-4 py-2 rounded-md transition-colors"
-              style={{ 
-                flex: 1,
-                backgroundColor: '#0072CE',
-                color: '#ffffff'
-              }}
-            >
-              생성하기
-            </button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <CreateClassModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSubmit={handleCreateClass}
+        error={error}
+      />
 
       {/* 수업 코드 모달 */}
       <Dialog open={isCodeModalOpen} onOpenChange={setIsCodeModalOpen}>
@@ -549,8 +435,6 @@ export default function ClassCreatePage() {
                   </p>
                 </div>
               </div>
-
-              
             </div>
           )}
 
