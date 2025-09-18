@@ -5,7 +5,7 @@ import { LaTeXRenderer } from '@/components/LaTeXRenderer';
 import { BaseQuestionPreviewProps } from './QuestionPreviewTypes';
 import { QuestionPreviewLoading } from './QuestionPreviewLoading';
 import { QuestionPreviewGuide } from './QuestionPreviewGuide';
-import { EnglishUIData, ParsedPassage, ParsedQuestion, ParsedExample, ParsedContentItem } from '@/types/englishUI';
+import { EnglishUIData, ParsedPassage, ParsedQuestion, ParsedContentItem } from '@/types/englishUI';
 
 // 콘텐츠 아이템 렌더링 컴포넌트
 const ContentItem: React.FC<{ item: ParsedContentItem }> = ({ item }) => {
@@ -145,60 +145,6 @@ const PassageDisplay: React.FC<{ passage: ParsedPassage }> = ({ passage }) => {
   );
 };
 
-// 예문 표시 컴포넌트
-const ExampleDisplay: React.FC<{ example: ParsedExample }> = ({ example }) => {
-  const [activeTab, setActiveTab] = useState<'original' | 'translation'>('original');
-
-  return (
-    <div className="example-section mb-4 bg-green-50 rounded-lg overflow-hidden">
-      {/* 예문 헤더 */}
-      <div className="example-header bg-green-100 p-2 border-b flex items-center justify-between">
-        <span className="example-label font-semibold text-green-700">
-          📝 예문
-        </span>
-
-        {/* 탭 버튼들 */}
-        <div className="tab-buttons flex bg-white rounded-md p-1 shadow-sm">
-          <button
-            className={`px-2 py-1 text-xs rounded transition-colors ${
-              activeTab === 'original'
-                ? 'bg-green-500 text-white'
-                : 'text-gray-600 hover:text-gray-800'
-            }`}
-            onClick={() => setActiveTab('original')}
-          >
-            원문
-          </button>
-          <button
-            className={`px-2 py-1 text-xs rounded transition-colors ${
-              activeTab === 'translation'
-                ? 'bg-green-500 text-white'
-                : 'text-gray-600 hover:text-gray-800'
-            }`}
-            onClick={() => setActiveTab('translation')}
-          >
-            번역
-          </button>
-        </div>
-      </div>
-
-      {/* 예문 내용 */}
-      <div className="example-content p-3">
-        {activeTab === 'original' && (
-          <div className="original-example text-sm font-medium">
-            {example.originalContent}
-          </div>
-        )}
-
-        {activeTab === 'translation' && (
-          <div className="translation-example text-sm text-gray-700">
-            {example.koreanTranslation}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
 
 // 새로운 Props 인터페이스
 interface EnglishUIQuestionPreviewProps {
@@ -293,10 +239,6 @@ export const EnglishQuestionPreview: React.FC<EnglishUIQuestionPreviewProps> = (
 
               {/* 각 그룹의 문제들 */}
               {group.questions.map((question, questionIndex) => {
-                // 해당 예문 찾기
-                const relatedExample = question.exampleId
-                  ? uiData.examples.find(e => e.id === question.exampleId)
-                  : undefined;
 
                 return (
                   <Card
@@ -376,8 +318,23 @@ export const EnglishQuestionPreview: React.FC<EnglishUIQuestionPreviewProps> = (
                           </div>
 
                           {/* 예문 (문제 텍스트 아래) */}
-                          {relatedExample && (
-                            <ExampleDisplay example={relatedExample} />
+                          {(question.exampleContent || question.exampleOriginalContent || question.exampleKoreanTranslation) && (
+                            <div className="example-section mt-4 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-400">
+                              <h4 className="text-sm font-medium text-blue-800 mb-2">예문</h4>
+                              {question.exampleContent && (
+                                <div className="mb-2">
+                                  <div className="text-sm text-gray-900">{question.exampleContent}</div>
+                                </div>
+                              )}
+                              {question.exampleOriginalContent && (
+                                <div className="mb-2">
+                                  <div className="text-xs text-gray-600 font-mono">{question.exampleOriginalContent}</div>
+                                </div>
+                              )}
+                              {question.exampleKoreanTranslation && (
+                                <div className="text-xs text-gray-500">{question.exampleKoreanTranslation}</div>
+                              )}
+                            </div>
                           )}
 
                           {/* 선택지 (객관식인 경우) */}

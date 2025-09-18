@@ -56,7 +56,9 @@ export interface ParsedQuestion {
   difficulty: '상' | '중' | '하';
   detailType: string;
   passageId?: number;
-  exampleId?: number;
+  exampleContent?: string;
+  exampleOriginalContent?: string;
+  exampleKoreanTranslation?: string;
   choices: string[];
   correctAnswer: string | number; // 객관식: 인덱스, 주관식: 텍스트
   explanation: string;
@@ -78,7 +80,6 @@ export interface EnglishUIData {
     totalQuestions: number;        // total_questions → totalQuestions
   };
   passages: ParsedPassage[];
-  examples: ParsedExample[];
   questions: ParsedQuestion[];
 }
 

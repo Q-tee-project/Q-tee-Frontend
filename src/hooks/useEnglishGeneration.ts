@@ -1,11 +1,10 @@
 import { useState } from 'react';
 import { useProblemGeneration, PreviewQuestion } from './useProblemGeneration';
 import { EnglishService } from '@/services/englishService';
-import { EnglishFormData, EnglishGenerationResponse, EnglishLLMResponseAndRequest, EnglishPassage, EnglishExample, EnglishQuestion } from '@/types/english';
+import { EnglishFormData, EnglishGenerationResponse, EnglishLLMResponseAndRequest, EnglishPassage, EnglishQuestion } from '@/types/english';
 import {
   EnglishUIData,
   ParsedPassage,
-  ParsedExample,
   ParsedQuestion,
   ParsedPassageContent,
   ParsedContentItem,
@@ -47,15 +46,6 @@ const transformPassage = (passage: EnglishPassage): ParsedPassage => {
   };
 };
 
-const transformExample = (example: EnglishExample): ParsedExample => {
-  return {
-    id: example.example_id,
-    content: example.example_content,
-    originalContent: example.original_content,
-    koreanTranslation: example.korean_translation,
-    relatedQuestionId: parseInt(example.related_question) || 0,
-  };
-};
 
 const transformQuestion = (question: EnglishQuestion): ParsedQuestion => {
   return {
@@ -66,7 +56,9 @@ const transformQuestion = (question: EnglishQuestion): ParsedQuestion => {
     difficulty: question.question_difficulty,
     detailType: question.question_detail_type,
     passageId: question.question_passage_id ?? undefined,
-    exampleId: question.question_example_id ?? undefined,
+    exampleContent: question.example_content,
+    exampleOriginalContent: question.example_original_content,
+    exampleKoreanTranslation: question.example_korean_translation,
     choices: question.question_choices || [],
     correctAnswer: question.question_type === '객관식'
       ? parseInt(question.correct_answer) - 1  // 1-based → 0-based index
@@ -91,7 +83,6 @@ const transformToUIData = (response: EnglishLLMResponseAndRequest): EnglishUIDat
       totalQuestions: response.total_questions,
     },
     passages: response.passages?.map(transformPassage) || [],
-    examples: response.examples?.map(transformExample) || [],
     questions: response.questions?.map(transformQuestion) || [],
   };
 };

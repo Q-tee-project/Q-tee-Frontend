@@ -33,10 +33,9 @@ export interface EnglishFormData {
   total_questions: number;
   subjects: string[];
   subject_details: {
-    reading_types?: string[];
-    grammar_categories?: string[];
-    grammar_topics?: string[];
-    vocabulary_categories?: string[];
+    reading_types?: number[];
+    grammar_categories?: number[];
+    vocabulary_categories?: number[];
   };
   subject_ratios: { subject: string; ratio: number }[];
   question_format: string;
@@ -48,22 +47,8 @@ export interface EnglishFormData {
 export interface EnglishGenerationResponse {
   message: string;
   status: 'success' | 'error';
-  request_data: EnglishFormData;
-  distribution_summary?: {
-    total_questions: number;
-    validation_passed: boolean;
-    subject_distribution: { subject: string; count: number; ratio: number }[];
-    format_distribution: { format: string; count: number; ratio: number }[];
-    difficulty_distribution: { difficulty: string; count: number; ratio: number }[];
-  };
   llm_response?: EnglishLLMResponseAndRequest;
   llm_error?: string;
-  subject_types_validation?: {
-    reading_types: string[];
-    grammar_categories: string[];
-    grammar_topics: string[];
-    vocabulary_categories: string[];
-  };
 }
 
 export interface EnglishWorksheetDetail {
@@ -120,7 +105,6 @@ export interface EnglishLLMResponseAndRequest {
   worksheet_grade: number;
   total_questions: number;
   passages: EnglishPassage[];
-  examples: EnglishExample[];
   questions: EnglishQuestion[];
 }
 
@@ -135,7 +119,6 @@ export interface EnglishWorksheet {
   worksheet_grade: number;
   total_questions: number;
   passages: EnglishPassage[];
-  examples: EnglishExample[];
   questions: EnglishQuestion[];
 }
 
@@ -171,14 +154,6 @@ export interface EnglishContentItem {
   line?: string;
 }
 
-export interface EnglishExample {
-  example_id: number;
-  example_content: string;
-  original_content: string;
-  korean_translation: string;
-  related_question: string;
-}
-
 export interface EnglishQuestion {
   question_id: number;
   question_text: string;
@@ -187,7 +162,9 @@ export interface EnglishQuestion {
   question_difficulty: '상' | '중' | '하';
   question_detail_type: string;
   question_passage_id: number | null;
-  question_example_id: number | null;
+  example_content: string;
+  example_original_content: string;
+  example_korean_translation: string;
   question_choices: string[];
   correct_answer: string;
   explanation: string;
