@@ -2,6 +2,7 @@
 
 import { PageHeader } from '@/components/layout/PageHeader';
 import { FiShoppingCart, FiEdit, FiTrash2, FiCheck } from 'react-icons/fi';
+import { FaPlus } from "react-icons/fa";
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -149,6 +150,7 @@ export default function MyMarketPage() {
         variant="market"
         description="나의 마켓 상품을 관리 할 수 있습니다"
       />
+
       {/* 탭 네비게이션 */}
       <nav
         className="flex justify-between items-center mt-6 mb-4 px-8"
@@ -200,16 +202,22 @@ export default function MyMarketPage() {
           ) : (
             <>
               <button
+                onClick={() => router.push('/market')}
+                className="text-sm px-4 py-2 rounded-md bg-gray-500 text-white hover:bg-gray-600 transition-colors"
+              >
+                돌아가기
+              </button>              
+              <button
                 onClick={toggleSelectMode}
                 className="text-sm px-4 py-2 rounded-md bg-[#0072CE] text-white hover:bg-[#005fa3] transition-colors"
               >
                 선택하기
               </button>
               <button
-                onClick={() => router.push('/market')}
-                className="text-sm px-4 py-2 rounded-md bg-gray-500 text-white hover:bg-gray-600 transition-colors"
+                onClick={()=> router.push('/market/create')}
+                className="text-sm px-4 py-2 rounded-md bg-[#0072CE] text-white hover:bg-[#005fa3] transition-colors"
               >
-                돌아가기
+                <FaPlus />
               </button>
             </>
           )}

@@ -117,19 +117,19 @@ export default function ClassDetailPage({ params }: ClassDetailPageProps) {
     }
 
     try {
-      // 백엔드 API가 구현되지 않았으므로 로컬 상태만 업데이트
-      const updatedClassroom = {
-        ...classroom!,
+      // 실제 API 호출로 클래스룸 정보 업데이트
+      const updatedClassroom = await classroomService.updateClassroom(classroom!.id, {
         name: editFormData.name,
         school_level: editFormData.school_level,
         grade: editFormData.grade,
-      };
+      });
+
       setClassroom(updatedClassroom);
       setIsEditModalOpen(false);
       setError('');
-      
-      // TODO: 백엔드 API 구현 후 실제 API 호출로 변경
-      console.log('클래스 정보가 로컬에서 수정되었습니다:', updatedClassroom);
+
+      // 성공 메시지 표시
+      alert('클래스 정보가 성공적으로 수정되었습니다!');
     } catch (error: any) {
       console.error('클래스 수정 실패:', error);
       setError(error?.message || '클래스 수정에 실패했습니다.');
@@ -138,13 +138,17 @@ export default function ClassDetailPage({ params }: ClassDetailPageProps) {
 
   // 클래스 삭제
   const handleDeleteClass = async () => {
+    if (!confirm('정말로 이 클래스를 삭제하시겠습니까? 삭제된 클래스는 복구할 수 없습니다.')) {
+      return;
+    }
+
     try {
-      // 백엔드 API가 구현되지 않았으므로 로컬에서만 처리
+      // 실제 API 호출로 클래스룸 삭제
+      await classroomService.deleteClassroom(classroom!.id);
+
       setIsDeleteModalOpen(false);
+      alert('클래스가 성공적으로 삭제되었습니다.');
       router.push('/class/create');
-      
-      // TODO: 백엔드 API 구현 후 실제 API 호출로 변경
-      console.log('클래스가 로컬에서 삭제되었습니다:', classId);
     } catch (error: any) {
       console.error('클래스 삭제 실패:', error);
       setError(error?.message || '클래스 삭제에 실패했습니다.');

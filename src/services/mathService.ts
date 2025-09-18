@@ -170,18 +170,18 @@ export class MathService {
   }
 
   // 학생용 과제 목록 가져오기
-  static async getStudentAssignments(): Promise<any[]> {
-    return apiRequest<any[]>('/assignments/student');
+  static async getStudentAssignments(studentId: number): Promise<any[]> {
+    return apiRequest<any[]>(`/api/math-generation/assignments/student/${studentId}`);
   }
 
   // 과제 상세 정보 가져오기
-  static async getAssignmentDetail(assignmentId: number): Promise<any> {
-    return apiRequest<any>(`/assignments/${assignmentId}/detail`);
+  static async getAssignmentDetail(assignmentId: number, studentId: number): Promise<any> {
+    return apiRequest<any>(`/api/math-generation/assignments/${assignmentId}/student/${studentId}`);
   }
 
   // 과제 시작
   static async startTest(assignmentId: number): Promise<any> {
-    return apiRequest<any>('/test-sessions', {
+    return apiRequest<any>('/api/math-generation/test-sessions', {
       method: 'POST',
       body: JSON.stringify({ assignment_id: assignmentId }),
     });
@@ -189,7 +189,7 @@ export class MathService {
 
   // 답안 저장
   static async saveAnswer(sessionId: string, problemId: number, answer: string): Promise<any> {
-    return apiRequest<any>('/test-answers', {
+    return apiRequest<any>('/api/math-generation/test-answers', {
       method: 'POST',
       body: JSON.stringify({
         session_id: sessionId,
@@ -201,7 +201,7 @@ export class MathService {
 
   // 과제 제출
   static async submitTest(sessionId: string, answers: Record<number, string>): Promise<any> {
-    return apiRequest<any>(`/test-sessions/${sessionId}/submit`, {
+    return apiRequest<any>(`/api/math-generation/test-sessions/${sessionId}/submit`, {
       method: 'POST',
       body: JSON.stringify({ answers }),
     });

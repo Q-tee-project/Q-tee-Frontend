@@ -70,6 +70,23 @@ export interface Classroom {
   created_at: string;
 }
 
+export interface ClassroomUpdate {
+  name?: string;
+  school_level?: 'middle' | 'high';
+  grade?: number;
+}
+
+export interface ClassroomWithTeacher {
+  id: number;
+  name: string;
+  school_level: 'middle' | 'high';
+  grade: number;
+  class_code: string;
+  is_active: boolean;
+  created_at: string;
+  teacher: TeacherProfile;
+}
+
 export interface JoinRequestData {
   class_code: string;
 }
@@ -297,7 +314,7 @@ export const classroomService = {
   },
 
   // 클래스룸 정보 수정
-  async updateClassroom(classroomId: number, data: ClassroomCreateData): Promise<Classroom> {
+  async updateClassroom(classroomId: number, data: ClassroomUpdate): Promise<Classroom> {
     return authApiRequest<Classroom>(`/api/classrooms/${classroomId}`, {
       method: 'PUT',
       headers: getAuthHeaders(),
@@ -306,8 +323,8 @@ export const classroomService = {
   },
 
   // 클래스룸 삭제
-  async deleteClassroom(classroomId: number): Promise<void> {
-    return authApiRequest<void>(`/api/classrooms/${classroomId}`, {
+  async deleteClassroom(classroomId: number): Promise<{ message: string }> {
+    return authApiRequest<{ message: string }>(`/api/classrooms/${classroomId}`, {
       method: 'DELETE',
       headers: getAuthHeaders(),
     });
@@ -328,6 +345,13 @@ export const studentClassService = {
   // 내가 속한 클래스 목록 조회
   async getMyClasses(): Promise<Classroom[]> {
     return authApiRequest<Classroom[]>('/api/classrooms/my-classrooms/student', {
+      headers: getAuthHeaders(),
+    });
+  },
+
+  // 내가 속한 클래스 목록과 교사 정보 조회
+  async getMyClassesWithTeachers(studentId: number): Promise<ClassroomWithTeacher[]> {
+    return authApiRequest<ClassroomWithTeacher[]>(`/api/classrooms/student/${studentId}/classrooms-with-teachers`, {
       headers: getAuthHeaders(),
     });
   },

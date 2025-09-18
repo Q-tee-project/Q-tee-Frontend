@@ -18,7 +18,7 @@ import {
 export default function ProductDetailPage() {
   const { productId } = useParams();
   const router = useRouter();
-  const { userProfile } = useAuth();
+  const { userProfile } = useAuth();    
 
   // 임시 상품 데이터
   const [product, setProduct] = useState({
