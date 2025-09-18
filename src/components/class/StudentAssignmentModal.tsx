@@ -21,6 +21,7 @@ interface StudentAssignmentModalProps {
   worksheetId: number;
   assignmentTitle: string;
   classId: string;
+  onAssignmentComplete?: (assignmentId: number, assignedStudents: StudentProfile[]) => void;
 }
 
 export function StudentAssignmentModal({
@@ -30,6 +31,7 @@ export function StudentAssignmentModal({
   worksheetId,
   assignmentTitle,
   classId,
+  onAssignmentComplete,
 }: StudentAssignmentModalProps) {
   const [students, setStudents] = useState<StudentProfile[]>([]);
   const [selectedStudents, setSelectedStudents] = useState<number[]>([]);
@@ -93,6 +95,16 @@ export function StudentAssignmentModal({
         }),
       });
 
+      // 배포된 학생 정보 가져오기
+      const assignedStudents = students.filter(student => 
+        selectedStudents.includes(student.id)
+      );
+      
+      // 콜백 함수 호출
+      if (onAssignmentComplete) {
+        onAssignmentComplete(assignmentId, assignedStudents);
+      }
+      
       alert(`${selectedStudents.length}명의 학생에게 과제가 배포되었습니다.`);
       onClose();
       setSelectedStudents([]);

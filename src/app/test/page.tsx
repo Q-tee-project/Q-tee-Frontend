@@ -24,7 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { RefreshCw, Clock, CheckCircle, BookOpen } from 'lucide-react';
+import { RefreshCw, Clock, CheckCircle, BookOpen, Calendar, Users, BookOpen as BookIcon } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { HandwritingCanvas } from '@/components/HandwritingCanvas';
 import { ScratchpadModal } from '@/components/ScratchpadModal';
@@ -122,10 +122,8 @@ export default function TestPage() {
       console.log('📋 변환된 워크시트 데이터:', worksheetData);
 
       setWorksheets(worksheetData);
-      if (worksheetData.length > 0) {
-        setSelectedWorksheet(worksheetData[0]);
-        await loadWorksheetProblems(worksheetData[0].id);
-      }
+      // 처음에는 아무것도 선택하지 않음
+      setSelectedWorksheet(null);
     } catch (error: any) {
       console.error('❌ 과제 로드 실패:', error);
       console.error('❌ 에러 상세:', {
@@ -336,7 +334,7 @@ export default function TestPage() {
       <div className="flex-1 p-6 min-h-0">
         <div className="flex gap-6 h-full">
           {/* 배포된 문제지 목록 */}
-          <Card className="w-1/6 flex flex-col shadow-sm">
+          <Card className="w-1/3 flex flex-col shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between py-2 px-6 border-b border-gray-100">
               <CardTitle className="text-lg font-medium">과제 목록</CardTitle>
               <div className="flex items-center gap-2">
@@ -352,55 +350,62 @@ export default function TestPage() {
               </div>
             </CardHeader>
             <CardContent className="p-4 flex-1 min-h-0">
-              <div className="space-y-4">
-                <Select
-                  value={selectedWorksheet?.id.toString() || ''}
-                  onValueChange={(value) => {
-                    const worksheet = worksheets.find((ws) => ws.id.toString() === value);
-                    if (worksheet) {
-                      handleWorksheetSelect(worksheet);
-                    }
-                  }}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="과제를 선택하세요" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {worksheets.length === 0 ? (
-                      <SelectItem value="no-worksheets" disabled>
-                        배포된 문제지가 없습니다
-                      </SelectItem>
-                    ) : (
-                      worksheets.map((worksheet) => (
-                        <SelectItem key={worksheet.id} value={worksheet.id.toString()}>
-                          {worksheet.title}
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
+              <div className="space-y-3">
+                {worksheets.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <div className="text-sm">배포된 과제가 없습니다</div>
+                  </div>
+                ) : (
+                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                    {worksheets.map((worksheet) => {
+                      const isCompleted = worksheet.status === 'completed' || worksheet.status === 'submitted';
+                      const isSelected = selectedWorksheet?.id === worksheet.id;
+                      
+                      return (
+                        <div
+                          key={worksheet.id}
+                          className={`border rounded-lg p-4 cursor-pointer transition-all hover:shadow-md ${
+                            isSelected ? 'border-[#0072CE]' : 'border-gray-200 hover:border-gray-300'
+                          }`}
+                          onClick={() => handleWorksheetSelect(worksheet)}
+                        >
 
-                {/* 과제 시작 버튼 */}
-                {selectedWorksheet &&
-                  worksheetProblems.length > 0 &&
-                  !isTestStarted &&
-                  !testResult && (
-                    <div className="space-y-3">
-                      <Button
-                        onClick={startTest}
-                        disabled={isLoading}
-                        className="w-full bg-[#0072CE] hover:bg-[#0056A3] text-white"
-                      >
-                        {isLoading ? '시작 중...' : '과제 시작하기'}
-                      </Button>
-                      <div className="text-xs text-gray-500 text-center">
-                        과제를 시작하면 타이머가 작동합니다
-                      </div>
-                    </div>
-                  )}
+                          {/* 범위 정보 */}
+                          <div className="flex items-center gap-2 text-xs text-gray-600 mb-3">
+                            <BookIcon className="w-3 h-3" />
+                            <span>{worksheet.unit_name} {'>'} {worksheet.chapter_name}</span>
+                          </div>
+
+                          {/* 과제 제목 */}
+                          <div className="flex items-center justify-between mb-3">
+                            <h4 className="font-semibold text-gray-900 text-sm">
+                              {worksheet.title} - {worksheet.problem_count}문제
+                            </h4>
+                          </div>
+
+                          {/* 문제 수 및 응시 상태 뱃지 */}
+                          <div className="flex justify-start">
+                            <Badge className="bg-gray-100 text-gray-700 text-xs">
+                              {worksheet.problem_count}문제
+                            </Badge>
+                            <Badge
+                              className={`text-xs ${
+                                isCompleted
+                                  ? 'bg-[#E6F3FF] text-[#0085FF]'
+                                  : 'bg-[#ffebeb] text-[#f00]'
+                              }`}
+                            >
+                              {isCompleted ? '응시' : '미응시'}
+                            </Badge>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
 
                 {/* 과제 진행 상태 표시 */}
-                {isTestStarted && (
+                {isTestStarted && selectedWorksheet && (
                   <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
@@ -410,7 +415,7 @@ export default function TestPage() {
                 )}
 
                 {/* 과제 완료 결과 표시 */}
-                {testResult && (
+                {testResult && selectedWorksheet && (
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-3">
                     <h4 className="text-sm font-medium text-blue-700">과제 완료</h4>
                     <div className="text-xs text-blue-600 space-y-1">
@@ -498,7 +503,30 @@ export default function TestPage() {
           </Card>
 
           {/* 문제 풀이 화면 */}
-          {selectedWorksheet && currentProblem && isTestStarted ? (
+          {selectedWorksheet && !isTestStarted ? (
+            <Card className="w-5/6 flex items-center justify-center shadow-sm">
+              <div className="text-center py-20">
+                <div className="text-gray-700 text-lg font-medium mb-2">
+                  {selectedWorksheet.title}
+                </div>
+                <div className="text-gray-500 text-sm mb-4">
+                  문제 수: {worksheetProblems.length}개 | 제한 시간: 60분
+                </div>
+                <div className="text-gray-500 text-sm mb-6">
+                  "과제 시작하기" 버튼을 눌러 과제를 시작하세요
+                </div>
+                {worksheetProblems.length > 0 && (
+                  <Button
+                    onClick={startTest}
+                    disabled={isLoading}
+                    className="bg-[#0072CE] hover:bg-[#0056A3] text-white"
+                  >
+                    {isLoading ? '시작 중...' : '문제 풀기 시작'}
+                  </Button>
+                )}
+              </div>
+            </Card>
+          ) : selectedWorksheet && currentProblem && isTestStarted ? (
             <Card className="w-5/6 flex flex-col shadow-sm">
               <CardHeader className="flex flex-row items-center justify-between py-6 px-6 border-b border-gray-100">
                 <div className="flex items-center justify-center gap-3 flex-1">
@@ -675,19 +703,7 @@ export default function TestPage() {
           ) : (
             <Card className="w-5/6 flex items-center justify-center shadow-sm">
               <div className="text-center py-20">
-                {selectedWorksheet && !isTestStarted && !testResult ? (
-                  <>
-                    <div className="text-gray-700 text-lg font-medium mb-2">
-                      {selectedWorksheet.title}
-                    </div>
-                    <div className="text-gray-500 text-sm mb-4">
-                      왼쪽에서 "과제 시작하기" 버튼을 눌러 과제를 시작하세요
-                    </div>
-                    <div className="text-gray-400 text-xs">
-                      문제 수: {worksheetProblems.length}개 | 제한 시간: 60분
-                    </div>
-                  </>
-                ) : testResult ? (
+                {testResult ? (
                   <>
                     <div className="text-green-400 text-lg mb-2">✅</div>
                     <div className="text-gray-700 text-lg font-medium mb-2">과제 완료!</div>

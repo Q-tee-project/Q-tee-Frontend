@@ -155,10 +155,10 @@ export function ApprovalTab({ classId, onStudentApproved }: ApprovalTabProps) {
   };
 
   return (
-    <div className="space-y-6" style={{ padding: '10px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
       {/* 승인 대기 목록 헤더 */}
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-gray-800" style={{ padding: '0 10px' }}>
+        <h3 className="text-lg font-semibold text-gray-800">
           승인 대기 목록 ({pendingRequests.length})
         </h3>
         <div className="flex gap-2">
@@ -199,7 +199,7 @@ export function ApprovalTab({ classId, onStudentApproved }: ApprovalTabProps) {
       )}
 
       {/* 승인 대기 목록 테이블 */}
-      <div className="bg-white border border-gray-200 rounded-lg shadow-sm" style={{ padding: '10px' }}>
+      <div className="bg-white border border-gray-200 rounded-lg shadow-sm" style={{ padding: '0 20px' }}>
         {isLoading ? (
           <div className="text-center py-12">
             <div className="text-gray-500">승인 대기 목록을 불러오는 중...</div>
@@ -215,7 +215,7 @@ export function ApprovalTab({ classId, onStudentApproved }: ApprovalTabProps) {
           <Table>
             <TableHeader style={{ background: '#fff', borderBottom: '1px solid #666' }}>
               <TableRow className="hover:bg-transparent">
-                <TableHead className="text-left" style={{ borderBottom: '1px solid #666', padding: '10px 12px' }}>
+                <TableHead className="text-left" style={{ padding: '10px 12px' }}>
                   <div className="flex items-center justify-center">
                     <Checkbox
                       checked={approvalSelectAll}
@@ -224,28 +224,28 @@ export function ApprovalTab({ classId, onStudentApproved }: ApprovalTabProps) {
                     />
                   </div>
                 </TableHead>
-                <TableHead className="text-center text-base font-bold" style={{ color: '#666', borderBottom: '1px solid #666', padding: '10px 12px' }}>
+                <TableHead className="text-center text-base font-bold" style={{ color: '#666', padding: '10px 12px' }}>
                   학생명
                 </TableHead>
-                <TableHead className="text-center text-base font-bold" style={{ color: '#666', borderBottom: '1px solid #666', padding: '10px 12px' }}>
+                <TableHead className="text-center text-base font-bold" style={{ color: '#666', padding: '10px 12px' }}>
                   학교/학년
                 </TableHead>
-                <TableHead className="text-center text-base font-bold" style={{ color: '#666', borderBottom: '1px solid #666', padding: '10px 12px' }}>
+                <TableHead className="text-center text-base font-bold" style={{ color: '#666', padding: '10px 12px' }}>
                   이메일
                 </TableHead>
-                <TableHead className="text-center text-base font-bold" style={{ color: '#666', borderBottom: '1px solid #666', padding: '10px 12px' }}>
+                <TableHead className="text-center text-base font-bold" style={{ color: '#666', padding: '10px 12px' }}>
                   학생 연락처
                 </TableHead>
-                <TableHead className="text-center text-base font-bold" style={{ color: '#666', borderBottom: '1px solid #666', padding: '10px 12px' }}>
+                <TableHead className="text-center text-base font-bold" style={{ color: '#666', padding: '10px 12px' }}>
                   학부모 연락처
                 </TableHead>
-                <TableHead className="text-center text-base font-bold" style={{ color: '#666', borderBottom: '1px solid #666', padding: '10px 12px' }}>
+                <TableHead className="text-center text-base font-bold" style={{ color: '#666', padding: '10px 12px' }}>
                   신청일시
                 </TableHead>
-                <TableHead className="text-center text-base font-bold" style={{ color: '#666', borderBottom: '1px solid #666', padding: '10px 12px' }}>
+                <TableHead className="text-center text-base font-bold" style={{ color: '#666', padding: '10px 12px' }}>
                   상태
                 </TableHead>
-                <TableHead className="text-center text-base font-bold" style={{ color: '#666', borderBottom: '1px solid #666', padding: '10px 12px' }}>
+                <TableHead className="text-center text-base font-bold" style={{ color: '#666', padding: '10px 12px' }}>
                   승인 / 거절
                 </TableHead>
               </TableRow>
