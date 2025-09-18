@@ -26,12 +26,12 @@ export default function MarketPage() {
   const [selectedTab, setSelectedTab] = useState('전체');
 
   //상품 데이터
-  const products: Product[] = Array.from({ length: 21 }).map((_, idx) => ({
+  const products: Product[] = Array.from({ length: 12 }).map((_, idx) => ({
     id: (idx + 1).toString(),
     title: '중학생',
-    price: 20000,
-    author: '킹왕짱광구쿤',
-    authorId: idx < 5 ? (userProfile?.id?.toString() || 'user123') : `user${idx}`, // 처음 5개는 현재 사용자 상품
+    price: 2000,
+    author: '최고미남한광구',
+    authorId: idx < 5 ? (userProfile?.id?.toString() || 'user123') : `user${idx}`,
     tags: ['중학교', '1학년', '국어', '기출문제', '2단원'],
   }));
 
@@ -66,6 +66,7 @@ export default function MarketPage() {
   
 
   return (
+
     <div className="flex flex-col">
       <PageHeader
         icon={<FiShoppingCart />}
@@ -73,38 +74,41 @@ export default function MarketPage() {
         variant="market"
         description="상품을 등록하거나 구매할 수 있습니다"
       />
-      {/* 탭 네비게이션 */}
-      <nav
-        className="flex justify-between items-center mt-6 mb-4 px-8"
-      >
-        {/* 탭 리스트 */}
-        <div className="flex space-x-6">
-          {TABS.map((tab) => (
-            <button
-              key={tab}
-              onClick={() => {
-                setSelectedTab(tab);
-                setCurrentPage(1);
-              }}
-              className={`py-2 px-4 font-medium text-sm border-b-2 transition-colors ${
-                selectedTab === tab
-                  ? 'border-[#0072CE] text-[#0072CE]'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
-        </div>
-
-        {/* 마이마켓 버튼 */}
-        <button
-          onClick={() => router.push('/market/myMarket')}
-          className="text-sm px-4 py-2 rounded-md bg-[#0072CE] text-white hover:bg-[#005fa3] transition-colors"
+        {/* 탭 네비게이션 */}
+        <nav
+          className="flex justify-between items-center mt-6 mb-4 px-8"
         >
-          마이마켓
-        </button>
-      </nav>
+          {/* 탭 리스트 */}
+          <div className="flex space-x-6">
+            {TABS.map((tab) => (
+              <button
+                key={tab}
+                onClick={() => {
+                  setSelectedTab(tab);
+                  setCurrentPage(1);
+                }}
+                className={`py-2 px-4 font-medium text-sm border-b-2 transition-colors ${
+                  selectedTab === tab
+                    ? 'border-[#0072CE] text-[#0072CE]'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+
+          {/* 버튼 그룹 */}
+          <div className="flex space-x-4">
+            <button
+              onClick={() => router.push('/market/myMarket')}
+              className="text-sm px-4 py-2 rounded-md bg-[#0072CE] text-white hover:bg-[#005fa3] transition-colors"
+            >
+              마이마켓
+            </button>
+          </div>
+        </nav>
+
 
       {/* 상품 목록 카드 */}
       <Card className="flex-1 flex flex-col shadow-sm"
