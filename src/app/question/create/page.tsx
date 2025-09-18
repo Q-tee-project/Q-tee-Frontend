@@ -8,11 +8,13 @@ import KoreanGenerator from '@/components/subjects/KoreanGenerator';
 import EnglishGenerator from '@/components/subjects/EnglishGenerator';
 import MathGenerator from '@/components/subjects/MathGenerator';
 import { QuestionPreview } from '@/components/question/QuestionPreview';
+import { EnglishQuestionPreview } from '@/components/question/EnglishQuestionPreview';
 import { ErrorToast } from '@/app/question/bank/components/ErrorToast';
 import { useKoreanGeneration } from '@/hooks/useKoreanGeneration';
 import { useMathGeneration } from '@/hooks/useMathGeneration';
 import { useEnglishGeneration } from '@/hooks/useEnglishGeneration';
 import { useWorksheetSave } from '@/hooks/useWorksheetSave';
+import { useEnglishWorksheetSave } from '@/hooks/useEnglishWorksheetSave';
 
 const SUBJECTS = ['국어', '영어', '수학'];
 
@@ -40,6 +42,7 @@ export default function CreatePage() {
 
   // 문제지 저장 훅
   const worksheetSave = useWorksheetSave();
+  const englishWorksheetSave = useEnglishWorksheetSave();
 
   // 현재 선택된 과목에 따른 상태
   const currentGeneration =
@@ -60,7 +63,11 @@ export default function CreatePage() {
   const handleSubjectChange = (newSubject: string) => {
     setSubject(newSubject);
     currentGeneration.resetGeneration();
-    worksheetSave.resetWorksheet();
+    if (newSubject === '영어') {
+      englishWorksheetSave.resetWorksheet();
+    } else {
+      worksheetSave.resetWorksheet();
+    }
   };
 
   // 과목별 문제 생성 핸들러
@@ -70,7 +77,7 @@ export default function CreatePage() {
     } else if (subject === '국어') {
       koreanGeneration.generateKoreanProblems(data);
     } else if (subject === '영어') {
-      englishGeneration.generateMockProblems(data);
+      englishGeneration.generateEnglishProblems(data);
     }
   };
 
@@ -83,18 +90,53 @@ export default function CreatePage() {
 
   // 문제지 저장 핸들러
   const handleSaveWorksheet = () => {
-    worksheetSave.saveWorksheet(
-      subject,
-      currentGeneration.previewQuestions,
-      (worksheetId) => {
-        currentGeneration.updateState({
-          errorMessage: '문제지가 성공적으로 저장되었습니다! ✅',
-        });
-      },
-      (error) => {
-        currentGeneration.updateState({ errorMessage: error });
-      },
-    );
+    if (subject === '영어') {
+      // 영어 전용 저장 로직
+      if (!englishGeneration.uiData) {
+        currentGeneration.updateState({ errorMessage: '저장할 영어 문제가 없습니다.' });
+        return;
+      }
+
+      englishWorksheetSave.saveEnglishWorksheet(
+        englishGeneration.uiData,
+        (worksheetId) => {
+          currentGeneration.updateState({
+            errorMessage: '영어 문제지가 성공적으로 저장되었습니다! ✅',
+          });
+        },
+        (error) => {
+          currentGeneration.updateState({ errorMessage: error });
+        },
+      );
+    } else {
+      // 기존 저장 로직 (수학, 국어)
+      worksheetSave.saveWorksheet(
+        subject,
+        currentGeneration.previewQuestions,
+        (worksheetId) => {
+          currentGeneration.updateState({
+            errorMessage: '문제지가 성공적으로 저장되었습니다! ✅',
+          });
+        },
+        (error) => {
+          currentGeneration.updateState({ errorMessage: error });
+        },
+      );
+    }
+  };
+
+  // uiData를 previewQuestions 형식으로 변환하는 함수
+  const convertUIDataToPreviewQuestions = (uiData: any) => {
+    return uiData.questions.map((question: any) => ({
+      id: question.id,
+      title: question.questionText,
+      options: question.choices,
+      answerIndex: typeof question.correctAnswer === 'number' ? question.correctAnswer : undefined,
+      correct_answer: typeof question.correctAnswer === 'string' ? question.correctAnswer : undefined,
+      explanation: question.explanation,
+      backendId: question.id,
+      problem_type: question.subject,
+    }));
   };
 
   return (
@@ -172,26 +214,50 @@ export default function CreatePage() {
               <CardTitle className="text-base font-medium">문제지</CardTitle>
             </CardHeader>
             <CardContent className="flex-1 flex flex-col">
-              <QuestionPreview
-                subject={getSubjectCode(subject)}
-                previewQuestions={currentGeneration.previewQuestions}
-                isGenerating={currentGeneration.isGenerating}
-                generationProgress={currentGeneration.generationProgress}
-                worksheetName={worksheetSave.worksheetName}
-                setWorksheetName={worksheetSave.setWorksheetName}
-                regeneratingQuestionId={currentGeneration.regeneratingQuestionId}
-                regenerationPrompt={currentGeneration.regenerationPrompt}
-                setRegenerationPrompt={(prompt) =>
-                  currentGeneration.updateState({ regenerationPrompt: prompt })
-                }
-                showRegenerationInput={currentGeneration.showRegenerationInput}
-                setShowRegenerationInput={(id) =>
-                  currentGeneration.updateState({ showRegenerationInput: id })
-                }
-                onRegenerateQuestion={handleRegenerateQuestion}
-                onSaveWorksheet={handleSaveWorksheet}
-                isSaving={worksheetSave.isSaving}
-              />
+              {/* 영어는 새로운 UI 컴포넌트 사용 */}
+              {subject === '영어' ? (
+                <EnglishQuestionPreview
+                  uiData={englishGeneration.uiData || undefined}
+                  isGenerating={currentGeneration.isGenerating}
+                  generationProgress={currentGeneration.generationProgress}
+                  worksheetName={englishWorksheetSave.worksheetName}
+                  setWorksheetName={englishWorksheetSave.setWorksheetName}
+                  regeneratingQuestionId={currentGeneration.regeneratingQuestionId}
+                  regenerationPrompt={currentGeneration.regenerationPrompt}
+                  setRegenerationPrompt={(prompt) =>
+                    currentGeneration.updateState({ regenerationPrompt: prompt })
+                  }
+                  showRegenerationInput={currentGeneration.showRegenerationInput}
+                  setShowRegenerationInput={(id) =>
+                    currentGeneration.updateState({ showRegenerationInput: id })
+                  }
+                  onRegenerateQuestion={handleRegenerateQuestion}
+                  onSaveWorksheet={handleSaveWorksheet}
+                  isSaving={englishWorksheetSave.isSaving}
+                />
+              ) : (
+                // 다른 과목은 기존 방식
+                <QuestionPreview
+                  subject={getSubjectCode(subject)}
+                  previewQuestions={currentGeneration.previewQuestions}
+                  isGenerating={currentGeneration.isGenerating}
+                  generationProgress={currentGeneration.generationProgress}
+                  worksheetName={worksheetSave.worksheetName}
+                  setWorksheetName={worksheetSave.setWorksheetName}
+                  regeneratingQuestionId={currentGeneration.regeneratingQuestionId}
+                  regenerationPrompt={currentGeneration.regenerationPrompt}
+                  setRegenerationPrompt={(prompt) =>
+                    currentGeneration.updateState({ regenerationPrompt: prompt })
+                  }
+                  showRegenerationInput={currentGeneration.showRegenerationInput}
+                  setShowRegenerationInput={(id) =>
+                    currentGeneration.updateState({ showRegenerationInput: id })
+                  }
+                  onRegenerateQuestion={handleRegenerateQuestion}
+                  onSaveWorksheet={handleSaveWorksheet}
+                  isSaving={worksheetSave.isSaving}
+                />
+              )}
             </CardContent>
           </Card>
         </div>
