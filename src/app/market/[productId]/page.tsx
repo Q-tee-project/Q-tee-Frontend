@@ -51,10 +51,6 @@ export default function ProductDetailPage() {
     { id: 'main', label: '메인 이미지', url: '', isMain: true },
     { id: 'sub1', label: '이미지 1', url: '', isMain: false },
     { id: 'sub2', label: '이미지 2', url: '', isMain: false },
-    { id: 'sub3', label: '이미지 3', url: '', isMain: false },
-    { id: 'sub4', label: '이미지 4', url: '', isMain: false },
-    { id: 'sub5', label: '이미지 5', url: '', isMain: false },
-    { id: 'sub6', label: '이미지 6', url: '', isMain: false },
   ]);
 
   const [selectedIndex, setSelectedIndex] = useState(0);
