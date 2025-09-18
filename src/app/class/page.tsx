@@ -14,16 +14,19 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { studentClassService } from '@/services/authService';
-import type { Classroom } from '@/services/authService';
+import type { Classroom, ClassroomWithTeacher } from '@/services/authService';
+import { TeacherInfoModal } from '@/components/student/TeacherInfoModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { Users, Plus, BookOpen, Calendar } from 'lucide-react';
 
 export default function StudentClassPage() {
   const router = useRouter();
-  const { isAuthenticated, userType } = useAuth();
+  const { isAuthenticated, userType, userProfile } = useAuth();
   const [classes, setClasses] = useState<Classroom[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [selectedClassroom, setSelectedClassroom] = useState<ClassroomWithTeacher | null>(null);
+  const [isTeacherModalOpen, setIsTeacherModalOpen] = useState(false);
 
   // 로그인 확인
   useEffect(() => {
@@ -49,9 +52,28 @@ export default function StudentClassPage() {
     }
   };
 
-  // 클래스 상세보기
-  const handleClassClick = (classroom: Classroom) => {
-    router.push(`/class/${classroom.id}`);
+  // 클래스 클릭 시 교사 정보 모달 열기
+  const handleClassClick = async (classroom: Classroom) => {
+    if (!userProfile?.id) {
+      setError('사용자 정보가 없습니다.');
+      return;
+    }
+
+    try {
+      // 교사 정보를 포함한 클래스룸 정보 가져오기
+      const classroomsWithTeachers = await studentClassService.getMyClassesWithTeachers(userProfile.id);
+      const classroomWithTeacher = classroomsWithTeachers.find(c => c.id === classroom.id);
+
+      if (classroomWithTeacher) {
+        setSelectedClassroom(classroomWithTeacher);
+        setIsTeacherModalOpen(true);
+      } else {
+        setError('교사 정보를 불러올 수 없습니다.');
+      }
+    } catch (error: any) {
+      console.error('교사 정보 조회 실패:', error);
+      setError('교사 정보를 불러오는데 실패했습니다.');
+    }
   };
 
   // 클래스 가입 페이지로 이동
@@ -174,7 +196,7 @@ export default function StudentClassPage() {
                   <div className="flex-1">
                     <h3 className="text-lg font-medium text-gray-900 mb-2">클래스 활용 팁</h3>
                     <div className="text-sm text-gray-600 space-y-1">
-                      <p>• 클래스를 클릭하면 상세 페이지로 이동합니다</p>
+                      <p>• 클래스를 클릭하면 담당 선생님의 연락처를 확인할 수 있습니다</p>
                       <p>• 과제 풀이 메뉴에서 선생님이 출제한 과제를 확인할 수 있습니다</p>
                       <p>• 새로운 클래스에 가입하려면 "클래스 가입하기" 버튼을 클릭하세요</p>
                     </div>
@@ -185,6 +207,13 @@ export default function StudentClassPage() {
           )}
         </div>
       </div>
+
+      {/* 교사 정보 모달 */}
+      <TeacherInfoModal
+        isOpen={isTeacherModalOpen}
+        onClose={() => setIsTeacherModalOpen(false)}
+        classroom={selectedClassroom}
+      />
     </div>
   );
 }
