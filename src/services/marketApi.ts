@@ -121,9 +121,17 @@ export const getProduct = async (productId: number): Promise<MarketProductDetail
 };
 
 // 상품 등록
-export const createProduct = async (productData: MarketProductCreate): Promise<MarketProductDetail> => {
-  const response = await marketApi.post('/market/products', productData);
-  return response.data;
+export const createProduct = async (
+  productData: MarketProductCreate,
+): Promise<MarketProductDetail> => {
+  try {
+    const response = await marketApi.post('/market/products', productData);
+    return response.data;
+  } catch (error: any) {
+    const status = error?.response?.status;
+    const detail = error?.response?.data?.detail || error?.message || '알 수 없는 오류';
+    throw new Error(`상품 등록 실패 (${status}): ${detail}`);
+  }
 };
 
 // 내 상품 목록 조회
@@ -136,7 +144,10 @@ export const getMyProducts = async (params?: {
 };
 
 // 상품 수정
-export const updateProduct = async (productId: number, updateData: MarketProductUpdate): Promise<MarketProductDetail> => {
+export const updateProduct = async (
+  productId: number,
+  updateData: MarketProductUpdate,
+): Promise<MarketProductDetail> => {
   const response = await marketApi.patch(`/market/products/${productId}`, updateData);
   return response.data;
 };
@@ -147,7 +158,9 @@ export const deleteProduct = async (productId: number): Promise<void> => {
 };
 
 // 상품 구매
-export const purchaseProduct = async (purchaseData: MarketPurchaseCreate): Promise<MarketPurchase> => {
+export const purchaseProduct = async (
+  purchaseData: MarketPurchaseCreate,
+): Promise<MarketPurchase> => {
   const response = await marketApi.post('/market/purchases', purchaseData);
   return response.data;
 };
@@ -194,21 +207,31 @@ export const getMathWorksheets = async (userId: number): Promise<Worksheet[]> =>
 };
 
 // Worksheet의 문제들 조회 (Korean Service)
-export const getKoreanWorksheetProblems = async (worksheetId: number): Promise<{ worksheet: any; problems: Problem[] }> => {
-  const response = await axios.get(`${KOREAN_API_BASE_URL}/market/worksheets/${worksheetId}/problems`, {
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+export const getKoreanWorksheetProblems = async (
+  worksheetId: number,
+): Promise<{ worksheet: any; problems: Problem[] }> => {
+  const response = await axios.get(
+    `${KOREAN_API_BASE_URL}/market/worksheets/${worksheetId}/problems`,
+    {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+      },
     },
-  });
+  );
   return response.data;
 };
 
 // Worksheet의 문제들 조회 (Math Service)
-export const getMathWorksheetProblems = async (worksheetId: number): Promise<{ worksheet: any; problems: Problem[] }> => {
-  const response = await axios.get(`${MATH_API_BASE_URL}/market/worksheets/${worksheetId}/problems`, {
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+export const getMathWorksheetProblems = async (
+  worksheetId: number,
+): Promise<{ worksheet: any; problems: Problem[] }> => {
+  const response = await axios.get(
+    `${MATH_API_BASE_URL}/market/worksheets/${worksheetId}/problems`,
+    {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+      },
     },
-  });
+  );
   return response.data;
 };

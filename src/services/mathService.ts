@@ -18,7 +18,7 @@ export class MathService {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(formData),
     });
@@ -40,7 +40,7 @@ export class MathService {
 
     const response = await fetch(`${MATH_API_BASE}/worksheets?limit=100`, {
       headers: {
-        'Authorization': `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
       },
     });
 
@@ -62,7 +62,7 @@ export class MathService {
 
     const response = await fetch(`${MATH_API_BASE}/worksheets/${worksheetId}`, {
       headers: {
-        'Authorization': `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
       },
     });
 
@@ -78,7 +78,7 @@ export class MathService {
     worksheetId: number,
     questions: Question[],
     title: string,
-    config: any
+    config: any,
   ): Promise<any> {
     return apiRequest('/api/worksheets/save', {
       method: 'POST',
@@ -102,7 +102,7 @@ export class MathService {
     const response = await fetch(`${MATH_API_BASE}/worksheets/${worksheetId}`, {
       method: 'DELETE',
       headers: {
-        'Authorization': `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
       },
     });
 
@@ -111,11 +111,17 @@ export class MathService {
     }
   }
 
+  // === Aliases for backwards compatibility with hooks/components ===
+  static async getMathWorksheetDetail(worksheetId: number): Promise<any> {
+    return this.getWorksheetDetail(worksheetId);
+  }
+
+  static async deleteMathWorksheet(worksheetId: number): Promise<void> {
+    return this.deleteWorksheet(worksheetId);
+  }
+
   // 문제 업데이트
-  static async updateProblem(
-    problemId: number,
-    updatedData: Partial<Question>
-  ): Promise<Question> {
+  static async updateProblem(problemId: number, updatedData: Partial<Question>): Promise<Question> {
     const token = localStorage.getItem('access_token');
 
     if (!token) {
@@ -126,7 +132,7 @@ export class MathService {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(updatedData),
     });
@@ -139,10 +145,7 @@ export class MathService {
   }
 
   // 워크시트 업데이트
-  static async updateWorksheet(
-    worksheetId: number,
-    updatedData: any
-  ): Promise<any> {
+  static async updateWorksheet(worksheetId: number, updatedData: any): Promise<any> {
     const token = localStorage.getItem('access_token');
 
     if (!token) {
@@ -153,7 +156,7 @@ export class MathService {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(updatedData),
     });
@@ -165,10 +168,15 @@ export class MathService {
     return response.json();
   }
 
+  // Alias for hooks/components expecting this name
+  static async updateMathWorksheet(worksheetId: number, updatedData: any): Promise<any> {
+    return this.updateWorksheet(worksheetId, updatedData);
+  }
+
   // 문제 재생성
   static async regenerateProblem(
     problemId: number,
-    updatedData: Partial<Question>
+    updatedData: Partial<Question>,
   ): Promise<Question> {
     const token = localStorage.getItem('access_token');
 
@@ -180,7 +188,7 @@ export class MathService {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(updatedData),
     });

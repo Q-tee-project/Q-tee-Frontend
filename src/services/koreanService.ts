@@ -20,7 +20,7 @@ export class KoreanService {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(formData),
     });
@@ -42,7 +42,7 @@ export class KoreanService {
 
     const response = await fetch(`${KOREAN_API_BASE}/worksheets?limit=100`, {
       headers: {
-        'Authorization': `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
       },
     });
 
@@ -66,7 +66,7 @@ export class KoreanService {
 
     const response = await fetch(`${KOREAN_API_BASE}/worksheets/${worksheetId}`, {
       headers: {
-        'Authorization': `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
       },
     });
 
@@ -75,6 +75,26 @@ export class KoreanService {
     }
 
     return response.json();
+  }
+
+  // 국어 워크시트 삭제
+  static async deleteKoreanWorksheet(worksheetId: number): Promise<void> {
+    const token = localStorage.getItem('access_token');
+
+    if (!token) {
+      throw new Error('로그인이 필요합니다.');
+    }
+
+    const response = await fetch(`${KOREAN_API_BASE}/worksheets/${worksheetId}`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Korean API Error: ${response.status}`);
+    }
   }
 
   // 국어 태스크 상태 확인
@@ -103,7 +123,7 @@ export class KoreanService {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(updateData),
     });

@@ -72,8 +72,7 @@ export const useKoreanBank = () => {
 
     try {
       updateState({ isLoading: true });
-      // Korean delete not implemented yet
-      throw new Error('국어 워크시트 삭제 기능은 아직 구현되지 않았습니다.');
+      await KoreanService.deleteKoreanWorksheet(worksheet.id);
 
       if (selectedWorksheet?.id === worksheet.id) {
         updateState({
@@ -95,9 +94,15 @@ export const useKoreanBank = () => {
   const handleBatchDeleteWorksheets = async (worksheets: KoreanWorksheet[]) => {
     try {
       updateState({ isLoading: true });
-
-      // Korean batch delete not implemented yet
-      throw new Error('국어 워크시트 일괄 삭제 기능은 아직 구현되지 않았습니다.');
+      for (const worksheet of worksheets) {
+        await KoreanService.deleteKoreanWorksheet(worksheet.id);
+      }
+      const deletedIds = worksheets.map((w) => w.id);
+      if (selectedWorksheet && deletedIds.includes(selectedWorksheet.id)) {
+        updateState({ selectedWorksheet: null, worksheetProblems: [] });
+      }
+      await loadWorksheets();
+      alert(`${worksheets.length}개의 국어 워크시트가 삭제되었습니다.`);
     } catch (error: any) {
       console.error('국어 워크시트 일괄 삭제 실패:', error);
       alert(`일괄 삭제 실패: ${error.message}`);
