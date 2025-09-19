@@ -2,7 +2,7 @@
 
 import { PageHeader } from '@/components/layout/PageHeader';
 import { FiShoppingCart, FiTrash2 } from 'react-icons/fi';
-import { FaPlus } from "react-icons/fa";
+import { FaPlus, FaEdit } from "react-icons/fa";
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -41,7 +41,7 @@ export default function MyMarketPage() {
 
   useEffect(() => {
     if (!userProfile) return;
-    const initialProducts: Product[] = Array.from({ length: 5 }).map((_, idx) => ({
+    const initialProducts: Product[] = Array.from({ length: 30 }).map((_, idx) => ({
       id: (idx + 1).toString(),
       title: `중학생 ${idx + 1}학년 국어`,
       price: 20000 + idx * 5000,
@@ -78,6 +78,11 @@ export default function MyMarketPage() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // 페이지/탭 변경 시 상단으로 스크롤
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [currentPage, selectedTab]);
 
   const handleViewProduct = (productId: string) => {
     router.push(`/market/${productId}`);
@@ -128,13 +133,13 @@ export default function MyMarketPage() {
         <div className="flex gap-2">
           <button
             onClick={() => router.push('/market')}
-            className="text-sm px-4 py-2 rounded-md bg-gray-500 text-white hover:bg-gray-600 transition-colors"
+            className="text-sm px-4 py-2 rounded-md bg-gray-500 text-white hover:bg-gray-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0072CE] focus-visible:ring-offset-2"
           >
             돌아가기
           </button>
           <button
             onClick={() => router.push('/market/create')}
-            className="text-sm px-4 py-2 rounded-md bg-[#0072CE] text-white hover:bg-[#005fa3] transition-colors"
+            className="text-sm px-4 py-2 rounded-md bg-[#0072CE] text-white hover:bg-[#005fa3] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0072CE] focus-visible:ring-offset-2"
           >
             <FaPlus />
           </button>
@@ -145,7 +150,7 @@ export default function MyMarketPage() {
       <Card className="flex-1 flex flex-col shadow-sm" style={{ margin: '2rem' }}>
         <CardHeader className="py-2 px-6 border-b border-gray-100 flex items-center justify-between">
           <CardTitle className="text-base font-medium">
-            <span style={{ color: '#0072CE' }}>{myProducts[0]?.author}</span>의 {selectedTab} 상품 목록
+            <span style={{ color: '#0072CE' }}>{myProducts[0]?.author}</span> 님의 {selectedTab} 상품 목록
           </CardTitle>
           <span className="text-sm font-normal" style={{ color: '#C8C8C8' }}>
             총 {filteredProducts.length}건
@@ -163,16 +168,7 @@ export default function MyMarketPage() {
                   key={product.id}
                   className="relative rounded-lg border border-gray-200 bg-white p-4 shadow-sm hover:shadow-md transition-shadow transform hover:scale-[1.02] cursor-pointer"
                 >
-                  {/* 삭제 버튼 */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteProduct(product.id);
-                    }}
-                    className="absolute top-2 right-2 text-red-500 hover:text-red-600"
-                  >
-                    <FiTrash2 />
-                  </button>
+
 
                   {/* 이미지 */}
                   <div
@@ -198,6 +194,32 @@ export default function MyMarketPage() {
                     </div>
                     <div className="w-fit px-3 py-1 rounded-full bg-[#EFEFEF] text-[#0072CE] text-sm font-semibold">
                       ₩{product.price.toLocaleString()}
+                    </div>
+                    {/* 하단 버튼 */}
+                    <div className="mt-4 flex justify-end gap-2">
+                      {/* 수정 버튼 */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          router.push(`/market/edit/${product.id}`);
+                        }}
+                        className="flex items-center justify-center gap-2 px-3 py-2 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0072CE]"
+                        aria-label="수정"
+                      >
+                        <FaEdit className="w-4 h-4" />
+                      </button>
+                      
+                      {/* 삭제 버튼 */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteProduct(product.id);
+                        }}
+                        className="flex items-center justify-center gap-2 px-3 py-2 rounded-md bg-red-50 text-red-600 hover:bg-red-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
+                        aria-label="삭제"
+                      >
+                        <FiTrash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -247,13 +269,13 @@ export default function MyMarketPage() {
                 setShowDeleteModal(false);
                 setDeleteTarget(null);
               }}
-              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
+              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0072CE] focus-visible:ring-offset-2"
             >
               취소
             </button>
             <button
               onClick={confirmDelete}
-              className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
+              className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-2"
             >
               삭제
             </button>

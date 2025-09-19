@@ -193,13 +193,13 @@ export default function ProductDetailPage() {
         icon={<FiShoppingCart />}
         title="마켓플레이스"
         variant="market"
-        description="상품의 상세 이미를 확인하고 구매 할 수 있습니다"
+        description="상품의 상세 이미지를 확인하고 구매할 수 있습니다"
       />
       <Card className="mx-8 mb-8 shadow-sm">
       <CardHeader className="py-3 px-6 border-b border-gray-100 flex items-center justify-between">
         <button
             onClick={() => router.back()}
-            className="w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-700 flex items-center justify-center shadow-sm"
+            className="w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-800 flex items-center justify-center shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0072CE] focus-visible:ring-offset-2 focus-visible:ring-offset-white"
             aria-label="뒤로가기"
           >
             <FiArrowLeft className="w-5 h-5" />
@@ -212,14 +212,14 @@ export default function ProductDetailPage() {
               <>
                 <button
                   onClick={handleSaveEdit}
-                  className="flex items-center gap-2 px-4 py-2 bg-[#0072CE] text-white rounded-md hover:bg-[#005fa3] transition-colors"
+                  className="flex items-center gap-2 px-4 py-2 bg-[#0072CE] text-white rounded-md hover:bg-[#005fa3] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0072CE] focus-visible:ring-offset-2"
                 >
                   <FiSave className="w-4 h-4" />
                   저장
                 </button>
                 <button
                   onClick={handleCancelEdit}
-                  className="flex items-center gap-2 px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors"
+                  className="flex items-center gap-2 px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0072CE] focus-visible:ring-offset-2"
                 >
                   <FiX className="w-4 h-4" />
                   취소
@@ -229,21 +229,21 @@ export default function ProductDetailPage() {
               <>
                 <button
                   onClick={() => setShowEditModal(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-[#0072CE] text-white rounded-md hover:bg-[#005fa3] transition-colors"
+                  className="flex items-center gap-2 px-4 py-2 bg-[#0072CE] text-white rounded-md hover:bg-[#005fa3] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0072CE] focus-visible:ring-offset-2"
                 >
                   <FiEye className="w-4 h-4" />
                   상세보기
                 </button>
                 <button
                   onClick={handleStartEdit}
-                  className="flex items-center gap-2 px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors"
+                  className="flex items-center gap-2 px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0072CE] focus-visible:ring-offset-2"
                 >
                   <FiEdit className="w-4 h-4" />
                   편집
                 </button>
                 <button
                   onClick={() => setShowDeleteModal(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
+                  className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-2"
                 >
                   <FiTrash2 className="w-4 h-4" />
                   삭제
@@ -256,15 +256,16 @@ export default function ProductDetailPage() {
         <CardContent className="p-6">         
           <div className="flex flex-col lg:flex-row gap-6">
             
-            {/* 메인 이미지 */}
+            {/* 이미지 레이아웃: 메인 이미지 상단, 썸네일 하단 배치 */}
             <div className="flex-1">
-              <div className="w-full h-[500px] bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 select-none relative">
+              {/* 메인 이미지 */}
+              <div className="w-full h-[500px] bg-gray-50 rounded-lg flex items-center justify-center text-gray-400 select-none relative">
                 {images[selectedIndex]?.url ? (
                   <img 
                     src={images[selectedIndex].url} 
                     alt={images[selectedIndex].label}
                     className="w-full h-full object-cover rounded-lg"
-                  />
+                />
                 ) : (
                   <span>{selectedIndex === 0 ? '메인 이미지' : images[selectedIndex]?.label}</span>
                 )}
@@ -274,14 +275,14 @@ export default function ProductDetailPage() {
                   <div className="absolute top-2 right-2 flex gap-2">
                     <button
                       onClick={() => handleSetMainImage(selectedIndex)}
-                      className="w-8 h-8 bg-[#0072CE] text-white rounded-full flex items-center justify-center hover:bg-[#005fa3] transition-colors"
+                      className="w-8 h-8 bg-[#0072CE] text-white rounded-full flex items-center justify-center hover:bg-[#005fa3] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0072CE]"
                       title="메인 이미지로 설정"
                     >
                       <FiMove className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => handleImageDelete(selectedIndex)}
-                      className="w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
+                      className="w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
                       title="이미지 삭제"
                     >
                       <FiX className="w-4 h-4" />
@@ -289,13 +290,14 @@ export default function ProductDetailPage() {
                   </div>
                 )}
               </div>
-              
+
+              {/* 썸네일 리스트 (메인 하단) */}
               <div className="mt-4 grid grid-cols-3 sm:grid-cols-7 gap-3">
                 {images.map((img, idx) => (
                   <div
                     key={img.id}
-                    className={`relative h-20 rounded-md flex items-center justify-center text-gray-400 select-none bg-gray-100 border ${
-                      selectedIndex === idx ? 'border-[#0072CE]' : 'border-transparent'
+                    className={`relative h-20 rounded-md flex items-center justify-center text-gray-400 select-none bg-gray-100 border transition-colors ${
+                      selectedIndex === idx ? 'border-transparent ring-2 ring-[#0072CE]' : 'border-transparent hover:border-[#0072CE]/60'
                     } ${isEditing ? 'cursor-move' : 'cursor-pointer'}`}
                     onClick={() => !isEditing && setSelectedIndex(idx)}
                     draggable={isEditing}
@@ -315,14 +317,14 @@ export default function ProductDetailPage() {
                     
                     {/* 편집 모드에서 이미지 액션 버튼들 */}
                     {isEditing && img.url && (
-                      <div className="absolute inset-0 bg-black bg-opacity-50 rounded-md flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                      <div className="absolute inset-0 bg-black/50 rounded-md flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
                         <div className="flex gap-1">
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               handleSetMainImage(idx);
                             }}
-                            className="w-6 h-6 bg-[#0072CE] text-white rounded-full flex items-center justify-center hover:bg-[#005fa3] transition-colors"
+                            className="w-6 h-6 bg-[#0072CE] text-white rounded-full flex items-center justify-center hover:bg-[#005fa3] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0072CE]"
                             title="메인으로 설정"
                           >
                             <FiMove className="w-3 h-3" />
@@ -332,7 +334,7 @@ export default function ProductDetailPage() {
                               e.stopPropagation();
                               handleImageDelete(idx);
                             }}
-                            className="w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
+                            className="w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
                             title="삭제"
                           >
                             <FiX className="w-3 h-3" />
@@ -343,8 +345,8 @@ export default function ProductDetailPage() {
                   </div>
                 ))}
               </div>
-              
-              {/* 편집 모드에서 이미지 업로드 버튼 */}
+
+              {/* 업로드 버튼 (편집 모드) */}
               {isEditing && (
                 <div className="mt-4">
                   <input
@@ -357,7 +359,7 @@ export default function ProductDetailPage() {
                   />
                   <label
                     htmlFor="image-upload"
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-[#0072CE] text-white rounded-md hover:bg-[#005fa3] transition-colors cursor-pointer"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-[#0072CE] text-white rounded-md hover:bg-[#005fa3] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0072CE] focus-visible:ring-offset-2"
                   >
                     <FiUpload className="w-4 h-4" />
                     이미지 업로드
@@ -439,7 +441,7 @@ export default function ProductDetailPage() {
               ) : (
                 <button
                   onClick={() => router.push(`/market/${productId}/buy`)}
-                  className="px-4 py-2 rounded-full bg-[#EFEFEF] text-[#0072CE] text-sm font-semibold hover:bg-gray-200"
+                  className="px-4 py-2 rounded-full bg-[#EFEFEF] text-[#0072CE] text-sm font-semibold hover:bg-gray-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0072CE] focus-visible:ring-offset-2"
                 >
                   ₩{product.price.toLocaleString()}
                 </button>
@@ -479,13 +481,13 @@ export default function ProductDetailPage() {
           <DialogFooter className="flex gap-2">
             <button
               onClick={() => setShowDeleteModal(false)}
-              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
+              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0072CE] focus-visible:ring-offset-2"
             >
               취소
             </button>
             <button
               onClick={handleDelete}
-              className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
+              className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-2"
             >
               삭제
             </button>
