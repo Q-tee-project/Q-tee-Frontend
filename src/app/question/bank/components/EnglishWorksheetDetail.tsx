@@ -6,19 +6,19 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { LaTeXRenderer } from '@/components/LaTeXRenderer';
-import { Worksheet, MathProblem, ProblemType } from '@/types/math';
+import { EnglishWorksheet, EnglishProblem } from '@/types/english';
 import { Edit3 } from 'lucide-react';
 
-interface WorksheetDetailProps {
-  selectedWorksheet: Worksheet | null;
-  worksheetProblems: MathProblem[];
+interface EnglishWorksheetDetailProps {
+  selectedWorksheet: EnglishWorksheet | null;
+  worksheetProblems: EnglishProblem[];
   showAnswerSheet: boolean;
   isEditingTitle: boolean;
   editedTitle: string;
   onToggleAnswerSheet: () => void;
   onOpenDistributeDialog: () => void;
   onOpenEditDialog: () => void;
-  onEditProblem: (problem: MathProblem) => void;
+  onEditProblem: (problem: EnglishProblem) => void;
   onStartEditTitle: () => void;
   onCancelEditTitle: () => void;
   onSaveTitle: () => void;
@@ -27,18 +27,18 @@ interface WorksheetDetailProps {
 
 const getProblemTypeInKorean = (type: string): string => {
   switch (type.toLowerCase()) {
-    case ProblemType.MULTIPLE_CHOICE:
+    case 'multiple_choice':
       return '객관식';
-    case ProblemType.ESSAY:
+    case 'essay':
       return '서술형';
-    case ProblemType.SHORT_ANSWER:
+    case 'short_answer':
       return '단답형';
     default:
       return type;
   }
 };
 
-export const WorksheetDetail: React.FC<WorksheetDetailProps> = ({
+export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
   selectedWorksheet,
   worksheetProblems,
   showAnswerSheet,
@@ -58,7 +58,7 @@ export const WorksheetDetail: React.FC<WorksheetDetailProps> = ({
       <Card className="w-2/3 flex items-center justify-center shadow-sm h-[calc(100vh-200px)]">
         <div className="text-center py-20">
           <div className="text-gray-400 text-lg mb-2">📋</div>
-          <div className="text-gray-500 text-sm">문제지를 선택하세요</div>
+          <div className="text-gray-500 text-sm">영어 문제지를 선택하세요</div>
         </div>
       </Card>
     );
@@ -150,16 +150,19 @@ export const WorksheetDetail: React.FC<WorksheetDetailProps> = ({
 
       <CardContent className="flex-1 p-0 overflow-hidden">
         <ScrollArea style={{ height: 'calc(100vh - 350px)' }} className="w-full">
-          <div className="p-6 space-y-8">
-            {worksheetProblems.length === 0 ? (
-              <div className="text-center py-20 text-gray-400">
-                문제 데이터를 불러오는 중입니다...
-              </div>
-            ) : (
-              <div className="space-y-8">
-                {worksheetProblems.map((problem, index) => (
-                  <div key={problem.id} className="page-break-inside-avoid">
-                    <div className="flex items-start gap-4 mb-4">
+          {worksheetProblems.length === 0 ? (
+            <div className="text-center py-20 text-gray-400">
+              영어 문제 데이터를 불러오는 중입니다...
+            </div>
+          ) : (
+            <div className="p-6 space-y-8">
+              {worksheetProblems.map((problem, problemIndex) => (
+                <Card
+                  key={problem.id}
+                  className="page-break-inside-avoid border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200"
+                >
+                  <CardContent className="p-6">
+                    <div className="flex items-start gap-4">
                       <div className="flex-shrink-0">
                         <span className="inline-flex items-center justify-center w-8 h-8 bg-white/80 backdrop-blur-sm border border-[#0072CE]/30 text-[#0072CE] rounded-full text-sm font-bold">
                           {problem.sequence_order}
@@ -169,13 +172,13 @@ export const WorksheetDetail: React.FC<WorksheetDetailProps> = ({
                         <div className="flex justify-between items-start mb-3">
                           <div className="flex items-center gap-3">
                             <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-medium">
-                              {getProblemTypeInKorean(problem.problem_type)}
+                              {getProblemTypeInKorean(problem.problem_type || '객관식')}
                             </span>
                             <span
                               className={`px-2 py-1 rounded text-xs font-medium ${
-                                problem.difficulty === 'A'
+                                problem.difficulty === '상'
                                   ? 'bg-red-100 text-red-800'
-                                  : problem.difficulty === 'B'
+                                  : problem.difficulty === '중'
                                   ? 'bg-green-100 text-green-800'
                                   : 'bg-purple-100 text-purple-800'
                               }`}
@@ -200,7 +203,7 @@ export const WorksheetDetail: React.FC<WorksheetDetailProps> = ({
 
                         {problem.choices && problem.choices.length > 0 && (
                           <div className="ml-4 space-y-3">
-                            {problem.choices.map((choice, choiceIndex) => {
+                            {problem.choices.map((choice: string, choiceIndex: number) => {
                               const optionLabel = String.fromCharCode(65 + choiceIndex);
                               const isCorrect = problem.correct_answer === optionLabel;
                               return (
@@ -241,9 +244,7 @@ export const WorksheetDetail: React.FC<WorksheetDetailProps> = ({
                               <span className="text-sm font-semibold text-blue-800">해설:</span>
                             </div>
                             <div className="text-sm text-blue-800">
-                              <LaTeXRenderer
-                                content={problem.explanation || '해설 정보가 없습니다'}
-                              />
+                              <LaTeXRenderer content={problem.explanation || '해설 정보가 없습니다'} />
                             </div>
                           </div>
                         )}
@@ -259,7 +260,7 @@ export const WorksheetDetail: React.FC<WorksheetDetailProps> = ({
                                       <LaTeXRenderer
                                         content={
                                           problem.correct_answer ||
-                                          '백엔드 API에서 답안 정보가 전달되지 않았습니다. 개발팀에 문의하세요.'
+                                          '답안 정보가 없습니다'
                                         }
                                       />
                                     </div>
@@ -270,9 +271,7 @@ export const WorksheetDetail: React.FC<WorksheetDetailProps> = ({
                                 {showAnswerSheet && (
                                   <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
                                     <div className="flex items-center gap-2 mb-2">
-                                      <span className="text-sm font-semibold text-blue-800">
-                                        해설:
-                                      </span>
+                                      <span className="text-sm font-semibold text-blue-800">해설:</span>
                                     </div>
                                     <div className="text-sm text-blue-800">
                                       <LaTeXRenderer
@@ -310,7 +309,7 @@ export const WorksheetDetail: React.FC<WorksheetDetailProps> = ({
                                       <LaTeXRenderer
                                         content={
                                           problem.correct_answer ||
-                                          '백엔드 API에서 답안 정보가 전달되지 않았습니다. 개발팀에 문의하세요.'
+                                          '답안 정보가 없습니다'
                                         }
                                       />
                                     </div>
@@ -332,15 +331,11 @@ export const WorksheetDetail: React.FC<WorksheetDetailProps> = ({
                         )}
                       </div>
                     </div>
-
-                    {index < worksheetProblems.length - 1 && (
-                      <hr className="border-gray-200 my-8" />
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </ScrollArea>
       </CardContent>
     </Card>

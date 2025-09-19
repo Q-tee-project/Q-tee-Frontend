@@ -1,35 +1,70 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { Subject } from '@/types/math';
 import { FileText } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { useBankPage } from './hooks/useBankPage';
+import { useMathBank } from '@/hooks/useMathBank';
+import { useKoreanBank } from '@/hooks/useKoreanBank';
+import { useEnglishBank } from '@/hooks/useEnglishBank';
 import { useWorksheetEdit } from './hooks/useWorksheetEdit';
 import { useDistribution } from './hooks/useDistribution';
 import { WorksheetList } from './components/WorksheetList';
-import { WorksheetDetail } from './components/WorksheetDetail';
+import { MathWorksheetDetail } from './components/MathWorksheetDetail';
+import { KoreanWorksheetDetail } from './components/KoreanWorksheetDetail';
+import { EnglishWorksheetDetail } from './components/EnglishWorksheetDetail';
 import { ProblemEditDialog } from './components/ProblemEditDialog';
 import { DistributionDialog } from './components/DistributionDialog';
 import { ErrorToast } from './components/ErrorToast';
 import { LoadingOverlay } from './components/LoadingOverlay';
 
+// 과목별 컴포넌트 타입 정의 - 각 컴포넌트가 받는 실제 props에 맞춤
+interface WorksheetDetailProps<T = any, P = any> {
+  selectedWorksheet: T | null;
+  worksheetProblems: P[];
+  showAnswerSheet: boolean;
+  isEditingTitle: boolean;
+  editedTitle: string;
+  onToggleAnswerSheet: () => void;
+  onOpenDistributeDialog: () => void;
+  onOpenEditDialog: () => void;
+  onEditProblem: (problem: P) => void;
+  onStartEditTitle: () => void;
+  onCancelEditTitle: () => void;
+  onSaveTitle: () => void;
+  onEditedTitleChange: (value: string) => void;
+}
+
+type WorksheetDetailComponent = React.ComponentType<WorksheetDetailProps>;
+
 export default function BankPage() {
-  const {
-    worksheets,
-    selectedWorksheet,
-    worksheetProblems,
-    isLoading,
-    error,
-    selectedSubject,
-    showAnswerSheet,
-    setSelectedSubject,
-    setShowAnswerSheet,
-    setError,
-    loadWorksheets,
-    handleWorksheetSelect,
-    handleDeleteWorksheet,
-  } = useBankPage();
+  const [selectedSubject, setSelectedSubject] = useState<string>('국어');
+
+  // 과목별 Bank 훅들
+  const mathBank = useMathBank();
+  const koreanBank = useKoreanBank();
+  const englishBank = useEnglishBank();
+
+  // 현재 선택된 과목에 따른 상태 매핑
+  const currentBank = useMemo(() => {
+    switch (selectedSubject) {
+      case '수학': return mathBank;
+      case '국어': return koreanBank;
+      case '영어': return englishBank;
+      default: return koreanBank;
+    }
+  }, [selectedSubject, mathBank, koreanBank, englishBank]);
+
+  // 과목별 컴포넌트 매핑
+  const WorksheetDetailComponents: Record<string, WorksheetDetailComponent> = useMemo(() => ({
+    '수학': MathWorksheetDetail,
+    '국어': KoreanWorksheetDetail,
+    '영어': EnglishWorksheetDetail,
+  }), []);
+
+  const handleSubjectChange = (newSubject: string) => {
+    setSelectedSubject(newSubject);
+  };
 
   const {
     isEditDialogOpen,
@@ -47,7 +82,7 @@ export default function BankPage() {
     handleStartEditTitle,
     handleCancelEditTitle,
     handleSaveTitle,
-  } = useWorksheetEdit();
+  } = useWorksheetEdit(selectedSubject);
 
   const {
     isDistributeDialogOpen,
@@ -76,7 +111,7 @@ export default function BankPage() {
           {[Subject.KOREAN, Subject.ENGLISH, Subject.MATH].map((subject) => (
             <button
               key={subject}
-              onClick={() => setSelectedSubject(subject)}
+              onClick={() => handleSubjectChange(subject)}
               className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
                 selectedSubject === subject
                   ? 'border-[#0072CE] text-[#0072CE]'
@@ -93,38 +128,49 @@ export default function BankPage() {
       <div className="flex-1 p-4 min-h-0">
         <div className="flex gap-4 h-full">
           <WorksheetList
-            worksheets={worksheets}
-            selectedWorksheet={selectedWorksheet}
+            worksheets={currentBank.worksheets}
+            selectedWorksheet={currentBank.selectedWorksheet}
             selectedSubject={selectedSubject}
-            isLoading={isLoading}
-            error={error}
-            onWorksheetSelect={handleWorksheetSelect}
-            onDeleteWorksheet={handleDeleteWorksheet}
-            onRefresh={loadWorksheets}
+            isLoading={currentBank.isLoading}
+            error={currentBank.error}
+            onWorksheetSelect={currentBank.handleWorksheetSelect as (worksheet: any) => void}
+            onDeleteWorksheet={currentBank.handleDeleteWorksheet as (worksheet: any, event: React.MouseEvent) => void}
+            onBatchDeleteWorksheets={currentBank.handleBatchDeleteWorksheets as (worksheets: any[]) => void}
+            onRefresh={currentBank.loadWorksheets}
           />
 
-          <WorksheetDetail
-            selectedWorksheet={selectedWorksheet}
-            worksheetProblems={worksheetProblems}
-            showAnswerSheet={showAnswerSheet}
-            isEditingTitle={isEditingTitle}
-            editedTitle={editedTitle}
-            onToggleAnswerSheet={() => setShowAnswerSheet(!showAnswerSheet)}
-            onOpenDistributeDialog={() => setIsDistributeDialogOpen(true)}
-            onOpenEditDialog={() => setIsEditDialogOpen(true)}
-            onEditProblem={handleEditProblem}
-            onStartEditTitle={() => handleStartEditTitle(selectedWorksheet?.title || '')}
-            onCancelEditTitle={handleCancelEditTitle}
-            onSaveTitle={() =>
-              selectedWorksheet && handleSaveTitle(selectedWorksheet.id, loadWorksheets)
-            }
-            onEditedTitleChange={setEditedTitle}
-          />
+          {(() => {
+            const WorksheetDetailComponent = WorksheetDetailComponents[selectedSubject];
+            if (!WorksheetDetailComponent) return null;
+
+            return (
+              <WorksheetDetailComponent
+                selectedWorksheet={currentBank.selectedWorksheet}
+                worksheetProblems={currentBank.worksheetProblems}
+                showAnswerSheet={currentBank.showAnswerSheet}
+                isEditingTitle={isEditingTitle}
+                editedTitle={editedTitle}
+                onToggleAnswerSheet={() => currentBank.setShowAnswerSheet(!currentBank.showAnswerSheet)}
+                onOpenDistributeDialog={() => setIsDistributeDialogOpen(true)}
+                onOpenEditDialog={() => setIsEditDialogOpen(true)}
+                onEditProblem={handleEditProblem}
+                onStartEditTitle={() =>
+                  handleStartEditTitle(currentBank.selectedWorksheet?.title || '')
+                }
+                onCancelEditTitle={handleCancelEditTitle}
+                onSaveTitle={() =>
+                  currentBank.selectedWorksheet &&
+                  handleSaveTitle(currentBank.selectedWorksheet.id, currentBank.loadWorksheets)
+                }
+                onEditedTitleChange={setEditedTitle}
+              />
+            );
+          })()}
         </div>
       </div>
 
-      <ErrorToast error={error} onClose={() => setError(null)} />
-      <LoadingOverlay isLoading={isLoading} />
+      <ErrorToast error={currentBank.error} onClose={() => currentBank.clearError()} />
+      <LoadingOverlay isLoading={currentBank.isLoading} />
 
       <DistributionDialog
         isOpen={isDistributeDialogOpen}
@@ -147,8 +193,8 @@ export default function BankPage() {
         onChoiceChange={handleChoiceChange}
         onSave={() =>
           handleSaveProblem(async () => {
-            if (selectedWorksheet) {
-              await loadWorksheets();
+            if (currentBank.selectedWorksheet) {
+              await currentBank.loadWorksheets();
             }
           })
         }

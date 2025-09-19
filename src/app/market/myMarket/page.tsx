@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
+import { getMyProducts, deleteProduct, MarketProduct } from '@/services/marketApi';
 
 import {
   Dialog,
@@ -16,14 +17,6 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 
-interface Product {
-  id: string;
-  title: string;
-  price: number;
-  author: string;
-  authorId: string;
-  tags: string[];
-}
 
 const TABS = ['전체', '국어', '영어', '수학'];
 
@@ -35,6 +28,7 @@ export default function MyMarketPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
   const [selectedTab, setSelectedTab] = useState('전체');
+
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [cols, setCols] = useState('grid-cols-1');
@@ -54,16 +48,16 @@ export default function MyMarketPage() {
 
   const myProducts = allProducts.filter(product => product.authorId === userProfile?.id?.toString());
 
+
   const filteredProducts =
     selectedTab === '전체'
       ? myProducts
-      : myProducts.filter((product) => product.tags.includes(selectedTab));
+      : myProducts.filter((product) => product.tags?.includes(selectedTab));
 
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
-  const displayedProducts = filteredProducts.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage,
-  );
+  const displayedProducts = filteredProducts;
+
+
 
   useEffect(() => {
     function handleResize() {
@@ -149,16 +143,22 @@ export default function MyMarketPage() {
       {/* 상품 카드 */}
       <Card className="flex-1 flex flex-col shadow-sm" style={{ margin: '2rem' }}>
         <CardHeader className="py-2 px-6 border-b border-gray-100 flex items-center justify-between">
+
           <CardTitle className="text-base font-medium">
             <span style={{ color: '#0072CE' }}>{myProducts[0]?.author}</span> 님의 {selectedTab} 상품 목록
           </CardTitle>
           <span className="text-sm font-normal" style={{ color: '#C8C8C8' }}>
+
             총 {filteredProducts.length}건
           </span>
         </CardHeader>
         <CardContent>
           <div className={`grid ${cols} gap-6`} style={{ minHeight: '400px' }}>
-            {displayedProducts.length === 0 ? (
+            {loading ? (
+              <div className="col-span-full flex justify-center items-center text-gray-500">
+                로딩 중...
+              </div>
+            ) : displayedProducts.length === 0 ? (
               <div className="col-span-full flex justify-center items-center text-gray-500">
                 등록된 상품이 없습니다.
               </div>
@@ -178,12 +178,14 @@ export default function MyMarketPage() {
                     이미지
                   </div>
 
+
                   {/* 정보 */}
                   <div onClick={() => handleViewProduct(product.id)}>
                     <p className="text-gray-400 font-semibold text-sm mb-1 truncate">{product.author}</p>
+
                     <p className="mb-2 truncate">{product.title}</p>
                     <div className="flex flex-wrap gap-2 mb-3">
-                      {product.tags.map((tag, idx) => (
+                      {product.tags?.map((tag, idx) => (
                         <span
                           key={idx}
                           className="text-[#9E9E9E] text-xs select-none"
@@ -193,7 +195,7 @@ export default function MyMarketPage() {
                       ))}
                     </div>
                     <div className="w-fit px-3 py-1 rounded-full bg-[#EFEFEF] text-[#0072CE] text-sm font-semibold">
-                      ₩{product.price.toLocaleString()}
+                      ₩{Number(product.price).toLocaleString()}
                     </div>
                     {/* 하단 버튼 */}
                     <div className="mt-4 flex justify-end gap-2">

@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { classroomService, StudentProfile } from '@/services/authService';
-import { QuestionService } from '@/services/questionService';
+import { apiRequest } from '@/lib/api';
 
 interface StudentAssignmentModalProps {
   isOpen: boolean;
@@ -21,6 +21,7 @@ interface StudentAssignmentModalProps {
   worksheetId: number;
   assignmentTitle: string;
   classId: string;
+  onAssignmentComplete?: (assignmentId: number, assignedStudents: StudentProfile[]) => void;
 }
 
 export function StudentAssignmentModal({
@@ -30,6 +31,7 @@ export function StudentAssignmentModal({
   worksheetId,
   assignmentTitle,
   classId,
+  onAssignmentComplete,
 }: StudentAssignmentModalProps) {
   const [students, setStudents] = useState<StudentProfile[]>([]);
   const [selectedStudents, setSelectedStudents] = useState<number[]>([]);
@@ -84,12 +86,25 @@ export function StudentAssignmentModal({
       setIsDeploying(true);
 
       // 과제 배포 API 호출 (worksheet_id 사용)
-      await QuestionService.deployAssignment({
-        assignmentId: worksheetId, // worksheet_id를 assignment_id로 사용
-        studentIds: selectedStudents,
-        classroomId: parseInt(classId),
+      await apiRequest('/api/math-generation/assignments/deploy', {
+        method: 'POST',
+        body: JSON.stringify({
+          assignment_id: worksheetId, // worksheet_id를 assignment_id로 사용
+          student_ids: selectedStudents,
+          classroom_id: parseInt(classId),
+        }),
       });
 
+      // 배포된 학생 정보 가져오기
+      const assignedStudents = students.filter(student => 
+        selectedStudents.includes(student.id)
+      );
+      
+      // 콜백 함수 호출
+      if (onAssignmentComplete) {
+        onAssignmentComplete(assignmentId, assignedStudents);
+      }
+      
       alert(`${selectedStudents.length}명의 학생에게 과제가 배포되었습니다.`);
       onClose();
       setSelectedStudents([]);

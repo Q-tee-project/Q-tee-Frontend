@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
+
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -20,6 +21,7 @@ interface Product {
   tags: string[];
 }
 
+
 const TABS = ['전체', '국어', '영어', '수학'];
 
 export default function MarketPage() {
@@ -28,6 +30,9 @@ export default function MarketPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
   const [selectedTab, setSelectedTab] = useState('전체');
+  const [products, setProducts] = useState<MarketProduct[]>([]);
+  const [loading, setLoading] = useState(true);
+
 
   // 인기상품 슬라이드 상태
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -48,11 +53,11 @@ export default function MarketPage() {
   // 인기상품(슬라이드) 데이터는 상위 5개로 제한
   const featuredProducts = products.slice(0, 5);
 
-  // 탭 필터링
-  const filteredProducts =
-    selectedTab === '전체'
-      ? products
-      : products.filter((product) => product.tags.includes(selectedTab));
+
+  useEffect(() => {
+    loadProducts();
+  }, [currentPage, selectedTab]);
+
 
   // 정렬 + 검색 적용
   const sortedAndFilteredProducts = filteredProducts
@@ -82,6 +87,7 @@ export default function MarketPage() {
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
+
 
   // 반응형 그리드
   const [cols, setCols] = useState('grid-cols-1');
@@ -159,10 +165,12 @@ export default function MarketPage() {
       <Card className="flex-1 flex flex-col shadow-sm" style={{ margin: '2rem' }}>
         <CardHeader className="py-2 px-6 border-b border-gray-100 flex items-center justify-between">
 
+
           <CardTitle className="text-base font-medium">{selectedTab} 상품 목록</CardTitle>
           <span className="text-sm font-normal text-gray-400">
             총 {filteredProducts.length}건
           </span>
+
         </CardHeader>
         <CardContent>
 
@@ -290,7 +298,11 @@ export default function MarketPage() {
 
           {/* 상품 그리드 */}
           <div className={`grid ${cols} gap-6`} style={{ minHeight: '400px' }}>
-            {displayedProducts.length === 0 ? (
+            {loading ? (
+              <div className="col-span-full flex justify-center items-center text-gray-500">
+                로딩 중...
+              </div>
+            ) : displayedProducts.length === 0 ? (
               <div className="col-span-full flex justify-center items-center text-gray-500">
                 등록된 상품이 없습니다.
               </div>
@@ -301,6 +313,7 @@ export default function MarketPage() {
                   onClick={() => router.push(`/market/${product.id}`)}
                   className="cursor-pointer rounded-lg border border-gray-200 bg-white p-4 shadow-sm hover:shadow-md transition-transform hover:scale-[1.02]"
                 >
+
                   <div className="bg-gray-100 rounded-md h-48 mb-4 flex items-center justify-center text-gray-400 select-none">
                     이미지
                   </div>
@@ -311,12 +324,13 @@ export default function MarketPage() {
                   <div className="flex flex-wrap gap-2 mb-3">
                     {product.tags.map((tag, idx) => (
                       <span key={idx} className="text-[#9E9E9E] text-xs select-none">
+
                         #{tag}
                       </span>
                     ))}
                   </div>
                   <div className="w-fit px-3 py-1 rounded-full bg-[#EFEFEF] text-[#0072CE] text-sm font-semibold">
-                    ₩{product.price.toLocaleString()}
+                    ₩{Number(product.price).toLocaleString()}
                   </div>
                 </div>
               ))

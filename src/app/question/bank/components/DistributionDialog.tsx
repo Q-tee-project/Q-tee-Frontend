@@ -151,9 +151,7 @@ export const DistributionDialog: React.FC<DistributionDialogProps> = ({
                           </span>
                         </div>
                         <div className="flex-1">
-                          <div className="text-sm font-medium text-gray-900">
-                            {recipient.name}
-                          </div>
+                          <div className="text-sm font-medium text-gray-900">{recipient.name}</div>
                           <div className="text-xs text-gray-500">{recipient.school}</div>
                         </div>
                       </div>

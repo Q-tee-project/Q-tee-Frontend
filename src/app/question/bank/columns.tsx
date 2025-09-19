@@ -2,10 +2,14 @@
 
 import { ColumnDef } from '@tanstack/react-table';
 import { Worksheet } from '@/types/math';
+import { KoreanWorksheet } from '@/types/korean';
+import { EnglishWorksheet } from '@/types/english';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 
-export const columns: ColumnDef<Worksheet>[] = [
+type AnyWorksheet = Worksheet | KoreanWorksheet | EnglishWorksheet;
+
+export const columns: ColumnDef<AnyWorksheet>[] = [
   {
     id: 'select',
     header: ({ table }) => (
@@ -69,13 +73,23 @@ export const columns: ColumnDef<Worksheet>[] = [
     ),
   },
   {
-    accessorKey: 'unit_name',
+    id: 'type_info',
     header: () => <div className="text-center">문제 유형</div>,
-    cell: ({ row }) => (
-      <div className="text-center">
-        <span className="text-sm text-gray-500">{row.getValue('unit_name')}</span>
-      </div>
-    ),
+    cell: ({ row }) => {
+      const worksheet = row.original;
+      // 과목별로 다른 필드 사용
+      const typeInfo =
+        'unit_name' in worksheet ? worksheet.unit_name :
+        'korean_type' in worksheet ? worksheet.korean_type :
+        'english_type' in worksheet ? worksheet.english_type :
+        '-';
+
+      return (
+        <div className="text-center">
+          <span className="text-sm text-gray-500">{typeInfo}</span>
+        </div>
+      );
+    },
   },
   {
     accessorKey: 'created_at',

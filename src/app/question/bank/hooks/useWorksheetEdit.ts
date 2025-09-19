@@ -1,13 +1,19 @@
 'use client';
 
 import { useState } from 'react';
-import { QuestionService } from '@/services/questionService';
+import { MathService } from '@/services/mathService';
+import { KoreanService } from '@/services/koreanService';
+import { EnglishService } from '@/services/englishService';
 import { MathProblem } from '@/types/math';
+import { KoreanProblem } from '@/types/korean';
+import { EnglishProblem } from '@/types/english';
 import { autoConvertToLatex } from '@/utils/mathLatexConverter';
 
-export const useWorksheetEdit = () => {
+type AnyProblem = MathProblem | KoreanProblem | EnglishProblem;
+
+export const useWorksheetEdit = (selectedSubject?: string) => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [editingProblem, setEditingProblem] = useState<MathProblem | null>(null);
+  const [editingProblem, setEditingProblem] = useState<AnyProblem | null>(null);
   const [editFormData, setEditFormData] = useState({
     question: '',
     problem_type: '',
@@ -20,11 +26,15 @@ export const useWorksheetEdit = () => {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState('');
 
-  const handleEditProblem = (problem: MathProblem) => {
+  const handleEditProblem = (problem: AnyProblem) => {
     setEditingProblem(problem);
     setEditFormData({
       question: problem.question,
-      problem_type: problem.problem_type,
+      problem_type:
+        (problem as any).problem_type ||
+        (problem as any).korean_type ||
+        (problem as any).english_type ||
+        'multiple_choice',
       difficulty: problem.difficulty,
       choices: problem.choices && problem.choices.length > 0 ? problem.choices : ['', '', '', ''],
       correct_answer: problem.correct_answer || '',
@@ -38,20 +48,26 @@ export const useWorksheetEdit = () => {
 
     try {
       const updateData = {
-        question: autoConvertMode ? autoConvertToLatex(editFormData.question) : editFormData.question,
+        question: autoConvertMode
+          ? autoConvertToLatex(editFormData.question)
+          : editFormData.question,
         problem_type: editFormData.problem_type,
         difficulty: editFormData.difficulty,
         choices:
           editFormData.problem_type === 'multiple_choice'
             ? editFormData.choices
                 .filter((choice) => choice.trim() !== '')
-                .map((choice) => autoConvertMode ? autoConvertToLatex(choice) : choice)
+                .map((choice) => (autoConvertMode ? autoConvertToLatex(choice) : choice))
             : null,
-        correct_answer: autoConvertMode ? autoConvertToLatex(editFormData.correct_answer) : editFormData.correct_answer,
-        explanation: autoConvertMode ? autoConvertToLatex(editFormData.explanation) : editFormData.explanation,
+        correct_answer: autoConvertMode
+          ? autoConvertToLatex(editFormData.correct_answer)
+          : editFormData.correct_answer,
+        explanation: autoConvertMode
+          ? autoConvertToLatex(editFormData.explanation)
+          : editFormData.explanation,
       };
 
-      await QuestionService.updateProblem(editingProblem.id, updateData);
+      await MathService.updateMathProblem(editingProblem.id, updateData);
       onSuccess();
       setIsEditDialogOpen(false);
       setEditingProblem(null);
@@ -94,9 +110,21 @@ export const useWorksheetEdit = () => {
     if (!editedTitle.trim()) return;
 
     try {
-      await QuestionService.updateWorksheet(worksheetId, {
-        title: editedTitle.trim(),
-      });
+      // 과목에 따라 적절한 서비스 사용
+      if (selectedSubject === '국어') {
+        await KoreanService.updateKoreanWorksheet(worksheetId, {
+          title: editedTitle.trim(),
+        });
+      } else if (selectedSubject === '영어') {
+        await EnglishService.updateEnglishWorksheet(worksheetId, {
+          title: editedTitle.trim(),
+        });
+      } else {
+        // 수학 또는 기본값
+        await MathService.updateMathWorksheet(worksheetId, {
+          title: editedTitle.trim(),
+        });
+      }
 
       onSuccess();
       setIsEditingTitle(false);
