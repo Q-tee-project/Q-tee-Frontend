@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
+import { getMyProducts, deleteProduct, MarketProduct } from '@/services/marketApi';
 
 import { 
   Dialog,
@@ -16,14 +17,6 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 
-interface Product {
-  id: string;
-  title: string;
-  price: number;
-  author: string;
-  authorId: string;
-  tags: string[];
-}
 
 const TABS = ['전체', '국어', '영어', '수학'];
 
@@ -33,35 +26,42 @@ export default function MyMarketPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
   const [selectedTab, setSelectedTab] = useState('전체');
-  const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
+  const [selectedProducts, setSelectedProducts] = useState<number[]>([]);
   const [isSelectMode, setIsSelectMode] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<{ type: 'single' | 'multiple', id?: string } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ type: 'single' | 'multiple', id?: number } | null>(null);
+  const [myProducts, setMyProducts] = useState<MarketProduct[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  //상품 데이터 (실제로는 API에서 가져와야 함)
-  const allProducts: Product[] = Array.from({ length: 5 }).map((_, idx) => ({
-    id: (idx + 1).toString(),
-    title: `중학생 ${idx + 1}학년 국어`,
-    price: 20000 + (idx * 5000),
-    author: userProfile?.name || '킹왕짱현범쿤',
-    authorId: userProfile?.id?.toString() || 'user123',
-    tags: ['중학교', `${idx + 1}학년`, '국어', '기출문제', '2단원'],
-  }));
+  // 내 상품 데이터 로드
+  const loadMyProducts = async () => {
+    try {
+      setLoading(true);
+      const data = await getMyProducts({
+        skip: (currentPage - 1) * itemsPerPage,
+        limit: itemsPerPage,
+      });
+      setMyProducts(data);
+    } catch (error) {
+      console.error('Failed to load my products:', error);
+      setMyProducts([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  // id 체크
-  const myProducts = allProducts.filter(product => product.authorId === userProfile?.id?.toString());
+  useEffect(() => {
+    loadMyProducts();
+  }, [currentPage]);
 
   // 탭 필터링
   const filteredProducts =
     selectedTab === '전체'
       ? myProducts
-      : myProducts.filter((product) => product.tags.includes(selectedTab));
+      : myProducts.filter((product) => product.tags?.includes(selectedTab));
 
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
-  const displayedProducts = filteredProducts.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage,
-  );
+  const displayedProducts = filteredProducts;
 
   const [cols, setCols] = useState('grid-cols-1');
 
@@ -72,9 +72,9 @@ export default function MyMarketPage() {
   };
 
   // 개별 상품 선택/해제
-  const toggleProductSelection = (productId: string) => {
-    setSelectedProducts(prev => 
-      prev.includes(productId) 
+  const toggleProductSelection = (productId: number) => {
+    setSelectedProducts(prev =>
+      prev.includes(productId)
         ? prev.filter(id => id !== productId)
         : [...prev, productId]
     );
@@ -90,7 +90,7 @@ export default function MyMarketPage() {
   };
 
   // 개별 상품 삭제
-  const handleDeleteProduct = (productId: string) => {
+  const handleDeleteProduct = (productId: number) => {
     setDeleteTarget({ type: 'single', id: productId });
     setShowDeleteModal(true);
   };
@@ -103,27 +103,35 @@ export default function MyMarketPage() {
   };
 
   // 실제 삭제 실행
-  const confirmDelete = () => {
-    if (deleteTarget?.type === 'single' && deleteTarget.id) {
-      // 실제로는 API 호출
-      console.log('상품 삭제:', deleteTarget.id);
-      // 임시로 상태에서 제거 (실제로는 API 응답 후 처리)
-    } else if (deleteTarget?.type === 'multiple') {
-      // 실제로는 API 호출
-      console.log('선택된 상품들 삭제:', selectedProducts);
-      setSelectedProducts([]);
+  const confirmDelete = async () => {
+    try {
+      if (deleteTarget?.type === 'single' && deleteTarget.id) {
+        await deleteProduct(deleteTarget.id);
+        loadMyProducts(); // 목록 새로고침
+      } else if (deleteTarget?.type === 'multiple') {
+        // 선택된 상품들을 하나씩 삭제
+        for (const productId of selectedProducts) {
+          await deleteProduct(productId);
+        }
+        setSelectedProducts([]);
+        loadMyProducts(); // 목록 새로고침
+      }
+    } catch (error) {
+      console.error('Failed to delete product:', error);
+      alert('상품 삭제 중 오류가 발생했습니다.');
+    } finally {
+      setShowDeleteModal(false);
+      setDeleteTarget(null);
     }
-    setShowDeleteModal(false);
-    setDeleteTarget(null);
   };
 
   // 상품 수정 (상세보기로 이동)
-  const handleEditProduct = (productId: string) => {
+  const handleEditProduct = (productId: number) => {
     router.push(`/market/${productId}`);
   };
 
   // 상품 상세보기
-  const handleViewProduct = (productId: string) => {
+  const handleViewProduct = (productId: number) => {
     router.push(`/market/${productId}`);
   };
   
@@ -229,7 +237,7 @@ export default function MyMarketPage() {
       style={{ margin: '2rem'}}>
         <CardHeader className="py-2 px-6 border-b border-gray-100 flex items-center justify-between">
         <CardTitle className="text-base font-medium">
-            <span style={{ color: '#0072CE' }}>{myProducts[0]?.author}</span>의 {selectedTab} 상품 목록
+            <span style={{ color: '#0072CE' }}>{myProducts[0]?.seller_name || userProfile?.name}</span>의 {selectedTab} 상품 목록
         </CardTitle>
         <span className="text-sm font-normal" style={{ color: '#C8C8C8' }}>
             총 {filteredProducts.length}건
@@ -238,7 +246,11 @@ export default function MyMarketPage() {
         <CardContent>
           {/* 상품 그리드 */}
           <div className={`grid ${cols} gap-6`} style={{ minHeight: '400px' }}>
-            {displayedProducts.length === 0 ? (
+            {loading ? (
+              <div className="col-span-full flex justify-center items-center text-gray-500">
+                로딩 중...
+              </div>
+            ) : displayedProducts.length === 0 ? (
               <div className="col-span-full flex justify-center items-center text-gray-500">
                 등록된 상품이 없습니다.
               </div>
@@ -276,10 +288,10 @@ export default function MyMarketPage() {
 
                   {/* 상품 정보 */}
                   <div onClick={() => !isSelectMode && handleViewProduct(product.id)}>
-                    <p className="text-gray-400 font-semibold text-sm mb-1 truncate">{product.author}</p>
+                    <p className="text-gray-400 font-semibold text-sm mb-1 truncate">{product.seller_name}</p>
                     <p className="mb-2 truncate">{product.title}</p>
                     <div className="flex flex-wrap gap-2 mb-3">
-                      {product.tags.map((tag, idx) => (
+                      {product.tags?.map((tag, idx) => (
                         <span
                           key={idx}
                           className="text-[#9E9E9E] text-xs select-none"
@@ -289,7 +301,7 @@ export default function MyMarketPage() {
                       ))}
                     </div>
                     <div className="w-fit px-3 py-1 rounded-full bg-[#EFEFEF] text-[#0072CE] text-sm font-semibold">
-                      ₩{product.price.toLocaleString()}
+                      ₩{Number(product.price).toLocaleString()}
                     </div>
                   </div>
 

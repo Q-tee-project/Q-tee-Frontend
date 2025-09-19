@@ -37,13 +37,15 @@ export const useMathGeneration = () => {
       // 생성 데이터 저장 (재생성에 사용)
       updateState({ lastGenerationData: requestData });
 
-      // 문제 생성 API 호출
+      // 문제 생성 API 호출 (Bearer 토큰 포함)
+      const token = localStorage.getItem('access_token');
       const response = await fetch(
         `http://localhost:8001/api/math-generation/generate?user_id=${userId}`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
           body: JSON.stringify(requestData),
         },
@@ -95,13 +97,15 @@ export const useMathGeneration = () => {
 
       console.log('🔄 문제 재생성 요청:', regenerationData);
 
-      // 재생성 API 호출
+      // 재생성 API 호출 (Bearer 토큰 포함)
+      const token = localStorage.getItem('access_token');
       const response = await fetch(
         `http://localhost:8001/api/math-generation/regenerate?user_id=${userId}`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
           body: JSON.stringify(regenerationData),
         },
@@ -186,7 +190,12 @@ export const useMathGeneration = () => {
     const poll = async () => {
       try {
         const apiUrl = `http://localhost:8001/api/math-generation/tasks/${taskId}`;
-        const response = await fetch(apiUrl);
+        const token = localStorage.getItem('access_token');
+        const response = await fetch(apiUrl, {
+          headers: {
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        });
         const data = await response.json();
 
         console.log('📊 태스크 상태:', data);
@@ -243,7 +252,12 @@ export const useMathGeneration = () => {
       }
 
       const apiUrl = `http://localhost:8001/api/math-generation/worksheets/${worksheetId}?user_id=${userId}`;
-      const response = await fetch(apiUrl);
+      const token = localStorage.getItem('access_token');
+      const response = await fetch(apiUrl, {
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
       const data = await response.json();
 
       console.log('🔍 워크시트 조회 결과:', data);

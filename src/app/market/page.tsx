@@ -6,15 +6,8 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
+import { getProducts, MarketProduct } from '@/services/marketApi';
 
-interface Product {
-  id: string;
-  title: string;
-  price: number;
-  author: string;
-  authorId: string;
-  tags: string[];
-}
 
 const TABS = ['전체', '국어', '영어', '수학'];
 
@@ -24,28 +17,34 @@ export default function MarketPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
   const [selectedTab, setSelectedTab] = useState('전체');
+  const [products, setProducts] = useState<MarketProduct[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  //상품 데이터
-  const products: Product[] = Array.from({ length: 12 }).map((_, idx) => ({
-    id: (idx + 1).toString(),
-    title: '중학생',
-    price: 2000,
-    author: '최고미남한광구',
-    authorId: idx < 5 ? (userProfile?.id?.toString() || 'user123') : `user${idx}`,
-    tags: ['중학교', '1학년', '국어', '기출문제', '2단원'],
-  }));
+  // 상품 데이터 로드
+  const loadProducts = async () => {
+    try {
+      setLoading(true);
+      const data = await getProducts({
+        skip: (currentPage - 1) * itemsPerPage,
+        limit: itemsPerPage,
+        subject: selectedTab === '전체' ? undefined : selectedTab,
+      });
+      setProducts(data);
+    } catch (error) {
+      console.error('Failed to load products:', error);
+      setProducts([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  // 탭 필터링
-  const filteredProducts =
-    selectedTab === '전체'
-      ? products
-      : products.filter((product) => product.tags.includes(selectedTab));
+  useEffect(() => {
+    loadProducts();
+  }, [currentPage, selectedTab]);
 
-  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
-  const displayedProducts = filteredProducts.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage,
-  );
+  // 필터링은 API에서 처리하므로 제거
+  const totalPages = Math.ceil(products.length / itemsPerPage);
+  const displayedProducts = products;
 
   const [cols, setCols] = useState('grid-cols-1');
 
@@ -118,13 +117,17 @@ export default function MarketPage() {
             {selectedTab} 상품 목록
         </CardTitle>
         <span className="text-sm font-normal" style={{ color: '#C8C8C8' }}>
-            총 {filteredProducts.length}건
+            총 {products.length}건
         </span>
         </CardHeader>
         <CardContent>
           {/* 상품 그리드 */}
           <div className={`grid ${cols} gap-6`} style={{ minHeight: '400px' }}>
-            {displayedProducts.length === 0 ? (
+            {loading ? (
+              <div className="col-span-full flex justify-center items-center text-gray-500">
+                로딩 중...
+              </div>
+            ) : displayedProducts.length === 0 ? (
               <div className="col-span-full flex justify-center items-center text-gray-500">
                 등록된 상품이 없습니다.
               </div>
@@ -136,12 +139,20 @@ export default function MarketPage() {
                   className="cursor-pointer rounded-lg border border-gray-200 bg-white p-4 shadow-sm hover:shadow-md transition-shadow transform hover:scale-[1.02]"
                 >
                   <div className="bg-gray-100 rounded-md h-70 mb-4 flex items-center justify-center text-gray-400 select-none">
-                    이미지
+                    {product.main_image ? (
+                      <img
+                        src={product.main_image}
+                        alt={product.title}
+                        className="w-full h-full object-cover rounded-md"
+                      />
+                    ) : (
+                      '이미지'
+                    )}
                   </div>
-                  <p className="text-gray-400 font-semibold text-sm mb-1 truncate">{product.author}</p>
+                  <p className="text-gray-400 font-semibold text-sm mb-1 truncate">{product.seller_name}</p>
                   <p className="mb-2 truncate">{product.title}</p>
                   <div className="flex flex-wrap gap-2 mb-3">
-                    {product.tags.map((tag, idx) => (
+                    {product.tags?.map((tag, idx) => (
                       <span
                         key={idx}
                         className="text-[#9E9E9E] text-xs select-none"
@@ -151,7 +162,7 @@ export default function MarketPage() {
                     ))}
                   </div>
                   <div className="w-fit px-3 py-1 rounded-full bg-[#EFEFEF] text-[#0072CE] text-sm font-semibold">
-                    ₩{product.price.toLocaleString()}
+                    ₩{Number(product.price).toLocaleString()}
                   </div>
                 </div>
               ))

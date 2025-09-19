@@ -19,3 +19,4 @@ export interface BaseQuestionPreviewProps {
 export interface QuestionPreviewComponentProps extends BaseQuestionPreviewProps {
   subject: 'korean' | 'math' | 'english';
 }
+
