@@ -3,13 +3,11 @@
 import { useState } from 'react';
 import { MathService } from '@/services/mathService';
 import { KoreanService } from '@/services/koreanService';
-import { EnglishService } from '@/services/englishService';
 import { MathProblem } from '@/types/math';
 import { KoreanProblem } from '@/types/korean';
-import { EnglishProblem } from '@/types/english';
 import { autoConvertToLatex } from '@/utils/mathLatexConverter';
 
-type AnyProblem = MathProblem | KoreanProblem | EnglishProblem;
+type AnyProblem = MathProblem | KoreanProblem;
 
 export const useWorksheetEdit = (selectedSubject?: string) => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -22,9 +20,9 @@ export const useWorksheetEdit = (selectedSubject?: string) => {
     correct_answer: '',
     explanation: '',
   });
-  const [autoConvertMode, setAutoConvertMode] = useState(true);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState('');
+  const [isRegenerating, setIsRegenerating] = useState(false);
 
   const handleEditProblem = (problem: AnyProblem) => {
     setEditingProblem(problem);
@@ -33,7 +31,6 @@ export const useWorksheetEdit = (selectedSubject?: string) => {
       problem_type:
         (problem as any).problem_type ||
         (problem as any).korean_type ||
-        (problem as any).english_type ||
         'multiple_choice',
       difficulty: problem.difficulty,
       choices: problem.choices && problem.choices.length > 0 ? problem.choices : ['', '', '', ''],
@@ -48,7 +45,7 @@ export const useWorksheetEdit = (selectedSubject?: string) => {
 
     try {
       const updateData = {
-        question: autoConvertMode
+        question: selectedSubject === '수학'
           ? autoConvertToLatex(editFormData.question)
           : editFormData.question,
         problem_type: editFormData.problem_type,
@@ -57,17 +54,25 @@ export const useWorksheetEdit = (selectedSubject?: string) => {
           editFormData.problem_type === 'multiple_choice'
             ? editFormData.choices
                 .filter((choice) => choice.trim() !== '')
-                .map((choice) => (autoConvertMode ? autoConvertToLatex(choice) : choice))
-            : null,
-        correct_answer: autoConvertMode
+                .map((choice) => selectedSubject === '수학' ? autoConvertToLatex(choice) : choice)
+            : undefined,
+        correct_answer: selectedSubject === '수학'
           ? autoConvertToLatex(editFormData.correct_answer)
           : editFormData.correct_answer,
-        explanation: autoConvertMode
+        explanation: selectedSubject === '수학'
           ? autoConvertToLatex(editFormData.explanation)
           : editFormData.explanation,
       };
 
-      await MathService.updateMathProblem(editingProblem.id, updateData);
+      // 과목에 따라 적절한 서비스 사용
+      if (selectedSubject === '국어') {
+        // 국어는 현재 워크시트 업데이트 사용
+        await KoreanService.updateKoreanWorksheet(editingProblem.id, updateData);
+      } else if (selectedSubject === '수학') {
+        await MathService.updateProblem(editingProblem.id, updateData);
+      } else {
+        throw new Error('지원되지 않는 과목입니다.');
+      }
       onSuccess();
       setIsEditDialogOpen(false);
       setEditingProblem(null);
@@ -79,7 +84,6 @@ export const useWorksheetEdit = (selectedSubject?: string) => {
   };
 
   const handleEditFormChange = (field: string, value: string | string[]) => {
-    // 실시간 변환을 제거하고 원본 값만 저장
     setEditFormData((prev) => ({
       ...prev,
       [field]: value,
@@ -88,7 +92,6 @@ export const useWorksheetEdit = (selectedSubject?: string) => {
 
   const handleChoiceChange = (index: number, value: string) => {
     const newChoices = [...editFormData.choices];
-    // 실시간 변환을 제거하고 원본 값만 저장
     newChoices[index] = value;
     setEditFormData((prev) => ({
       ...prev,
@@ -115,15 +118,12 @@ export const useWorksheetEdit = (selectedSubject?: string) => {
         await KoreanService.updateKoreanWorksheet(worksheetId, {
           title: editedTitle.trim(),
         });
-      } else if (selectedSubject === '영어') {
-        await EnglishService.updateEnglishWorksheet(worksheetId, {
-          title: editedTitle.trim(),
-        });
-      } else {
-        // 수학 또는 기본값
+      } else if (selectedSubject === '수학') {
         await MathService.updateMathWorksheet(worksheetId, {
           title: editedTitle.trim(),
         });
+      } else {
+        throw new Error('지원되지 않는 과목입니다.');
       }
 
       onSuccess();
@@ -136,16 +136,103 @@ export const useWorksheetEdit = (selectedSubject?: string) => {
     }
   };
 
+  const handleRegenerateProblem = async (requirements?: string, onSuccess?: () => void) => {
+    if (!editingProblem) return;
+
+    try {
+      setIsRegenerating(true);
+
+      const regenerateData = {
+        problem_id: editingProblem.id,
+        requirements: requirements || '',
+        current_problem: {
+          question: editFormData.question,
+          problem_type: editFormData.problem_type,
+          difficulty: editFormData.difficulty,
+          choices: editFormData.choices,
+          correct_answer: editFormData.correct_answer,
+          explanation: editFormData.explanation,
+        }
+      };
+
+      let taskResponse;
+
+      // 국어와 수학만 처리 (Celery 통해 비동기 처리)
+      if (selectedSubject === '국어') {
+        taskResponse = await KoreanService.regenerateProblemAsync(regenerateData);
+      } else if (selectedSubject === '수학') {
+        taskResponse = await MathService.regenerateProblemAsync(regenerateData);
+      } else {
+        alert('현재 국어와 수학만 재생성을 지원합니다.');
+        return;
+      }
+
+      if (taskResponse?.task_id) {
+        // Celery 작업 상태 폴링
+        const pollResult = await pollTaskStatus(taskResponse.task_id);
+
+        if (pollResult.success && pollResult.result) {
+          // 폼 데이터를 재생성된 문제로 업데이트
+          setEditFormData({
+            question: pollResult.result.question || '',
+            problem_type: pollResult.result.problem_type || editFormData.problem_type,
+            difficulty: pollResult.result.difficulty || editFormData.difficulty,
+            choices: pollResult.result.choices || editFormData.choices,
+            correct_answer: pollResult.result.correct_answer || '',
+            explanation: pollResult.result.explanation || '',
+          });
+
+          alert('문제가 성공적으로 재생성되었습니다.');
+          if (onSuccess) onSuccess();
+        } else {
+          alert(`재생성 실패: ${pollResult.error || '알 수 없는 오류가 발생했습니다.'}`);
+        }
+      }
+    } catch (error: any) {
+      console.error('문제 재생성 실패:', error);
+      alert(`재생성 실패: ${error.message || '서버 오류가 발생했습니다.'}`);
+    } finally {
+      setIsRegenerating(false);
+    }
+  };
+
+  // Celery 작업 상태를 폴링하는 함수 (기존 문제 생성과 동일한 타임아웃 설정)
+  const pollTaskStatus = async (taskId: string, maxRetries = 300, interval = 2000) => {
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        let statusResponse;
+
+        if (selectedSubject === '국어') {
+          statusResponse = await KoreanService.getTaskStatus(taskId);
+        } else if (selectedSubject === '수학') {
+          statusResponse = await MathService.getTaskStatus(taskId);
+        }
+
+        if (statusResponse?.status === 'SUCCESS') {
+          return { success: true, result: statusResponse.result };
+        } else if (statusResponse?.status === 'FAILURE') {
+          return { success: false, error: statusResponse.error || '작업이 실패했습니다.' };
+        }
+
+        // 아직 진행 중이면 잠시 대기
+        await new Promise(resolve => setTimeout(resolve, interval));
+      } catch (error) {
+        console.error('작업 상태 확인 중 오류:', error);
+      }
+    }
+
+    return { success: false, error: '작업이 시간 초과되었습니다.' };
+  };
+
   return {
     isEditDialogOpen,
     setIsEditDialogOpen,
     editingProblem,
     editFormData,
-    autoConvertMode,
-    setAutoConvertMode,
     isEditingTitle,
     editedTitle,
     setEditedTitle,
+    isRegenerating,
     handleEditProblem,
     handleSaveProblem,
     handleEditFormChange,
@@ -153,5 +240,6 @@ export const useWorksheetEdit = (selectedSubject?: string) => {
     handleStartEditTitle,
     handleCancelEditTitle,
     handleSaveTitle,
+    handleRegenerateProblem,
   };
 };

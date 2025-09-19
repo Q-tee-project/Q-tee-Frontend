@@ -13,7 +13,8 @@ import { WorksheetList } from './components/WorksheetList';
 import { MathWorksheetDetail } from './components/MathWorksheetDetail';
 import { KoreanWorksheetDetail } from './components/KoreanWorksheetDetail';
 import { EnglishWorksheetDetail } from './components/EnglishWorksheetDetail';
-import { ProblemEditDialog } from './components/ProblemEditDialog';
+import { MathProblemEditDialog } from './components/MathProblemEditDialog';
+import { KoreanProblemEditDialog } from './components/KoreanProblemEditDialog';
 import { DistributionDialog } from './components/DistributionDialog';
 import { ErrorToast } from './components/ErrorToast';
 import { LoadingOverlay } from './components/LoadingOverlay';
@@ -48,19 +49,26 @@ export default function BankPage() {
   // 현재 선택된 과목에 따른 상태 매핑
   const currentBank = useMemo(() => {
     switch (selectedSubject) {
-      case '수학': return mathBank;
-      case '국어': return koreanBank;
-      case '영어': return englishBank;
-      default: return koreanBank;
+      case '수학':
+        return mathBank;
+      case '국어':
+        return koreanBank;
+      case '영어':
+        return englishBank;
+      default:
+        return koreanBank;
     }
   }, [selectedSubject, mathBank, koreanBank, englishBank]);
 
   // 과목별 컴포넌트 매핑
-  const WorksheetDetailComponents: Record<string, WorksheetDetailComponent> = useMemo(() => ({
-    '수학': MathWorksheetDetail,
-    '국어': KoreanWorksheetDetail,
-    '영어': EnglishWorksheetDetail,
-  }), []);
+  const WorksheetDetailComponents: Record<string, WorksheetDetailComponent> = useMemo(
+    () => ({
+      수학: MathWorksheetDetail,
+      국어: KoreanWorksheetDetail,
+      영어: EnglishWorksheetDetail,
+    }),
+    [],
+  );
 
   const handleSubjectChange = (newSubject: string) => {
     setSelectedSubject(newSubject);
@@ -70,11 +78,10 @@ export default function BankPage() {
     isEditDialogOpen,
     setIsEditDialogOpen,
     editFormData,
-    autoConvertMode,
-    setAutoConvertMode,
     isEditingTitle,
     editedTitle,
     setEditedTitle,
+    isRegenerating,
     handleEditProblem,
     handleSaveProblem,
     handleEditFormChange,
@@ -82,6 +89,7 @@ export default function BankPage() {
     handleStartEditTitle,
     handleCancelEditTitle,
     handleSaveTitle,
+    handleRegenerateProblem,
   } = useWorksheetEdit(selectedSubject);
 
   const {
@@ -134,8 +142,12 @@ export default function BankPage() {
             isLoading={currentBank.isLoading}
             error={currentBank.error}
             onWorksheetSelect={currentBank.handleWorksheetSelect as (worksheet: any) => void}
-            onDeleteWorksheet={currentBank.handleDeleteWorksheet as (worksheet: any, event: React.MouseEvent) => void}
-            onBatchDeleteWorksheets={currentBank.handleBatchDeleteWorksheets as (worksheets: any[]) => void}
+            onDeleteWorksheet={
+              currentBank.handleDeleteWorksheet as (worksheet: any, event: React.MouseEvent) => void
+            }
+            onBatchDeleteWorksheets={
+              currentBank.handleBatchDeleteWorksheets as (worksheets: any[]) => void
+            }
             onRefresh={currentBank.loadWorksheets}
           />
 
@@ -150,7 +162,9 @@ export default function BankPage() {
                 showAnswerSheet={currentBank.showAnswerSheet}
                 isEditingTitle={isEditingTitle}
                 editedTitle={editedTitle}
-                onToggleAnswerSheet={() => currentBank.setShowAnswerSheet(!currentBank.showAnswerSheet)}
+                onToggleAnswerSheet={() =>
+                  currentBank.setShowAnswerSheet(!currentBank.showAnswerSheet)
+                }
                 onOpenDistributeDialog={() => setIsDistributeDialogOpen(true)}
                 onOpenEditDialog={() => setIsEditDialogOpen(true)}
                 onEditProblem={handleEditProblem}
@@ -171,6 +185,7 @@ export default function BankPage() {
 
       <ErrorToast error={currentBank.error} onClose={() => currentBank.clearError()} />
       <LoadingOverlay isLoading={currentBank.isLoading} />
+      <LoadingOverlay isLoading={isRegenerating} message="문제를 재생성하고 있습니다... 🔄" />
 
       <DistributionDialog
         isOpen={isDistributeDialogOpen}
@@ -183,22 +198,43 @@ export default function BankPage() {
         onDistribute={handleDistribute}
       />
 
-      <ProblemEditDialog
-        isOpen={isEditDialogOpen}
-        onOpenChange={setIsEditDialogOpen}
-        editFormData={editFormData}
-        autoConvertMode={autoConvertMode}
-        onAutoConvertModeChange={setAutoConvertMode}
-        onFormChange={handleEditFormChange}
-        onChoiceChange={handleChoiceChange}
-        onSave={() =>
-          handleSaveProblem(async () => {
-            if (currentBank.selectedWorksheet) {
-              await currentBank.loadWorksheets();
-            }
-          })
-        }
-      />
+      {selectedSubject === '수학' ? (
+        <MathProblemEditDialog
+          isOpen={isEditDialogOpen}
+          onOpenChange={setIsEditDialogOpen}
+          editFormData={editFormData}
+          onFormChange={handleEditFormChange}
+          onChoiceChange={handleChoiceChange}
+          onSave={() =>
+            handleSaveProblem(async () => {
+              if (currentBank.selectedWorksheet) {
+                await currentBank.loadWorksheets();
+              }
+            })
+          }
+          onRegenerate={(requirements) => {
+            handleRegenerateProblem(requirements);
+          }}
+        />
+      ) : (
+        <KoreanProblemEditDialog
+          isOpen={isEditDialogOpen}
+          onOpenChange={setIsEditDialogOpen}
+          editFormData={editFormData}
+          onFormChange={handleEditFormChange}
+          onChoiceChange={handleChoiceChange}
+          onSave={() =>
+            handleSaveProblem(async () => {
+              if (currentBank.selectedWorksheet) {
+                await currentBank.loadWorksheets();
+              }
+            })
+          }
+          onRegenerate={(requirements) => {
+            handleRegenerateProblem(requirements);
+          }}
+        />
+      )}
     </div>
   );
 }
