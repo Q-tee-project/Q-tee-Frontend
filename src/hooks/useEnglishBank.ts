@@ -34,7 +34,10 @@ export const useEnglishBank = () => {
 
       if (worksheetData.length > 0) {
         updateState({ selectedWorksheet: worksheetData[0] });
-        await loadWorksheetProblems(worksheetData[0].id);
+        const worksheetId = worksheetData[0].worksheet_id;
+        if (worksheetId) {
+          await loadWorksheetProblems(worksheetId);
+        }
       }
     } catch (error: any) {
       console.error('영어 워크시트 로드 실패:', error);
@@ -46,10 +49,33 @@ export const useEnglishBank = () => {
     }
   };
 
-  const loadWorksheetProblems = async (worksheetId: number) => {
+  const loadWorksheetProblems = async (worksheetId: string) => {
     try {
       const worksheetDetail = await EnglishService.getEnglishWorksheetDetail(worksheetId);
-      updateState({ worksheetProblems: worksheetDetail.problems || [] });
+      console.log('=== 영어 워크시트 상세 API 응답 ===');
+      console.log('전체 응답:', worksheetDetail);
+
+      // API 응답 구조가 worksheet_data 안에 중첩되어 있음
+      const worksheetData = worksheetDetail.worksheet_data;
+      const questions = worksheetData?.questions || [];
+      const passages = worksheetData?.passages || [];
+
+      console.log('worksheet_data:', worksheetData);
+      console.log('questions 필드:', questions);
+      console.log('passages 필드:', passages);
+      console.log('questions 길이:', questions.length);
+      console.log('passages 길이:', passages.length);
+
+      if (questions.length > 0) {
+        console.log('첫 번째 문제 구조:', questions[0]);
+        console.log('첫 번째 문제의 모든 키:', Object.keys(questions[0]));
+      }
+      if (passages.length > 0) {
+        console.log('첫 번째 지문 구조:', passages[0]);
+      }
+
+      // worksheetProblems를 전체 worksheet_data로 교체
+      updateState({ worksheetProblems: worksheetData as any });
     } catch (error: any) {
       console.error('영어 워크시트 문제 로드 실패:', error);
       updateState({ error: '영어 워크시트 문제를 불러올 수 없습니다.' });
@@ -58,7 +84,10 @@ export const useEnglishBank = () => {
 
   const handleWorksheetSelect = async (worksheet: EnglishWorksheet) => {
     updateState({ selectedWorksheet: worksheet });
-    await loadWorksheetProblems(worksheet.id);
+    const worksheetId = worksheet.worksheet_id;
+    if (worksheetId) {
+      await loadWorksheetProblems(worksheetId);
+    }
   };
 
   const handleDeleteWorksheet = async (worksheet: EnglishWorksheet, event: React.MouseEvent) => {

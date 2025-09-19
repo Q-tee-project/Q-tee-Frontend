@@ -6,6 +6,7 @@ export interface EnglishWorksheet {
   school_level: string;
   grade: number;
   english_type: string;
+  problem_type?: string;
   problem_count: number;
   status: string;
   created_at: string;
@@ -57,12 +58,14 @@ export interface EnglishWorksheetDetail {
   school_level: string;
   grade: number;
   english_type: string;
+  problem_type?: string;
   problem_count: number;
   status: string;
   created_at: string;
   problems: EnglishProblem[];
   user_prompt?: string;
   generation_id?: string;
+  worksheet_data?: EnglishLLMResponseAndRequest;
 }
 
 export interface EnglishCategories {
@@ -103,6 +106,7 @@ export interface EnglishLLMResponseAndRequest {
   worksheet_subject: string;
   worksheet_level: string;
   worksheet_grade: number;
+  problem_type?: string;
   total_questions: number;
   passages: EnglishPassage[];
   questions: EnglishQuestion[];
@@ -117,6 +121,7 @@ export interface EnglishWorksheet {
   worksheet_subject: string;
   worksheet_level: string;
   worksheet_grade: number;
+  problem_type?: string;
   total_questions: number;
   passages: EnglishPassage[];
   questions: EnglishQuestion[];

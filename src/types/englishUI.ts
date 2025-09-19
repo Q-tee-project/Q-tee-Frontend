@@ -77,6 +77,7 @@ export interface EnglishUIData {
     subject: string;               // worksheet_subject → subject
     level: string;                 // worksheet_level → level
     grade: number;                 // worksheet_grade → grade
+    problemType?: string;          // problem_type → problemType
     totalQuestions: number;        // total_questions → totalQuestions
   };
   passages: ParsedPassage[];

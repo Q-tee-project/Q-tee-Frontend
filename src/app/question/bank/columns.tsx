@@ -66,11 +66,19 @@ export const columns: ColumnDef<AnyWorksheet>[] = [
   {
     accessorKey: 'title',
     header: () => <div className="text-center">제목</div>,
-    cell: ({ row }) => (
-      <div className="text-sm font-medium text-gray-900 truncate max-w-xs text-center">
-        {row.getValue('title')}
-      </div>
-    ),
+    cell: ({ row }) => {
+      const worksheet = row.original;
+      // 영어 워크시트는 worksheet_name을 사용할 수 있음
+      const title = worksheet.title ||
+                   ('worksheet_name' in worksheet ? worksheet.worksheet_name : null) ||
+                   '제목 없음';
+
+      return (
+        <div className="text-sm font-medium text-gray-900 truncate max-w-xs text-center">
+          {title}
+        </div>
+      );
+    },
   },
   {
     id: 'type_info',
@@ -81,7 +89,7 @@ export const columns: ColumnDef<AnyWorksheet>[] = [
       const typeInfo =
         'unit_name' in worksheet ? worksheet.unit_name :
         'korean_type' in worksheet ? worksheet.korean_type :
-        'english_type' in worksheet ? worksheet.english_type :
+        'problem_type' in worksheet ? worksheet.problem_type :
         '-';
 
       return (
