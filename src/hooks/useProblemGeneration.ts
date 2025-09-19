@@ -25,6 +25,7 @@ export interface GenerationState {
   showRegenerationInput: number | null;
   lastGenerationData: any;
   errorMessage: string | null;
+  currentWorksheetId: number | null;
 }
 
 export const useProblemGeneration = () => {
@@ -37,6 +38,7 @@ export const useProblemGeneration = () => {
     showRegenerationInput: null,
     lastGenerationData: null,
     errorMessage: null,
+    currentWorksheetId: null,
   });
 
   const updateState = (updates: Partial<GenerationState>) => {

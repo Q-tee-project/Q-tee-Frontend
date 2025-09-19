@@ -195,10 +195,10 @@ export const QuestionPreview: React.FC<QuestionPreviewProps> = ({
                   </div>
                 </div>
                 <div className="text-base leading-relaxed text-gray-900 mb-4">
-                  <LaTeXRenderer content={q.title} />
+                  <LaTeXRenderer content={q.question || q.title} />
                 </div>
-                {q.options &&
-                  q.options.map((opt, idx) => (
+                {(q.choices || q.options) &&
+                  (q.choices || q.options)!.map((opt, idx) => (
                     <div key={idx} className="flex items-start gap-3 mb-3">
                       <span
                         className={`flex-shrink-0 w-6 h-6 border-2 ${
@@ -223,7 +223,7 @@ export const QuestionPreview: React.FC<QuestionPreviewProps> = ({
               <div className="col-span-4">
                 <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
                   <div className="text-sm font-semibold text-gray-700 mb-2">
-                    {q.options && q.options.length > 0 ? (
+                    {((q.choices || q.options) && (q.choices || q.options)!.length > 0) ? (
                       <span>정답: {String.fromCharCode(65 + (q.answerIndex || 0))}</span>
                     ) : (
                       <div className="flex items-center gap-2">

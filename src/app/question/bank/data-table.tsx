@@ -63,7 +63,10 @@ export function DataTable<TData, TValue>({
       rowSelection,
     },
     // 페이지네이션 비활성화 - 모든 데이터 표시
-    enablePagination: false,
+    manualPagination: true,
+    // 컬럼 크기 조정 활성화
+    enableColumnResizing: true,
+    columnResizeMode: 'onChange',
   });
 
   // 선택 상태 초기화
@@ -82,8 +85,8 @@ export function DataTable<TData, TValue>({
   }, [rowSelection]); // rowSelection만 의존성으로 설정
 
   return (
-    <div>
-      <Table>
+    <div className="overflow-x-auto pb-2">
+      <Table style={{ minWidth: '720px' }}>
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id}>
@@ -105,8 +108,8 @@ export function DataTable<TData, TValue>({
               <TableRow
                 key={row.id}
                 data-state={row.getIsSelected() && 'selected'}
-                className={`cursor-pointer ${
-                  (row.original as any)?.id === selectedRowId ? 'bg-[#EBF6FF]' : ''
+                className={`cursor-pointer hover:bg-[#F8FAFF] transition-colors ${
+                  (row.original as any)?.id === selectedRowId ? 'bg-[#F0F7FF]' : ''
                 }`}
                 style={{ minHeight: '60px' }}
                 onClick={() => onRowClick?.(row.original)}

@@ -97,17 +97,6 @@ export class KoreanService {
     }
   }
 
-  // 국어 태스크 상태 확인
-  static async getKoreanTaskStatus(taskId: string): Promise<any> {
-    const response = await fetch(`${KOREAN_API_BASE}/tasks/${taskId}`);
-
-    if (!response.ok) {
-      throw new Error(`Korean API Error: ${response.status}`);
-    }
-
-    return response.json();
-  }
-
   // 국어 워크시트 업데이트
   static async updateKoreanWorksheet(
     worksheetId: number,
@@ -163,5 +152,60 @@ export class KoreanService {
         message: error instanceof Error ? error.message : 'Korean service connection failed',
       };
     }
+  }
+
+  // 비동기 문제 재생성 (Celery 사용)
+  static async regenerateProblemAsync(regenerateData: {
+    problem_id: number;
+    requirements: string;
+    current_problem: any;
+  }): Promise<{ task_id: string }> {
+    const token = localStorage.getItem('access_token');
+
+    if (!token) {
+      throw new Error('로그인이 필요합니다.');
+    }
+
+    const response = await fetch(`${KOREAN_API_BASE}/problems/regenerate-async`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(regenerateData),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Korean API Error: ${response.status}`);
+    }
+
+    return response.json();
+  }
+
+  // Celery 작업 상태 확인
+  static async getTaskStatus(taskId: string): Promise<{
+    status: string;
+    result?: any;
+    error?: string;
+  }> {
+    const token = localStorage.getItem('access_token');
+
+    if (!token) {
+      throw new Error('로그인이 필요합니다.');
+    }
+
+    const response = await fetch(`${KOREAN_API_BASE}/tasks/${taskId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Korean API Error: ${response.status}`);
+    }
+
+    return response.json();
   }
 }
