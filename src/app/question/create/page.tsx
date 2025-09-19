@@ -276,7 +276,7 @@ export default function CreatePage() {
 
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col" style={{ padding: '20px', display: 'flex', gap: '20px' }}>
       {/* 헤더 영역 */}
       <PageHeader
         icon={<PlusCircle />}
@@ -285,69 +285,71 @@ export default function CreatePage() {
         description="과목별 문제를 생성할 수 있습니다"
       />
 
-      {/* 과목 탭 */}
-      <div className="px-6 pb-2 flex-shrink-0">
-        <nav className="flex space-x-8">
-          {SUBJECTS.map((s) => (
-            <button
-              key={s}
-              onClick={() => handleSubjectChange(s)}
-              className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
-                subject === s
-                  ? 'border-[#0072CE] text-[#0072CE]'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              {s}
-            </button>
-          ))}
-        </nav>
-      </div>
-
       {/* 메인 컨텐츠 영역 */}
-      <div className="flex-1 p-4 min-h-0">
-        <div className="flex gap-4 h-full">
-          <Card className="w-[400px] flex flex-col shadow-sm h-[calc(100vh-200px)]">
-            <CardHeader className="flex flex-row items-center justify-center py-1 px-6 border-b border-gray-100">
-              <CardTitle className="text-base font-medium">문제 생성</CardTitle>
+      <div className="flex-1 min-h-0">
+        <div className="flex gap-6 h-full">
+          <Card className="w-1/3 flex flex-col shadow-sm h-[calc(100vh-200px)]" style={{ gap: '0', padding: '0' }}>
+            <CardHeader className="flex flex-row items-center justify-between border-b border-gray-100" style={{ padding: '20px' }}>
+              <CardTitle className="text-lg font-semibold text-gray-900">문제 생성</CardTitle>
             </CardHeader>
-            <CardContent className="flex-1 overflow-y-auto p-6">
+            <CardContent className="flex-1 min-h-0" style={{ padding: '20px' }}>
+              {/* 과목 탭 */}
+              <div className="mb-4">
+                <div className="flex gap-2">
+                  {SUBJECTS.map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => handleSubjectChange(s)}
+                      className={`py-2 px-4 text-sm font-medium rounded transition-colors duration-150 cursor-pointer ${
+                        subject === s
+                          ? 'bg-[#E6F3FF] text-[#0085FF]'
+                          : 'bg-[#f5f5f5] text-[#999999]'
+                      }`}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              
               {/* 과목별 컴포넌트 렌더링 */}
-              {subject === '국어' && (
-                <KoreanGenerator
-                  onGenerate={handleGenerate}
-                  isGenerating={currentGeneration.isGenerating}
-                />
-              )}
-              {subject === '영어' && (
-                <EnglishGenerator
-                  onGenerate={handleGenerate}
-                  isGenerating={currentGeneration.isGenerating}
-                />
-              )}
-              {subject === '수학' && (
-                <MathGenerator
-                  onGenerate={handleGenerate}
-                  isGenerating={currentGeneration.isGenerating}
-                />
-              )}
-              {!subject && (
-                <div className="flex items-center justify-center h-full text-gray-500">
-                  <div className="text-center">
-                    <div className="text-lg font-medium mb-2">과목을 선택해주세요</div>
+              <div className="overflow-y-auto pr-2" style={{ height: 'calc(100vh - 400px)' }}>
+                {subject === '국어' && (
+                  <KoreanGenerator
+                    onGenerate={handleGenerate}
+                    isGenerating={currentGeneration.isGenerating}
+                  />
+                )}
+                {subject === '영어' && (
+                  <EnglishGenerator
+                    onGenerate={handleGenerate}
+                    isGenerating={currentGeneration.isGenerating}
+                  />
+                )}
+                {subject === '수학' && (
+                  <MathGenerator
+                    onGenerate={handleGenerate}
+                    isGenerating={currentGeneration.isGenerating}
+                  />
+                )}
+                {!subject && (
+                  <div className="text-center py-8 text-gray-500">
                     <div className="text-sm">
-                      위의 탭에서 과목을 선택하면 문제 생성 폼이 나타납니다.
+                      과목을 선택해주세요
+                      <div className="mt-2">
+                        위의 탭에서 과목을 선택하면 문제 생성 폼이 나타납니다.
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </CardContent>
           </Card>
 
           {/* 오른쪽 영역 - 결과 미리보기 자리 */}
-          <Card className="flex-1 flex flex-col shadow-sm h-[calc(100vh-200px)]">
-            <CardHeader className="flex flex-row items-center justify-center py-1 px-6 border-b border-gray-100">
-              <CardTitle className="text-base font-medium">문제지</CardTitle>
+          <Card className="flex-1 flex flex-col shadow-sm h-[calc(100vh-200px)]" style={{ gap: '0', padding: '0' }}>
+            <CardHeader className="flex flex-row items-center justify-between border-b border-gray-100" style={{ padding: '20px' }}>
+              <CardTitle className="text-lg font-semibold text-gray-900">문제지</CardTitle>
             </CardHeader>
             <CardContent className="flex-1 flex flex-col">
               {/* 영어는 새로운 UI 컴포넌트 사용 */}

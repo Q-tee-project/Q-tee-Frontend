@@ -30,6 +30,8 @@ export const columns: ColumnDef<AnyWorksheet>[] = [
     ),
     enableSorting: false,
     enableHiding: false,
+    size: 50,
+    minSize: 50,
   },
   {
     accessorKey: 'school_level',
@@ -39,17 +41,21 @@ export const columns: ColumnDef<AnyWorksheet>[] = [
       return (
         <div className="flex justify-center">
           <Badge
-            className={`${
-              worksheet.school_level === '고등학교'
-                ? 'border-orange-300 text-orange-600 bg-orange-50'
-                : 'border-blue-300 text-blue-600 bg-blue-50'
-            }`}
+            className="rounded-[4px]"
+            style={{
+              backgroundColor: worksheet.school_level === '고등학교' ? '#FFF5E9' : '#E6F3FF',
+              color: worksheet.school_level === '고등학교' ? '#FF9F2D' : '#0085FF',
+              padding: '5px 10px',
+              fontSize: '14px',
+            }}
           >
             {worksheet.school_level}
           </Badge>
         </div>
       );
     },
+    size: 100,
+    minSize: 100,
   },
   {
     accessorKey: 'grade',
@@ -58,19 +64,33 @@ export const columns: ColumnDef<AnyWorksheet>[] = [
       const worksheet = row.original;
       return (
         <div className="flex justify-center">
-          <Badge className="border-gray-300 text-gray-600 bg-gray-50">{worksheet.grade}학년</Badge>
+          <Badge
+            className="rounded-[4px]"
+            style={{
+              backgroundColor: '#f5f5f5',
+              color: '#999999',
+              padding: '5px 10px',
+              fontSize: '14px',
+            }}
+          >
+            {worksheet.grade}학년
+          </Badge>
         </div>
       );
     },
+    size: 100,
+    minSize: 100,
   },
   {
     accessorKey: 'title',
     header: () => <div className="text-center">제목</div>,
     cell: ({ row }) => (
-      <div className="text-sm font-medium text-gray-900 truncate max-w-xs text-center">
+      <div className="text-sm font-medium text-gray-900 text-center">
         {row.getValue('title')}
       </div>
     ),
+    size: 200,
+    minSize: 200,
   },
   {
     id: 'type_info',
@@ -90,6 +110,8 @@ export const columns: ColumnDef<AnyWorksheet>[] = [
         </div>
       );
     },
+    size: 150,
+    minSize: 150,
   },
   {
     accessorKey: 'created_at',
@@ -111,5 +133,7 @@ export const columns: ColumnDef<AnyWorksheet>[] = [
         </div>
       );
     },
+    size: 120,
+    minSize: 120,
   },
 ];

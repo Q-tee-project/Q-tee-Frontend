@@ -104,7 +104,7 @@ export default function BankPage() {
   } = useDistribution();
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col" style={{ padding: '20px', display: 'flex', gap: '20px' }}>
       {/* 헤더 영역 */}
       <PageHeader
         icon={<FileText />}
@@ -113,28 +113,9 @@ export default function BankPage() {
         description="문제지 편집 및 배포할 수 있습니다"
       />
 
-      {/* 과목 탭 */}
-      <div className="px-6 pb-2 flex-shrink-0">
-        <nav className="flex space-x-8">
-          {[Subject.KOREAN, Subject.ENGLISH, Subject.MATH].map((subject) => (
-            <button
-              key={subject}
-              onClick={() => handleSubjectChange(subject)}
-              className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
-                selectedSubject === subject
-                  ? 'border-[#0072CE] text-[#0072CE]'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              {subject}
-            </button>
-          ))}
-        </nav>
-      </div>
-
       {/* 메인 컨텐츠 영역 */}
-      <div className="flex-1 p-4 min-h-0">
-        <div className="flex gap-4 h-full">
+      <div className="flex-1 min-h-0">
+        <div className="flex gap-6 h-full">
           <WorksheetList
             worksheets={currentBank.worksheets}
             selectedWorksheet={currentBank.selectedWorksheet}
@@ -149,6 +130,7 @@ export default function BankPage() {
               currentBank.handleBatchDeleteWorksheets as (worksheets: any[]) => void
             }
             onRefresh={currentBank.loadWorksheets}
+            onSubjectChange={handleSubjectChange}
           />
 
           {(() => {

@@ -117,7 +117,7 @@ export default function RegisterPage({ params }: RegisterPageProps) {
   };
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col" style={{ padding: '20px', display: 'flex', gap: '20px' }}>
       {/* 헤더 */}
       <PageHeader
         icon={<UserPlus />}
@@ -127,7 +127,7 @@ export default function RegisterPage({ params }: RegisterPageProps) {
       />
 
       {/* 메인 컨텐츠 */}
-      <div className="flex-1 p-6">
+      <div className="flex-1">
         <div className="mx-auto">
           {/* 전체 콘텐츠 컨테이너 */}
           <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-6">
