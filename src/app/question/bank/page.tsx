@@ -159,6 +159,14 @@ export default function BankPage() {
                   handleSaveTitle(currentBank.selectedWorksheet.id, currentBank.loadWorksheets)
                 }
                 onEditedTitleChange={setEditedTitle}
+                onRefresh={() => {
+                  if (currentBank.selectedWorksheet) {
+                    const worksheetId = currentBank.selectedWorksheet.worksheet_id;
+                    if (worksheetId) {
+                      currentBank.handleWorksheetSelect(currentBank.selectedWorksheet);
+                    }
+                  }
+                }}
               />
             );
           })()}

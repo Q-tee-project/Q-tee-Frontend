@@ -80,6 +80,7 @@ const transformToUIData = (response: EnglishLLMResponseAndRequest): EnglishUIDat
       subject: response.worksheet_subject,
       level: response.worksheet_level,
       grade: response.worksheet_grade,
+      problemType: response.problem_type,
       totalQuestions: response.total_questions,
     },
     passages: response.passages?.map(transformPassage) || [],

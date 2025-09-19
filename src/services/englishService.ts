@@ -52,12 +52,12 @@ export class EnglishService {
     }
 
     const data = await response.json();
-    return data.worksheets || [];
+    return data || [];
   }
 
   // 영어 워크시트 상세 정보 가져오기
   static async getEnglishWorksheetDetail(
-    worksheetId: number,
+    worksheetId: string | number,
   ): Promise<EnglishWorksheetDetail> {
     const currentUser = JSON.parse(localStorage.getItem('user_profile') || '{}');
     const userId = currentUser?.id;
@@ -159,6 +159,101 @@ export class EnglishService {
       worksheet_id: result.worksheet_id || worksheetData.worksheet_id,
       message: result.message || '영어 워크시트가 저장되었습니다.',
     };
+  }
+
+  // 영어 문제 수정
+  static async updateEnglishQuestion(
+    worksheetId: string,
+    questionId: number,
+    updateData: any,
+  ): Promise<{ success: boolean; message: string }> {
+    const currentUser = JSON.parse(localStorage.getItem('user_profile') || '{}');
+    const userId = currentUser?.id;
+
+    if (!userId) {
+      throw new Error('로그인이 필요합니다.');
+    }
+
+    const response = await fetch(
+      `${ENGLISH_API_BASE}/worksheets/${worksheetId}/questions/${questionId}?user_id=${userId}`,
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updateData),
+      },
+    );
+
+    if (!response.ok) {
+      throw new Error(`English API Error: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return { success: true, message: result.message || '영어 문제가 업데이트되었습니다.' };
+  }
+
+  // 영어 지문 수정
+  static async updateEnglishPassage(
+    worksheetId: string,
+    passageId: number,
+    updateData: any,
+  ): Promise<{ success: boolean; message: string }> {
+    const currentUser = JSON.parse(localStorage.getItem('user_profile') || '{}');
+    const userId = currentUser?.id;
+
+    if (!userId) {
+      throw new Error('로그인이 필요합니다.');
+    }
+
+    const response = await fetch(
+      `${ENGLISH_API_BASE}/worksheets/${worksheetId}/passages/${passageId}?user_id=${userId}`,
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updateData),
+      },
+    );
+
+    if (!response.ok) {
+      throw new Error(`English API Error: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return { success: true, message: result.message || '영어 지문이 업데이트되었습니다.' };
+  }
+
+  // 영어 워크시트 제목 수정
+  static async updateEnglishWorksheetTitle(
+    worksheetId: string,
+    newTitle: string,
+  ): Promise<{ success: boolean; message: string }> {
+    const currentUser = JSON.parse(localStorage.getItem('user_profile') || '{}');
+    const userId = currentUser?.id;
+
+    if (!userId) {
+      throw new Error('로그인이 필요합니다.');
+    }
+
+    const response = await fetch(
+      `${ENGLISH_API_BASE}/worksheets/${worksheetId}/title?user_id=${userId}`,
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ worksheet_name: newTitle }),
+      },
+    );
+
+    if (!response.ok) {
+      throw new Error(`English API Error: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return { success: true, message: result.message || '영어 워크시트 제목이 업데이트되었습니다.' };
   }
 
   // 영어 서비스 헬스체크
