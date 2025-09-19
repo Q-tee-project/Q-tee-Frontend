@@ -172,14 +172,35 @@ export const useWorksheetEdit = (selectedSubject?: string) => {
         const pollResult = await pollTaskStatus(taskResponse.task_id);
 
         if (pollResult.success && pollResult.result) {
-          // 폼 데이터를 재생성된 문제로 업데이트
+          // 폼 데이터를 재생성된 문제로 업데이트 (수학인 경우 LaTeX 변환 포함)
+          let processedResult = pollResult.result;
+
+          if (selectedSubject === '수학') {
+            const { autoConvertToLatex } = await import('@/utils/mathLatexConverter');
+            processedResult = {
+              ...pollResult.result,
+              question: pollResult.result.question
+                ? autoConvertToLatex(pollResult.result.question)
+                : pollResult.result.question,
+              choices: pollResult.result.choices
+                ? pollResult.result.choices.map((choice: string) => autoConvertToLatex(choice))
+                : pollResult.result.choices,
+              correct_answer: pollResult.result.correct_answer
+                ? autoConvertToLatex(pollResult.result.correct_answer)
+                : pollResult.result.correct_answer,
+              explanation: pollResult.result.explanation
+                ? autoConvertToLatex(pollResult.result.explanation)
+                : pollResult.result.explanation,
+            };
+          }
+
           setEditFormData({
-            question: pollResult.result.question || '',
-            problem_type: pollResult.result.problem_type || editFormData.problem_type,
-            difficulty: pollResult.result.difficulty || editFormData.difficulty,
-            choices: pollResult.result.choices || editFormData.choices,
-            correct_answer: pollResult.result.correct_answer || '',
-            explanation: pollResult.result.explanation || '',
+            question: processedResult.question || '',
+            problem_type: processedResult.problem_type || editFormData.problem_type,
+            difficulty: processedResult.difficulty || editFormData.difficulty,
+            choices: processedResult.choices || editFormData.choices,
+            correct_answer: processedResult.correct_answer || '',
+            explanation: processedResult.explanation || '',
           });
 
           alert('문제가 성공적으로 재생성되었습니다.');

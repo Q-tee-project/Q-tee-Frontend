@@ -97,17 +97,6 @@ export class KoreanService {
     }
   }
 
-  // 국어 태스크 상태 확인
-  static async getKoreanTaskStatus(taskId: string): Promise<any> {
-    const response = await fetch(`${KOREAN_API_BASE}/tasks/${taskId}`);
-
-    if (!response.ok) {
-      throw new Error(`Korean API Error: ${response.status}`);
-    }
-
-    return response.json();
-  }
-
   // 국어 워크시트 업데이트
   static async updateKoreanWorksheet(
     worksheetId: number,
@@ -205,7 +194,7 @@ export class KoreanService {
       throw new Error('로그인이 필요합니다.');
     }
 
-    const response = await fetch(`${KOREAN_API_BASE}/tasks/${taskId}/status`, {
+    const response = await fetch(`${KOREAN_API_BASE}/tasks/${taskId}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',

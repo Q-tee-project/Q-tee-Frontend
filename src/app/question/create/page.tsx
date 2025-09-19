@@ -18,22 +18,10 @@ import { useEnglishWorksheetSave } from '@/hooks/useEnglishWorksheetSave';
 
 const SUBJECTS = ['국어', '영어', '수학'];
 
-// 과목명을 영어 코드로 변환하는 함수
-const getSubjectCode = (subjectName: string): 'korean' | 'math' | 'english' => {
-  switch (subjectName) {
-    case '국어':
-      return 'korean';
-    case '수학':
-      return 'math';
-    case '영어':
-      return 'english';
-    default:
-      return 'math'; // 기본값
-  }
-};
 
 export default function CreatePage() {
   const [subject, setSubject] = useState<string>('');
+  const [forceUpdateKey, setForceUpdateKey] = useState(0); // 강제 리렌더링을 위한 키
 
   // 과목별 생성 훅들
   const koreanGeneration = useKoreanGeneration();
@@ -47,6 +35,7 @@ export default function CreatePage() {
   // 현재 선택된 과목에 따른 상태
   const currentGeneration =
     subject === '국어' ? koreanGeneration : subject === '수학' ? mathGeneration : englishGeneration;
+
 
   // Toast 자동 닫기
   React.useEffect(() => {
@@ -81,10 +70,170 @@ export default function CreatePage() {
     }
   };
 
-  // 문제 재생성 핸들러 (수학만 지원)
-  const handleRegenerateQuestion = (questionId: number, prompt?: string) => {
-    if (subject === '수학' && mathGeneration.regenerateQuestion) {
-      mathGeneration.regenerateQuestion(questionId, prompt);
+  // 문제 재생성 핸들러 - bank 페이지와 동일한 방식 사용
+  const handleRegenerateQuestion = async (questionId: number, prompt?: string) => {
+    console.log('🔄 재생성 시작:', { questionId, prompt });
+
+    if (!prompt) {
+      alert('재생성 요구사항을 입력해주세요.');
+      return;
+    }
+
+    try {
+      // 현재 문제 찾기
+      const currentQuestion = currentGeneration.previewQuestions.find(q => q.id === questionId);
+      console.log('📝 현재 문제:', currentQuestion);
+
+      if (!currentQuestion) {
+        alert('문제를 찾을 수 없습니다.');
+        return;
+      }
+
+      // 재생성 시작 상태로 설정
+      currentGeneration.updateState({
+        regeneratingQuestionId: questionId
+      });
+
+      // MathService의 재생성 API 직접 호출
+      const { MathService } = await import('@/services/mathService');
+
+      // backendId가 실제 데이터베이스의 문제 ID
+      const backendProblemId = currentQuestion.backendId;
+      if (!backendProblemId) {
+        alert('백엔드 문제 ID를 찾을 수 없습니다. 문제가 아직 저장되지 않았을 수 있습니다.');
+        return;
+      }
+
+      const regenerateData = {
+        problem_id: backendProblemId,
+        requirements: prompt,
+        current_problem: {
+          question: currentQuestion.question,
+          problem_type: currentQuestion.problem_type || 'multiple_choice',
+          choices: currentQuestion.choices || [],
+          correct_answer: currentQuestion.correct_answer || '',
+          explanation: currentQuestion.explanation || '',
+        }
+      };
+
+      const taskResponse = await MathService.regenerateProblemAsync(regenerateData);
+
+      if (taskResponse?.task_id) {
+        // 작업 상태 폴링
+        let attempts = 0;
+        const maxAttempts = 300;
+        const interval = 2000;
+
+        const pollTaskStatus = async () => {
+          while (attempts < maxAttempts) {
+            try {
+              const statusResponse = await MathService.getTaskStatus(taskResponse.task_id);
+
+              if (statusResponse?.status === 'SUCCESS') {
+                // 성공 시 문제 업데이트 (LaTeX 변환 제거 - LaTeXRenderer가 처리)
+                const result = statusResponse.result;
+
+                // questionId는 프론트엔드 ID, backendId와 매칭해야 함
+                const updatedQuestions = currentGeneration.previewQuestions.map(q => {
+                  // 프론트엔드 ID 또는 백엔드 ID 중 하나라도 매칭되면 업데이트
+                  const isTargetQuestion = q.id === questionId || q.backendId === backendProblemId;
+
+                  if (isTargetQuestion) {
+                    console.log('🎯 문제 매칭됨:', {
+                      frontendId: q.id,
+                      backendId: q.backendId,
+                      questionId,
+                      backendProblemId
+                    });
+
+                    return {
+                      ...q,
+                      question: result.question || q.question,
+                      problem_type: result.problem_type || q.problem_type,
+                      choices: result.choices || q.choices,
+                      correct_answer: result.correct_answer || q.correct_answer,
+                      explanation: result.explanation || q.explanation,
+                    };
+                  }
+                  return q;
+                });
+
+                console.log('🔄 재생성 결과 업데이트:', {
+                  originalQuestions: currentGeneration.previewQuestions.length,
+                  updatedQuestions: updatedQuestions.length,
+                  questionId,
+                  result
+                });
+
+                // 상태 업데이트 with 강제 리렌더링
+                if (subject === '수학') {
+                  // 완전히 새로운 배열과 객체 참조로 업데이트
+                  const newQuestions = updatedQuestions.map(q => ({
+                    ...q,
+                    // 수학 문제의 경우 choices를 options로도 매핑
+                    options: q.choices || q.options,
+                    title: q.question || q.title
+                  }));
+
+                  mathGeneration.updateState({
+                    previewQuestions: newQuestions,
+                    regeneratingQuestionId: null,
+                    showRegenerationInput: null,
+                    regenerationPrompt: ''
+                  });
+                  console.log('✅ mathGeneration 상태 업데이트 완료');
+                } else {
+                  const newQuestions = updatedQuestions.map(q => ({
+                    ...q,
+                    // 다른 과목의 경우도 동일하게 매핑
+                    options: q.choices || q.options,
+                    title: q.question || q.title
+                  }));
+
+                  currentGeneration.updateState({
+                    previewQuestions: newQuestions,
+                    regeneratingQuestionId: null,
+                    showRegenerationInput: null,
+                    regenerationPrompt: ''
+                  });
+                  console.log('✅ currentGeneration 상태 업데이트 완료');
+                }
+
+                // 컴포넌트 강제 리렌더링
+                setForceUpdateKey(prev => prev + 1);
+                console.log('🔄 컴포넌트 강제 리렌더링 트리거');
+
+                alert('문제가 성공적으로 재생성되었습니다.');
+                return;
+              } else if (statusResponse?.status === 'FAILURE') {
+                throw new Error(statusResponse.error || '재생성 작업이 실패했습니다.');
+              }
+
+              // 아직 진행 중이면 잠시 대기
+              await new Promise(resolve => setTimeout(resolve, interval));
+              attempts++;
+            } catch (error) {
+              console.error('작업 상태 확인 중 오류:', error);
+              attempts++;
+              await new Promise(resolve => setTimeout(resolve, interval));
+            }
+          }
+
+          throw new Error('재생성 작업이 시간 초과되었습니다.');
+        };
+
+        await pollTaskStatus();
+      }
+    } catch (error: any) {
+      console.error('문제 재생성 실패:', error);
+      alert(`재생성 실패: ${error.message}`);
+
+      // 실패 시 재생성 상태 해제
+      currentGeneration.updateState({
+        regeneratingQuestionId: null,
+        showRegenerationInput: null,
+        regenerationPrompt: ''
+      });
     }
   };
 
@@ -99,7 +248,7 @@ export default function CreatePage() {
 
       englishWorksheetSave.saveEnglishWorksheet(
         englishGeneration.uiData,
-        (worksheetId) => {
+        () => {
           currentGeneration.updateState({
             errorMessage: '영어 문제지가 성공적으로 저장되었습니다! ✅',
           });
@@ -113,7 +262,7 @@ export default function CreatePage() {
       worksheetSave.saveWorksheet(
         subject,
         currentGeneration.previewQuestions,
-        (worksheetId) => {
+        () => {
           currentGeneration.updateState({
             errorMessage: '문제지가 성공적으로 저장되었습니다! ✅',
           });
@@ -125,19 +274,6 @@ export default function CreatePage() {
     }
   };
 
-  // uiData를 previewQuestions 형식으로 변환하는 함수
-  const convertUIDataToPreviewQuestions = (uiData: any) => {
-    return uiData.questions.map((question: any) => ({
-      id: question.id,
-      title: question.questionText,
-      options: question.choices,
-      answerIndex: typeof question.correctAnswer === 'number' ? question.correctAnswer : undefined,
-      correct_answer: typeof question.correctAnswer === 'string' ? question.correctAnswer : undefined,
-      explanation: question.explanation,
-      backendId: question.id,
-      problem_type: question.subject,
-    }));
-  };
 
   return (
     <div className="flex flex-col">
@@ -217,7 +353,7 @@ export default function CreatePage() {
               {/* 영어는 새로운 UI 컴포넌트 사용 */}
               {subject === '영어' ? (
                 <EnglishQuestionPreview
-                  uiData={englishGeneration.uiData || undefined}
+                  previewQuestions={currentGeneration.previewQuestions}
                   isGenerating={currentGeneration.isGenerating}
                   generationProgress={currentGeneration.generationProgress}
                   worksheetName={englishWorksheetSave.worksheetName}
@@ -236,9 +372,9 @@ export default function CreatePage() {
                   isSaving={englishWorksheetSave.isSaving}
                 />
               ) : (
-                // 다른 과목은 기존 방식
+                // 다른 과목은 기존 방식 (forceUpdateKey로 강제 리렌더링)
                 <QuestionPreview
-                  subject={getSubjectCode(subject)}
+                  key={`${subject}-${forceUpdateKey}`}
                   previewQuestions={currentGeneration.previewQuestions}
                   isGenerating={currentGeneration.isGenerating}
                   generationProgress={currentGeneration.generationProgress}

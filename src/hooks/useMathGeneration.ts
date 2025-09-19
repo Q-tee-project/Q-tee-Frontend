@@ -10,6 +10,7 @@ export const useMathGeneration = () => {
     showRegenerationInput,
     lastGenerationData,
     errorMessage,
+    currentWorksheetId,
     updateState,
     resetGeneration,
     clearError,
@@ -40,7 +41,7 @@ export const useMathGeneration = () => {
       // 문제 생성 API 호출 (Bearer 토큰 포함)
       const token = localStorage.getItem('access_token');
       const response = await fetch(
-        `http://localhost:8001/api/math-generation/generate?user_id=${userId}`,
+        `http://localhost:8001/generate?user_id=${userId}`,
         {
           method: 'POST',
           headers: {
@@ -100,7 +101,7 @@ export const useMathGeneration = () => {
       // 재생성 API 호출 (Bearer 토큰 포함)
       const token = localStorage.getItem('access_token');
       const response = await fetch(
-        `http://localhost:8001/api/math-generation/regenerate?user_id=${userId}`,
+        `http://localhost:8001/regenerate?user_id=${userId}`,
         {
           method: 'POST',
           headers: {
@@ -189,7 +190,7 @@ export const useMathGeneration = () => {
 
     const poll = async () => {
       try {
-        const apiUrl = `http://localhost:8001/api/math-generation/tasks/${taskId}`;
+        const apiUrl = `http://localhost:8001/tasks/${taskId}`;
         const token = localStorage.getItem('access_token');
         const response = await fetch(apiUrl, {
           headers: {
@@ -251,7 +252,7 @@ export const useMathGeneration = () => {
         throw new Error('로그인이 필요합니다.');
       }
 
-      const apiUrl = `http://localhost:8001/api/math-generation/worksheets/${worksheetId}?user_id=${userId}`;
+      const apiUrl = `http://localhost:8001/worksheets/${worksheetId}?user_id=${userId}`;
       const token = localStorage.getItem('access_token');
       const response = await fetch(apiUrl, {
         headers: {
@@ -424,7 +425,10 @@ export const useMathGeneration = () => {
           });
         }
 
-        updateState({ previewQuestions: validQuestions });
+        updateState({
+          previewQuestions: validQuestions,
+          currentWorksheetId: worksheetId // 워크시트 ID 저장
+        });
       } else {
         console.error('❌ API 응답에 problems 배열이 없음:', data);
         updateState({
@@ -453,6 +457,7 @@ export const useMathGeneration = () => {
     showRegenerationInput,
     lastGenerationData,
     errorMessage,
+    currentWorksheetId,
     generateMathProblems,
     regenerateQuestion,
     updateState,

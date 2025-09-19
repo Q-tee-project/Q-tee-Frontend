@@ -1,7 +1,7 @@
 import { apiRequest, API_BASE_URL } from '@/lib/api';
 import { Categories, QuestionFormData, QuestionGenerationResponse, Question } from '@/types/api';
 
-const MATH_API_BASE = 'http://localhost:8001/api/math-generation';
+const MATH_API_BASE = 'http://localhost:8001';
 
 export class MathService {
   // 수학 문제 생성

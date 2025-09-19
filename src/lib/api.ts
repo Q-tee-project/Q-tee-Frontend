@@ -78,25 +78,25 @@ export const mathApi = {
   // 교육과정 구조 조회
   async getCurriculumStructure(schoolLevel?: string) {
     const params = schoolLevel ? `?school_level=${schoolLevel}` : '';
-    return apiRequest<{ structure: any }>(`/api/math-generation/curriculum/structure${params}`);
+    return apiRequest<{ structure: any }>(`/curriculum/structure${params}`);
   },
 
   // 대단원 목록 조회
   async getUnits() {
-    return apiRequest<{ units: any[] }>('/api/math-generation/curriculum/units');
+    return apiRequest<{ units: any[] }>('/curriculum/units');
   },
 
   // 소단원 목록 조회 (대단원명으로 필터링)
   async getChaptersByUnit(unitName: string) {
     return apiRequest<{ chapters: any[] }>(
-      `/api/math-generation/curriculum/chapters?unit_name=${encodeURIComponent(unitName)}`,
+      `/curriculum/chapters?unit_name=${encodeURIComponent(unitName)}`,
     );
   },
 
   // 문제 생성
   async generateProblems(requestData: any) {
     return apiRequest<{ task_id: string; status: string; message: string }>(
-      '/api/math-generation/generate',
+      '/generate',
       {
         method: 'POST',
         body: JSON.stringify(requestData),
@@ -106,19 +106,19 @@ export const mathApi = {
 
   // 태스크 상태 조회
   async getTaskStatus(taskId: string) {
-    return apiRequest<any>(`/api/math-generation/tasks/${taskId}`);
+    return apiRequest<any>(`/tasks/${taskId}`);
   },
 
   // 워크시트 목록 조회
   async getWorksheets(skip = 0, limit = 20) {
     return apiRequest<{ worksheets: any[]; total: number }>(
-      `/api/math-generation/worksheets?skip=${skip}&limit=${limit}`,
+      `/worksheets?skip=${skip}&limit=${limit}`,
     );
   },
 
   // 워크시트 상세 조회
   async getWorksheetDetail(worksheetId: number) {
-    return apiRequest<any>(`/api/math-generation/worksheets/${worksheetId}`);
+    return apiRequest<any>(`/worksheets/${worksheetId}`);
   },
 };
 
