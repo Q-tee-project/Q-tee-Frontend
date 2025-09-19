@@ -69,8 +69,8 @@ export const useWorksheetSave = () => {
       console.log('💾 문제지 저장 요청:', saveData);
 
       const endpoint = currentWorksheetId
-        ? `http://localhost:8001/api/math-generation/worksheets/${currentWorksheetId}?user_id=${userId}`
-        : `http://localhost:8001/api/math-generation/save-worksheet?user_id=${userId}`;
+        ? `http://localhost:8001/worksheets/${currentWorksheetId}?user_id=${userId}`
+        : `http://localhost:8001/save-worksheet?user_id=${userId}`;
 
       const method = currentWorksheetId ? 'PUT' : 'POST';
 
