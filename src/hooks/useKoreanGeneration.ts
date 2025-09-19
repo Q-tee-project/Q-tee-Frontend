@@ -37,13 +37,15 @@ export const useKoreanGeneration = () => {
       // 생성 데이터 저장 (재생성에 사용)
       updateState({ lastGenerationData: requestData });
 
-      // 국어 문제 생성 API 호출
+      // 국어 문제 생성 API 호출 (Bearer 토큰 포함)
+      const token = localStorage.getItem('access_token');
       const response = await fetch(
         `http://localhost:8004/api/korean-generation/generate?user_id=${userId}`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
           body: JSON.stringify(requestData),
         },
@@ -76,7 +78,12 @@ export const useKoreanGeneration = () => {
     const poll = async () => {
       try {
         const apiUrl = `http://localhost:8004/api/korean-generation/tasks/${taskId}`;
-        const response = await fetch(apiUrl);
+        const token = localStorage.getItem('access_token');
+        const response = await fetch(apiUrl, {
+          headers: {
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        });
         const data = await response.json();
 
         console.log('📊 태스크 상태:', data);
@@ -133,7 +140,12 @@ export const useKoreanGeneration = () => {
       }
 
       const apiUrl = `http://localhost:8004/api/korean-generation/worksheets/${worksheetId}?user_id=${userId}`;
-      const response = await fetch(apiUrl);
+      const token = localStorage.getItem('access_token');
+      const response = await fetch(apiUrl, {
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
       const data = await response.json();
 
       console.log('🔍 워크시트 조회 결과:', data);

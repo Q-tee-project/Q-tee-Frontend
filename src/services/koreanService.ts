@@ -10,17 +10,17 @@ const KOREAN_API_BASE = 'http://localhost:8004/api/korean-generation';
 export class KoreanService {
   // 국어 문제 생성
   static async generateKoreanProblems(formData: KoreanFormData): Promise<KoreanGenerationResponse> {
-    const currentUser = JSON.parse(localStorage.getItem('user_profile') || '{}');
-    const userId = currentUser?.id;
+    const token = localStorage.getItem('access_token');
 
-    if (!userId) {
+    if (!token) {
       throw new Error('로그인이 필요합니다.');
     }
 
-    const response = await fetch(`${KOREAN_API_BASE}/generate?user_id=${userId}`, {
+    const response = await fetch(`${KOREAN_API_BASE}/generate`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(formData),
     });
@@ -34,14 +34,17 @@ export class KoreanService {
 
   // 국어 워크시트 목록 가져오기
   static async getKoreanWorksheets(): Promise<KoreanWorksheet[]> {
-    const currentUser = JSON.parse(localStorage.getItem('user_profile') || '{}');
-    const userId = currentUser?.id;
+    const token = localStorage.getItem('access_token');
 
-    if (!userId) {
+    if (!token) {
       throw new Error('로그인이 필요합니다.');
     }
 
-    const response = await fetch(`${KOREAN_API_BASE}/worksheets?user_id=${userId}&limit=100`);
+    const response = await fetch(`${KOREAN_API_BASE}/worksheets?limit=100`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
     if (!response.ok) {
       throw new Error(`Korean API Error: ${response.status}`);
@@ -55,14 +58,17 @@ export class KoreanService {
   static async getKoreanWorksheetDetail(
     worksheetId: number,
   ): Promise<{ worksheet: KoreanWorksheet; problems: KoreanProblem[] }> {
-    const currentUser = JSON.parse(localStorage.getItem('user_profile') || '{}');
-    const userId = currentUser?.id;
+    const token = localStorage.getItem('access_token');
 
-    if (!userId) {
+    if (!token) {
       throw new Error('로그인이 필요합니다.');
     }
 
-    const response = await fetch(`${KOREAN_API_BASE}/worksheets/${worksheetId}?user_id=${userId}`);
+    const response = await fetch(`${KOREAN_API_BASE}/worksheets/${worksheetId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
     if (!response.ok) {
       throw new Error(`Korean API Error: ${response.status}`);
@@ -71,15 +77,24 @@ export class KoreanService {
     return response.json();
   }
 
-  // 국어 태스크 상태 확인
-  static async getKoreanTaskStatus(taskId: string): Promise<any> {
-    const response = await fetch(`${KOREAN_API_BASE}/tasks/${taskId}`);
+  // 국어 워크시트 삭제
+  static async deleteKoreanWorksheet(worksheetId: number): Promise<void> {
+    const token = localStorage.getItem('access_token');
+
+    if (!token) {
+      throw new Error('로그인이 필요합니다.');
+    }
+
+    const response = await fetch(`${KOREAN_API_BASE}/worksheets/${worksheetId}`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
     if (!response.ok) {
       throw new Error(`Korean API Error: ${response.status}`);
     }
-
-    return response.json();
   }
 
   // 국어 워크시트 업데이트
@@ -87,17 +102,17 @@ export class KoreanService {
     worksheetId: number,
     updateData: any,
   ): Promise<{ success: boolean; message: string }> {
-    const currentUser = JSON.parse(localStorage.getItem('user_profile') || '{}');
-    const userId = currentUser?.id;
+    const token = localStorage.getItem('access_token');
 
-    if (!userId) {
+    if (!token) {
       throw new Error('로그인이 필요합니다.');
     }
 
-    const response = await fetch(`${KOREAN_API_BASE}/worksheets/${worksheetId}?user_id=${userId}`, {
+    const response = await fetch(`${KOREAN_API_BASE}/worksheets/${worksheetId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(updateData),
     });
@@ -137,5 +152,60 @@ export class KoreanService {
         message: error instanceof Error ? error.message : 'Korean service connection failed',
       };
     }
+  }
+
+  // 비동기 문제 재생성 (Celery 사용)
+  static async regenerateProblemAsync(regenerateData: {
+    problem_id: number;
+    requirements: string;
+    current_problem: any;
+  }): Promise<{ task_id: string }> {
+    const token = localStorage.getItem('access_token');
+
+    if (!token) {
+      throw new Error('로그인이 필요합니다.');
+    }
+
+    const response = await fetch(`${KOREAN_API_BASE}/problems/regenerate-async`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(regenerateData),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Korean API Error: ${response.status}`);
+    }
+
+    return response.json();
+  }
+
+  // Celery 작업 상태 확인
+  static async getTaskStatus(taskId: string): Promise<{
+    status: string;
+    result?: any;
+    error?: string;
+  }> {
+    const token = localStorage.getItem('access_token');
+
+    if (!token) {
+      throw new Error('로그인이 필요합니다.');
+    }
+
+    const response = await fetch(`${KOREAN_API_BASE}/tasks/${taskId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Korean API Error: ${response.status}`);
+    }
+
+    return response.json();
   }
 }
