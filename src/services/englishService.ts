@@ -4,9 +4,10 @@ import {
   EnglishWorksheet,
   EnglishProblem,
   EnglishWorksheetDetail,
+  EnglishLLMResponseAndRequest,
 } from '@/types/english';
 
-const ENGLISH_API_BASE = 'http://localhost:8002/api/english-generation';
+const ENGLISH_API_BASE = 'http://localhost:8002/api/english';
 
 export class EnglishService {
   // 영어 문제 생성
@@ -20,7 +21,7 @@ export class EnglishService {
       throw new Error('로그인이 필요합니다.');
     }
 
-    const response = await fetch(`${ENGLISH_API_BASE}/generate?user_id=${userId}`, {
+    const response = await fetch(`${ENGLISH_API_BASE}/worksheet-generate?user_id=${userId}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -57,7 +58,7 @@ export class EnglishService {
   // 영어 워크시트 상세 정보 가져오기
   static async getEnglishWorksheetDetail(
     worksheetId: number,
-  ): Promise<{ worksheet: EnglishWorksheet; problems: EnglishProblem[] }> {
+  ): Promise<EnglishWorksheetDetail> {
     const currentUser = JSON.parse(localStorage.getItem('user_profile') || '{}');
     const userId = currentUser?.id;
 
@@ -121,6 +122,43 @@ export class EnglishService {
 
     const result = await response.json();
     return { success: true, message: result.message || '영어 워크시트가 업데이트되었습니다.' };
+  }
+
+  // 영어 워크시트 저장
+  static async saveEnglishWorksheet(
+    worksheetData: EnglishLLMResponseAndRequest,
+  ): Promise<{ worksheet_id: string; message: string }> {
+    const currentUser = JSON.parse(localStorage.getItem('user_profile') || '{}');
+    const userId = currentUser?.id;
+
+    if (!userId) {
+      throw new Error('로그인이 필요합니다.');
+    }
+
+    const response = await fetch(`${ENGLISH_API_BASE}/worksheet-save`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(worksheetData),
+    });
+
+    if (!response.ok) {
+      let errorMessage = `English API Error: ${response.status}`;
+      try {
+        const errorData = await response.text();
+        errorMessage += ` - ${errorData}`;
+      } catch (e) {
+        // JSON 파싱 실패 시 기본 메시지 사용
+      }
+      throw new Error(errorMessage);
+    }
+
+    const result = await response.json();
+    return {
+      worksheet_id: result.worksheet_id || worksheetData.worksheet_id,
+      message: result.message || '영어 워크시트가 저장되었습니다.',
+    };
   }
 
   // 영어 서비스 헬스체크
