@@ -31,6 +31,7 @@ export const useEnglishWorksheetSave = () => {
       worksheet_subject: uiData.worksheetInfo.subject,
       worksheet_level: uiData.worksheetInfo.level,
       worksheet_grade: uiData.worksheetInfo.grade,
+      problem_type: uiData.worksheetInfo.problemType,
       total_questions: uiData.worksheetInfo.totalQuestions,
       passages: uiData.passages.map((passage: ParsedPassage) => ({
         passage_id: passage.id,

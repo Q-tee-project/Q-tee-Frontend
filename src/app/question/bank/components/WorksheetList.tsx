@@ -24,6 +24,7 @@ interface WorksheetListProps {
   onDeleteWorksheet: (worksheet: AnyWorksheet, event: React.MouseEvent) => void;
   onBatchDeleteWorksheets: (worksheets: AnyWorksheet[]) => void;
   onRefresh: () => void;
+  onSubjectChange: (subject: string) => void;
 }
 
 export const WorksheetList: React.FC<WorksheetListProps> = ({
@@ -36,6 +37,7 @@ export const WorksheetList: React.FC<WorksheetListProps> = ({
   onDeleteWorksheet,
   onBatchDeleteWorksheets,
   onRefresh,
+  onSubjectChange,
 }) => {
   const [selectedWorksheets, setSelectedWorksheets] = useState<AnyWorksheet[]>([]);
   const [clearSelection, setClearSelection] = useState(false);
@@ -75,9 +77,10 @@ export const WorksheetList: React.FC<WorksheetListProps> = ({
   return (
     <Card
       className={`w-1/3 flex flex-col shadow-sm ${hasNoData ? 'h-auto' : 'h-[calc(100vh-200px)]'}`}
+      style={{ gap: '0', padding: '0' }}
     >
-      <CardHeader className="flex flex-row items-center justify-between py-6 px-6 border-b border-gray-100">
-        <CardTitle className="text-lg font-medium">
+      <CardHeader className="flex flex-row items-center justify-between border-b border-gray-100" style={{ padding: '20px' }}>
+        <CardTitle className="text-lg font-semibold text-gray-900">
           문제 목록
           {selectedWorksheets.length > 0 && (
             <span className="ml-2 text-sm text-[#0072CE]">
@@ -120,27 +123,44 @@ export const WorksheetList: React.FC<WorksheetListProps> = ({
           )}
         </div>
       </CardHeader>
-      <CardContent className={`p-0 ${hasNoData ? 'flex-none' : 'flex-1 overflow-hidden'}`}>
+      <CardContent className={`flex-1 min-h-0 ${hasNoData ? 'flex-none' : ''}`} style={{ padding: '20px' }}>
+        {/* 과목 탭 */}
+        <div className="mb-4">
+          <div className="flex gap-2">
+            {[Subject.KOREAN, Subject.ENGLISH, Subject.MATH].map((subject) => (
+              <button
+                key={subject}
+                onClick={() => onSubjectChange(subject)}
+                className={`py-2 px-4 text-sm font-medium rounded transition-colors duration-150 cursor-pointer ${
+                  selectedSubject === subject
+                    ? 'bg-[#E6F3FF] text-[#0085FF]'
+                    : 'bg-[#f5f5f5] text-[#999999]'
+                }`}
+              >
+                {subject}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {hasNoData ? (
-          <div className="p-4">
-            <div className="px-4 py-8 text-center text-gray-400 text-sm">
+          <div className="text-center py-8 text-gray-500">
+            <div className="text-sm">
               저장된 워크시트가 없습니다 (로딩 상태: {isLoading ? '로딩 중' : '로딩 완료'}, 과목:{' '}
               {selectedSubject}){error && <div className="text-red-500 mt-2">오류: {error}</div>}
             </div>
           </div>
         ) : (
-          <ScrollArea style={{ height: 'calc(100vh - 350px)' }} className="w-full">
-            <div className="p-4">
-              <DataTable
-                columns={columns}
-                data={worksheets}
-                onRowClick={onWorksheetSelect}
-                selectedRowId={selectedWorksheet?.id}
-                onRowSelectionChange={handleRowSelectionChange}
-                clearSelection={clearSelection}
-              />
-            </div>
-          </ScrollArea>
+          <div className="overflow-y-auto pr-2" style={{ height: 'calc(100vh - 400px)' }}>
+            <DataTable
+              columns={columns}
+              data={worksheets}
+              onRowClick={onWorksheetSelect}
+              selectedRowId={selectedWorksheet?.id}
+              onRowSelectionChange={handleRowSelectionChange}
+              clearSelection={clearSelection}
+            />
+          </div>
         )}
       </CardContent>
     </Card>

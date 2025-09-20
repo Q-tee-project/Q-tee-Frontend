@@ -27,7 +27,7 @@ export function PageHeader({
   };
 
   return (
-    <div className="px-6 py-4">
+    <div>
       <div className="flex items-center justify-between">
         <div className="flex items-center">
           {icon && (
