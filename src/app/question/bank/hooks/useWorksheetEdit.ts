@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { MathService } from '@/services/mathService';
-import { KoreanService } from '@/services/koreanService';
+import { mathService } from '@/services/mathService';
+import { koreanService } from '@/services/koreanService';
 import { MathProblem } from '@/types/math';
 import { KoreanProblem } from '@/types/korean';
 import { autoConvertToLatex } from '@/utils/mathLatexConverter';
@@ -67,9 +67,9 @@ export const useWorksheetEdit = (selectedSubject?: string) => {
       // 과목에 따라 적절한 서비스 사용
       if (selectedSubject === '국어') {
         // 국어는 현재 워크시트 업데이트 사용
-        await KoreanService.updateKoreanWorksheet(editingProblem.id, updateData);
+        await koreanService.updateProblem(editingProblem.id, updateData);
       } else if (selectedSubject === '수학') {
-        await MathService.updateProblem(editingProblem.id, updateData);
+        await mathService.updateProblem(editingProblem.id, updateData);
       } else {
         throw new Error('지원되지 않는 과목입니다.');
       }
@@ -115,11 +115,11 @@ export const useWorksheetEdit = (selectedSubject?: string) => {
     try {
       // 과목에 따라 적절한 서비스 사용
       if (selectedSubject === '국어') {
-        await KoreanService.updateKoreanWorksheet(worksheetId, {
+        await koreanService.updateKoreanWorksheet(worksheetId, {
           title: editedTitle.trim(),
         });
       } else if (selectedSubject === '수학') {
-        await MathService.updateMathWorksheet(worksheetId, {
+        await mathService.updateMathWorksheet(worksheetId, {
           title: editedTitle.trim(),
         });
       } else {
@@ -159,9 +159,9 @@ export const useWorksheetEdit = (selectedSubject?: string) => {
 
       // 국어와 수학만 처리 (Celery 통해 비동기 처리)
       if (selectedSubject === '국어') {
-        taskResponse = await KoreanService.regenerateProblemAsync(regenerateData);
+        taskResponse = await koreanService.regenerateProblemAsync(regenerateData);
       } else if (selectedSubject === '수학') {
-        taskResponse = await MathService.regenerateProblemAsync(regenerateData);
+        taskResponse = await mathService.regenerateProblemAsync(regenerateData);
       } else {
         alert('현재 국어와 수학만 재생성을 지원합니다.');
         return;
@@ -224,9 +224,9 @@ export const useWorksheetEdit = (selectedSubject?: string) => {
         let statusResponse;
 
         if (selectedSubject === '국어') {
-          statusResponse = await KoreanService.getTaskStatus(taskId);
+          statusResponse = await koreanService.getTaskStatus(taskId);
         } else if (selectedSubject === '수학') {
-          statusResponse = await MathService.getTaskStatus(taskId);
+          statusResponse = await mathService.getTaskStatus(taskId);
         }
 
         if (statusResponse?.status === 'SUCCESS') {

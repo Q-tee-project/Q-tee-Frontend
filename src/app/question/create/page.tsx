@@ -113,7 +113,7 @@ export default function CreatePage() {
       });
 
       // MathService의 재생성 API 직접 호출
-      const { MathService } = await import('@/services/mathService');
+      const { mathService } = await import('@/services/mathService');
 
       // backendId가 실제 데이터베이스의 문제 ID
       const backendProblemId = currentQuestion.backendId;
@@ -134,7 +134,7 @@ export default function CreatePage() {
         }
       };
 
-      const taskResponse = await MathService.regenerateProblemAsync(regenerateData);
+      const taskResponse = await mathService.regenerateProblemAsync(regenerateData);
 
       if (taskResponse?.task_id) {
         // 작업 상태 폴링
@@ -145,7 +145,7 @@ export default function CreatePage() {
         const pollTaskStatus = async () => {
           while (attempts < maxAttempts) {
             try {
-              const statusResponse = await MathService.getTaskStatus(taskResponse.task_id);
+              const statusResponse = await mathService.getTaskStatus(taskResponse.task_id);
 
               if (statusResponse?.status === 'SUCCESS') {
                 // 성공 시 문제 업데이트 (LaTeX 변환 제거 - LaTeXRenderer가 처리)
