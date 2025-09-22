@@ -8,7 +8,15 @@ import {
   EnglishRegenerationInfo,
   EnglishRegenerationRequest,
   EnglishRegenerationResponse,
+  EnglishDataRegenerationRequest,
 } from '@/types/english';
+
+// 영어 과제 배포 요청 (백엔드 API와 일치)
+export interface EnglishAssignmentDeployRequest {
+  worksheet_id: string;      // 영어 워크시트 ID (UUID)
+  classroom_id: number;      // 클래스룸 ID
+  student_ids: number[];     // 학생 ID 목록
+}
 
 const ENGLISH_API_BASE = 'http://localhost:8002/api/english';
 
@@ -320,9 +328,11 @@ export class EnglishService {
     return response.json();
   }
 
-  // 영어 문제 재생성 (데이터 기반)
-  static async regenerateEnglishQuestionData(
-    regenerationData: EnglishRegenerationRequest,
+  // 영어 문제 재생성 (데이터 기반) - v2.0 API
+  static async regenerateEnglishQuestionFromData(
+    questionData: any,
+    passageData: any | null,
+    regenerationRequest: EnglishRegenerationRequest,
   ): Promise<EnglishRegenerationResponse> {
     const currentUser = JSON.parse(localStorage.getItem('user_profile') || '{}');
     const userId = currentUser?.id;
@@ -331,6 +341,12 @@ export class EnglishService {
       throw new Error('로그인이 필요합니다.');
     }
 
+    const requestBody: EnglishDataRegenerationRequest = {
+      question_data: questionData,
+      passage_data: passageData,
+      regeneration_request: regenerationRequest,
+    };
+
     const response = await fetch(
       `${ENGLISH_API_BASE}/questions/regenerate-data?user_id=${userId}`,
       {
@@ -338,7 +354,7 @@ export class EnglishService {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(regenerationData),
+        body: JSON.stringify(requestBody),
       },
     );
 
@@ -376,5 +392,42 @@ export class EnglishService {
         message: error instanceof Error ? error.message : 'English service connection failed',
       };
     }
+  }
+
+  static async deployAssignment(deployRequest: EnglishAssignmentDeployRequest): Promise<any> {
+    const response = await fetch(`${ENGLISH_API_BASE}/assignments/deploy`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(deployRequest),
+    });
+
+    if (!response.ok) {
+      throw new Error(`English API Error: ${response.status}`);
+    }
+
+    return response.json();
+  }
+
+  // 영어 배포된 과제 목록 조회
+  static async getDeployedAssignments(classId: string): Promise<any[]> {
+    const currentUser = JSON.parse(localStorage.getItem('user_profile') || '{}');
+    const userId = currentUser?.id;
+
+    if (!userId) {
+      throw new Error('로그인이 필요합니다.');
+    }
+
+    const response = await fetch(
+      `${ENGLISH_API_BASE}/assignments/deployed?classroom_id=${classId}&user_id=${userId}`
+    );
+
+    if (!response.ok) {
+      throw new Error(`English API Error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data || [];
   }
 }

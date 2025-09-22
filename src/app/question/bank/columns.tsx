@@ -114,7 +114,7 @@ export const columns: ColumnDef<AnyWorksheet>[] = [
 
       return (
         <div className="text-center">
-          <span className="text-sm text-gray-500">{typeInfo}</span>
+          <span className="text-sm text-gray-500">{typeInfo as string}</span>
         </div>
       );
     },

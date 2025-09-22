@@ -34,7 +34,7 @@ interface EnglishWorksheetDetailProps {
   onSaveWorksheet?: () => void;
   isSaving?: boolean;
   showRegenerateButtons?: boolean;
-  onUpdateQuestion?: (questionId: number, updatedQuestion: any, updatedPassage?: any) => void;
+  onUpdateQuestion?: (questionId: number, updatedQuestion: any, updatedPassage?: any, updatedRelatedQuestions?: any[]) => void;
 }
 
 export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
@@ -210,6 +210,7 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
         setRegenerationFormData({
           feedback: '',
           keep_passage: true,
+          regenerate_related_questions: false,
           keep_question_type: true,
           keep_difficulty: true,
           keep_subject: true,
@@ -238,6 +239,7 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
         setRegenerationFormData({
           feedback: '',
           keep_passage: true,
+          regenerate_related_questions: false,
           keep_question_type: true,
           keep_difficulty: true,
           keep_subject: true,
@@ -271,24 +273,38 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
     }
 
     setIsRegenerating(true);
+
+    // 로딩 메시지 결정
+    const isMultipleRegeneration = regenerationFormData.regenerate_related_questions &&
+      regenerationInfo?.related_questions?.length > 0;
+
     try {
       if (mode === 'generation') {
-        // 생성 모드: API 호출하여 재생성하고 로컬 상태 업데이트
-        const response = await EnglishService.regenerateEnglishQuestion(
-          selectedWorksheet.worksheet_id,
-          selectedQuestionForRegeneration.question_id,
+        // 생성 모드: 데이터 기반 재생성 API 사용
+        const currentPassage = selectedQuestionForRegeneration.question_passage_id ?
+          passages.find((p: any) => p.passage_id === selectedQuestionForRegeneration.question_passage_id) : null;
+
+        const response = await EnglishService.regenerateEnglishQuestionFromData(
+          selectedQuestionForRegeneration,
+          currentPassage,
           regenerationFormData as EnglishRegenerationRequest
         );
 
-        if (response.status === 'success' && response.regenerated_question) {
-          alert('문제가 성공적으로 재생성되었습니다!');
+        if (response.status === 'success') {
+          // 성공 메시지 개선
+          if (response.regenerated_related_questions && response.regenerated_related_questions.length > 0) {
+            alert(`지문과 ${response.regenerated_related_questions.length + 1}개 문제가 함께 재생성되었습니다!`);
+          } else {
+            alert('문제가 성공적으로 재생성되었습니다!');
+          }
 
           // 생성 모드에서는 로컬 상태를 업데이트
           if (onUpdateQuestion) {
             onUpdateQuestion(
               selectedQuestionForRegeneration.question_id,
               response.regenerated_question,
-              response.regenerated_passage
+              response.regenerated_passage,
+              response.regenerated_related_questions
             );
           }
 
@@ -297,7 +313,7 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
           alert(`재생성 실패: ${response.message}`);
         }
       } else {
-        // 뱅크 모드: 기존 방식대로 API 호출 후 새로고침
+        // 뱅크 모드: 기존 DB 기반 재생성 API 사용
         const response = await EnglishService.regenerateEnglishQuestion(
           selectedWorksheet.worksheet_id,
           selectedQuestionForRegeneration.question_id,
@@ -305,7 +321,13 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
         );
 
         if (response.status === 'success') {
-          alert('문제가 성공적으로 재생성되었습니다!');
+          // 성공 메시지 개선
+          if (response.regenerated_related_questions && response.regenerated_related_questions.length > 0) {
+            alert(`지문과 ${response.regenerated_related_questions.length + 1}개 문제가 함께 재생성되었습니다!`);
+          } else {
+            alert('문제가 성공적으로 재생성되었습니다!');
+          }
+
           setIsRegenerateModalOpen(false);
           onRefresh(); // 데이터 새로고침
         } else {
@@ -462,7 +484,6 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
                 const prevQuestion = questionIndex > 0 ? questions[questionIndex - 1] : null;
                 const shouldShowPassage = relatedPassage &&
                   (!prevQuestion || prevQuestion.question_passage_id !== question.question_passage_id);
-                console.log('relatedPassage', relatedPassage);
 
                 return (
                   <div key={question.question_id}>
@@ -1047,19 +1068,21 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
             <div className="space-y-6">
               {/* 지문 연계 경고 */}
               {regenerationInfo.has_passage && regenerationInfo.related_questions.length > 0 && (
-                <div className="border border-amber-200 bg-amber-50 rounded-lg p-4">
+                <div className="border border-blue-200 bg-blue-50 rounded-lg p-4">
                   <div className="flex items-start gap-3">
-                    <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                    <div className="text-amber-800">
-                      <div className="font-semibold mb-2">⚠️ 지문 연계 문제 주의</div>
+                    <AlertTriangle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                    <div className="text-blue-800">
+                      <div className="font-semibold mb-2 text-blue-900">📝 지문 연계 문제 안내</div>
                       <div className="text-sm">
                         이 문제는 지문에 연결된 다른 문제들이 있습니다:
                         <ul className="mt-1 ml-4 list-disc">
                           {regenerationInfo.related_questions.map(q => (
-                            <li key={q.id}>문제 {q.id}: {q.text}</li>
+                            <li key={q.id}>문제 {q.id}: {q.text.substring(0, 30)}...</li>
                           ))}
                         </ul>
-                        지문을 변경하면 다른 문제들과 어울리지 않을 수 있습니다. 지문 수정 시, 연계된 문제도 함께 재생성됩니다.
+                        <div className="mt-2 font-medium">
+                          💡 지문을 변경하려면 "지문과 모든 연계 문제 함께 재생성" 옵션을 선택하세요.
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1159,6 +1182,23 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
                       </label>
                     </div>
                   )}
+
+                  {/* 연계 문제 재생성 옵션 (지문이 있고 연계 문제가 있을 때만 표시) */}
+                  {regenerationInfo.has_passage && regenerationInfo.related_questions.length > 0 && !regenerationFormData.keep_passage && (
+                    <div className="flex items-center space-x-2 col-span-2">
+                      <Checkbox
+                        id="regenerate_related_questions"
+                        checked={regenerationFormData.regenerate_related_questions || false}
+                        onCheckedChange={(checked) => setRegenerationFormData({
+                          ...regenerationFormData,
+                          regenerate_related_questions: checked as boolean
+                        })}
+                      />
+                      <label htmlFor="regenerate_related_questions" className="text-sm">
+                        지문과 모든 연계 문제 함께 재생성 ({regenerationInfo.related_questions.length + 1}개 문제)
+                      </label>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1241,7 +1281,15 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
               disabled={isRegenerating || !regenerationFormData.feedback}
               className="bg-green-600 hover:bg-green-700"
             >
-              {isRegenerating ? '재생성 중...' : '문제 재생성'}
+              {isRegenerating ? (
+                regenerationFormData.regenerate_related_questions && regenerationInfo?.related_questions?.length > 0
+                  ? '지문과 연계 문제들을 함께 생성 중...'
+                  : '문제를 재생성 중...'
+              ) : (
+                regenerationFormData.regenerate_related_questions && regenerationInfo?.related_questions?.length > 0
+                  ? `지문과 ${regenerationInfo?.related_questions?.length + 1}개 문제 재생성`
+                  : '문제 재생성'
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

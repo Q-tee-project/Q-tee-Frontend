@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
       targetUrl = 'http://localhost:8004';
       endpoint = '/api/assignments/deploy';
     } else if (subject === 'english') {
-      targetUrl = 'http://localhost:8005';
+      targetUrl = 'http://localhost:8002';
       endpoint = '/api/assignments/deploy';
     } else {
       return NextResponse.json(

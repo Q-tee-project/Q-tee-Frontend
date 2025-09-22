@@ -153,7 +153,7 @@ export default function CreatePage() {
       });
 
       // MathService의 재생성 API 직접 호출
-      const { mathService } = await import('@/services/mathService');
+      const { MathService } = await import('@/services/mathService');
 
       // backendId가 실제 데이터베이스의 문제 ID
       const backendProblemId = currentQuestion.backendId;
@@ -500,11 +500,14 @@ export default function CreatePage() {
                         mode="generation"
                         onSaveWorksheet={handleSaveWorksheet}
                         isSaving={englishWorksheetSave.isSaving}
-                        onUpdateQuestion={(questionId, updatedQuestion, updatedPassage) => {
+                        onUpdateQuestion={(questionId, updatedQuestion, updatedPassage, updatedRelatedQuestions) => {
                           // 영어 생성 상태의 questions 배열 업데이트
                           const currentUIData = englishGeneration.uiData;
                           if (currentUIData) {
-                            const updatedQuestions = currentUIData.questions.map((q: any) => {
+                            let updatedQuestions = [...currentUIData.questions];
+
+                            // 현재 문제 업데이트
+                            updatedQuestions = updatedQuestions.map((q: any) => {
                               if (q.question_id === questionId) {
                                 return {
                                   ...q,
@@ -519,6 +522,27 @@ export default function CreatePage() {
                               }
                               return q;
                             });
+
+                            // 연계 문제들도 업데이트 (다중 재생성의 경우)
+                            if (updatedRelatedQuestions && updatedRelatedQuestions.length > 0) {
+                              updatedRelatedQuestions.forEach((relatedQ: any) => {
+                                updatedQuestions = updatedQuestions.map((q: any) => {
+                                  if (q.question_id === relatedQ.question_id) {
+                                    return {
+                                      ...q,
+                                      ...relatedQ,
+                                      // 객관식 정답 인덱스 변환 (0-based -> 1-based for UI)
+                                      correct_answer: relatedQ.question_type === '객관식' &&
+                                        typeof relatedQ.correct_answer === 'string' &&
+                                        !isNaN(parseInt(relatedQ.correct_answer))
+                                        ? (parseInt(relatedQ.correct_answer) + 1).toString()
+                                        : relatedQ.correct_answer
+                                    };
+                                  }
+                                  return q;
+                                });
+                              });
+                            }
 
                             // 지문이 업데이트된 경우 passages 배열도 업데이트
                             let updatedPassages = currentUIData.passages;

@@ -200,14 +200,6 @@ export interface EnglishRegenerationInfo {
 
 export interface EnglishRegenerationRequest {
   feedback: string;
-  keep_passage?: boolean;
-  keep_question_type?: boolean;
-  keep_difficulty?: boolean;
-  keep_subject?: boolean;
-  keep_detail_type?: boolean;
-  target_difficulty?: string;
-  target_subject?: string;
-  target_detail_type?: string;
   worksheet_context: {
     school_level: string;
     grade: number;
@@ -217,6 +209,21 @@ export interface EnglishRegenerationRequest {
   current_subject: string;
   current_detail_type: string;
   current_difficulty: string;
+
+  // 유지 옵션들
+  keep_passage?: boolean;
+  regenerate_related_questions?: boolean; // v2.0 새로 추가
+  keep_question_type?: boolean;
+  keep_difficulty?: boolean;
+  keep_subject?: boolean;
+  keep_detail_type?: boolean;
+
+  // 변경 목표값들
+  target_question_type?: string;
+  target_difficulty?: string;
+  target_subject?: string;
+  target_detail_type?: string;
+
   additional_requirements?: string;
 }
 
@@ -225,5 +232,13 @@ export interface EnglishRegenerationResponse {
   message: string;
   regenerated_question?: EnglishQuestion;
   regenerated_passage?: EnglishPassage;
+  regenerated_related_questions?: EnglishQuestion[]; // v2.0 새로 추가
   error_details?: string;
+}
+
+// 데이터 기반 재생성 요청을 위한 새로운 타입
+export interface EnglishDataRegenerationRequest {
+  question_data: EnglishQuestion;
+  passage_data?: EnglishPassage;
+  regeneration_request: EnglishRegenerationRequest;
 }

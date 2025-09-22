@@ -3,6 +3,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { koreanService, Assignment, KoreanWorksheet, AssignmentDeployRequest } from '@/services/koreanService';
 import { mathService } from '@/services/mathService';
+import { EnglishAssignmentDeployRequest, EnglishService } from '@/services/englishService';
+import { classroomService } from '@/services/authService';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -32,7 +34,7 @@ export function AssignmentTab({ classId }: AssignmentTabProps) {
   // State for AssignmentCreateModal
   const [modalWorksheets, setModalWorksheets] = useState<Worksheet[]>([]);
   const [modalIsLoading, setModalIsLoading] = useState(false);
-  const [selectedWorksheetIds, setSelectedWorksheetIds] = useState<number[]>([]);
+  const [selectedWorksheetIds, setSelectedWorksheetIds] = useState<(string | number)[]>([]);
   const [selectAllWorksheets, setSelectAllWorksheets] = useState(false);
 
   // Load assignments for the main list
@@ -41,11 +43,13 @@ export function AssignmentTab({ classId }: AssignmentTabProps) {
       setIsLoading(true);
       let data: Assignment[] = [];
       if (activeSubject === 'korean') {
-        data = await koreanService.getDeployedAssignments(classId.toString()); // Convert to string for API call if needed
+        data = await koreanService.getDeployedAssignments(classId.toString());
       } else if (activeSubject === 'math') {
         // Assuming mathService has a similar getDeployedAssignments method
-        // data = await mathService.getDeployedAssignments(classId.toString()); // Convert to string for API call if needed
+        // data = await mathService.getDeployedAssignments(classId.toString());
         console.warn("MathService.getDeployedAssignments is not yet implemented.");
+      } else if (activeSubject === 'english') {
+        data = await EnglishService.getDeployedAssignments(classId.toString());
       }
       setAssignments(data);
     } catch (error) {
@@ -67,6 +71,9 @@ export function AssignmentTab({ classId }: AssignmentTabProps) {
         // Assuming mathService has a similar getMathWorksheets method
         const response = await mathService.getMathWorksheets();
         fetchedWorksheets = response.worksheets;
+      } else if (activeSubject === 'english') {
+        const response = await EnglishService.getEnglishWorksheets();
+        fetchedWorksheets = response;
       }
       setModalWorksheets(fetchedWorksheets);
       setSelectedWorksheetIds([]); // Reset selections when worksheets are reloaded
@@ -124,7 +131,7 @@ export function AssignmentTab({ classId }: AssignmentTabProps) {
     }
   };
 
-  const handleSelectWorksheet = (worksheetId: number, checked: boolean) => {
+  const handleSelectWorksheet = (worksheetId: string | number, checked: boolean) => {
     setSelectedWorksheetIds(prev =>
       checked ? [...prev, worksheetId] : prev.filter(id => id !== worksheetId)
     );
@@ -137,30 +144,39 @@ export function AssignmentTab({ classId }: AssignmentTabProps) {
     }
 
     try {
-      // For simplicity, assuming all students in the class will get the assignment
-      // In a real app, you might fetch student IDs from the classroom service
-      const studentIds: number[] = []; // TODO: Replace with actual student IDs from the class
+      // 클래스의 학생 목록 조회
+      const students = await classroomService.getClassroomStudents(classId);
+      const studentIds = students.map(student => student.id);
+
+      if (studentIds.length === 0) {
+        alert('클래스에 등록된 학생이 없습니다. 먼저 학생을 등록해주세요.');
+        return;
+      } 
 
       for (const worksheetId of selectedWorksheetIds) {
-        const deployRequest: AssignmentDeployRequest = {
-          assignment_id: worksheetId, // This is actually worksheet_id in the backend deploy endpoint
-          classroom_id: classId, // classId is already a number
-          student_ids: studentIds, // Pass actual student IDs here
-        };
-
         if (activeSubject === 'korean') {
+          const deployRequest: AssignmentDeployRequest = {
+            assignment_id: worksheetId as number,
+            classroom_id: classId,
+            student_ids: studentIds,
+          };
           await koreanService.deployAssignment(deployRequest);
         } else if (activeSubject === 'math') {
-          // Assuming mathService has a similar deployAssignment method
-          // await mathService.deployAssignment(deployRequest);
           console.warn("MathService.deployAssignment is not yet implemented.");
+        } else if (activeSubject === 'english') {
+          const englishDeployRequest: EnglishAssignmentDeployRequest = {
+            worksheet_id: worksheetId as string, // 영어는 worksheet_id (UUID)
+            classroom_id: classId,
+            student_ids: studentIds,
+          };
+          await EnglishService.deployAssignment(englishDeployRequest);
         }
       }
       alert(`${selectedWorksheetIds.length}개의 과제가 성공적으로 생성되었습니다.`);
-      onAssignmentCreated();
+      handleAssignmentCreated();
     } catch (error) {
       console.error('Failed to create assignments:', error);
-      alert('과제 생성에 실패했습니다.');
+      alert(`과제 생성에 실패했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
     }
   };
 
