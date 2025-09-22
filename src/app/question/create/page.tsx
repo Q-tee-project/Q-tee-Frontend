@@ -436,6 +436,7 @@ export default function CreatePage() {
                   <EnglishWorksheetDetail
                     selectedWorksheet={englishGeneration.worksheetData}
                     worksheetProblems={englishGeneration.worksheetData}
+                    worksheetPassages={englishGeneration.worksheetData.passages || []}
                         showAnswerSheet={showAnswerSheet}
                         isEditingTitle={isEditingTitle}
                         editedTitle={englishWorksheetSave.worksheetName || englishGeneration.worksheetData?.worksheet_name || `영어 문제지 ${new Date().toLocaleDateString()}`}
