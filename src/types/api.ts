@@ -57,6 +57,12 @@ export interface QuestionFormData {
   format_ratios: { format: string; ratio: number }[];
   difficulty_distribution: { difficulty: string; ratio: number }[];
   additional_requirements?: string;
+
+  // Math service specific properties
+  curriculum_data?: any;
+  user_prompt?: string;
+  problem_count?: number;
+  difficulty_ratio?: any;
 }
 
 // API 응답 타입

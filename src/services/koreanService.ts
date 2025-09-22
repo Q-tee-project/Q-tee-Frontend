@@ -1,211 +1,428 @@
-import {
-  KoreanFormData,
-  KoreanGenerationResponse,
-  KoreanWorksheet,
-  KoreanProblem,
-} from '@/types/korean';
+import { KoreanGradingSession } from "@/components/class/GradingApprovalTab"; // Assuming the interface is exported
 
-const KOREAN_API_BASE = 'http://localhost:8004/api/korean-generation';
+// Base Worksheet interface
+export interface Worksheet {
+  id: number;
+  title: string;
+  school_level: string;
+  grade: number;
+  problem_count: number;
+  created_at: string;
+  // Add other common fields if necessary
+}
 
-export class KoreanService {
-  // 국어 문제 생성
-  static async generateKoreanProblems(formData: KoreanFormData): Promise<KoreanGenerationResponse> {
-    const token = localStorage.getItem('access_token');
+// Korean-specific Worksheet interface extending the base Worksheet
+export interface KoreanWorksheet extends Worksheet {
+  korean_type: string;
+  question_type: string;
+  difficulty: string;
+  question_type_ratio: any; // Adjust type if a more specific schema is available
+  difficulty_ratio: any; // Adjust type if a more specific schema is available
+  user_text: string | null;
+  actual_korean_type_distribution: any; // Adjust type
+  actual_question_type_distribution: any; // Adjust type
+  actual_difficulty_distribution: any; // Adjust type
+  status: string;
+}
 
-    if (!token) {
-      throw new Error('로그인이 필요합니다.');
-    }
+// Problem interface
+export interface Problem {
+  id: number;
+  sequence_order: number;
+  korean_type?: string;
+  problem_type: string;
+  difficulty: string;
+  question: string;
+  choices?: string[];
+  correct_answer: string;
+  explanation: string;
+  source_text?: string;
+  source_title?: string;
+  source_author?: string;
+}
 
-    const response = await fetch(`${KOREAN_API_BASE}/generate`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(formData),
-    });
+// Define types for Assignment (should match backend schema)
+export interface Assignment {
+  id: number;
+  title: string;
+  worksheet_id: number;
+  classroom_id: number;
+  teacher_id: number;
+  korean_type: string;
+  question_type: string;
+  problem_count: number;
+  is_deployed: string; // e.g., "deployed", "pending"
+  created_at: string;
+}
 
-    if (!response.ok) {
-      throw new Error(`Korean API Error: ${response.status}`);
-    }
+// Define types for AssignmentDeploymentResponse (should match backend schema)
+export interface AssignmentDeploymentResponse {
+  id: number;
+  assignment_id: number;
+  student_id: number;
+  classroom_id: number;
+  status: string; // e.g., "assigned", "completed"
+  deployed_at: string;
+}
 
-    return response.json();
+export interface AssignmentDeployRequest {
+  assignment_id: number;
+  classroom_id: number;
+  student_ids: number[];
+}
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_KOREAN_SERVICE_URL || "http://localhost:8004/api"; // Adjust as per your backend setup
+
+const getToken = (): string | null => {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem('access_token'); // Changed to 'access_token'
   }
+  return null;
+};
 
-  // 국어 워크시트 목록 가져오기
-  static async getKoreanWorksheets(): Promise<KoreanWorksheet[]> {
-    const token = localStorage.getItem('access_token');
-
+export const koreanService = {
+  getPendingGradingSessions: async (classId: string): Promise<KoreanGradingSession[]> => {
+    const token = getToken();
     if (!token) {
-      throw new Error('로그인이 필요합니다.');
+      throw new Error("Authentication token not found. Please log in.");
     }
 
-    const response = await fetch(`${KOREAN_API_BASE}/worksheets?limit=100`, {
+    const response = await fetch(`${API_BASE_URL}/grading/grading-sessions/pending`, {
+      method: "GET",
       headers: {
-        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
       },
     });
 
     if (!response.ok) {
-      throw new Error(`Korean API Error: ${response.status}`);
+      const errorData = await response.json();
+      throw new Error(errorData.detail || "Failed to fetch pending grading sessions.");
+    }
+
+    const data: KoreanGradingSession[] = await response.json();
+    console.log(`Fetched pending grading sessions:`, data);
+    return data;
+  },
+
+  approveGradingSession: async (sessionId: number): Promise<KoreanGradingSession> => {
+    const token = getToken();
+    if (!token) {
+      throw new Error("Authentication token not found. Please log in.");
+    }
+
+    const response = await fetch(`${API_BASE_URL}/grading/grading-sessions/${sessionId}/approve`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || "Failed to approve grading session.");
+    }
+
+    const data: KoreanGradingSession = await response.json();
+    console.log(`Approved grading session:`, data);
+    return data;
+  },
+
+  getKoreanWorksheets: async (skip: number = 0, limit: number = 20): Promise<{ worksheets: KoreanWorksheet[], total: number }> => {
+    const token = getToken();
+    if (!token) {
+      throw new Error("Authentication token not found. Please log in.");
+    }
+
+    const response = await fetch(`${API_BASE_URL}/korean-generation/worksheets?skip=${skip}&limit=${limit}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || "Failed to fetch Korean worksheets.");
+    }
+
+    const data: { worksheets: KoreanWorksheet[], total: number } = await response.json();
+    console.log(`Fetched Korean worksheets:`, data);
+    return data;
+  },
+
+  getKoreanWorksheetProblems: async (
+    worksheetId: number,
+  ): Promise<{ worksheet: KoreanWorksheet; problems: Problem[] }> => { // Updated return type
+    const token = getToken();
+    if (!token) {
+      throw new Error("Authentication token not found. Please log in.");
+    }
+
+    const response = await fetch(
+      `${API_BASE_URL}/korean-generation/worksheets/${worksheetId}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+      },
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || "Failed to fetch Korean worksheet problems.");
+    }
+
+    const data: { worksheet: KoreanWorksheet; problems: Problem[] } = await response.json(); // Updated type
+    console.log(`Fetched Korean worksheet problems:`, data);
+    return data;
+  },
+
+  deleteKoreanWorksheet: async (worksheetId: number): Promise<void> => {
+    const token = getToken();
+    if (!token) {
+      throw new Error("Authentication token not found. Please log in.");
+    }
+
+    const response = await fetch(`${API_BASE_URL}/korean-generation/worksheets/${worksheetId}`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || "Failed to delete Korean worksheet.");
+    }
+    console.log(`Deleted Korean worksheet: ${worksheetId}`);
+  },
+
+  getDeployedAssignments: async (classId: string): Promise<Assignment[]> => {
+    const token = getToken();
+    if (!token) {
+      throw new Error("Authentication token not found. Please log in.");
+    }
+
+    const response = await fetch(`${API_BASE_URL}/assignments/classrooms/${classId}/assignments`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || "Failed to fetch deployed assignments.");
+    }
+
+    const data: Assignment[] = await response.json();
+    console.log(`Fetched deployed assignments for class ${classId}:`, data);
+    return data;
+  },
+
+  deployAssignment: async (deployRequest: AssignmentDeployRequest): Promise<AssignmentDeploymentResponse[]> => {
+    const token = getToken();
+    if (!token) {
+      throw new Error("Authentication token not found. Please log in.");
+    }
+
+    const response = await fetch(`${API_BASE_URL}/assignments/deploy`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+      },
+      body: JSON.stringify(deployRequest),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || "Failed to deploy assignment.");
+    }
+
+    const data: AssignmentDeploymentResponse[] = await response.json();
+    console.log(`Deployed assignment:`, data);
+    return data;
+  },
+
+  // Get student assignments (deployed assignments for a specific student)
+  async getStudentAssignments(studentId: number): Promise<Assignment[]> {
+    const token = getToken();
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
+
+    const response = await fetch(`${API_BASE_URL}/assignments/student/${studentId}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || "Failed to get student assignments.");
+    }
+
+    const data: Assignment[] = await response.json();
+    console.log(`Student assignments:`, data);
+    return data;
+  },
+
+  // Get assignment detail (for starting a test)
+  async getAssignmentDetail(assignmentId: number, studentId: number): Promise<any> {
+    const token = getToken();
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
+
+    const response = await fetch(`${API_BASE_URL}/assignments/${assignmentId}/student/${studentId}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || "Failed to get assignment detail.");
     }
 
     const data = await response.json();
-    return data.worksheets || [];
-  }
+    console.log(`Assignment detail:`, data);
+    return data;
+  },
 
-  // 국어 워크시트 상세 정보 가져오기
-  static async getKoreanWorksheetDetail(
-    worksheetId: number,
-  ): Promise<{ worksheet: KoreanWorksheet; problems: KoreanProblem[] }> {
-    const token = localStorage.getItem('access_token');
-
+  // Submit test results
+  async submitTest(assignmentId: number, studentId: number, answers: any): Promise<any> {
+    const token = getToken();
     if (!token) {
-      throw new Error('로그인이 필요합니다.');
+      throw new Error('No authentication token found');
     }
 
-    const response = await fetch(`${KOREAN_API_BASE}/worksheets/${worksheetId}`, {
+    const response = await fetch(`${API_BASE_URL}/assignments/${assignmentId}/submit`, {
+      method: "POST",
       headers: {
-        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        student_id: studentId,
+        answers: answers
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || "Failed to submit test.");
+    }
+
+    const data = await response.json();
+    console.log(`Test submission result:`, data);
+    return data;
+  },
+
+  // Get assignment results (grading sessions for an assignment)
+  async getAssignmentResults(assignmentId: number): Promise<any[]> {
+    const token = getToken();
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
+
+    const response = await fetch(`${API_BASE_URL}/grading/assignments/${assignmentId}/results`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
       },
     });
 
     if (!response.ok) {
-      throw new Error(`Korean API Error: ${response.status}`);
+      const errorData = await response.json();
+      throw new Error(errorData.detail || "Failed to get assignment results.");
     }
 
-    return response.json();
-  }
+    const data = await response.json();
+    console.log(`Assignment results:`, data);
+    return data;
+  },
 
-  // 국어 워크시트 삭제
-  static async deleteKoreanWorksheet(worksheetId: number): Promise<void> {
-    const token = localStorage.getItem('access_token');
-
+  // Approve a grading session
+  async approveGrade(sessionId: number): Promise<any> {
+    const token = getToken();
     if (!token) {
-      throw new Error('로그인이 필요합니다.');
+      throw new Error('No authentication token found');
     }
 
-    const response = await fetch(`${KOREAN_API_BASE}/worksheets/${worksheetId}`, {
-      method: 'DELETE',
+    const response = await fetch(`${API_BASE_URL}/grading/grading-sessions/${sessionId}/approve`, {
+      method: "POST",
       headers: {
-        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
       },
     });
 
     if (!response.ok) {
-      throw new Error(`Korean API Error: ${response.status}`);
+      const errorData = await response.json();
+      throw new Error(errorData.detail || "Failed to approve grade.");
     }
-  }
 
-  // 국어 워크시트 업데이트
-  static async updateKoreanWorksheet(
-    worksheetId: number,
-    updateData: any,
-  ): Promise<{ success: boolean; message: string }> {
-    const token = localStorage.getItem('access_token');
+    const data = await response.json();
+    console.log(`Grade approved:`, data);
+    return data;
+  },
 
+  // Get detailed grading session results
+  async getGradingSessionDetails(sessionId: number): Promise<any> {
+    const token = getToken();
     if (!token) {
-      throw new Error('로그인이 필요합니다.');
+      throw new Error('No authentication token found');
     }
 
-    const response = await fetch(`${KOREAN_API_BASE}/worksheets/${worksheetId}`, {
-      method: 'PUT',
+    const response = await fetch(`${API_BASE_URL}/grading/grading-sessions/${sessionId}`, {
+      method: "GET",
       headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(updateData),
-    });
-
-    if (!response.ok) {
-      let errorMessage = `Korean API Error: ${response.status}`;
-      try {
-        const errorData = await response.text();
-        errorMessage += ` - ${errorData}`;
-      } catch (e) {
-        // JSON 파싱 실패 시 기본 메시지 사용
-      }
-      throw new Error(errorMessage);
-    }
-
-    const result = await response.json();
-    return { success: true, message: result.message || '국어 워크시트가 업데이트되었습니다.' };
-  }
-
-  // 국어 서비스 헬스체크
-  static async healthCheck(): Promise<{ status: string; message: string }> {
-    try {
-      const response = await fetch('http://localhost:8004/');
-
-      if (!response.ok) {
-        throw new Error(`Korean Service Error: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return {
-        status: 'healthy',
-        message: data.message,
-      };
-    } catch (error) {
-      return {
-        status: 'error',
-        message: error instanceof Error ? error.message : 'Korean service connection failed',
-      };
-    }
-  }
-
-  // 비동기 문제 재생성 (Celery 사용)
-  static async regenerateProblemAsync(regenerateData: {
-    problem_id: number;
-    requirements: string;
-    current_problem: any;
-  }): Promise<{ task_id: string }> {
-    const token = localStorage.getItem('access_token');
-
-    if (!token) {
-      throw new Error('로그인이 필요합니다.');
-    }
-
-    const response = await fetch(`${KOREAN_API_BASE}/problems/regenerate-async`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(regenerateData),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Korean API Error: ${response.status}`);
-    }
-
-    return response.json();
-  }
-
-  // Celery 작업 상태 확인
-  static async getTaskStatus(taskId: string): Promise<{
-    status: string;
-    result?: any;
-    error?: string;
-  }> {
-    const token = localStorage.getItem('access_token');
-
-    if (!token) {
-      throw new Error('로그인이 필요합니다.');
-    }
-
-    const response = await fetch(`${KOREAN_API_BASE}/tasks/${taskId}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
       },
     });
 
     if (!response.ok) {
-      throw new Error(`Korean API Error: ${response.status}`);
+      const errorData = await response.json();
+      throw new Error(errorData.detail || "Failed to get grading session details.");
     }
 
-    return response.json();
-  }
-}
+    const data = await response.json();
+    console.log(`Grading session details:`, data);
+    return data;
+  },
+
+  // Get student's grading result for a specific assignment
+  async getStudentGradingResult(assignmentId: number, studentId: number): Promise<any> {
+    const token = getToken();
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
+
+    // First get assignment results to find the grading session
+    const assignmentResults = await this.getAssignmentResults(assignmentId);
+    const studentSession = assignmentResults.find((session: any) => session.graded_by === studentId);
+
+    if (!studentSession) {
+      throw new Error('No grading result found for this student');
+    }
+
+    // Get detailed session info
+    const sessionDetails = await this.getGradingSessionDetails(studentSession.id);
+    return sessionDetails;
+  },
+};

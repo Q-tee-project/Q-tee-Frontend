@@ -184,16 +184,7 @@ export const downloadPurchasedWorksheet = async (productId: number): Promise<any
 const KOREAN_API_BASE_URL = process.env.NEXT_PUBLIC_KOREAN_API_URL || 'http://localhost:8004';
 const MATH_API_BASE_URL = process.env.NEXT_PUBLIC_MATH_API_URL || 'http://localhost:8001';
 
-// 사용자 worksheet 목록 조회 (Korean Service)
-export const getKoreanWorksheets = async (userId: number): Promise<Worksheet[]> => {
-  const response = await axios.get(`${KOREAN_API_BASE_URL}/market/worksheets`, {
-    params: { user_id: userId },
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem('access_token')}`,
-    },
-  });
-  return response.data;
-};
+
 
 // 사용자 worksheet 목록 조회 (Math Service)
 export const getMathWorksheets = async (userId: number): Promise<Worksheet[]> => {

@@ -2,10 +2,12 @@
 
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { MathService } from '@/services/mathService';
+import { mathService } from '@/services/mathService';
+import { koreanService } from '@/services/koreanService';
 import { useAuth } from '@/contexts/AuthContext';
 import { LaTeXRenderer } from '@/components/LaTeXRenderer';
 import { Worksheet, MathProblem, ProblemType, Subject } from '@/types/math';
+import { KoreanWorksheet, KoreanProblem } from '@/types/korean';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -24,15 +26,17 @@ import { IoSearch } from "react-icons/io5";
 import { TestResultModal } from './components/TestResultModal';
 import { AssignmentList } from '@/components/test/AssignmentList';
 import { TestInterface } from '@/components/test/TestInterface';
+import { KoreanTestInterface } from '@/components/test/KoreanTestInterface';
+import { StudentResultView } from '@/components/test/StudentResultView';
 
 export default function TestPage() {
   const { userProfile } = useAuth();
-  const [worksheets, setWorksheets] = useState<Worksheet[]>([]);
-  const [selectedWorksheet, setSelectedWorksheet] = useState<Worksheet | null>(null);
-  const [worksheetProblems, setWorksheetProblems] = useState<MathProblem[]>([]);
+  const [worksheets, setWorksheets] = useState<(Worksheet | KoreanWorksheet)[]>([]);
+  const [selectedWorksheet, setSelectedWorksheet] = useState<Worksheet | KoreanWorksheet | null>(null);
+  const [worksheetProblems, setWorksheetProblems] = useState<(MathProblem | KoreanProblem)[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedSubject, setSelectedSubject] = useState<string>('수학');
+  const [selectedSubject, setSelectedSubject] = useState<string>('국어');
   const [currentProblemIndex, setCurrentProblemIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [timeRemaining, setTimeRemaining] = useState(3600); // 60분 (초 단위)
@@ -43,15 +47,21 @@ export default function TestPage() {
   const [testResult, setTestResult] = useState<any>(null);
   const [showResultModal, setShowResultModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showStudentResult, setShowStudentResult] = useState(false);
 
   // 문제 유형을 한국어로 변환
   const getProblemTypeInKorean = (type: string): string => {
+    if (!type) return '객관식'; // 기본값
+
     switch (type.toLowerCase()) {
       case ProblemType.MULTIPLE_CHOICE:
+      case '객관식':
         return '객관식';
       case ProblemType.ESSAY:
+      case '서술형':
         return '서술형';
       case ProblemType.SHORT_ANSWER:
+      case '단답형':
         return '단답형';
       default:
         return type;
@@ -83,14 +93,7 @@ export default function TestPage() {
   }, []);
 
   const loadWorksheets = async () => {
-    if (selectedSubject !== Subject.MATH) {
-      setWorksheets([]);
-      setSelectedWorksheet(null);
-      setWorksheetProblems([]);
-      return;
-    }
-
-    console.log('배포된 과제 로드 시작...');
+    console.log('배포된 과제 로드 시작... 과목:', selectedSubject);
     setIsLoading(true);
     try {
       // 학생용 과제 목록 가져오기
@@ -98,23 +101,59 @@ export default function TestPage() {
         console.error('사용자 정보가 없습니다');
         return;
       }
-      const assignmentData = await MathService.getStudentAssignments(userProfile.id);
-      console.log('과제 데이터:', assignmentData);
+
+      let assignmentData: any[] = [];
+
+      if (selectedSubject === Subject.MATH) {
+        try {
+          assignmentData = await mathService.getStudentAssignments(userProfile.id);
+          console.log('수학 과제 데이터:', assignmentData);
+        } catch (error) {
+          console.log('수학 과제 없음 또는 오류:', error);
+        }
+      } else if (selectedSubject === '국어') {
+        try {
+          assignmentData = await koreanService.getStudentAssignments(userProfile.id);
+          console.log('국어 과제 데이터:', assignmentData);
+        } catch (error) {
+          console.log('국어 과제 없음 또는 오류:', error);
+        }
+      }
 
       // 과제 데이터를 워크시트 형식으로 변환
-      const worksheetData = assignmentData.map((assignment: any) => ({
-        id: assignment.assignment_id,
-        title: assignment.title,
-        unit_name: assignment.unit_name,
-        chapter_name: assignment.chapter_name,
-        problem_count: assignment.problem_count,
-        status: assignment.status,
-        deployed_at: assignment.deployed_at,
-        created_at: assignment.deployed_at,
-        school_level: '중학교', // 기본값
-        grade: 1, // 기본값
-        semester: 1, // 기본값
-      }));
+      const worksheetData = assignmentData.map((assignment: any) => {
+        if (selectedSubject === '국어') {
+          return {
+            id: assignment.assignment_id,
+            title: assignment.title,
+            unit_name: assignment.unit_name || assignment.korean_type || '',
+            chapter_name: assignment.chapter_name || assignment.korean_type || '',
+            korean_type: assignment.korean_type || '소설',
+            problem_count: assignment.problem_count,
+            status: assignment.status,
+            deployed_at: assignment.deployed_at,
+            created_at: assignment.deployed_at,
+            school_level: '중학교', // 기본값
+            grade: 1, // 기본값
+            subject: selectedSubject, // 과목 정보 추가
+          } as KoreanWorksheet;
+        } else {
+          return {
+            id: assignment.assignment_id,
+            title: assignment.title,
+            unit_name: assignment.unit_name || assignment.korean_type || '',
+            chapter_name: assignment.chapter_name || assignment.korean_type || '',
+            problem_count: assignment.problem_count,
+            status: assignment.status,
+            deployed_at: assignment.deployed_at,
+            created_at: assignment.deployed_at,
+            school_level: '중학교', // 기본값
+            grade: 1, // 기본값
+            semester: 1, // 기본값
+            subject: selectedSubject, // 과목 정보 추가
+          } as Worksheet;
+        }
+      });
 
       console.log('📋 변환된 워크시트 데이터:', worksheetData);
 
@@ -147,7 +186,7 @@ export default function TestPage() {
   // 워크시트의 문제들 로드
   const loadWorksheetProblems = async (worksheetId: number) => {
     try {
-      console.log('📚 과제 문제 로드 시작 - worksheetId:', worksheetId);
+      console.log('📚 과제 문제 로드 시작 - worksheetId:', worksheetId, '과목:', selectedSubject);
 
       // 학생용 과제 상세 정보 가져오기
       console.log('📚 API 호출 시작...');
@@ -155,7 +194,17 @@ export default function TestPage() {
         console.error('사용자 정보가 없습니다');
         return;
       }
-      const assignmentDetail = await MathService.getAssignmentDetail(worksheetId, userProfile.id);
+
+      let assignmentDetail;
+      if (selectedSubject === Subject.MATH) {
+        assignmentDetail = await mathService.getAssignmentDetail(worksheetId, userProfile.id);
+      } else if (selectedSubject === '국어') {
+        assignmentDetail = await koreanService.getAssignmentDetail(worksheetId, userProfile.id);
+      } else {
+        console.log('📚 지원하지 않는 과목:', selectedSubject);
+        setError('해당 과목은 아직 지원되지 않습니다.');
+        return;
+      }
       console.log('📚 과제 상세 정보 전체:', assignmentDetail);
       console.log('📚 과제 정보:', assignmentDetail?.assignment);
       console.log('📚 배포 정보:', assignmentDetail?.deployment);
@@ -196,10 +245,26 @@ export default function TestPage() {
   };
 
   // 문제지 선택 핸들러
-  const handleWorksheetSelect = async (worksheet: Worksheet) => {
+  const handleWorksheetSelect = async (worksheet: Worksheet | KoreanWorksheet) => {
     console.log('📝 과제 선택:', worksheet);
+    console.log('📝 과제 상태:', (worksheet as any).status);
+    console.log('📝 showStudentResult 현재값:', showStudentResult);
     setSelectedWorksheet(worksheet);
-    await loadWorksheetProblems(worksheet.id);
+
+    // Check if this is a completed assignment (completed 상태)
+    const isCompleted = (worksheet as any).status === 'completed';
+    console.log('📝 응시 완료 여부:', isCompleted);
+
+    if (isCompleted && userProfile) {
+      // Show result view for completed assignments - still need to load problems for display
+      await loadWorksheetProblems(worksheet.id);
+      setShowStudentResult(true);
+    } else {
+      // Load problems for new assignments
+      await loadWorksheetProblems(worksheet.id);
+      setShowStudentResult(false);
+    }
+
     setCurrentProblemIndex(0);
     setAnswers({});
     setIsTestStarted(false);
@@ -207,27 +272,42 @@ export default function TestPage() {
     setTestResult(null);
   };
 
+  // 결과 보기에서 돌아가기
+  const handleBackFromResult = () => {
+    setShowStudentResult(false);
+    setSelectedWorksheet(null);
+    setWorksheetProblems([]);
+  };
+
   // 과제 시작
   const startTest = async () => {
-    if (!selectedWorksheet) return;
+    if (!selectedWorksheet || !userProfile?.id) return;
 
     try {
       setIsLoading(true);
-      const session = await MathService.startTest(selectedWorksheet.id);
 
-      // 세션 데이터를 로컬 스토리지에 저장
-      localStorage.setItem(
-        `${session.session_id}_data`,
-        JSON.stringify({
-          worksheet_id: selectedWorksheet.id,
-          worksheet_title: selectedWorksheet.title,
-          problems: worksheetProblems,
-        }),
-      );
+      if (selectedSubject === '국어') {
+        // 국어는 세션 없이 바로 시작
+        setIsTestStarted(true);
+        console.log('국어 과제 시작');
+      } else {
+        // 수학은 세션 기반으로 시작
+        const session = await mathService.startTest(selectedWorksheet.id, userProfile.id);
 
-      setTestSession(session);
-      setIsTestStarted(true);
-      console.log('과제 세션 시작:', session);
+        // 세션 데이터를 로컬 스토리지에 저장
+        localStorage.setItem(
+          `${session.session_id}_data`,
+          JSON.stringify({
+            worksheet_id: selectedWorksheet.id,
+            worksheet_title: selectedWorksheet.title,
+            problems: worksheetProblems,
+          }),
+        );
+
+        setTestSession(session);
+        setIsTestStarted(true);
+        console.log('수학 과제 세션 시작:', session);
+      }
     } catch (error: any) {
       console.error('과제 시작 실패:', error);
       setError('과제를 시작할 수 없습니다: ' + error.message);
@@ -243,15 +323,18 @@ export default function TestPage() {
       [problemId]: answer,
     }));
 
-    // 백엔드에 답안 임시 저장 (과제가 시작된 경우에만)
-    if (testSession && isTestStarted) {
+    // 백엔드에 답안 임시 저장 (수학 과제이고 세션이 있는 경우에만)
+    if (selectedSubject === Subject.MATH && testSession && isTestStarted) {
       try {
-        await MathService.saveAnswer(testSession.session_id, problemId, answer);
-        console.log('답안 임시 저장 완료:', { problemId, answer });
+        await mathService.saveAnswer(testSession.session_id, problemId, answer);
+        console.log('수학 답안 임시 저장 완료:', { problemId, answer });
       } catch (error) {
         console.error('답안 저장 실패:', error);
         // 실패해도 UI는 정상 작동하도록 함
       }
+    } else if (selectedSubject === '국어') {
+      console.log('국어 답안 로컬 저장:', { problemId, answer });
+      // 국어는 로컬에만 저장 (임시)
     }
   };
 
@@ -271,7 +354,7 @@ export default function TestPage() {
 
   // 과제 제출
   const submitTest = async () => {
-    if (!testSession || !isTestStarted) {
+    if (!isTestStarted) {
       alert('과제를 먼저 시작해주세요.');
       return;
     }
@@ -291,23 +374,33 @@ export default function TestPage() {
 
     try {
       setIsSubmitting(true);
-      const result = await MathService.submitTest(testSession.session_id, answers);
-      setTestResult(result);
+
+      if (selectedSubject === Subject.MATH && testSession) {
+        // 수학 과제 제출
+        const result = await mathService.submitTest(testSession.session_id, answers);
+        setTestResult(result);
+        setShowResultModal(true);
+      } else if (selectedSubject === '국어') {
+        // 국어 과제 제출
+        if (!selectedWorksheet || !userProfile) return;
+        const result = await koreanService.submitTest(selectedWorksheet.id, userProfile.id, answers);
+        setTestResult(result);
+        setShowResultModal(true);
+        console.log('국어 과제 제출 완료:', result);
+      }
+
       setIsTestStarted(false);
 
       // 과제 상태를 "응시"로 업데이트
       if (selectedWorksheet) {
-        setWorksheets(prev => 
-          prev.map(worksheet => 
-            worksheet.id === selectedWorksheet.id 
+        setWorksheets(prev =>
+          prev.map(worksheet =>
+            worksheet.id === selectedWorksheet.id
               ? { ...worksheet, status: 'completed' }
               : worksheet
           )
         );
       }
-
-      // 결과 모달 표시
-      setShowResultModal(true);
     } catch (error: any) {
       console.error('과제 제출 실패:', error);
       setError('과제 제출에 실패했습니다: ' + error.message);
@@ -343,14 +436,34 @@ export default function TestPage() {
         description="배포된 과제를 확인하고 풀이할 수 있습니다"
       />
 
+      {/* 과목 선택 탭 */}
+      <div className="border-b border-gray-200">
+        <div className="flex">
+          {['국어', '영어', '수학'].map((subject) => (
+            <button
+              key={subject}
+              onClick={() => setSelectedSubject(subject)}
+              className={`border-b-2 font-medium text-sm ${
+                selectedSubject === subject
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+              style={{ padding: '10px 20px' }}
+            >
+              {subject}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* 메인 컨텐츠 영역 */}
       <div className="flex-1 min-h-0">
         <div className="flex gap-6 h-full">
           {/* 배포된 문제지 목록 */}
           <AssignmentList
-            worksheets={filteredWorksheets}
-            selectedWorksheet={selectedWorksheet}
-            worksheetProblems={worksheetProblems}
+            worksheets={filteredWorksheets as Worksheet[]}
+            selectedWorksheet={selectedWorksheet as Worksheet}
+            worksheetProblems={worksheetProblems as MathProblem[]}
             isTestStarted={isTestStarted}
             answers={answers}
             currentProblemIndex={currentProblemIndex}
@@ -365,7 +478,17 @@ export default function TestPage() {
           />
 
           {/* 문제 풀이 화면 */}
-          {selectedWorksheet && !isTestStarted ? (
+          {showStudentResult && selectedWorksheet && userProfile && (
+            <StudentResultView
+              assignmentId={selectedWorksheet.id}
+              studentId={userProfile.id}
+              assignmentTitle={selectedWorksheet.title}
+              onBack={handleBackFromResult}
+              problems={worksheetProblems}
+            />
+          )}
+
+          {selectedWorksheet && !isTestStarted && !showStudentResult && (
             <Card className="w-5/6 flex items-center justify-center shadow-sm">
               <div className="text-center py-20">
                 <div className="text-gray-700 text-lg font-medium mb-2">
@@ -388,30 +511,57 @@ export default function TestPage() {
                 )}
               </div>
             </Card>
-          ) : selectedWorksheet && currentProblem && isTestStarted ? (
-            <TestInterface
-              selectedWorksheet={selectedWorksheet}
-              currentProblem={currentProblem}
-              worksheetProblems={worksheetProblems}
-              currentProblemIndex={currentProblemIndex}
-              answers={answers}
-              timeRemaining={timeRemaining}
-              isSubmitting={isSubmitting}
-              onAnswerChange={handleAnswerChange}
-              onPreviousProblem={goToPreviousProblem}
-              onNextProblem={goToNextProblem}
-              onSubmitTest={submitTest}
-              onBackToAssignmentList={() => {
-                    setIsTestStarted(false);
-                    setTestSession(null);
-                    setCurrentProblemIndex(0);
-                    setAnswers({});
-                  }}
-              onOpenScratchpad={() => setScratchpadOpen(true)}
-              getProblemTypeInKorean={getProblemTypeInKorean}
-              formatTime={formatTime}
-            />
-          ) : (
+          )}
+
+          {selectedWorksheet && currentProblem && isTestStarted && (
+            selectedSubject === '국어' ? (
+              <KoreanTestInterface
+                selectedWorksheet={selectedWorksheet as KoreanWorksheet}
+                currentProblem={currentProblem as KoreanProblem}
+                worksheetProblems={worksheetProblems as KoreanProblem[]}
+                currentProblemIndex={currentProblemIndex}
+                answers={answers}
+                timeRemaining={timeRemaining}
+                isSubmitting={isSubmitting}
+                onAnswerChange={handleAnswerChange}
+                onPreviousProblem={goToPreviousProblem}
+                onNextProblem={goToNextProblem}
+                onSubmitTest={submitTest}
+                onBackToAssignmentList={() => {
+                      setIsTestStarted(false);
+                      setTestSession(null);
+                      setCurrentProblemIndex(0);
+                      setAnswers({});
+                    }}
+                formatTime={formatTime}
+              />
+            ) : (
+              <TestInterface
+                selectedWorksheet={selectedWorksheet as Worksheet}
+                currentProblem={currentProblem as MathProblem}
+                worksheetProblems={worksheetProblems as MathProblem[]}
+                currentProblemIndex={currentProblemIndex}
+                answers={answers}
+                timeRemaining={timeRemaining}
+                isSubmitting={isSubmitting}
+                onAnswerChange={handleAnswerChange}
+                onPreviousProblem={goToPreviousProblem}
+                onNextProblem={goToNextProblem}
+                onSubmitTest={submitTest}
+                onBackToAssignmentList={() => {
+                      setIsTestStarted(false);
+                      setTestSession(null);
+                      setCurrentProblemIndex(0);
+                      setAnswers({});
+                    }}
+                onOpenScratchpad={() => setScratchpadOpen(true)}
+                getProblemTypeInKorean={getProblemTypeInKorean}
+                formatTime={formatTime}
+              />
+            )
+          )}
+
+          {!selectedWorksheet && (
             <Card className="w-5/6 flex items-center justify-center shadow-sm">
               <div className="text-center py-20">
                 {testResult ? (

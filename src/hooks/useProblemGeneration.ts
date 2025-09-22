@@ -14,6 +14,9 @@ export interface PreviewQuestion {
   source_text?: string;
   source_title?: string;
   source_author?: string;
+  // Validation related properties
+  validation_result?: any;
+  validation_status?: 'auto_approved' | 'manual_review_needed' | 'rejected';
 }
 
 export interface GenerationState {
