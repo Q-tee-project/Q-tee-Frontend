@@ -153,7 +153,7 @@ export default function CreatePage() {
       });
 
       // MathService의 재생성 API 직접 호출
-      const { MathService } = await import('@/services/mathService');
+      const { mathService } = await import('@/services/mathService');
 
       // backendId가 실제 데이터베이스의 문제 ID
       const backendProblemId = currentQuestion.backendId;
