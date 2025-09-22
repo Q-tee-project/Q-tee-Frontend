@@ -267,4 +267,103 @@ export const mathService = {
     console.log(`Answer saved:`, data);
     return data;
   },
+
+  async updateMathWorksheet(worksheetId: number, data: any): Promise<any> {
+    const token = getToken();
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
+
+    const response = await fetch(`${API_BASE_URL}/worksheets/${worksheetId}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || "Failed to update worksheet.");
+    }
+
+    const responseData = await response.json();
+    console.log(`Worksheet updated:`, responseData);
+    return responseData;
+  },
+
+  async updateProblem(problemId: number, data: any): Promise<any> {
+    const token = getToken();
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
+
+    const response = await fetch(`${API_BASE_URL}/problems/${problemId}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || "Failed to update problem.");
+    }
+
+    const responseData = await response.json();
+    console.log(`Problem updated:`, responseData);
+    return responseData;
+  },
+
+  async regenerateProblemAsync(data: any): Promise<any> {
+    const token = getToken();
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
+
+    const response = await fetch(`${API_BASE_URL}/problems/regenerate-async`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || "Failed to regenerate problem.");
+    }
+
+    const responseData = await response.json();
+    console.log(`Problem regeneration started:`, responseData);
+    return responseData;
+  },
+
+  async getTaskStatus(taskId: string): Promise<any> {
+    const token = getToken();
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
+
+    const response = await fetch(`${API_BASE_URL}/tasks/${taskId}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || "Failed to get task status.");
+    }
+
+    const responseData = await response.json();
+    console.log(`Task status:`, responseData);
+    return responseData;
+  },
 };
