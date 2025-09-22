@@ -2,12 +2,13 @@
 
 import React, { useState, use, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { FaArrowLeft } from "react-icons/fa6";
-import { HiOutlinePencilSquare } from "react-icons/hi2";
+import { FaArrowLeft } from 'react-icons/fa6';
+import { HiOutlinePencilSquare } from 'react-icons/hi2';
 import { Users } from 'lucide-react';
 import { AssignmentTab } from '@/components/class/AssignmentTab';
 import { StudentManagementTab } from '@/components/class/StudentManagementTab';
-import { ApprovalTab } from '@/components/class/ApprovalTab';
+import { ApprovalTab as StudentApprovalTab } from '@/components/class/StudentApprovalTab';
+import { GradingApprovalTab } from '@/components/class/GradingApprovalTab';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { classroomService, Classroom } from '@/services/authService';
 import { Button } from '@/components/ui/button';
@@ -26,7 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { IoIosClose } from "react-icons/io";
+import { IoIosClose } from 'react-icons/io';
 
 interface ClassDetailPageProps {
   params: Promise<{
@@ -51,8 +52,8 @@ export default function ClassDetailPage({ params }: ClassDetailPageProps) {
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const tabParam = urlParams.get('tab');
-    
-    if (tabParam && ['assignment', 'student', 'approval'].includes(tabParam)) {
+
+    if (tabParam && ['assignment', 'student', 'approval', 'grading_approval'].includes(tabParam)) {
       setActiveTab(tabParam);
     }
   }, []);
@@ -157,13 +158,14 @@ export default function ClassDetailPage({ params }: ClassDetailPageProps) {
 
   // 학생 승인 후 콜백
   const handleStudentApproved = () => {
-    setStudentRefreshTrigger(prev => prev + 1);
+    setStudentRefreshTrigger((prev) => prev + 1);
   };
 
   const tabs = [
     { id: 'assignment', label: '과제 목록', count: 0 },
     { id: 'student', label: '학생 관리', count: 0 },
     { id: 'approval', label: '승인 대기', count: 0 },
+    { id: 'grading_approval', label: '채점 승인', count: 0 },
   ];
 
   return (
@@ -180,7 +182,10 @@ export default function ClassDetailPage({ params }: ClassDetailPageProps) {
       <div className="flex-1">
         <div className="mx-auto">
           {/* 전체 콘텐츠 컨테이너 */}
-          <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-6" style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
+          <div
+            className="bg-white rounded-lg shadow-lg border border-gray-200 p-6"
+            style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}
+          >
             {/* 이전으로 돌아가기 및 클래스명 */}
             <div className="flex items-center">
               <button
@@ -238,9 +243,14 @@ export default function ClassDetailPage({ params }: ClassDetailPageProps) {
 
             {/* 탭 내용 */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              {activeTab === 'assignment' && <AssignmentTab classId={classId} />}
-              {activeTab === 'student' && <StudentManagementTab classId={classId} refreshTrigger={studentRefreshTrigger} />}
-              {activeTab === 'approval' && <ApprovalTab classId={classId} onStudentApproved={handleStudentApproved} />}
+              {activeTab === 'assignment' && <AssignmentTab classId={parseInt(classId)} />}
+              {activeTab === 'student' && (
+                <StudentManagementTab classId={classId.toString()} refreshTrigger={studentRefreshTrigger} />
+              )}
+              {activeTab === 'approval' && (
+                <StudentApprovalTab classId={classId.toString()} onStudentApproved={handleStudentApproved} />
+              )}
+              {activeTab === 'grading_approval' && <GradingApprovalTab classId={classId.toString()} />}
             </div>
           </div>
         </div>
@@ -251,13 +261,21 @@ export default function ClassDetailPage({ params }: ClassDetailPageProps) {
         <DialogContent className="max-w-md" showCloseButton={false}>
           <DialogHeader>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <DialogTitle>
-                클래스 정보 수정
-              </DialogTitle>
+              <DialogTitle>클래스 정보 수정</DialogTitle>
               <button
                 onClick={() => setIsEditModalOpen(false)}
                 className="text-gray-400 hover:text-gray-600"
-                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '0',
+                  width: '24px',
+                  height: '24px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
               >
                 <IoIosClose />
               </button>
@@ -341,7 +359,7 @@ export default function ClassDetailPage({ params }: ClassDetailPageProps) {
                     border: 'none',
                     cursor: 'pointer',
                     fontSize: '14px',
-                    fontWeight: '500'
+                    fontWeight: '500',
                   }}
                 >
                   삭제하기
@@ -361,10 +379,10 @@ export default function ClassDetailPage({ params }: ClassDetailPageProps) {
             <button
               onClick={handleUpdateClass}
               className="px-4 py-2 rounded-md transition-colors"
-              style={{ 
+              style={{
                 flex: 1,
                 backgroundColor: '#0072CE',
-                color: '#ffffff'
+                color: '#ffffff',
               }}
             >
               수정하기
@@ -378,13 +396,21 @@ export default function ClassDetailPage({ params }: ClassDetailPageProps) {
         <DialogContent className="max-w-md" showCloseButton={false}>
           <DialogHeader>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <DialogTitle>
-                클래스 삭제
-              </DialogTitle>
+              <DialogTitle>클래스 삭제</DialogTitle>
               <button
                 onClick={() => setIsDeleteModalOpen(false)}
                 className="text-gray-400 hover:text-gray-600"
-                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '0',
+                  width: '24px',
+                  height: '24px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
               >
                 <IoIosClose />
               </button>
@@ -392,15 +418,12 @@ export default function ClassDetailPage({ params }: ClassDetailPageProps) {
           </DialogHeader>
 
           <div className="space-y-4">
-            <p className="text-gray-600">
-              정말로 이 클래스를 삭제하시겠습니까?
-            </p>
+            <p className="text-gray-600">정말로 이 클래스를 삭제하시겠습니까?</p>
             <p className="text-sm text-gray-500">
               • 삭제된 클래스는 복구할 수 없습니다.
               <br />
               • 클래스에 속한 모든 학생들이 자동으로 제거됩니다.
-              <br />
-              • 클래스와 관련된 모든 데이터가 삭제됩니다.
+              <br />• 클래스와 관련된 모든 데이터가 삭제됩니다.
             </p>
           </div>
 
@@ -415,10 +438,10 @@ export default function ClassDetailPage({ params }: ClassDetailPageProps) {
             <button
               onClick={handleDeleteClass}
               className="px-4 py-2 rounded-md transition-colors"
-              style={{ 
+              style={{
                 flex: 1,
                 backgroundColor: '#dc2626',
-                color: '#ffffff'
+                color: '#ffffff',
               }}
             >
               삭제하기

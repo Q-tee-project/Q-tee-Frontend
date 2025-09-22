@@ -1,257 +1,270 @@
-import { apiRequest, API_BASE_URL } from '@/lib/api';
-import { Categories, QuestionFormData, QuestionGenerationResponse, Question } from '@/types/api';
+import { Worksheet, Problem, Assignment, AssignmentDeployRequest, AssignmentDeploymentResponse } from "@/services/koreanService"; // Re-using interfaces from koreanService
 
-const MATH_API_BASE = 'http://localhost:8001';
+const API_BASE_URL = process.env.NEXT_PUBLIC_MATH_API_URL || "http://localhost:8001"; // Adjust as per your backend setup
 
-export class MathService {
-  // 수학 문제 생성
-  static async generateMathProblems(
-    formData: QuestionFormData,
-  ): Promise<QuestionGenerationResponse> {
-    const token = localStorage.getItem('access_token');
-
-    if (!token) {
-      throw new Error('로그인이 필요합니다.');
-    }
-
-    const response = await fetch(`${MATH_API_BASE}/generate`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(formData),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Math API Error: ${response.status}`);
-    }
-
-    return response.json();
+const getToken = (): string | null => {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem('access_token'); // Changed to 'access_token'
   }
+  return null;
+};
 
-  // 수학 워크시트 목록 조회
-  static async getMathWorksheets(): Promise<any[]> {
-    const token = localStorage.getItem('access_token');
-
+export const mathService = {
+  getMathWorksheets: async (skip: number = 0, limit: number = 20): Promise<{ worksheets: Worksheet[], total: number }> => {
+    const token = getToken();
     if (!token) {
-      throw new Error('로그인이 필요합니다.');
+      throw new Error("Authentication token not found. Please log in.");
     }
 
-    const response = await fetch(`${MATH_API_BASE}/worksheets?limit=100`, {
+    const response = await fetch(`${API_BASE_URL}/worksheets?skip=${skip}&limit=${limit}`, {
+      method: "GET",
       headers: {
-        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
       },
     });
 
     if (!response.ok) {
-      throw new Error(`Math API Error: ${response.status}`);
+      const errorData = await response.json();
+      throw new Error(errorData.detail || "Failed to fetch Math worksheets.");
+    }
+
+    const data: { worksheets: Worksheet[], total: number } = await response.json();
+    console.log(`Fetched Math worksheets:`, data);
+    return data;
+  },
+
+  getMathWorksheetProblems: async (
+    worksheetId: number,
+  ): Promise<{ worksheet: Worksheet; problems: Problem[] }> => { // Updated return type
+    const token = getToken();
+    if (!token) {
+      throw new Error("Authentication token not found. Please log in.");
+    }
+
+    const response = await fetch(
+      `${API_BASE_URL}/worksheets/${worksheetId}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+      },
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || "Failed to fetch Math worksheet problems.");
+    }
+
+    const data: { worksheet: Worksheet; problems: Problem[] } = await response.json(); // Updated type
+    console.log(`Fetched Math worksheet problems:`, data);
+    return data;
+  },
+
+  deleteMathWorksheet: async (worksheetId: number): Promise<void> => {
+    const token = getToken();
+    if (!token) {
+      throw new Error("Authentication token not found. Please log in.");
+    }
+
+    const response = await fetch(`${API_BASE_URL}/worksheets/${worksheetId}`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || "Failed to delete Math worksheet.");
+    }
+    console.log(`Deleted Math worksheet: ${worksheetId}`);
+  },
+
+  getDeployedAssignments: async (classId: string): Promise<Assignment[]> => {
+    const token = getToken();
+    if (!token) {
+      throw new Error("Authentication token not found. Please log in.");
+    }
+
+    const response = await fetch(`${API_BASE_URL}/assignments/classrooms/${classId}/assignments`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || "Failed to fetch deployed assignments.");
+    }
+
+    const data: Assignment[] = await response.json();
+    console.log(`Fetched deployed assignments for class ${classId}:`, data);
+    return data;
+  },
+
+  deployAssignment: async (deployRequest: AssignmentDeployRequest): Promise<AssignmentDeploymentResponse[]> => {
+    const token = getToken();
+    if (!token) {
+      throw new Error("Authentication token not found. Please log in.");
+    }
+
+    const response = await fetch(`${API_BASE_URL}/assignments/deploy`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+      },
+      body: JSON.stringify(deployRequest),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || "Failed to deploy assignment.");
+    }
+
+    const data: AssignmentDeploymentResponse[] = await response.json();
+    console.log(`Deployed assignment:`, data);
+    return data;
+  },
+
+  // Get student assignments (deployed assignments for a specific student)
+  async getStudentAssignments(studentId: number): Promise<Assignment[]> {
+    const token = getToken();
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
+
+    const response = await fetch(`${API_BASE_URL}/assignments/student/${studentId}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || "Failed to get student assignments.");
+    }
+
+    const data: Assignment[] = await response.json();
+    console.log(`Student assignments:`, data);
+    return data;
+  },
+
+  // Get assignment detail (for starting a test)
+  async getAssignmentDetail(assignmentId: number, studentId: number): Promise<any> {
+    const token = getToken();
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
+
+    const response = await fetch(`${API_BASE_URL}/assignments/${assignmentId}/student/${studentId}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || "Failed to get assignment detail.");
     }
 
     const data = await response.json();
-    return data.worksheets || [];
-  }
+    console.log(`Assignment detail:`, data);
+    return data;
+  },
 
-  // 워크시트 상세 조회
-  static async getWorksheetDetail(worksheetId: number): Promise<any> {
-    const token = localStorage.getItem('access_token');
-
+  // Submit test results (for test sessions)
+  async submitTest(sessionId: string, answers: any): Promise<any> {
+    const token = getToken();
     if (!token) {
-      throw new Error('로그인이 필요합니다.');
+      throw new Error('No authentication token found');
     }
 
-    const response = await fetch(`${MATH_API_BASE}/worksheets/${worksheetId}`, {
+    const response = await fetch(`${API_BASE_URL}/test-sessions/${sessionId}/submit`, {
+      method: "POST",
       headers: {
-        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
       },
-    });
-
-    if (!response.ok) {
-      throw new Error(`Math API Error: ${response.status}`);
-    }
-
-    return response.json();
-  }
-
-  // 워크시트 저장 (기존 코드 유지)
-  static async saveWorksheet(
-    worksheetId: number,
-    questions: Question[],
-    title: string,
-    config: any,
-  ): Promise<any> {
-    return apiRequest('/api/worksheets/save', {
-      method: 'POST',
       body: JSON.stringify({
-        worksheetId,
-        questions,
-        title,
-        config,
+        answers: answers
       }),
     });
-  }
 
-  // 워크시트 삭제
-  static async deleteWorksheet(worksheetId: number): Promise<void> {
-    const token = localStorage.getItem('access_token');
-
-    if (!token) {
-      throw new Error('로그인이 필요합니다.');
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || "Failed to submit test.");
     }
 
-    const response = await fetch(`${MATH_API_BASE}/worksheets/${worksheetId}`, {
-      method: 'DELETE',
+    const data = await response.json();
+    console.log(`Test submission result:`, data);
+    return data;
+  },
+
+  // Start test session
+  async startTest(assignmentId: number, studentId: number): Promise<any> {
+    const token = getToken();
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
+
+    const response = await fetch(`${API_BASE_URL}/assignments/${assignmentId}/start`, {
+      method: "POST",
       headers: {
-        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
       },
+      body: JSON.stringify({
+        student_id: studentId
+      }),
     });
 
     if (!response.ok) {
-      throw new Error(`Math API Error: ${response.status}`);
+      const errorData = await response.json();
+      throw new Error(errorData.detail || "Failed to start test.");
     }
-  }
 
-  // === Aliases for backwards compatibility with hooks/components ===
-  static async getMathWorksheetDetail(worksheetId: number): Promise<any> {
-    return this.getWorksheetDetail(worksheetId);
-  }
+    const data = await response.json();
+    console.log(`Test session started:`, data);
+    return data;
+  },
 
-  static async deleteMathWorksheet(worksheetId: number): Promise<void> {
-    return this.deleteWorksheet(worksheetId);
-  }
-
-  // 문제 업데이트
-  static async updateProblem(problemId: number, updatedData: Partial<Question>): Promise<Question> {
-    const token = localStorage.getItem('access_token');
-
+  // Save answer for a test session
+  async saveAnswer(sessionId: string, problemId: number, answer: string): Promise<any> {
+    const token = getToken();
     if (!token) {
-      throw new Error('로그인이 필요합니다.');
+      throw new Error('No authentication token found');
     }
 
-    const response = await fetch(`${MATH_API_BASE}/problems/${problemId}`, {
-      method: 'PUT',
+    const response = await fetch(`${API_BASE_URL}/test-sessions/${sessionId}/answers`, {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
       },
-      body: JSON.stringify(updatedData),
+      body: JSON.stringify({
+        problem_id: problemId,
+        answer: answer
+      }),
     });
 
     if (!response.ok) {
-      throw new Error(`Math API Error: ${response.status}`);
+      const errorData = await response.json();
+      throw new Error(errorData.detail || "Failed to save answer.");
     }
 
-    return response.json();
-  }
-
-  // 워크시트 업데이트
-  static async updateWorksheet(worksheetId: number, updatedData: any): Promise<any> {
-    const token = localStorage.getItem('access_token');
-
-    if (!token) {
-      throw new Error('로그인이 필요합니다.');
-    }
-
-    const response = await fetch(`${MATH_API_BASE}/worksheets/${worksheetId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(updatedData),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Math API Error: ${response.status}`);
-    }
-
-    return response.json();
-  }
-
-  // Alias for hooks/components expecting this name
-  static async updateMathWorksheet(worksheetId: number, updatedData: any): Promise<any> {
-    return this.updateWorksheet(worksheetId, updatedData);
-  }
-
-  // 문제 재생성
-  static async regenerateProblem(
-    problemId: number,
-    updatedData: Partial<Question>,
-  ): Promise<Question> {
-    const token = localStorage.getItem('access_token');
-
-    if (!token) {
-      throw new Error('로그인이 필요합니다.');
-    }
-
-    const response = await fetch(`${MATH_API_BASE}/problems/${problemId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(updatedData),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Math API Error: ${response.status}`);
-    }
-
-    return response.json();
-  }
-
-  // 비동기 문제 재생성 (Celery 사용)
-  static async regenerateProblemAsync(regenerateData: {
-    problem_id: number;
-    requirements: string;
-    current_problem: any;
-  }): Promise<{ task_id: string }> {
-    const token = localStorage.getItem('access_token');
-
-    if (!token) {
-      throw new Error('로그인이 필요합니다.');
-    }
-
-    const response = await fetch(`${MATH_API_BASE}/problems/regenerate-async`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(regenerateData),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Math API Error: ${response.status}`);
-    }
-
-    return response.json();
-  }
-
-  // Celery 작업 상태 확인
-  static async getTaskStatus(taskId: string): Promise<{
-    status: string;
-    result?: any;
-    error?: string;
-  }> {
-    const token = localStorage.getItem('access_token');
-
-    if (!token) {
-      throw new Error('로그인이 필요합니다.');
-    }
-
-    const response = await fetch(`${MATH_API_BASE}/tasks/${taskId}/status`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`Math API Error: ${response.status}`);
-    }
-
-    return response.json();
-  }
-}
+    const data = await response.json();
+    console.log(`Answer saved:`, data);
+    return data;
+  },
+};

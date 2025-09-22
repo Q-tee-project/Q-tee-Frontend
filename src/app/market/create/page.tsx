@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { FiPlus, FiCheck } from 'react-icons/fi';
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -14,14 +14,12 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import {
   createProduct,
-  getKoreanWorksheets,
-  getMathWorksheets,
-  getKoreanWorksheetProblems,
-  getMathWorksheetProblems,
-  Worksheet,
-  Problem,
-  MarketProductCreate
+  MarketProductCreate,
+  Worksheet, // Keep Worksheet interface from marketApi for now
+  Problem, // Keep Problem interface from marketApi for now
 } from '@/services/marketApi';
+import { koreanService, KoreanWorksheet } from '@/services/koreanService';
+import { mathService } from '@/services/mathService';
 
 
 type FormData = {
@@ -30,7 +28,13 @@ type FormData = {
   price: string;
   subject: string;
   worksheetId: number | null;
+  tags?: string; // Added tags to form data
 };
+
+interface UploadedImage {
+  file: File;
+  preview: string;
+}
 
 export default function CreateMarketPage() {
   const router = useRouter();
@@ -42,18 +46,24 @@ export default function CreateMarketPage() {
     price: '',
     subject: '',
     worksheetId: null,
+    tags: '',
   });
 
   const [images, setImages] = useState<UploadedImage[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
-  // 태그 드롭다운 선택 상태
   const [school, setSchool] = useState<string>('');
   const [grade, setGrade] = useState<string>('');
   const [semester, setSemester] = useState<string>('');
-  const [subject, setSubject] = useState<string>('');
+  const [subject, setSubject] = useState<string>(''); // This is for the tag dropdown, distinct from form.subject
   const [mathSemester, setMathSemester] = useState<string>('');
   const [questionCount, setQuestionCount] = useState<string>('');
 
+  const [worksheets, setWorksheets] = useState<Worksheet[]>([]);
+  const [problems, setProblems] = useState<Problem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [selectedProblems, setSelectedProblems] = useState<number[]>([]);
+  const [selectedWorksheet, setSelectedWorksheet] = useState<Worksheet | null>(null);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | { target: { name: string; value: string } }
@@ -75,7 +85,71 @@ export default function CreateMarketPage() {
 
     setForm(prev => ({ ...prev, [name]: value }));
   };
-  
+
+  const fetchWorksheets = useCallback(async () => {
+    if (!userProfile?.id || !form.subject) return;
+
+    setLoading(true);
+    try {
+      let fetchedWorksheets: Worksheet[] = [];
+      if (form.subject === '국어') {
+        const response = await koreanService.getKoreanWorksheets();
+        fetchedWorksheets = response.worksheets;
+      } else if (form.subject === '수학') {
+        const response = await mathService.getMathWorksheets();
+        fetchedWorksheets = response.worksheets;
+      }
+      setWorksheets(fetchedWorksheets);
+    } catch (error) {
+      console.error('Failed to fetch worksheets:', error);
+      alert('문제지 목록을 불러오는데 실패했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  }, [userProfile?.id, form.subject]);
+
+  const fetchProblemsForWorksheet = useCallback(async (worksheetId: number, subjectType: string) => {
+    setLoading(true);
+    try {
+      let fetchedProblems: Problem[] = [];
+      let fetchedWorksheet: Worksheet | null = null;
+
+      if (subjectType === '국어') {
+        const response = await koreanService.getKoreanWorksheetProblems(worksheetId);
+        fetchedProblems = response.problems;
+        fetchedWorksheet = response.worksheet;
+      } else if (subjectType === '수학') {
+        const response = await mathService.getMathWorksheetProblems(worksheetId);
+        fetchedProblems = response.problems;
+        fetchedWorksheet = response.worksheet;
+      }
+      setProblems(fetchedProblems);
+      setSelectedWorksheet(fetchedWorksheet);
+      setSelectedProblems([]); // Reset selected problems when worksheet changes
+    } catch (error) {
+      console.error('Failed to fetch problems:', error);
+      alert('문제 목록을 불러오는데 실패했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchWorksheets();
+  }, [fetchWorksheets]);
+
+  const handleSubjectChange = (value: string) => {
+    setForm(prev => ({ ...prev, subject: value, worksheetId: null }));
+    setWorksheets([]);
+    setProblems([]);
+    setSelectedProblems([]);
+    setSelectedWorksheet(null);
+  };
+
+  const handleWorksheetChange = (value: number) => {
+    setForm(prev => ({ ...prev, worksheetId: value }));
+    fetchProblemsForWorksheet(value, form.subject);
+  };
 
   // 문제 선택/해제 (최대 3개)
   const toggleProblemSelection = (problemId: number) => {
@@ -90,7 +164,6 @@ export default function CreateMarketPage() {
       }
     });
   };
-  
 
   const handleSubmit = async () => {
     // 유효성 검사
@@ -147,7 +220,6 @@ export default function CreateMarketPage() {
       setSubmitting(false);
     }
   };
-  
 
   const isFormValid = form.title.trim() && form.subject && form.worksheetId && form.price && Number(form.price) > 0 && selectedProblems.length > 0;
 
