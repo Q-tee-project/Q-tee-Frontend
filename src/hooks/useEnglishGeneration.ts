@@ -111,6 +111,11 @@ export const useEnglishGeneration = () => {
     setUiData(null);
   };
 
+  // UI 데이터 직접 업데이트 함수
+  const updateUIData = (newData: EnglishUIData | null) => {
+    setUiData(newData);
+  };
+
   // 실제 영어 문제 생성
   const generateEnglishProblems = async (formData: EnglishFormData) => {
     try {
@@ -174,5 +179,6 @@ export const useEnglishGeneration = () => {
     resetGeneration,
     resetUIData,
     clearError,
+    updateUIData,
   };
 };

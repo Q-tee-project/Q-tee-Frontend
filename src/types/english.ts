@@ -175,3 +175,55 @@ export interface EnglishQuestion {
   explanation: string;
   learning_point: string;
 }
+
+// 문제 재생성 관련 타입 정의
+export interface EnglishRegenerationInfo {
+  question: {
+    id: number;
+    question_type: string;
+    question_subject: string;
+    question_detail_type: string;
+    question_difficulty: string;
+    passage_id?: number;
+  };
+  worksheet: {
+    school_level: string;
+    grade: number;
+    problem_type: string;
+  };
+  has_passage: boolean;
+  related_questions: {
+    id: number;
+    text: string;
+  }[];
+}
+
+export interface EnglishRegenerationRequest {
+  feedback: string;
+  keep_passage?: boolean;
+  keep_question_type?: boolean;
+  keep_difficulty?: boolean;
+  keep_subject?: boolean;
+  keep_detail_type?: boolean;
+  target_difficulty?: string;
+  target_subject?: string;
+  target_detail_type?: string;
+  worksheet_context: {
+    school_level: string;
+    grade: number;
+    worksheet_type: string;
+  };
+  current_question_type: string;
+  current_subject: string;
+  current_detail_type: string;
+  current_difficulty: string;
+  additional_requirements?: string;
+}
+
+export interface EnglishRegenerationResponse {
+  status: 'success' | 'error';
+  message: string;
+  regenerated_question?: EnglishQuestion;
+  regenerated_passage?: EnglishPassage;
+  error_details?: string;
+}

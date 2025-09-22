@@ -5,6 +5,9 @@ import {
   EnglishProblem,
   EnglishWorksheetDetail,
   EnglishLLMResponseAndRequest,
+  EnglishRegenerationInfo,
+  EnglishRegenerationRequest,
+  EnglishRegenerationResponse,
 } from '@/types/english';
 
 const ENGLISH_API_BASE = 'http://localhost:8002/api/english';
@@ -254,6 +257,103 @@ export class EnglishService {
 
     const result = await response.json();
     return { success: true, message: result.message || '영어 워크시트 제목이 업데이트되었습니다.' };
+  }
+
+  // 영어 문제 재생성 정보 조회
+  static async getEnglishQuestionRegenerationInfo(
+    worksheetId: string,
+    questionId: number,
+  ): Promise<EnglishRegenerationInfo> {
+    const currentUser = JSON.parse(localStorage.getItem('user_profile') || '{}');
+    const userId = currentUser?.id;
+
+    if (!userId) {
+      throw new Error('로그인이 필요합니다.');
+    }
+
+    const response = await fetch(
+      `${ENGLISH_API_BASE}/worksheets/${worksheetId}/questions/${questionId}/regeneration-info?user_id=${userId}`
+    );
+
+    if (!response.ok) {
+      throw new Error(`English API Error: ${response.status}`);
+    }
+
+    return response.json();
+  }
+
+  // 영어 문제 재생성 실행
+  static async regenerateEnglishQuestion(
+    worksheetId: string,
+    questionId: number,
+    regenerationData: EnglishRegenerationRequest,
+  ): Promise<EnglishRegenerationResponse> {
+    const currentUser = JSON.parse(localStorage.getItem('user_profile') || '{}');
+    const userId = currentUser?.id;
+
+    if (!userId) {
+      throw new Error('로그인이 필요합니다.');
+    }
+
+    const response = await fetch(
+      `${ENGLISH_API_BASE}/worksheets/${worksheetId}/questions/${questionId}/regenerate?user_id=${userId}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(regenerationData),
+      },
+    );
+
+    if (!response.ok) {
+      let errorMessage = `English API Error: ${response.status}`;
+      try {
+        const errorData = await response.text();
+        errorMessage += ` - ${errorData}`;
+      } catch (e) {
+        // JSON 파싱 실패 시 기본 메시지 사용
+      }
+      throw new Error(errorMessage);
+    }
+
+    return response.json();
+  }
+
+  // 영어 문제 재생성 (데이터 기반)
+  static async regenerateEnglishQuestionData(
+    regenerationData: EnglishRegenerationRequest,
+  ): Promise<EnglishRegenerationResponse> {
+    const currentUser = JSON.parse(localStorage.getItem('user_profile') || '{}');
+    const userId = currentUser?.id;
+
+    if (!userId) {
+      throw new Error('로그인이 필요합니다.');
+    }
+
+    const response = await fetch(
+      `${ENGLISH_API_BASE}/questions/regenerate-data?user_id=${userId}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(regenerationData),
+      },
+    );
+
+    if (!response.ok) {
+      let errorMessage = `English API Error: ${response.status}`;
+      try {
+        const errorData = await response.text();
+        errorMessage += ` - ${errorData}`;
+      } catch (e) {
+        // JSON 파싱 실패 시 기본 메시지 사용
+      }
+      throw new Error(errorMessage);
+    }
+
+    return response.json();
   }
 
   // 영어 서비스 헬스체크
