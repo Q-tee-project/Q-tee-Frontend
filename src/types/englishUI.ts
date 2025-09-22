@@ -68,7 +68,7 @@ export interface ParsedQuestion {
 // 영어 문제 전체 UI 데이터
 export interface EnglishUIData {
   worksheetInfo: {
-    id: string;                    // worksheet_id → id
+    id: number;                    // worksheet_id → id
     teacherId?: number;            // teacher_id → teacherId
     name: string;                  // worksheet_name → name
     date: string;                  // worksheet_date → date

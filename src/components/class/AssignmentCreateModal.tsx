@@ -26,7 +26,10 @@ import { Worksheet as MathWorksheet } from '@/services/marketApi'; // Re-using W
 import { useAuth } from '@/contexts/AuthContext';
 import { classroomService } from '@/services/authService';
 import { EnglishService, EnglishAssignmentDeployRequest } from '@/services/englishService';
-import { EnglishWorksheet } from '@/types/english';
+import { EnglishWorksheetData } from '@/types/english';
+
+// 타입 별칭
+type EnglishWorksheet = EnglishWorksheetData;
 interface AssignmentCreateModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -128,7 +131,7 @@ export function AssignmentCreateModal({
           await mathService.deployAssignment(deployRequest);
         } else if (activeSubject === 'english') {
           const englishDeployRequest: EnglishAssignmentDeployRequest = {
-            worksheet_id: worksheetId as string, // 영어는 worksheet_id를 string으로
+            worksheet_id: worksheetId as number, // 영어는 worksheet_id를 number로
             classroom_id: parseInt(classId),
             student_ids: studentIds,
           };

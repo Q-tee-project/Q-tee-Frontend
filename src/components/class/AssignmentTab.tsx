@@ -165,7 +165,7 @@ export function AssignmentTab({ classId }: AssignmentTabProps) {
           console.warn("MathService.deployAssignment is not yet implemented.");
         } else if (activeSubject === 'english') {
           const englishDeployRequest: EnglishAssignmentDeployRequest = {
-            worksheet_id: worksheetId as string, // 영어는 worksheet_id (UUID)
+            worksheet_id: worksheetId as number, // 영어는 worksheet_id
             classroom_id: classId,
             student_ids: studentIds,
           };

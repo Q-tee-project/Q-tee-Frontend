@@ -1,34 +1,5 @@
-// 영어 문제 관련 타입 정의
-
-export interface EnglishWorksheet {
-  id: number;
-  title: string;
-  school_level: string;
-  grade: number;
-  english_type: string;
-  problem_type?: string;
-  problem_count: number;
-  status: string;
-  created_at: string;
-  user_prompt?: string;
-  generation_id?: string;
-}
-
-export interface EnglishProblem {
-  id: number;
-  sequence_order: number;
-  english_type: string;
-  difficulty: string;
-  question: string;
-  choices?: string[];
-  correct_answer: string;
-  explanation: string;
-  source_text?: string;
-  source_title?: string;
-  source_author?: string;
-}
-
-export interface EnglishFormData {
+// 영어 문제 생성 관련 타입 정의
+export interface EnglishWorksheetGeneratorFormData {
   school_level: string;
   grade: number;
   total_questions: number;
@@ -43,29 +14,6 @@ export interface EnglishFormData {
   format_ratios: { format: string; ratio: number }[];
   difficulty_distribution: { difficulty: string; ratio: number }[];
   additional_requirements?: string;
-}
-
-export interface EnglishGenerationResponse {
-  message: string;
-  status: 'success' | 'error';
-  llm_response?: EnglishLLMResponseAndRequest;
-  llm_error?: string;
-}
-
-export interface EnglishWorksheetDetail {
-  id: number;
-  title: string;
-  school_level: string;
-  grade: number;
-  english_type: string;
-  problem_type?: string;
-  problem_count: number;
-  status: string;
-  created_at: string;
-  problems: EnglishProblem[];
-  user_prompt?: string;
-  generation_id?: string;
-  worksheet_data?: EnglishLLMResponseAndRequest;
 }
 
 export interface EnglishCategories {
@@ -96,8 +44,19 @@ export interface VocabularyCategory {
   name: string;
 }
 
-export interface EnglishLLMResponseAndRequest {
-  worksheet_id: string;
+// 영어 문제 생성 관련 타입 정의 끝
+
+// 영어 문제 생성 응답 타입 정의
+export interface EnglishGenerationResponse {
+  message: string;
+  status: 'success' | 'error';
+  llm_response?: EnglishWorksheetData;
+  llm_error?: string;
+}
+
+// 영어 워크시트 데이터 타입 정의
+export interface EnglishWorksheetData {
+  worksheet_id?: number;
   teacher_id?: number;
   worksheet_name: string;
   worksheet_date: string;
@@ -108,25 +67,11 @@ export interface EnglishLLMResponseAndRequest {
   worksheet_grade: number;
   problem_type?: string;
   total_questions: number;
-  passages: EnglishPassage[];
-  questions: EnglishQuestion[];
+  passages?: EnglishPassage[]; // 지문 데이터
+  questions?: EnglishQuestion[]; // 문제 데이터
 }
 
-export interface EnglishWorksheet {
-  worksheet_id: string;
-  worksheet_name: string;
-  worksheet_date: string;
-  worksheet_time: string;
-  worksheet_duration: string;
-  worksheet_subject: string;
-  worksheet_level: string;
-  worksheet_grade: number;
-  problem_type?: string;
-  total_questions: number;
-  passages: EnglishPassage[];
-  questions: EnglishQuestion[];
-}
-
+// 영어 지문 데이터 타입 정의
 export interface EnglishPassage {
   passage_id: number;
   passage_type: 'article' | 'correspondence' | 'dialogue' | 'informational' | 'review';
@@ -136,6 +81,7 @@ export interface EnglishPassage {
   related_questions: number[];
 }
 
+// 영어 지문 콘텐츠 타입 정의
 export interface EnglishPassageContent {
   metadata?: {
     sender?: string;
@@ -150,6 +96,7 @@ export interface EnglishPassageContent {
   content: EnglishContentItem[];
 }
 
+// 영어 지문 콘텐츠 아이템 타입 정의
 export interface EnglishContentItem {
   type: 'title' | 'paragraph' | 'list' | 'key_value';
   value?: string;
@@ -159,6 +106,7 @@ export interface EnglishContentItem {
   line?: string;
 }
 
+// 영어 문제 데이터 타입 정의
 export interface EnglishQuestion {
   question_id: number;
   question_text: string;
@@ -171,7 +119,7 @@ export interface EnglishQuestion {
   example_original_content: string;
   example_korean_translation: string;
   question_choices: string[];
-  correct_answer: string;
+  correct_answer: string | number;
   explanation: string;
   learning_point: string;
 }
@@ -192,7 +140,7 @@ export interface EnglishRegenerationInfo {
     problem_type: string;
   };
   has_passage: boolean;
-  related_questions: {
+  related_questions?: {
     id: number;
     text: string;
   }[];

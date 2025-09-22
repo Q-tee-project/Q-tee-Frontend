@@ -9,14 +9,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
-import { EnglishQuestion, EnglishWorksheet, EnglishRegenerationInfo, EnglishRegenerationRequest } from '@/types/english';
+import { EnglishQuestion, EnglishWorksheetData, EnglishRegenerationInfo, EnglishRegenerationRequest, EnglishPassage } from '@/types/english';
 import { Edit3, Save, X, Check, RotateCcw, AlertTriangle } from 'lucide-react';
 import { EnglishContentRenderer } from '@/components/EnglishContentRenderer';
 import { EnglishService } from '@/services/englishService';
 
 interface EnglishWorksheetDetailProps {
-  selectedWorksheet: EnglishWorksheet | null;
-  worksheetProblems: any; // worksheet_data 전체 객체
+  selectedWorksheet: EnglishWorksheetData | null;
+  worksheetProblems: EnglishWorksheetData; // worksheet_data 전체 객체 (questions와 passages 포함)
+  worksheetPassages: EnglishPassage[];
   showAnswerSheet: boolean;
   isEditingTitle: boolean;
   editedTitle: string;
@@ -40,6 +41,7 @@ interface EnglishWorksheetDetailProps {
 export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
   selectedWorksheet,
   worksheetProblems,
+  worksheetPassages,
   showAnswerSheet,
   isEditingTitle,
   editedTitle,
@@ -128,7 +130,7 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
       }
 
       await EnglishService.updateEnglishQuestion(
-        selectedWorksheet.worksheet_id,
+        selectedWorksheet.worksheet_id as number,
         editingQuestionId,
         saveData
       );
@@ -152,7 +154,7 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
     setIsLoading(true);
     try {
       await EnglishService.updateEnglishPassage(
-        selectedWorksheet.worksheet_id,
+        selectedWorksheet.worksheet_id as number,
         editingPassageId,
         editFormData
       );
@@ -180,11 +182,11 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
       if (mode === 'generation') {
         // 현재 메모리에 있는 데이터로 재생성 정보 구성
         const currentPassage = question.question_passage_id ?
-          passages.find((p: any) => p.passage_id === question.question_passage_id) : null;
+          passages.find((p: EnglishPassage) => p.passage_id === question.question_passage_id) : null;
 
         const relatedQuestions = currentPassage ?
-          questions.filter((q: any) => q.question_passage_id === question.question_passage_id && q.question_id !== question.question_id)
-            .map((q: any) => ({ id: q.question_id, text: q.question_text })) : [];
+          questions.filter((q: EnglishQuestion) => q.question_passage_id === question.question_passage_id && q.question_id !== question.question_id)
+            .map((q: EnglishQuestion) => ({ id: q.question_id, text: q.question_text })) : [];
 
         const info = {
           question: {
@@ -229,7 +231,7 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
       } else {
         // 뱅크 모드일 때는 기존대로 API 조회
         const info = await EnglishService.getEnglishQuestionRegenerationInfo(
-          selectedWorksheet.worksheet_id,
+          selectedWorksheet.worksheet_id as number,
           question.question_id
         );
 
@@ -276,13 +278,13 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
 
     // 로딩 메시지 결정
     const isMultipleRegeneration = regenerationFormData.regenerate_related_questions &&
-      regenerationInfo?.related_questions?.length > 0;
+      regenerationInfo?.related_questions?.length && regenerationInfo?.related_questions?.length > 0;
 
     try {
       if (mode === 'generation') {
         // 생성 모드: 데이터 기반 재생성 API 사용
         const currentPassage = selectedQuestionForRegeneration.question_passage_id ?
-          passages.find((p: any) => p.passage_id === selectedQuestionForRegeneration.question_passage_id) : null;
+          passages.find((p: EnglishPassage) => p.passage_id === selectedQuestionForRegeneration.question_passage_id) : null;
 
         const response = await EnglishService.regenerateEnglishQuestionFromData(
           selectedQuestionForRegeneration,
@@ -315,7 +317,7 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
       } else {
         // 뱅크 모드: 기존 DB 기반 재생성 API 사용
         const response = await EnglishService.regenerateEnglishQuestion(
-          selectedWorksheet.worksheet_id,
+          selectedWorksheet.worksheet_id as number,
           selectedQuestionForRegeneration.question_id,
           regenerationFormData as EnglishRegenerationRequest
         );
@@ -360,7 +362,7 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
   }
 
   const questions = (worksheetProblems?.questions || []).sort((a: EnglishQuestion, b: EnglishQuestion) => a.question_id - b.question_id);
-  const passages = worksheetProblems?.passages || [];
+  const passages: EnglishPassage[] = worksheetProblems?.passages || [];
 
   return (
     <Card className="w-2/3 flex flex-col shadow-sm h-[calc(100vh-200px)]">
@@ -400,7 +402,7 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
                 onClick={onStartEditTitle}
                 title="클릭하여 타이틀 편집"
               >
-                {selectedWorksheet.title || selectedWorksheet.worksheet_name}
+                {selectedWorksheet.worksheet_name || "제목 없음"}
               </CardTitle>
               <Button
                 onClick={onStartEditTitle}
@@ -477,26 +479,28 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
             <div className="p-6 space-y-8">
               {questions.map((question: EnglishQuestion, questionIndex: number) => {
                 // 연관된 지문 찾기
-                const relatedPassage = question.question_passage_id ?
-                  passages.find((p: any) => p.passage_id === question.question_passage_id) : null;
+                const passage = question.question_passage_id ?
+                  passages.find((p: EnglishPassage) => p.passage_id === question.question_passage_id) : null;
 
                 // 이전 문제와 같은 지문인지 확인 (지문 중복 렌더링 방지)
                 const prevQuestion = questionIndex > 0 ? questions[questionIndex - 1] : null;
-                const shouldShowPassage = relatedPassage &&
+                const shouldShowPassage = passage &&
                   (!prevQuestion || prevQuestion.question_passage_id !== question.question_passage_id);
 
                 return (
                   <div key={question.question_id}>
                     {/* 지문 렌더링 */}
-                    {shouldShowPassage && (
-                      <Card className="mb-4 bg-blue-50 border-blue-200">
-                        <CardContent className="p-6">
+                    {shouldShowPassage && passage && (() => {
+                      const currentPassage = passage as EnglishPassage;
+                      return (
+                        <Card className="mb-4 bg-blue-50 border-blue-200">
+                          <CardContent className="p-6">
                           <div className="flex justify-between items-center mb-3">
                             <div className="text-sm font-semibold text-blue-800">
-                              [문제 {relatedPassage.related_questions.length > 1 ? `${relatedPassage.related_questions[0]}-${relatedPassage.related_questions[relatedPassage.related_questions.length - 1]}` : relatedPassage.related_questions[0]}]
+                              [문제 {currentPassage.related_questions && currentPassage.related_questions.length > 1 ? `${currentPassage.related_questions[0]}-${currentPassage.related_questions[currentPassage.related_questions.length - 1]}` : currentPassage.related_questions[0] || ''}]
                             </div>
                             <div className="flex gap-2">
-                              {editingPassageId === relatedPassage.passage_id ? (
+                              {editingPassageId === currentPassage.passage_id ? (
                                 <>
                                   <Button
                                     onClick={handleSavePassage}
@@ -517,7 +521,7 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
                                 </>
                               ) : (
                                 <Button
-                                  onClick={() => handleStartEditPassage(relatedPassage)}
+                                  onClick={() => handleStartEditPassage(currentPassage)}
                                   size="sm"
                                   variant="outline"
                                   className="bg-white hover:bg-gray-50"
@@ -528,36 +532,36 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
                             </div>
                           </div>
                           {/* Metadata rendering for correspondence and review */}
-                          {relatedPassage.passage_content?.metadata && (
+                          {currentPassage.passage_content?.metadata && (
                             <div className="mb-4 p-3 bg-gray-50 rounded-lg text-sm">
-                              {relatedPassage.passage_content.metadata.sender && (
-                                <div><span className="font-semibold">From:</span> {relatedPassage.passage_content.metadata.sender}</div>
+                              {currentPassage.passage_content.metadata.sender && (
+                                <div><span className="font-semibold">From:</span> {currentPassage.passage_content.metadata.sender}</div>
                               )}
-                              {relatedPassage.passage_content.metadata.recipient && (
-                                <div><span className="font-semibold">To:</span> {relatedPassage.passage_content.metadata.recipient}</div>
+                              {currentPassage.passage_content.metadata.recipient && (
+                                <div><span className="font-semibold">To:</span> {currentPassage.passage_content.metadata.recipient}</div>
                               )}
-                              {relatedPassage.passage_content.metadata.subject && (
-                                <div><span className="font-semibold">Subject:</span> {relatedPassage.passage_content.metadata.subject}</div>
+                              {currentPassage.passage_content.metadata.subject && (
+                                <div><span className="font-semibold">Subject:</span> {currentPassage.passage_content.metadata.subject}</div>
                               )}
-                              {relatedPassage.passage_content.metadata.date && (
-                                <div><span className="font-semibold">Date:</span> {relatedPassage.passage_content.metadata.date}</div>
+                              {currentPassage.passage_content.metadata.date && (
+                                <div><span className="font-semibold">Date:</span> {currentPassage.passage_content.metadata.date}</div>
                               )}
-                              {relatedPassage.passage_content.metadata.participants && (
-                                <div><span className="font-semibold">Participants:</span> {relatedPassage.passage_content.metadata.participants.join(', ')}</div>
+                              {currentPassage.passage_content.metadata.participants && (
+                                <div><span className="font-semibold">Participants:</span> {currentPassage.passage_content.metadata.participants.join(', ')}</div>
                               )}
-                              {relatedPassage.passage_content.metadata.rating && (
-                                <div><span className="font-semibold">Rating:</span> {'★'.repeat(relatedPassage.passage_content.metadata.rating)}</div>
+                              {currentPassage.passage_content.metadata.rating && (
+                                <div><span className="font-semibold">Rating:</span> {'★'.repeat(currentPassage.passage_content.metadata.rating)}</div>
                               )}
-                              {relatedPassage.passage_content.metadata.product_name && (
-                                <div><span className="font-semibold">Product:</span> {relatedPassage.passage_content.metadata.product_name}</div>
+                              {currentPassage.passage_content.metadata.product_name && (
+                                <div><span className="font-semibold">Product:</span> {currentPassage.passage_content.metadata.product_name}</div>
                               )}
-                              {relatedPassage.passage_content.metadata.reviewer && (
-                                <div><span className="font-semibold">Reviewer:</span> {relatedPassage.passage_content.metadata.reviewer}</div>
+                              {currentPassage.passage_content.metadata.reviewer && (
+                                <div><span className="font-semibold">Reviewer:</span> {currentPassage.passage_content.metadata.reviewer}</div>
                               )}
                             </div>
                           )}
 
-                          {editingPassageId === relatedPassage.passage_id ? (
+                          {editingPassageId === currentPassage.passage_id ? (
                             <div className="space-y-4 p-4 bg-blue-100 border border-blue-300 rounded-lg">
                               <div className="text-sm font-medium text-blue-800 mb-3">지문 편집 (구조 유지 필수)</div>
 
@@ -648,7 +652,7 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
                           ) : (
                             <div className="prose prose-sm max-w-none">
                               {/* 정답지 모드일 때는 원본 내용 표시, 아니면 학생용 내용 표시 */}
-                              {(showAnswerSheet ? relatedPassage.original_content : relatedPassage.passage_content)?.content?.map((item: any, idx: number) => (
+                              {(showAnswerSheet ? currentPassage.original_content : currentPassage.passage_content)?.content?.map((item: any, idx: number) => (
                                 <div key={idx} className="mb-2">
                                   {item.type === 'title' && (
                                     <h4 className="font-bold text-gray-900">{item.value}</h4>
@@ -686,10 +690,10 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
                               ))}
 
                               {/* 정답지 모드일 때만 한글 번역 표시 */}
-                              {showAnswerSheet && relatedPassage.korean_translation && (
+                              {showAnswerSheet && currentPassage.korean_translation && (
                                 <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
                                   <div className="text-sm font-semibold text-green-800 mb-3">📝 지문 해설</div>
-                                  {relatedPassage.korean_translation.content?.map((item: any, idx: number) => (
+                                  {currentPassage.korean_translation.content?.map((item: any, idx: number) => (
                                     <div key={idx} className="mb-2">
                                       {item.type === 'title' && (
                                         <h4 className="font-bold text-green-900">{item.value}</h4>
@@ -728,7 +732,8 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
                           )}
                         </CardContent>
                       </Card>
-                    )}
+                      );
+                    })()}
 
                     {/* 문제 카드 */}
                     <Card className="border border-gray-200 shadow-sm">
@@ -1067,7 +1072,7 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
           {regenerationInfo && (
             <div className="space-y-6">
               {/* 지문 연계 경고 */}
-              {regenerationInfo.has_passage && regenerationInfo.related_questions.length > 0 && (
+              {regenerationInfo.has_passage && regenerationInfo.related_questions?.length && regenerationInfo.related_questions.length > 0 && (
                 <div className="border border-blue-200 bg-blue-50 rounded-lg p-4">
                   <div className="flex items-start gap-3">
                     <AlertTriangle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
@@ -1184,7 +1189,7 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
                   )}
 
                   {/* 연계 문제 재생성 옵션 (지문이 있고 연계 문제가 있을 때만 표시) */}
-                  {regenerationInfo.has_passage && regenerationInfo.related_questions.length > 0 && !regenerationFormData.keep_passage && (
+                  {regenerationInfo.has_passage && regenerationInfo.related_questions?.length && regenerationInfo.related_questions.length > 0 && !regenerationFormData.keep_passage && (
                     <div className="flex items-center space-x-2 col-span-2">
                       <Checkbox
                         id="regenerate_related_questions"
@@ -1195,7 +1200,7 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
                         })}
                       />
                       <label htmlFor="regenerate_related_questions" className="text-sm">
-                        지문과 모든 연계 문제 함께 재생성 ({regenerationInfo.related_questions.length + 1}개 문제)
+                        지문과 모든 연계 문제 함께 재생성 ({regenerationInfo.related_questions?.length && regenerationInfo.related_questions.length + 1}개 문제)
                       </label>
                     </div>
                   )}
@@ -1282,11 +1287,11 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
               className="bg-green-600 hover:bg-green-700"
             >
               {isRegenerating ? (
-                regenerationFormData.regenerate_related_questions && regenerationInfo?.related_questions?.length > 0
+                regenerationFormData.regenerate_related_questions && regenerationInfo?.related_questions?.length && regenerationInfo?.related_questions?.length > 0
                   ? '지문과 연계 문제들을 함께 생성 중...'
                   : '문제를 재생성 중...'
               ) : (
-                regenerationFormData.regenerate_related_questions && regenerationInfo?.related_questions?.length > 0
+                regenerationFormData.regenerate_related_questions && regenerationInfo?.related_questions?.length && regenerationInfo?.related_questions?.length > 0
                   ? `지문과 ${regenerationInfo?.related_questions?.length + 1}개 문제 재생성`
                   : '문제 재생성'
               )}

@@ -17,55 +17,15 @@ import { useMathGeneration } from '@/hooks/useMathGeneration';
 import { useEnglishGeneration } from '@/hooks/useEnglishGeneration';
 import { useWorksheetSave } from '@/hooks/useWorksheetSave';
 import { useEnglishWorksheetSave } from '@/hooks/useEnglishWorksheetSave';
-import { EnglishWorksheet } from '@/types/english';
+import { EnglishWorksheetData } from '@/types/english';
+
+// 타입 별칭
+type EnglishWorksheet = EnglishWorksheetData;
 import { EnglishService } from '@/services/englishService';
 
 const SUBJECTS = ['국어', '영어', '수학'];
 
-// EnglishUIData를 EnglishWorksheetDetail 형식으로 역변환하는 함수
-const convertUIDataToWorksheetDetail = (uiData: any) => {
-  if (!uiData) return null;
-
-  return {
-    selectedWorksheet: {
-      worksheet_id: uiData.worksheetInfo.id || 'temp-generation',
-      worksheet_name: uiData.worksheetInfo.name,
-      worksheet_date: uiData.worksheetInfo.date,
-      worksheet_time: uiData.worksheetInfo.time,
-      worksheet_duration: uiData.worksheetInfo.duration,
-      worksheet_subject: uiData.worksheetInfo.subject,
-      worksheet_level: uiData.worksheetInfo.level,
-      worksheet_grade: uiData.worksheetInfo.grade,
-      total_questions: uiData.questions.length,
-    },
-    worksheetProblems: {
-      passages: uiData.passages.map((p: any) => ({
-        passage_id: p.id,
-        passage_type: p.type,
-        passage_content: p.content,
-        original_content: p.originalContent,
-        korean_translation: p.koreanTranslation,
-        related_questions: p.relatedQuestionIds,
-      })),
-      questions: uiData.questions.map((q: any) => ({
-        question_id: q.id,
-        question_text: q.text || q.questionText,
-        question_type: q.type,
-        question_subject: q.subject,
-        question_difficulty: q.difficulty,
-        question_detail_type: q.detailType,
-        question_passage_id: q.passageId,
-        example_content: q.exampleContent,
-        example_original_content: q.exampleOriginalContent,
-        example_korean_translation: q.exampleKoreanTranslation,
-        question_choices: q.choices,
-        correct_answer: q.correctAnswer,
-        explanation: q.explanation,
-        learning_point: q.learningPoint,
-      })),
-    }
-  };
-};
+// 더 이상 변환 필요 없음 - 서버 데이터 직접 사용
 
 
 export default function CreatePage() {
@@ -299,7 +259,7 @@ export default function CreatePage() {
   const handleSaveWorksheet = () => {
     if (subject === '영어') {
       // 영어 전용 저장 로직
-      if (!englishGeneration.uiData) {
+      if (!englishGeneration.worksheetData) {
         currentGeneration.updateState({ errorMessage: '저장할 영어 문제가 없습니다.' });
         return;
       }
@@ -310,7 +270,7 @@ export default function CreatePage() {
       }
 
       englishWorksheetSave.saveEnglishWorksheet(
-        englishGeneration.uiData,
+        englishGeneration.worksheetData as EnglishWorksheetData,
         () => {
           currentGeneration.updateState({
             errorMessage: '영어 문제지가 성공적으로 저장되었습니다! ✅',
@@ -472,16 +432,13 @@ export default function CreatePage() {
             <CardContent className="flex-1 flex flex-col">
               {/* 영어는 EnglishWorksheetDetail 컴포넌트 사용 */}
               {subject === '영어' ? (
-                englishGeneration.uiData && englishGeneration.uiData.questions.length > 0 ? (
-                  (() => {
-                    const convertedData = convertUIDataToWorksheetDetail(englishGeneration.uiData);
-                    return (
-                      <EnglishWorksheetDetail
-                        selectedWorksheet={convertedData?.selectedWorksheet as EnglishWorksheet | null}
-                        worksheetProblems={convertedData?.worksheetProblems || {}}
+                englishGeneration.worksheetData && englishGeneration.worksheetData.questions && englishGeneration.worksheetData.questions.length > 0 ? (
+                  <EnglishWorksheetDetail
+                    selectedWorksheet={englishGeneration.worksheetData}
+                    worksheetProblems={englishGeneration.worksheetData}
                         showAnswerSheet={showAnswerSheet}
                         isEditingTitle={isEditingTitle}
-                        editedTitle={englishWorksheetSave.worksheetName || `영어 문제지 ${new Date().toLocaleDateString()}`}
+                        editedTitle={englishWorksheetSave.worksheetName || englishGeneration.worksheetData?.worksheet_name || `영어 문제지 ${new Date().toLocaleDateString()}`}
                         onToggleAnswerSheet={() => setShowAnswerSheet(!showAnswerSheet)}
                         onEditProblem={() => {}}
                         onStartEditTitle={() => setIsEditingTitle(true)}
@@ -490,6 +447,13 @@ export default function CreatePage() {
                           englishWorksheetSave.setWorksheetName(englishWorksheetSave.worksheetName);
                         }}
                         onSaveTitle={() => {
+                          // 워크시트 데이터에 제목 반영
+                          if (englishGeneration.worksheetData) {
+                            englishGeneration.updateWorksheetData({
+                              ...englishGeneration.worksheetData,
+                              worksheet_name: englishWorksheetSave.worksheetName
+                            });
+                          }
                           setIsEditingTitle(false);
                         }}
                         onEditedTitleChange={englishWorksheetSave.setWorksheetName}
@@ -502,9 +466,9 @@ export default function CreatePage() {
                         isSaving={englishWorksheetSave.isSaving}
                         onUpdateQuestion={(questionId, updatedQuestion, updatedPassage, updatedRelatedQuestions) => {
                           // 영어 생성 상태의 questions 배열 업데이트
-                          const currentUIData = englishGeneration.uiData;
-                          if (currentUIData) {
-                            let updatedQuestions = [...currentUIData.questions];
+                          const currentWorksheetData = englishGeneration.worksheetData;
+                          if (currentWorksheetData) {
+                            let updatedQuestions = [...(currentWorksheetData.questions || [])];
 
                             // 현재 문제 업데이트
                             updatedQuestions = updatedQuestions.map((q: any) => {
@@ -545,9 +509,9 @@ export default function CreatePage() {
                             }
 
                             // 지문이 업데이트된 경우 passages 배열도 업데이트
-                            let updatedPassages = currentUIData.passages;
+                            let updatedPassages = currentWorksheetData.passages || [];
                             if (updatedPassage) {
-                              updatedPassages = currentUIData.passages.map((p: any) => {
+                              updatedPassages = (currentWorksheetData.passages || []).map((p: any) => {
                                 if (p.passage_id === updatedPassage.passage_id) {
                                   return {
                                     ...p,
@@ -559,9 +523,9 @@ export default function CreatePage() {
                               });
                             }
 
-                            // UIData 업데이트
-                            englishGeneration.updateUIData({
-                              ...currentUIData,
+                            // WorksheetData 업데이트
+                            englishGeneration.updateWorksheetData({
+                              ...currentWorksheetData,
                               questions: updatedQuestions,
                               passages: updatedPassages,
                             });
@@ -571,8 +535,6 @@ export default function CreatePage() {
                           }
                         }}
                       />
-                    );
-                  })()
                 ) : (
                   <div className="flex-1 flex items-center justify-center text-gray-500">
                     {currentGeneration.isGenerating

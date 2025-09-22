@@ -1,19 +1,24 @@
 import {
-  EnglishFormData,
+  EnglishWorksheetGeneratorFormData,
   EnglishGenerationResponse,
-  EnglishWorksheet,
-  EnglishProblem,
-  EnglishWorksheetDetail,
-  EnglishLLMResponseAndRequest,
+  EnglishWorksheetData,
+  EnglishQuestion,
   EnglishRegenerationInfo,
   EnglishRegenerationRequest,
   EnglishRegenerationResponse,
   EnglishDataRegenerationRequest,
 } from '@/types/english';
 
+// 타입 별칭 생성 (기존 코드 호환성)
+type EnglishFormData = EnglishWorksheetGeneratorFormData;
+type EnglishWorksheet = EnglishWorksheetData;
+type EnglishProblem = EnglishQuestion;
+type EnglishWorksheetDetail = EnglishWorksheetData;
+type EnglishLLMResponseAndRequest = EnglishWorksheetData;
+
 // 영어 과제 배포 요청 (백엔드 API와 일치)
 export interface EnglishAssignmentDeployRequest {
-  worksheet_id: string;      // 영어 워크시트 ID (UUID)
+  worksheet_id: number;      // 영어 워크시트 ID
   classroom_id: number;      // 클래스룸 ID
   student_ids: number[];     // 학생 ID 목록
 }
@@ -68,7 +73,7 @@ export class EnglishService {
 
   // 영어 워크시트 상세 정보 가져오기
   static async getEnglishWorksheetDetail(
-    worksheetId: string | number,
+    worksheetId: number,
   ): Promise<EnglishWorksheetDetail> {
     const currentUser = JSON.parse(localStorage.getItem('user_profile') || '{}');
     const userId = currentUser?.id;
@@ -137,14 +142,17 @@ export class EnglishService {
 
   // 영어 워크시트 저장
   static async saveEnglishWorksheet(
-    worksheetData: EnglishLLMResponseAndRequest,
-  ): Promise<{ worksheet_id: string; message: string }> {
+    worksheetData: EnglishWorksheetData,
+  ): Promise<{ worksheet_id: number; message: string }> {
     const currentUser = JSON.parse(localStorage.getItem('user_profile') || '{}');
     const userId = currentUser?.id;
 
     if (!userId) {
       throw new Error('로그인이 필요합니다.');
     }
+
+    console.log('💾 저장할 워크시트 데이터:', worksheetData);
+    console.log('💾 questions 샘플:', worksheetData.questions?.[0]);
 
     const response = await fetch(`${ENGLISH_API_BASE}/worksheet-save`, {
       method: 'POST',
@@ -167,14 +175,14 @@ export class EnglishService {
 
     const result = await response.json();
     return {
-      worksheet_id: result.worksheet_id || worksheetData.worksheet_id,
+      worksheet_id: worksheetData.worksheet_id || 0,
       message: result.message || '영어 워크시트가 저장되었습니다.',
     };
   }
 
   // 영어 문제 수정
   static async updateEnglishQuestion(
-    worksheetId: string,
+    worksheetId: number,
     questionId: number,
     updateData: any,
   ): Promise<{ success: boolean; message: string }> {
@@ -206,7 +214,7 @@ export class EnglishService {
 
   // 영어 지문 수정
   static async updateEnglishPassage(
-    worksheetId: string,
+    worksheetId: number,
     passageId: number,
     updateData: any,
   ): Promise<{ success: boolean; message: string }> {
@@ -238,7 +246,7 @@ export class EnglishService {
 
   // 영어 워크시트 제목 수정
   static async updateEnglishWorksheetTitle(
-    worksheetId: string,
+    worksheetId: number,
     newTitle: string,
   ): Promise<{ success: boolean; message: string }> {
     const currentUser = JSON.parse(localStorage.getItem('user_profile') || '{}');
@@ -269,7 +277,7 @@ export class EnglishService {
 
   // 영어 문제 재생성 정보 조회
   static async getEnglishQuestionRegenerationInfo(
-    worksheetId: string,
+    worksheetId: number,
     questionId: number,
   ): Promise<EnglishRegenerationInfo> {
     const currentUser = JSON.parse(localStorage.getItem('user_profile') || '{}');
@@ -292,7 +300,7 @@ export class EnglishService {
 
   // 영어 문제 재생성 실행
   static async regenerateEnglishQuestion(
-    worksheetId: string,
+    worksheetId: number,
     questionId: number,
     regenerationData: EnglishRegenerationRequest,
   ): Promise<EnglishRegenerationResponse> {
