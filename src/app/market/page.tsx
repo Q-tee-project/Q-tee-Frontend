@@ -21,6 +21,8 @@ interface Product {
   tags: string[];
 }
 
+type MarketProduct = Product;
+
 
 const TABS = ['전체', '국어', '영어', '수학'];
 
@@ -30,9 +32,7 @@ export default function MarketPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
   const [selectedTab, setSelectedTab] = useState('전체');
-  const [products, setProducts] = useState<MarketProduct[]>([]);
   const [loading, setLoading] = useState(true);
-
 
   // 인기상품 슬라이드 상태
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -53,6 +53,22 @@ export default function MarketPage() {
   // 인기상품(슬라이드) 데이터는 상위 5개로 제한
   const featuredProducts = products.slice(0, 5);
 
+  // 필터링된 상품 (탭에 따른 필터링)
+  const filteredProducts = products.filter((product) => {
+    if (selectedTab === '전체') return true;
+    return product.tags.includes(selectedTab);
+  });
+
+
+  // 상품 로딩 함수
+  const loadProducts = () => {
+    setLoading(true);
+    // 실제 API 호출이 필요한 경우 여기에 구현
+    // 현재는 정적 데이터를 사용하므로 로딩 상태만 관리
+    setTimeout(() => {
+      setLoading(false);
+    }, 500);
+  };
 
   useEffect(() => {
     loadProducts();
@@ -61,21 +77,21 @@ export default function MarketPage() {
 
   // 정렬 + 검색 적용
   const sortedAndFilteredProducts = filteredProducts
-    .filter((p) => {
+    .filter((p: Product) => {
       const q = searchQuery.toLowerCase();
       if (!q) return true;
       if (searchField === 'title') {
         return p.title.toLowerCase().includes(q);
       }
       if (searchField === 'tags') {
-        return p.tags.some((tag) => tag.toLowerCase().includes(q));
+        return p.tags.some((tag: string) => tag.toLowerCase().includes(q));
       }
       if (searchField === 'author') {
         return p.author.toLowerCase().includes(q);
       }
       return true;
     })
-    .sort((a, b) => {
+    .sort((a: Product, b: Product) => {
       if (sortType === 'latest') return Number(b.id) - Number(a.id);
       if (sortType === 'rating') return (b.price % 5) - (a.price % 5); // 예시 별점
       if (sortType === 'sales') return b.price - a.price; // 예시 구매 수
@@ -198,7 +214,7 @@ export default function MarketPage() {
                       <h2 className="text-lg font-semibold mb-2">{p.title}</h2>
                       <p className="text-gray-500 text-sm mb-3">{p.description}</p>
                       <div className="flex flex-wrap gap-2 mb-3">
-                        {p.tags.map((tag, i) => (
+                        {p.tags.map((tag: string, i: number) => (
                           <span key={i} className="text-xs text-[#9E9E9E]">
                             #{tag}
                           </span>
@@ -307,7 +323,7 @@ export default function MarketPage() {
                 등록된 상품이 없습니다.
               </div>
             ) : (
-              displayedProducts.map((product) => (
+              displayedProducts.map((product: Product) => (
                 <div
                   key={product.id}
                   onClick={() => router.push(`/market/${product.id}`)}
@@ -322,7 +338,7 @@ export default function MarketPage() {
                   </p>
                   <p className="mb-2 font-semibold truncate">{product.title}</p>
                   <div className="flex flex-wrap gap-2 mb-3">
-                    {product.tags.map((tag, idx) => (
+                    {product.tags.map((tag: string, idx: number) => (
                       <span key={idx} className="text-[#9E9E9E] text-xs select-none">
 
                         #{tag}

@@ -17,6 +17,15 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 
+interface Product {
+  id: string;
+  title: string;
+  description?: string;
+  price: number;
+  author: string;
+  authorId: string;
+  tags: string[];
+}
 
 const TABS = ['전체', '국어', '영어', '수학'];
 
@@ -28,6 +37,7 @@ export default function MyMarketPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
   const [selectedTab, setSelectedTab] = useState('전체');
+  const [loading, setLoading] = useState(false);
 
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -163,7 +173,7 @@ export default function MyMarketPage() {
                 등록된 상품이 없습니다.
               </div>
             ) : (
-              displayedProducts.map((product) => (
+              displayedProducts.map((product: Product) => (
                 <div
                   key={product.id}
                   className="relative rounded-lg border border-gray-200 bg-white p-4 shadow-sm hover:shadow-md transition-shadow transform hover:scale-[1.02] cursor-pointer"
@@ -185,7 +195,7 @@ export default function MyMarketPage() {
 
                     <p className="mb-2 truncate">{product.title}</p>
                     <div className="flex flex-wrap gap-2 mb-3">
-                      {product.tags?.map((tag, idx) => (
+                      {product.tags?.map((tag: string, idx: number) => (
                         <span
                           key={idx}
                           className="text-[#9E9E9E] text-xs select-none"

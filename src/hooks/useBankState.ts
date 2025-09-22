@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { BaseWorksheet, BaseProblem } from '@/types/common';
+import { Worksheet, Problem } from '@/services/koreanService'; // Import Worksheet and Problem from koreanService
 
 export interface BankState<
-  TWorksheet extends BaseWorksheet = BaseWorksheet,
-  TProblem extends BaseProblem = BaseProblem,
+  TWorksheet extends Worksheet = Worksheet,
+  TProblem extends Problem = Problem,
 > {
   worksheets: TWorksheet[];
   selectedWorksheet: TWorksheet | null;
@@ -14,8 +14,8 @@ export interface BankState<
 }
 
 export const useBankState = <
-  TWorksheet extends BaseWorksheet = BaseWorksheet,
-  TProblem extends BaseProblem = BaseProblem,
+  TWorksheet extends Worksheet = Worksheet,
+  TProblem extends Problem = Problem,
 >() => {
   const [state, setState] = useState<BankState<TWorksheet, TProblem>>({
     worksheets: [],
