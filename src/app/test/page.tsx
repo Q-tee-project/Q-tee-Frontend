@@ -22,7 +22,7 @@ import { CheckCircle } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { ScratchpadModal } from '@/components/ScratchpadModal';
 import { Input } from '@/components/ui/input';
-import { IoSearch } from "react-icons/io5";
+import { IoSearch } from 'react-icons/io5';
 import { TestResultModal } from './components/TestResultModal';
 import { AssignmentList } from '@/components/test/AssignmentList';
 import { TestInterface } from '@/components/test/TestInterface';
@@ -32,7 +32,9 @@ import { StudentResultView } from '@/components/test/StudentResultView';
 export default function TestPage() {
   const { userProfile } = useAuth();
   const [worksheets, setWorksheets] = useState<(Worksheet | KoreanWorksheet)[]>([]);
-  const [selectedWorksheet, setSelectedWorksheet] = useState<Worksheet | KoreanWorksheet | null>(null);
+  const [selectedWorksheet, setSelectedWorksheet] = useState<Worksheet | KoreanWorksheet | null>(
+    null,
+  );
   const [worksheetProblems, setWorksheetProblems] = useState<(MathProblem | KoreanProblem)[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -74,7 +76,6 @@ export default function TestPage() {
       loadWorksheets();
     }
   }, [selectedSubject, userProfile]);
-
 
   // 타이머 효과
   useEffect(() => {
@@ -383,7 +384,11 @@ export default function TestPage() {
       } else if (selectedSubject === '국어') {
         // 국어 과제 제출
         if (!selectedWorksheet || !userProfile) return;
-        const result = await koreanService.submitTest(selectedWorksheet.id, userProfile.id, answers);
+        const result = await koreanService.submitTest(
+          selectedWorksheet.id,
+          userProfile.id,
+          answers,
+        );
         setTestResult(result);
         setShowResultModal(true);
         console.log('국어 과제 제출 완료:', result);
@@ -393,12 +398,12 @@ export default function TestPage() {
 
       // 과제 상태를 "응시"로 업데이트
       if (selectedWorksheet) {
-        setWorksheets(prev =>
-          prev.map(worksheet =>
+        setWorksheets((prev) =>
+          prev.map((worksheet) =>
             worksheet.id === selectedWorksheet.id
               ? { ...worksheet, status: 'completed' }
-              : worksheet
-          )
+              : worksheet,
+          ),
         );
       }
     } catch (error: any) {
@@ -422,8 +427,8 @@ export default function TestPage() {
   const currentProblem = worksheetProblems[currentProblemIndex];
 
   // 검색 필터링된 과제 목록
-  const filteredWorksheets = worksheets.filter(worksheet =>
-    worksheet.title.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredWorksheets = worksheets.filter((worksheet) =>
+    worksheet.title.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   return (
@@ -478,15 +483,20 @@ export default function TestPage() {
           />
 
           {/* 문제 풀이 화면 */}
-          {showStudentResult && selectedWorksheet && userProfile && (
-            <StudentResultView
-              assignmentId={selectedWorksheet.id}
-              studentId={userProfile.id}
-              assignmentTitle={selectedWorksheet.title}
-              onBack={handleBackFromResult}
-              problems={worksheetProblems}
-            />
-          )}
+          {(() => {
+            if (showStudentResult && selectedWorksheet && userProfile) {
+              return (
+                <StudentResultView
+                  assignmentId={selectedWorksheet.id}
+                  studentId={userProfile.id}
+                  assignmentTitle={selectedWorksheet.title}
+                  onBack={handleBackFromResult}
+                  problems={worksheetProblems}
+                />
+              );
+            }
+            return null;
+          })()}
 
           {selectedWorksheet && !isTestStarted && !showStudentResult && (
             <Card className="w-5/6 flex items-center justify-center shadow-sm">
@@ -513,8 +523,10 @@ export default function TestPage() {
             </Card>
           )}
 
-          {selectedWorksheet && currentProblem && isTestStarted && (
-            selectedSubject === '국어' ? (
+          {selectedWorksheet &&
+            currentProblem &&
+            isTestStarted &&
+            (selectedSubject === '국어' ? (
               <KoreanTestInterface
                 selectedWorksheet={selectedWorksheet as KoreanWorksheet}
                 currentProblem={currentProblem as KoreanProblem}
@@ -528,11 +540,11 @@ export default function TestPage() {
                 onNextProblem={goToNextProblem}
                 onSubmitTest={submitTest}
                 onBackToAssignmentList={() => {
-                      setIsTestStarted(false);
-                      setTestSession(null);
-                      setCurrentProblemIndex(0);
-                      setAnswers({});
-                    }}
+                  setIsTestStarted(false);
+                  setTestSession(null);
+                  setCurrentProblemIndex(0);
+                  setAnswers({});
+                }}
                 formatTime={formatTime}
               />
             ) : (
@@ -549,17 +561,16 @@ export default function TestPage() {
                 onNextProblem={goToNextProblem}
                 onSubmitTest={submitTest}
                 onBackToAssignmentList={() => {
-                      setIsTestStarted(false);
-                      setTestSession(null);
-                      setCurrentProblemIndex(0);
-                      setAnswers({});
-                    }}
+                  setIsTestStarted(false);
+                  setTestSession(null);
+                  setCurrentProblemIndex(0);
+                  setAnswers({});
+                }}
                 onOpenScratchpad={() => setScratchpadOpen(true)}
                 getProblemTypeInKorean={getProblemTypeInKorean}
                 formatTime={formatTime}
               />
-            )
-          )}
+            ))}
 
           {!selectedWorksheet && (
             <Card className="w-5/6 flex items-center justify-center shadow-sm">
