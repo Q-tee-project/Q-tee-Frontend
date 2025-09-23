@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
-import { getMyProducts, deleteProduct, MarketProduct } from '@/services/marketApi';
+import { getMyProducts, deleteProduct, updateProduct, getProduct, MarketProduct, MarketProductDetail } from '@/services/marketApi';
 
 import {
   Dialog,
@@ -17,15 +17,8 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 
-interface Product {
-  id: string;
-  title: string;
-  description?: string;
-  price: number;
-  author: string;
-  authorId: string;
-  tags: string[];
-}
+// MarketProductDetail을 Product로 사용
+type Product = MarketProductDetail;
 
 const TABS = ['전체', '국어', '영어', '수학'];
 
@@ -43,26 +36,60 @@ export default function MyMarketPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [cols, setCols] = useState('grid-cols-1');
 
-  useEffect(() => {
-    if (!userProfile) return;
-    const initialProducts: Product[] = Array.from({ length: 30 }).map((_, idx) => ({
-      id: (idx + 1).toString(),
+  // 수정 모달 상태
+  const [editTarget, setEditTarget] = useState<Product | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+
+  // 상품 데이터 로드 (개발 환경에서는 mock 데이터 사용)
+  const loadProducts = async () => {
+    if (!userProfile?.id) return;
+    
+    setLoading(true);
+    
+    // 개발 환경에서는 API 서버가 없을 가능성이 높으므로 mock 데이터 사용
+    console.log('개발 환경: mock 데이터 사용');
+    
+    // Mock 데이터 생성
+    const mockProducts: Product[] = Array.from({ length: 5 }).map((_, idx) => ({
+      id: idx + 1,
       title: `중학생 ${idx + 1}학년 국어`,
+      description: `중학교 ${idx + 1}학년 국어 기출문제 모음집입니다. 각 단원별로 체계적으로 정리된 문제들로 구성되어 있어 효과적인 학습이 가능합니다.`,
       price: 20000 + idx * 5000,
-      author: userProfile?.name || '킹왕짱현범쿤',
-      authorId: userProfile?.id?.toString() || 'user123',
+      seller_name: userProfile?.name || '킹왕짱현범쿤',
+      seller_id: userProfile?.id || 1,
+      subject_type: '국어',
       tags: ['중학교', `${idx + 1}학년`, '국어', '기출문제', '2단원'],
+      main_image: undefined,
+      view_count: 0,
+      purchase_count: 0,
+      created_at: new Date().toISOString(),
+      original_service: 'korean',
+      original_worksheet_id: idx + 1,
+      status: 'active',
+      images: [],
+      updated_at: new Date().toISOString(),
     }));
-    setAllProducts(initialProducts);
+    
+    // 로딩 시뮬레이션
+    setTimeout(() => {
+      setAllProducts(mockProducts);
+      setLoading(false);
+    }, 500);
+  };
+
+  useEffect(() => {
+    loadProducts();
   }, [userProfile]);
 
-  const myProducts = allProducts.filter(product => product.authorId === userProfile?.id?.toString());
-
+  // 내 상품 필터링 (seller_id로 비교)
+  const myProducts = allProducts.filter(product => product.seller_id === userProfile?.id);
 
   const filteredProducts =
     selectedTab === '전체'
       ? myProducts
-      : myProducts.filter((product) => product.tags?.includes(selectedTab));
+      : myProducts.filter((product) => product.subject_type === selectedTab);
 
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
   const displayedProducts = filteredProducts;
@@ -99,9 +126,42 @@ export default function MyMarketPage() {
 
   const confirmDelete = () => {
     if (!deleteTarget) return;
-    setAllProducts(prev => prev.filter(product => product.id !== deleteTarget));
+    
+    // 로컬에서 삭제
+    setAllProducts(prev => prev.filter(product => product.id.toString() !== deleteTarget));
+    
     setDeleteTarget(null);
     setShowDeleteModal(false);
+  };
+
+  const handleEditProduct = (product: Product) => {
+    setEditTarget(product);
+    setEditTitle(product.title);
+    setEditDescription(product.description || '');
+    setShowEditModal(true);
+  };
+
+  const confirmEdit = () => {
+    if (!editTarget) return;
+    
+    // 로컬에서 수정
+    setAllProducts(prev => prev.map(product => 
+      product.id === editTarget.id 
+        ? { ...product, title: editTitle, description: editDescription }
+        : product
+    ));
+    
+    setEditTarget(null);
+    setShowEditModal(false);
+    setEditTitle('');
+    setEditDescription('');
+  };
+
+  const cancelEdit = () => {
+    setEditTarget(null);
+    setShowEditModal(false);
+    setEditTitle('');
+    setEditDescription('');
   };
 
   return (
@@ -155,7 +215,7 @@ export default function MyMarketPage() {
         <CardHeader className="py-2 px-6 border-b border-gray-100 flex items-center justify-between">
 
           <CardTitle className="text-base font-medium">
-            <span style={{ color: '#0072CE' }}>{myProducts[0]?.author}</span> 님의 {selectedTab} 상품 목록
+            <span style={{ color: '#0072CE' }}>{myProducts[0]?.seller_name}</span> 님의 {selectedTab} 상품 목록
           </CardTitle>
           <span className="text-sm font-normal" style={{ color: '#C8C8C8' }}>
 
@@ -183,15 +243,15 @@ export default function MyMarketPage() {
                   {/* 이미지 */}
                   <div
                     className="bg-gray-100 rounded-md h-70 mb-4 flex items-center justify-center text-gray-400 select-none"
-                    onClick={() => handleViewProduct(product.id)}
+                    onClick={() => handleViewProduct(product.id.toString())}
                   >
                     이미지
                   </div>
 
 
                   {/* 정보 */}
-                  <div onClick={() => handleViewProduct(product.id)}>
-                    <p className="text-gray-400 font-semibold text-sm mb-1 truncate">{product.author}</p>
+                  <div onClick={() => handleViewProduct(product.id.toString())}>
+                    <p className="text-gray-400 font-semibold text-sm mb-1 truncate">{product.seller_name}</p>
 
                     <p className="mb-2 truncate">{product.title}</p>
                     <div className="flex flex-wrap gap-2 mb-3">
@@ -213,7 +273,7 @@ export default function MyMarketPage() {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          router.push(`/market/edit/${product.id}`);
+                          handleEditProduct(product);
                         }}
                         className="flex items-center justify-center gap-2 px-3 py-2 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0072CE]"
                         aria-label="수정"
@@ -225,7 +285,7 @@ export default function MyMarketPage() {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleDeleteProduct(product.id);
+                          handleDeleteProduct(product.id.toString());
                         }}
                         className="flex items-center justify-center gap-2 px-3 py-2 rounded-md bg-red-50 text-red-600 hover:bg-red-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
                         aria-label="삭제"
@@ -290,6 +350,68 @@ export default function MyMarketPage() {
               className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-2"
             >
               삭제
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 수정 모달 */}
+      <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-[#0072CE]">
+              <FaEdit className="w-5 h-5" />
+              상품 수정
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="py-4 space-y-4">
+            {/* 상품 제목 */}
+            <div>
+              <label htmlFor="edit-title" className="block text-sm font-medium text-gray-700 mb-2">
+                상품 제목
+              </label>
+              <input
+                id="edit-title"
+                type="text"
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#0072CE] focus:border-transparent"
+                placeholder="상품 제목을 입력하세요"
+              />
+            </div>
+
+            {/* 상품 상세 설명 */}
+            <div>
+              <label htmlFor="edit-description" className="block text-sm font-medium text-gray-700 mb-2">
+                상품 상세 설명
+              </label>
+              <textarea
+                id="edit-description"
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                rows={4}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#0072CE] focus:border-transparent resize-none"
+                placeholder="상품 상세 설명을 입력하세요"
+              />
+            </div>
+
+
+            </div>
+
+          <DialogFooter className="flex gap-2">
+            <button
+              onClick={cancelEdit}
+              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0072CE] focus-visible:ring-offset-2"
+            >
+              취소
+            </button>
+            <button
+              onClick={confirmEdit}
+              disabled={!editTitle.trim()}
+              className="px-4 py-2 bg-[#0072CE] text-white rounded-md hover:bg-[#005fa3] disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0072CE] focus-visible:ring-offset-2"
+            >
+              수정 완료
             </button>
           </DialogFooter>
         </DialogContent>
