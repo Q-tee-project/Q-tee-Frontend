@@ -20,6 +20,19 @@ export function AssignmentResultView({ assignment, onBack }: { assignment: any, 
     loadProblems();
   }, [assignment.id]);
 
+  // selectedStudentId가 있으면 해당 학생의 결과를 바로 로드
+  useEffect(() => {
+    if (assignment.selectedStudentId && results.length > 0) {
+      const studentSession = results.find(result => {
+        // API 결과에서 학생 ID는 graded_by 필드에 저장됨
+        return result.graded_by === assignment.selectedStudentId || result.graded_by === assignment.selectedStudentId.toString();
+      });
+      if (studentSession) {
+        handleSessionClick(studentSession);
+      }
+    }
+  }, [assignment.selectedStudentId, results]);
+
   const loadProblems = async () => {
     try {
       const data = await koreanService.getKoreanWorksheetProblems(assignment.worksheet_id);
@@ -63,8 +76,14 @@ export function AssignmentResultView({ assignment, onBack }: { assignment: any, 
   };
 
   const handleBackToList = () => {
-    setSelectedSession(null);
-    setSessionDetails(null);
+    // selectedStudentId가 있으면 (학생별 결과에서 온 경우) 과제 목록으로 돌아가기
+    if (assignment.selectedStudentId) {
+      onBack();
+    } else {
+      // 일반적인 경우 학생 목록으로 돌아가기
+      setSelectedSession(null);
+      setSessionDetails(null);
+    }
   };
 
   const getAnswerStatus = (problemId: string) => {
@@ -111,7 +130,7 @@ export function AssignmentResultView({ assignment, onBack }: { assignment: any, 
 
   if (selectedSession) {
     return (
-      <div className="max-w-4xl mx-auto p-6">
+      <div className="mx-auto p-6">
         {/* Header */}
         <div className="flex items-center mb-6">
           <button
@@ -120,7 +139,9 @@ export function AssignmentResultView({ assignment, onBack }: { assignment: any, 
           >
             <FaArrowLeft className="h-5 w-5" />
           </button>
-          <h1 className="text-2xl font-bold text-gray-900">학생 {selectedSession.graded_by} - 채점 결과</h1>
+          <h1 className="text-2xl font-bold text-gray-900">
+            학생 {assignment.selectedStudentName || selectedSession.graded_by} - 채점 결과
+          </h1>
         </div>
 
         {sessionDetails ? (
@@ -131,33 +152,30 @@ export function AssignmentResultView({ assignment, onBack }: { assignment: any, 
                 <CardTitle>채점 결과 요약</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="text-center">
-                    <p className="text-sm text-gray-600">총점</p>
-                    <p className="text-2xl font-bold text-blue-600">
-                      {sessionDetails.total_score}/{sessionDetails.max_possible_score}
+                <div className="grid grid-cols-4 gap-4">
+                  <div className="text-center bg-gray-100 rounded-lg p-4">
+                    <p className="text-sm text-gray-600 mb-2">점수</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {sessionDetails.total_score} 점
                     </p>
                   </div>
-                  <div className="text-center">
-                    <p className="text-sm text-gray-600">정답률</p>
-                    <p className="text-2xl font-bold text-green-600">
-                      {sessionDetails.correct_count}/{sessionDetails.total_problems}
+                  <div className="text-center bg-gray-100 rounded-lg p-4">
+                    <p className="text-sm text-gray-600 mb-2">풀이시간</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      00:00:00
                     </p>
                   </div>
-                  <div className="text-center">
-                    <p className="text-sm text-gray-600">백분율</p>
-                    <p className="text-2xl font-bold text-purple-600">
-                      {Math.round((sessionDetails.correct_count / sessionDetails.total_problems) * 100)}%
+                  <div className="text-center bg-gray-100 rounded-lg p-4">
+                    <p className="text-sm text-gray-600 mb-2">맞춘 개수</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {sessionDetails.correct_count} 개
                     </p>
                   </div>
-                  <div className="text-center">
-                    <p className="text-sm text-gray-600">상태</p>
-                    <Badge
-                      variant={sessionDetails.status === 'approved' ? 'default' : 'secondary'}
-                      className="text-sm"
-                    >
-                      {sessionDetails.status === 'approved' ? '승인됨' : '대기중'}
-                    </Badge>
+                  <div className="text-center bg-gray-100 rounded-lg p-4">
+                    <p className="text-sm text-gray-600 mb-2">틀린 개수</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {sessionDetails.total_problems - sessionDetails.correct_count} 개
+                    </p>
                   </div>
                 </div>
               </CardContent>
@@ -304,7 +322,7 @@ export function AssignmentResultView({ assignment, onBack }: { assignment: any, 
   }
 
   return (
-    <div>
+    <div className="p-6">
       <div className="flex items-center mb-4">
         <button onClick={onBack} className="mr-4 p-2 rounded-md text-gray-400 hover:text-gray-600 transition-colors duration-200">
           <FaArrowLeft className="h-5 w-5" />

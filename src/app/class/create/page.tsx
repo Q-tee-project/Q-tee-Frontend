@@ -60,7 +60,7 @@ export default function ClassCreatePage() {
     loadClasses();
   }, [isAuthenticated, userType, router]);
 
-  // 수업 목록 로드
+  // 클래스 목록 로드
   const loadClasses = async () => {
     setIsLoading(true);
     try {
@@ -80,14 +80,14 @@ export default function ClassCreatePage() {
       }
       setStudentCounts(counts);
     } catch (error: any) {
-      console.error('수업 로드 실패:', error);
-      setError('수업 목록을 불러오는데 실패했습니다.');
+      console.error('클래스 로드 실패:', error);
+      setError('클래스 목록을 불러오는데 실패했습니다.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  // 수업 생성
+  // 클래스 생성
   const handleCreateClass = async (formData: {
     name: string;
     school_level: 'middle' | 'high';
@@ -105,8 +105,8 @@ export default function ClassCreatePage() {
       setIsCreateModalOpen(false);
       setError('');
     } catch (error: any) {
-      console.error('수업 생성 실패:', error);
-      setError(error?.message || '수업 생성에 실패했습니다.');
+      console.error('클래스 생성 실패:', error);
+      setError(error?.message || '클래스 생성에 실패했습니다.');
       throw error; // 모달에서 에러를 처리할 수 있도록 에러를 다시 던짐
     }
   };
@@ -131,12 +131,12 @@ export default function ClassCreatePage() {
     }
   };
 
-  // 수업 상세보기
+  // 클래스 상세보기
   const handleClassClick = (classroom: Classroom) => {
     router.push(`/class/${classroom.id}`);
   };
 
-  // 검색 필터링된 수업 목록 (수업명으로만 검색)
+  // 검색 필터링된 클래스 목록 (클래스명으로만 검색)
   const filteredClasses = classes.filter(classroom =>
     classroom.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -146,9 +146,9 @@ export default function ClassCreatePage() {
       {/* 헤더 */}
       <PageHeader
         icon={<Users />}
-        title="수업 관리"
+        title="클래스 관리"
         variant="class"
-        description="수업을 생성하고 관리하세요"
+        description="클래스를 생성하고 관리하세요"
       />
 
       {/* 메인 컨텐츠 */}
@@ -160,7 +160,7 @@ export default function ClassCreatePage() {
           <div className="flex justify-between items-center mb-6">
             <div className="max-w-sm relative">
               <Input
-                placeholder="수업명 검색"
+                placeholder="클래스명 검색"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pr-10"
@@ -172,14 +172,14 @@ export default function ClassCreatePage() {
               style={{ backgroundColor: '#0072CE' }}
               className="hover:opacity-90 ml-4"
             >
-              수업 생성
+              클래스 생성
             </Button>
           </div>
 
-          {/* 수업 목록 섹션 */}
+          {/* 클래스 목록 섹션 */}
           <div className="rounded-[10px] border p-6 shadow-sm">
-            {/* 수업 목록 제목 */}
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">내 수업 목록</h2>
+            {/* 클래스 목록 제목 */}
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">내 클래스 목록</h2>
 
 
           {/* 에러 메시지 */}
@@ -192,7 +192,7 @@ export default function ClassCreatePage() {
           {/* 로딩 */}
           {isLoading ? (
             <div className="text-center py-8">
-              <div className="text-gray-500">수업 목록을 불러오는 중...</div>
+              <div className="text-gray-500">클래스 목록을 불러오는 중...</div>
             </div>
           ) : filteredClasses.length === 0 ? (
             <Card>
@@ -201,25 +201,25 @@ export default function ClassCreatePage() {
                 {searchTerm ? (
                   <>
                     <h3 className="text-lg font-medium text-gray-900 mb-2">검색 결과가 없습니다</h3>
-                    <p className="text-gray-500 mb-4">다른 수업명으로 검색해보세요.</p>
+                    <p className="text-gray-500 mb-4">다른 클래스명으로 검색해보세요.</p>
                   </>
                 ) : (
                   <>
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">생성된 수업이 없습니다</h3>
-                    <p className="text-gray-500 mb-4">첫 번째 수업을 생성해보세요!</p>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">생성된 클래스가 없습니다</h3>
+                    <p className="text-gray-500 mb-4">첫 번째 클래스를 생성해보세요!</p>
                     <Button
                       onClick={() => setIsCreateModalOpen(true)}
                       style={{ backgroundColor: '#0072CE' }}
                       className="hover:opacity-90"
                     >
-                      수업 생성
+                      클래스 생성
                     </Button>
                   </>
                 )}
               </CardContent>
             </Card>
             ) : (
-              /* 수업 테이블 */
+              /* 클래스 테이블 */
               <Table>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
@@ -233,7 +233,7 @@ export default function ClassCreatePage() {
                         width: '15%'
                       }}
                     >
-                      수업명
+                      클래스명
                     </TableHead>
                     <TableHead 
                       className="font-semibold text-center border-b"
@@ -394,7 +394,7 @@ export default function ClassCreatePage() {
         </div>
       </div>
 
-      {/* 수업 생성 모달 */}
+      {/* 클래스 생성 모달 */}
       <CreateClassModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
@@ -402,13 +402,13 @@ export default function ClassCreatePage() {
         error={error}
       />
 
-      {/* 수업 코드 모달 */}
+      {/* 클래스 코드 모달 */}
       <Dialog open={isCodeModalOpen} onOpenChange={setIsCodeModalOpen}>
         <DialogContent className="max-w-md" showCloseButton={false}>
           <DialogHeader>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <DialogTitle className="flex items-center gap-2">
-                수업 코드
+                클래스 코드
               </DialogTitle>
               <button
                 onClick={() => setIsCodeModalOpen(false)}
@@ -423,10 +423,10 @@ export default function ClassCreatePage() {
           {selectedClass && (
             <div className="space-y-4">
               <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                <p className="text-sm text-gray-600">수업명: {selectedClass.name}</p>
+                <p className="text-sm text-gray-600">클래스명: {selectedClass.name}</p>
                 <div className="text-xs text-gray-500 space-y-1">
                   <p>• 이 코드를 학생들에게 공유하세요</p>
-                  <p>• 학생은 수업 가입 페이지에서 이 코드를 입력할 수 있습니다</p>
+                  <p>• 학생은 클래스 가입 페이지에서 이 코드를 입력할 수 있습니다</p>
                   <p>• 가입 요청 후 선생님의 승인이 필요합니다</p>
                 </div>
                 <div className="bg-gray-50 p-4 rounded-lg text-center">

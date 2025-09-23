@@ -101,6 +101,18 @@ export function AssignmentTab({ classId }: AssignmentTabProps) {
     setSelectedAssignment(assignment);
   };
 
+  const handleViewStudentResult = (assignment: Assignment, studentId: number, studentName: string) => {
+    console.log('handleViewStudentResult called with:', { assignment, studentId, studentName });
+    // 학생 정보를 포함한 assignment 객체를 설정하여 바로 결과 화면으로 이동
+    const updatedAssignment = {
+      ...assignment,
+      selectedStudentId: studentId,
+      selectedStudentName: studentName
+    };
+    console.log('Setting selectedAssignment to:', updatedAssignment);
+    setSelectedAssignment(updatedAssignment);
+  };
+
   const handleBackToAssignmentList = () => {
     setSelectedAssignment(null);
   };
@@ -177,58 +189,51 @@ export function AssignmentTab({ classId }: AssignmentTabProps) {
       ) : (
         <>
           {/* 과목별 탭 */}
-          <div className="border-b border-gray-200">
-            <div className="flex">
+          <div className="flex gap-2">
               {subjectTabs.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveSubject(tab.id)}
-                  className={`border-b-2 font-medium text-sm ${
+                  className={`py-2 px-4 text-sm font-medium rounded transition-colors duration-150 cursor-pointer ${
                     activeSubject === tab.id
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      ? 'bg-[#E6F3FF] text-[#0085FF]'
+                      : 'bg-[#f5f5f5] text-[#999999]'
                   }`}
-                  style={{ padding: '10px 20px' }}
                 >
                   {tab.label}
-                  {tab.count > 0 && (
-                    <span className="ml-2 bg-gray-100 text-gray-900 py-0.5 px-2.5 rounded-full text-xs">
-                      {tab.count}
-                    </span>
-                  )}
                 </button>
               ))}
             </div>
-          </div>
-
           {/* 과제 목록 헤더 */}
-          <div>
+          <div className="flex justify-between items-center">
             <h3 className="text-lg font-semibold text-gray-800">
               {subjectTabs.find(tab => tab.id === activeSubject)?.label} 과제 목록 ({filteredAssignments.length})
             </h3>
+            <Button 
+              onClick={() => setIsCreateModalOpen(true)} 
+              className="flex items-center gap-2"
+              style={{ backgroundColor: '#0085FF' }}
+            >
+              과제 생성
+            </Button>
           </div>
 
-          {/* 검색창과 과제 생성 버튼 */}
-          <div className="flex justify-between items-center">
-            <div className="max-w-sm relative">
-              <Input
-                placeholder="과제명 검색"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pr-10"
-              />
-              <IoSearch className="absolute right-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            </div>
-            <Button onClick={() => setIsCreateModalOpen(true)} className="flex items-center gap-2">
-              <Plus className="w-4 h-4" /> 과제 생성
-            </Button>
+          {/* 검색창 */}
+          <div className="max-w-sm relative">
+            <Input
+              placeholder="과제명 검색"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pr-10"
+            />
+            <IoSearch className="absolute right-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
           </div>
 
           {/* 과제 목록 */}
           {isLoading ? (
             <p>Loading assignments...</p>
           ) : filteredAssignments.length === 0 ? (
-            <div style={{ padding: '0 20px' }}>
+            <div>
               <Card>
                 <CardContent className="text-center py-12">
                   <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
@@ -250,7 +255,10 @@ export function AssignmentTab({ classId }: AssignmentTabProps) {
             <AssignmentList
               assignments={filteredAssignments}
               onSelectAssignment={handleSelectAssignment}
+              onViewStudentResult={handleViewStudentResult}
               onDeployAssignment={handleDeployAssignment}
+              classId={classId.toString()}
+              onRefresh={loadAssignments}
             />
           )}
         </>
