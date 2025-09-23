@@ -1,5 +1,6 @@
 // API 기본 설정
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8001';
+const ENGLISH_API_BASE_URL = process.env.NEXT_PUBLIC_ENGLISH_API_BASE_URL || 'http://localhost:8002';
 const AUTH_API_BASE_URL = process.env.NEXT_PUBLIC_AUTH_API_BASE_URL || 'http://localhost:8003';
 
 // 토큰 만료 처리를 위한 callback

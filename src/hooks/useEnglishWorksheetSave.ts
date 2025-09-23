@@ -1,69 +1,52 @@
 import { useState } from 'react';
 import { EnglishService } from '@/services/englishService';
-import { EnglishLLMResponseAndRequest } from '@/types/english';
-import { EnglishUIData, ParsedPassage, ParsedQuestion } from '@/types/englishUI';
+import { EnglishWorksheetData } from '@/types/english';
+
+// 타입 별칭 (기존 코드 호환성)
+type EnglishLLMResponseAndRequest = EnglishWorksheetData;
+// EnglishUIData는 더 이상 사용하지 않음 - 서버 데이터 직접 사용
 
 export const useEnglishWorksheetSave = () => {
   const [worksheetName, setWorksheetName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
-  const [currentWorksheetId, setCurrentWorksheetId] = useState<string | null>(null);
+  const [currentWorksheetId, setCurrentWorksheetId] = useState<number | null>(null);
 
   const resetWorksheet = () => {
     setWorksheetName('');
     setCurrentWorksheetId(null);
   };
 
-  // UIData를 EnglishLLMResponseAndRequest 형식으로 변환
-  const convertUIDataToSaveFormat = (uiData: EnglishUIData): EnglishLLMResponseAndRequest => {
+  // 서버 데이터에 제목 추가 및 null 값 처리
+  const addTitleToWorksheetData = (worksheetData: EnglishWorksheetData): EnglishWorksheetData => {
     const now = new Date();
-
-    // 현재 사용자 정보 가져오기
     const currentUser = JSON.parse(localStorage.getItem('user_profile') || '{}');
     const userId = currentUser?.id;
 
+    // questions 배열의 null 값들을 빈 문자열로 처리하고 correct_answer를 문자열로 변환
+    const processedQuestions = worksheetData.questions?.map(question => ({
+      ...question,
+      example_content: question.example_content || '',
+      example_original_content: question.example_original_content || '',
+      example_korean_translation: question.example_korean_translation || '',
+      correct_answer: String(question.correct_answer), // 모든 답안을 문자열로 변환
+    })) || [];
+
     return {
-      worksheet_id: currentWorksheetId || `worksheet_${Date.now()}`,
-      teacher_id: userId, // 현재 사용자 ID 설정
+      ...worksheetData,
+      worksheet_id: currentWorksheetId || 0,
+      teacher_id: userId,
       worksheet_name: worksheetName,
-      worksheet_date: now.toISOString().split('T')[0], // YYYY-MM-DD
-      worksheet_time: now.toTimeString().split(' ')[0], // HH:MM:SS
-      worksheet_duration: '60', // 분 단위 문자열
-      worksheet_subject: uiData.worksheetInfo.subject,
-      worksheet_level: uiData.worksheetInfo.level,
-      worksheet_grade: uiData.worksheetInfo.grade,
-      problem_type: uiData.worksheetInfo.problemType,
-      total_questions: uiData.worksheetInfo.totalQuestions,
-      passages: uiData.passages.map((passage: ParsedPassage) => ({
-        passage_id: passage.id,
-        passage_type: passage.type,
-        passage_content: passage.content,
-        original_content: passage.originalContent,
-        korean_translation: passage.koreanTranslation,
-        related_questions: passage.relatedQuestionIds,
-      })),
-      questions: uiData.questions.map((question: ParsedQuestion) => ({
-        question_id: question.id,
-        question_text: question.questionText,
-        question_type: question.type,
-        question_subject: question.subject,
-        question_difficulty: question.difficulty,
-        question_detail_type: question.detailType,
-        question_passage_id: question.passageId || null,
-        example_content: question.exampleContent || '',
-        example_original_content: question.exampleOriginalContent || '',
-        example_korean_translation: question.exampleKoreanTranslation || '',
-        question_choices: question.choices,
-        correct_answer: question.correctAnswer.toString(),
-        explanation: question.explanation,
-        learning_point: question.learningPoint,
-      })),
+      worksheet_date: now.toISOString().split('T')[0],
+      worksheet_time: now.toTimeString().split(' ')[0],
+      worksheet_duration: '60',
+      questions: processedQuestions,
     };
   };
 
-  // 영어 워크시트 저장 함수
+  // 영어 워크시트 저장 함수 (변환 없이 서버 데이터 직접 사용)
   const saveEnglishWorksheet = async (
-    uiData: EnglishUIData,
-    onSuccess?: (worksheetId: string) => void,
+    worksheetData: EnglishWorksheetData,
+    onSuccess?: (worksheetId: number) => void,
     onError?: (error: string) => void,
   ) => {
     if (!worksheetName.trim()) {
@@ -71,7 +54,7 @@ export const useEnglishWorksheetSave = () => {
       return;
     }
 
-    if (!uiData || uiData.questions.length === 0) {
+    if (!worksheetData || !worksheetData.questions || worksheetData.questions.length === 0) {
       alert('저장할 문제가 없습니다.');
       return;
     }
@@ -79,16 +62,18 @@ export const useEnglishWorksheetSave = () => {
     try {
       setIsSaving(true);
 
-      // UIData를 저장 형식으로 변환
-      const saveData = convertUIDataToSaveFormat(uiData);
+      // 서버 데이터에 제목만 추가
+      const saveData = addTitleToWorksheetData(worksheetData);
 
-      console.log('💾 영어 워크시트 저장 요청:', saveData);
+      console.log('💾 원본 워크시트 데이터:', worksheetData);
+      console.log('💾 변환된 저장 데이터:', saveData);
+      console.log('💾 첫 번째 문제 데이터:', saveData.questions?.[0]);
 
       // 영어 워크시트 저장 API 호출
       const result = await EnglishService.saveEnglishWorksheet(saveData);
 
       if (result.worksheet_id) {
-        setCurrentWorksheetId(result.worksheet_id);
+        setCurrentWorksheetId(Number(result.worksheet_id));
         onSuccess?.(result.worksheet_id);
       } else {
         throw new Error('워크시트 ID를 받지 못했습니다.');

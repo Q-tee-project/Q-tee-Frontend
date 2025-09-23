@@ -16,11 +16,13 @@ import { RefreshCw, BookOpen as BookIcon } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { IoSearch } from "react-icons/io5";
 import { Worksheet, MathProblem } from '@/types/math';
+import { EnglishWorksheetData, EnglishQuestion } from '@/types/english';
 
 interface AssignmentListProps {
   worksheets: Worksheet[];
   selectedWorksheet: Worksheet | null;
-  worksheetProblems: MathProblem[];
+  worksheetEnglishProblems: EnglishWorksheetData[];
+  worksheetProblems: (MathProblem | EnglishQuestion)[];
   isTestStarted: boolean;
   answers: Record<number, string>;
   currentProblemIndex: number;
@@ -38,6 +40,7 @@ export function AssignmentList({
   worksheets,
   selectedWorksheet,
   worksheetProblems,
+  worksheetEnglishProblems,
   isTestStarted,
   answers,
   currentProblemIndex,
@@ -141,35 +144,36 @@ export function AssignmentList({
                       </TableHeader>
                       <TableBody>
                         {worksheetProblems.map((problem, index) => {
-                          const isAnswered = answers[problem.id];
+                          const problemId = (problem as any).id || (problem as any).question_id;
+                          const isAnswered = answers[problemId];
                           const isCurrentProblem = index === currentProblemIndex;
                           return (
                             <TableRow
-                              key={problem.id}
+                              key={problemId}
                               className={`cursor-pointer hover:bg-gray-50 ${
                                 isCurrentProblem ? 'bg-[#EBF6FF]' : ''
                               }`}
                               onClick={() => onProblemSelect(index)}
                             >
                               <TableCell className="text-center font-medium">
-                                {problem.sequence_order}
+                                {(problem as any).sequence_order || (problem as any).question_id || index + 1}
                               </TableCell>
                               <TableCell className="text-center">
                                 <Badge className="bg-blue-100 text-blue-800 border-blue-200 text-xs">
-                                  {getProblemTypeInKorean(problem.problem_type)}
+                                  {getProblemTypeInKorean((problem as any).problem_type || (problem as any).question_detail_type || 'unknown')}
                                 </Badge>
                               </TableCell>
                               <TableCell className="text-center">
                                 <Badge
                                   className={`text-xs ${
-                                    problem.difficulty === 'A'
+                                    ((problem as any).difficulty === 'A' || (problem as any).question_difficulty === '상')
                                       ? 'border-red-300 text-red-600 bg-red-50'
-                                      : problem.difficulty === 'B'
+                                      : ((problem as any).difficulty === 'B' || (problem as any).question_difficulty === '중')
                                       ? 'border-green-300 text-green-600 bg-green-50'
                                       : 'border-purple-300 text-purple-600 bg-purple-50'
                                   }`}
                                 >
-                                  {problem.difficulty}
+                                  {(problem as any).difficulty || (problem as any).question_difficulty || '중'}
                                 </Badge>
                               </TableCell>
                               <TableCell className="text-center">

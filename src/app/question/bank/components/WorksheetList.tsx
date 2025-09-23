@@ -8,7 +8,10 @@ import { DataTable } from '../data-table';
 import { columns } from '../columns';
 import { Worksheet, Subject } from '@/types/math';
 import { KoreanWorksheet } from '@/types/korean';
-import { EnglishWorksheet } from '@/types/english';
+import { EnglishWorksheetData } from '@/types/english';
+
+// 타입 별칭
+type EnglishWorksheet = EnglishWorksheetData;
 import { BaseWorksheet } from '@/types/common';
 import { Trash2, RefreshCw } from 'lucide-react';
 
