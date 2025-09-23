@@ -247,6 +247,8 @@ export function AssignmentTab({ classId }: AssignmentTabProps) {
               assignments={filteredAssignments}
               onSelectAssignment={handleSelectAssignment}
               onDeployAssignment={handleDeployAssignment}
+              classId={classId.toString()}
+              onRefresh={loadAssignments}
             />
           )}
         </>
