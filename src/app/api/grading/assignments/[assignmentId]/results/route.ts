@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-export async function POST(
+export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ assignmentId: string }> }
 ) {
   try {
     const { assignmentId } = await params;
-    const body = await request.json();
-    const { student_id } = body;
     const url = new URL(request.url);
     const subject = url.searchParams.get('subject') || 'math';
 
@@ -16,10 +14,13 @@ export async function POST(
 
     if (subject === 'math') {
       targetUrl = 'http://localhost:8001';
-      endpoint = `/api/assignments/${assignmentId}/start`;
+      endpoint = `/api/grading/assignments/${assignmentId}/results`;
+    } else if (subject === 'korean') {
+      targetUrl = 'http://localhost:8004';
+      endpoint = `/api/grading/assignments/${assignmentId}/results`;
     } else {
       return NextResponse.json(
-        { error: 'Invalid subject for starting a test' },
+        { error: 'Invalid subject for grading results' },
         { status: 400 }
       );
     }
@@ -33,9 +34,8 @@ export async function POST(
     }
 
     const response = await fetch(`${targetUrl}${endpoint}`, {
-      method: 'POST',
+      method: 'GET',
       headers,
-      body: JSON.stringify({ student_id }),
     });
 
     const data = await response.json();
@@ -46,7 +46,7 @@ export async function POST(
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Assignment start proxy error:', error);
+    console.error('Assignment results proxy error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

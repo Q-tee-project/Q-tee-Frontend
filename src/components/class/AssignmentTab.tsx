@@ -46,6 +46,7 @@ export function AssignmentTab({ classId }: AssignmentTabProps) {
       if (activeSubject === 'korean') {
         data = await koreanService.getDeployedAssignments(classId.toString());
       } else if (activeSubject === 'math') {
+        data = await mathService.getDeployedAssignments(classId.toString()); // Convert to string for API call if needed
         // Assuming mathService has a similar getDeployedAssignments method
         // data = await mathService.getDeployedAssignments(classId.toString());
         console.warn("MathService.getDeployedAssignments is not yet implemented.");
@@ -167,10 +168,16 @@ export function AssignmentTab({ classId }: AssignmentTabProps) {
           };
           await koreanService.deployAssignment(deployRequest);
         } else if (activeSubject === 'math') {
+          const deployRequest: AssignmentDeployRequest = {
+            assignment_id: worksheetId as number,
+            classroom_id: classId,
+            student_ids: studentIds,
+          };
+          await mathService.deployAssignment(deployRequest);
           console.warn("MathService.deployAssignment is not yet implemented.");
         } else if (activeSubject === 'english') {
           const englishDeployRequest: EnglishAssignmentDeployRequest = {
-            assignment_id: worksheetId as number, // 영어는 assignment_id로 백엔드에 전송
+            assignment_id: worksheetId as number,
             classroom_id: classId,
             student_ids: studentIds,
           };
@@ -178,6 +185,7 @@ export function AssignmentTab({ classId }: AssignmentTabProps) {
         }
       }
       alert(`${selectedWorksheetIds.length}개의 과제가 성공적으로 생성되었습니다.`);
+      handleAssignmentCreated();
       handleAssignmentCreated();
     } catch (error) {
       console.error('Failed to create assignments:', error);
@@ -272,6 +280,9 @@ export function AssignmentTab({ classId }: AssignmentTabProps) {
               assignments={filteredAssignments}
               onSelectAssignment={handleSelectAssignment}
               onDeployAssignment={handleDeployAssignment}
+              classId={classId.toString()}
+              onRefresh={loadAssignments}
+              subject={activeSubject}
             />
           )}
         </>

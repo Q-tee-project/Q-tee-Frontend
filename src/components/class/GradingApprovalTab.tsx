@@ -10,7 +10,7 @@ import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 
 // Define types for grading session (should match backend schema)
-interface KoreanGradingSession {
+interface GradingSession {
   id: number;
   worksheet_id: number;
   graded_by: number; // Student ID who submitted
@@ -26,7 +26,19 @@ interface KoreanGradingSession {
   // Add other fields as necessary, e.g., student name, assignment name
   student_name?: string; // Placeholder for student name
   assignment_name?: string; // Placeholder for assignment name
+  // For Math sessions - AI grading specific fields
+  ai_graded_problems?: {
+    problem_id: number;
+    ai_score: number;
+    ai_explanation: string;
+    extracted_text?: string;
+    is_manual_review_required: boolean;
+  }[];
+  subject?: 'korean' | 'math';
 }
+
+// Backward compatibility
+interface KoreanGradingSession extends GradingSession {}
 
 interface GradingApprovalTabProps {
   classId: string;
@@ -34,16 +46,21 @@ interface GradingApprovalTabProps {
 }
 
 import { koreanService } from '@/services/koreanService';
+import { mathService } from '@/services/mathService';
 
-export function GradingApprovalTab({ classId, onGradingApproved }: GradingApprovalTabProps) {
-  const [pendingGradingSessions, setPendingGradingSessions] = useState<KoreanGradingSession[]>([]);
+interface GradingApprovalTabPropsExtended extends GradingApprovalTabProps {
+  subject?: 'korean' | 'math';
+}
+
+export function GradingApprovalTab({ classId, onGradingApproved, subject = 'korean' }: GradingApprovalTabPropsExtended) {
+  const [pendingGradingSessions, setPendingGradingSessions] = useState<GradingSession[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
-  
+
   const [selectedSessions, setSelectedSessions] = useState<boolean[]>([]);
   const [approvalSelectAll, setApprovalSelectAll] = useState(false);
   const [isApprovalModalOpen, setIsApprovalModalOpen] = useState(false);
-  const [approvingSession, setApprovingSession] = useState<KoreanGradingSession | null>(null);
+  const [approvingSession, setApprovingSession] = useState<GradingSession | null>(null);
 
   useEffect(() => {
     loadPendingGradingSessions();
@@ -52,8 +69,14 @@ export function GradingApprovalTab({ classId, onGradingApproved }: GradingApprov
   const loadPendingGradingSessions = async () => {
     setIsLoading(true);
     try {
-      // In a real app, classId would be used to filter sessions relevant to this class
-      const sessions = await koreanGradingService.getPendingGradingSessions(classId);
+      let sessions: GradingSession[] = [];
+      if (subject === 'korean') {
+        sessions = await koreanService.getPendingGradingSessions(classId);
+      } else if (subject === 'math') {
+        sessions = await mathService.getPendingGradingSessions();
+      }
+      // Add subject field to each session for UI purposes
+      sessions = sessions.map(session => ({ ...session, subject }));
       setPendingGradingSessions(sessions);
       setSelectedSessions(Array(sessions.length).fill(false));
     } catch (err: any) {
@@ -78,7 +101,7 @@ export function GradingApprovalTab({ classId, onGradingApproved }: GradingApprov
     setApprovalSelectAll(allSelected);
   };
 
-  const handleApproveClick = (session: KoreanGradingSession) => {
+  const handleApproveClick = (session: GradingSession) => {
     setApprovingSession(session);
     setIsApprovalModalOpen(true);
   };
@@ -87,7 +110,11 @@ export function GradingApprovalTab({ classId, onGradingApproved }: GradingApprov
     if (!approvingSession) return;
 
     try {
-      await koreanGradingService.approveGradingSession(approvingSession.id);
+      if (subject === 'korean') {
+        await koreanService.approveGradingSession(approvingSession.id);
+      } else if (subject === 'math') {
+        await mathService.approveGradingSession(approvingSession.id);
+      }
       await loadPendingGradingSessions(); // Refresh list
       if (onGradingApproved) {
         onGradingApproved();
@@ -164,6 +191,9 @@ export function GradingApprovalTab({ classId, onGradingApproved }: GradingApprov
                   학생명
                 </TableHead>
                 <TableHead className="text-center text-base font-bold" style={{ color: '#666', padding: '10px 12px' }}>
+                  과목
+                </TableHead>
+                <TableHead className="text-center text-base font-bold" style={{ color: '#666', padding: '10px 12px' }}>
                   과제명
                 </TableHead>
                 <TableHead className="text-center text-base font-bold" style={{ color: '#666', padding: '10px 12px' }}>
@@ -195,6 +225,19 @@ export function GradingApprovalTab({ classId, onGradingApproved }: GradingApprov
                   </TableCell>
                   <TableCell className="text-center text-sm text-gray-600 font-medium" style={{ padding: '10px 12px' }}>
                     {session.student_name}
+                  </TableCell>
+                  <TableCell className="text-center text-sm text-gray-600" style={{ padding: '10px 12px' }}>
+                    <Badge
+                      className="text-sm"
+                      style={{
+                        backgroundColor: session.subject === 'math' ? '#FFF5E9' : '#E6F3FF',
+                        color: session.subject === 'math' ? '#FF9F2D' : '#0085FF',
+                        border: 'none',
+                        padding: '6px 12px'
+                      }}
+                    >
+                      {session.subject === 'math' ? '수학' : '국어'}
+                    </Badge>
                   </TableCell>
                   <TableCell className="text-center text-sm text-gray-600" style={{ padding: '10px 12px' }}>
                     {session.assignment_name}
@@ -288,8 +331,44 @@ export function GradingApprovalTab({ classId, onGradingApproved }: GradingApprov
                       <span className="text-gray-500">채점일:</span>
                       <span className="ml-2">{format(new Date(approvingSession.graded_at), 'yyyy.MM.dd HH:mm', { locale: ko })}</span>
                     </div>
+                    {approvingSession.subject === 'math' && (
+                      <div>
+                        <span className="text-gray-500">채점 방식:</span>
+                        <span className="ml-2">AI 자동 채점 + 교사 검수</span>
+                      </div>
+                    )}
                   </div>
                 </div>
+
+                {/* AI 채점 세부사항 (수학 과목인 경우) */}
+                {approvingSession.subject === 'math' && approvingSession.ai_graded_problems && (
+                  <div className="mt-4">
+                    <h4 className="text-sm font-medium text-gray-700 mb-2">AI 채점 세부사항</h4>
+                    <div className="space-y-2 max-h-32 overflow-y-auto">
+                      {approvingSession.ai_graded_problems.map((problem, index) => (
+                        <div key={problem.problem_id} className="p-2 border border-gray-200 rounded text-xs">
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="font-medium">문제 {index + 1}</span>
+                            <span className={`px-2 py-1 rounded ${
+                              problem.is_manual_review_required
+                                ? 'bg-yellow-100 text-yellow-800'
+                                : 'bg-green-100 text-green-800'
+                            }`}>
+                              {problem.is_manual_review_required ? '검수 필요' : 'AI 채점 완료'}
+                            </span>
+                          </div>
+                          <div className="text-gray-600">
+                            <div>점수: {problem.ai_score}점</div>
+                            {problem.extracted_text && (
+                              <div>추출된 텍스트: {problem.extracted_text}</div>
+                            )}
+                            <div>AI 설명: {problem.ai_explanation}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>

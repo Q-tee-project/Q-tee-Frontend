@@ -2,14 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { sessionId: string } }
+  { params }: { params: Promise<{ sessionId: string }> }
 ) {
   try {
-    const { sessionId } = params;
+    const { sessionId } = await params;
     const body = await request.json();
 
     const targetUrl = 'http://localhost:8001';
-    const endpoint = `/test-sessions/${sessionId}/answers`;
+    const endpoint = `/api/test-sessions/test-sessions/${sessionId}/answers`;
 
     const authHeader = request.headers.get('authorization');
     const headers: HeadersInit = {

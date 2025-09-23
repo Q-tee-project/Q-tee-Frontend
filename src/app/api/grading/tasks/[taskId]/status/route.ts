@@ -1,15 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-export async function POST(
+export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ sessionId: string }> }
+  { params }: { params: Promise<{ taskId: string }> }
 ) {
   try {
-    const { sessionId } = await params;
-    const body = await request.json();
+    const { taskId } = await params;
+    const url = new URL(request.url);
+    const subject = url.searchParams.get('subject') || 'math';
 
-    const targetUrl = 'http://localhost:8001';
-    const endpoint = `/api/test-sessions/test-sessions/${sessionId}/submit`;
+    let targetUrl = '';
+    let endpoint = '';
+
+    if (subject === 'math') {
+      targetUrl = 'http://localhost:8001';
+      endpoint = `/api/grading/tasks/${taskId}/status`;
+    } else {
+      return NextResponse.json(
+        { error: 'Task status only supported for math service' },
+        { status: 400 }
+      );
+    }
 
     const authHeader = request.headers.get('authorization');
     const headers: HeadersInit = {
@@ -20,9 +31,8 @@ export async function POST(
     }
 
     const response = await fetch(`${targetUrl}${endpoint}`, {
-      method: 'POST',
+      method: 'GET',
       headers,
-      body: JSON.stringify(body),
     });
 
     const data = await response.json();
@@ -33,7 +43,7 @@ export async function POST(
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Test submission proxy error:', error);
+    console.error('Task status proxy error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

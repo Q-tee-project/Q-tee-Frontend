@@ -3,7 +3,8 @@
 import { useParams, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { FiShoppingCart, FiArrowLeft, FiEdit, FiSave, FiX, FiTrash2, FiUpload, FiMove, FiPlus, FiEye } from 'react-icons/fi';
+import { FiShoppingCart, FiArrowLeft, FiEdit, FiSave, FiX, FiTrash2, FiUpload, FiMove, FiPlus, FiEye, FiThumbsUp, FiMoreHorizontal, FiThumbsDown, FiInfo  } from 'react-icons/fi';
+import { FaUserGroup } from "react-icons/fa6";
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import ProductEditModal from '@/components/market/ProductEditModal';
@@ -14,6 +15,8 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+
+
 
 export default function ProductDetailPage() {
   const { productId } = useParams();
@@ -45,6 +48,26 @@ export default function ProductDetailPage() {
 
   // 등록자와 로그인 사용자 비교
   const isOwner = userProfile?.id?.toString() === product.authorId;
+
+  // 구매 여부 확인 (임시로 false로 설정, 실제로는 API에서 확인)
+  const [isPurchased, setIsPurchased] = useState(false);
+  
+  // 리뷰 상태 관리
+  const [userReview, setUserReview] = useState<'recommend' | 'normal' | 'not-recommend' | null>(null);
+  
+  // 리뷰 통계 데이터 (임시 데이터)
+  const reviewStats = {
+    satisfactionRate: 92, // 만족도 퍼센트
+    totalReviews: 500, // 전체 리뷰 수 
+    breakdown: {
+      recommend: { count: 459, percentage: 92 },
+      normal: { count: 25, percentage: 5 },
+      notRecommend: { count: 16, percentage: 3 }
+    }
+  };
+
+  
+
 
   // 이미지 관리 상태
   const [images, setImages] = useState([
@@ -187,6 +210,15 @@ export default function ProductDetailPage() {
     setDraggedIndex(null);
   };
 
+  // 리뷰 선택 핸들러
+  const handleReviewSelect = (reviewType: 'recommend' | 'normal' | 'not-recommend') => {
+    setUserReview(reviewType);
+    // 실제로는 API 호출하여 리뷰 저장
+    console.log('리뷰 선택:', reviewType);
+  };
+
+
+
   return (
     <div className="flex flex-col">
       <PageHeader
@@ -195,7 +227,7 @@ export default function ProductDetailPage() {
         variant="market"
         description="상품의 상세 이미지를 확인하고 구매할 수 있습니다"
       />
-      <Card className="mx-8 mb-8 shadow-sm">
+      <Card className="flex-1 flex flex-col shadow-sm" style={{ margin: '2rem' }}>
       <CardHeader className="py-3 px-6 border-b border-gray-100 flex items-center justify-between">
         <button
             onClick={() => router.back()}
@@ -292,11 +324,11 @@ export default function ProductDetailPage() {
               </div>
 
               {/* 썸네일 리스트 (메인 하단) */}
-              <div className="mt-4 grid grid-cols-3 sm:grid-cols-7 gap-3">
+              <div className="mt-4 flex gap-3">
                 {images.map((img, idx) => (
                   <div
                     key={img.id}
-                    className={`relative h-20 rounded-md flex items-center justify-center text-gray-400 select-none bg-gray-100 border transition-colors ${
+                    className={`relative flex-1 h-20 rounded-lg flex items-center justify-center text-gray-400 select-none bg-gray-50 border transition-colors ${
                       selectedIndex === idx ? 'border-transparent ring-2 ring-[#0072CE]' : 'border-transparent hover:border-[#0072CE]/60'
                     } ${isEditing ? 'cursor-move' : 'cursor-pointer'}`}
                     onClick={() => !isEditing && setSelectedIndex(idx)}
@@ -309,7 +341,7 @@ export default function ProductDetailPage() {
                       <img 
                         src={img.url} 
                         alt={img.label}
-                        className="w-full h-full object-cover rounded-md"
+                        className="w-full h-full object-cover rounded-lg"
                       />
                     ) : (
                       <span>{idx === 0 ? '메인' : idx}</span>
@@ -372,7 +404,12 @@ export default function ProductDetailPage() {
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-2">
                 {/* <div className="w-12 h-12 rounded-full bg-gray-200" /> */}
-                <p className="font-semibold text-gray-700">{product.author}</p>
+                <button
+                  onClick={() => router.push(`/market/author/${product.authorId}`)}
+                  className="font-semibold text-gray-700 hover:text-[#0072CE] transition-colors"
+                >
+                  {product.author}
+                </button>
               </div>
               
               {/* 상품 제목 */}
@@ -451,6 +488,229 @@ export default function ProductDetailPage() {
         </CardContent>
       </Card>
 
+      {/* 리뷰 섹션 */}
+      <Card className="flex-1 flex flex-col shadow-sm" style={{ margin: '2rem' }}>
+        <CardHeader className="py-3 px-6 border-b border-gray-100 flex items-center justify-between">
+          <CardTitle className="text-lg font-semibold text-gray-800">상품 리뷰</CardTitle>
+          {/* 테스트용 구매 상태 토글 버튼 */}
+          <button
+            onClick={() => setIsPurchased(!isPurchased)}
+            className={`px-3 py-1 text-xs rounded-full transition-colors ${
+              isPurchased 
+                ? 'bg-green-100 text-green-700 border border-green-200' 
+                : 'bg-gray-100 text-gray-700 border border-gray-200'
+            }`}
+          >
+            {isPurchased ? '구매완료' : '미구매'}
+          </button>
+        </CardHeader>
+        <CardContent className="p-6">
+          {/* 리뷰 통계 섹션 - 모든 사용자에게 표시 */}
+          <div className="w-full mb-10">
+            <div className="flex gap-8">
+              {/* 좌측: 만족도 */}
+              <div className="flex-1 bg-gray-50 rounded-lg p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <h3 className="text-lg font-semibold text-gray-800">만족도</h3>
+                  <div className="relative group">
+                    <FiInfo className="w-4 h-4 text-gray-400 hover:text-gray-600 cursor-help" />
+                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-10">
+                      전체 평가 중 추천 비율
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="flex -space-x-2">
+                    <div className="w-12 h-12 bg-gray-300 rounded-full border-2 border-white flex items-center justify-center">
+                      <FaUserGroup  className="w-6 h-6 text-gray-600" />
+                    </div>
+                  </div>
+                  <div>
+                    <div className={`text-6xl font-bold ${reviewStats.satisfactionRate >= 90 ? 'text-[#0072CE]' : 'text-gray-800'}`}>
+                      {reviewStats.satisfactionRate}%
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 우측: 구매평 비율 */}
+              <div className="flex-1 bg-gray-50 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">구매평</h3>
+                <div className="flex flex-col gap-3">
+                  {/* 추천 */}
+                  <div className="flex flex-col gap-2 group">
+                    <div className="text-sm text-gray-600">추천</div>
+                    <div className="relative">
+                      <div className="w-full h-6 bg-gray-200 rounded-full">
+                        <div 
+                          className="h-full bg-[#0072CE] rounded-full transition-all duration-300 relative"
+                          style={{ width: `${reviewStats.breakdown.recommend.percentage}%` }}
+                        >
+                          <div className="absolute -top-8 right-0 bg-[#0072CE] text-white text-xs px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-10">
+                            {reviewStats.breakdown.recommend.count}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 보통 */}
+                  <div className="flex flex-col gap-2 group">
+                    <div className="text-sm text-gray-600">보통</div>
+                    <div className="relative">
+                      <div className="w-full h-6 bg-gray-200 rounded-full">
+                        <div 
+                          className="h-full bg-gray-400 rounded-full transition-all duration-300 relative"
+                          style={{ width: `${reviewStats.breakdown.normal.percentage}%` }}
+                        >
+                          <div className="absolute -top-8 right-0 bg-gray-400 text-white text-xs px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-10">
+                            {reviewStats.breakdown.normal.count}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 추천안함 */}
+                  <div className="flex flex-col gap-2 group">
+                    <div className="text-sm text-gray-600">추천안함</div>
+                    <div className="relative">
+                      <div className="w-full h-6 bg-gray-200 rounded-full">
+                        <div 
+                          className="h-full bg-gray-600 rounded-full transition-all duration-300 relative"
+                          style={{ width: `${reviewStats.breakdown.notRecommend.percentage}%` }}
+                        >
+                          <div className="absolute -top-8 right-0 bg-gray-600 text-white text-xs px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-10">
+                            {reviewStats.breakdown.notRecommend.count}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {isPurchased ? (
+            // 구매한 경우 - 리뷰 선택 가능
+            <div className="flex flex-col items-center">
+              <p className="text-gray-600 mb-6">이 상품에 대한 평가를 남겨주세요</p>
+              <div className="flex gap-8">
+                {/* 추천 */}
+                <button
+                  onClick={() => handleReviewSelect('recommend')}
+                  className={`flex flex-col items-center gap-2 p-4 rounded-lg transition-all ${
+                    userReview === 'recommend'
+                      ? 'bg-[#0072CE]/10 border-2 border-[#0072CE]/30'
+                      : 'hover:bg-gray-50 border-2 border-transparent'
+                  }`}
+                >
+                  <div className={`w-16 h-16 rounded-full flex items-center justify-center ${
+                    userReview === 'recommend' ? 'bg-[#0072CE]' : 'bg-gray-300'
+                  }`}>
+                    <FiThumbsUp className="w-8 h-8 text-white" />
+                  </div>
+                  <span className="text-sm text-gray-600">추천</span>
+                </button>
+
+                {/* 보통 */}
+                <button
+                  onClick={() => handleReviewSelect('normal')}
+                  className={`flex flex-col items-center gap-2 p-4 rounded-lg transition-all ${
+                    userReview === 'normal'
+                      ? 'bg-gray-50 border-2 border-gray-300'
+                      : 'hover:bg-gray-50 border-2 border-transparent'
+                  }`}
+                >
+                  <div className={`w-16 h-16 rounded-full flex items-center justify-center ${
+                    userReview === 'normal' ? 'bg-gray-500' : 'bg-gray-300'
+                  }`}>
+                    <FiMoreHorizontal className="w-8 h-8 text-white" />
+                  </div>
+                  <span className="text-sm text-gray-600">보통</span>
+                </button>
+
+                {/* 추천안함 */}
+                <button
+                  onClick={() => handleReviewSelect('not-recommend')}
+                  className={`flex flex-col items-center gap-2 p-4 rounded-lg transition-all ${
+                    userReview === 'not-recommend'
+                      ? 'bg-red-50 border-2 border-red-200'
+                      : 'hover:bg-gray-50 border-2 border-transparent'
+                  }`}
+                >
+                  <div className={`w-16 h-16 rounded-full flex items-center justify-center ${
+                    userReview === 'not-recommend' ? 'bg-red-500' : 'bg-gray-300'
+                  }`}>
+                    <FiThumbsDown className="w-8 h-8 text-white" />
+                  </div>
+                  <span className="text-sm text-gray-600">추천안함</span>
+                </button>
+              </div>
+            </div>
+          ) : (
+            // 구매하지 않은 경우 - 블러 처리된 카드
+            <div className="relative">
+              <div className="filter blur-sm pointer-events-none">
+                <div className="flex flex-col items-center">
+                  <p className="text-gray-600 mb-6">이 상품에 대한 평가를 남겨주세요</p>
+                  <div className="flex gap-8">
+                    {/* 추천 */}
+                    <div className="flex flex-col items-center gap-2 p-4 rounded-lg bg-gray-50 border-2 border-transparent">
+                      <div className="w-16 h-16 rounded-full bg-gray-300 flex items-center justify-center">
+                        <FiThumbsUp className="w-8 h-8 text-white" />
+                      </div>
+                      <span className="text-sm text-gray-600">추천</span>
+                    </div>
+
+                    {/* 보통 */}
+                    <div className="flex flex-col items-center gap-2 p-4 rounded-lg bg-gray-50 border-2 border-transparent">
+                      <div className="w-16 h-16 rounded-full bg-gray-300 flex items-center justify-center">
+                        <FiMoreHorizontal className="w-8 h-8 text-white" />
+                      </div>
+                      <span className="text-sm text-gray-600">보통</span>
+                    </div>
+
+                    {/* 추천안함 */}
+                    <div className="flex flex-col items-center gap-2 p-4 rounded-lg bg-gray-50 border-2 border-transparent">
+                      <div className="w-16 h-16 rounded-full bg-gray-300 flex items-center justify-center">
+                        <FiThumbsDown className="w-8 h-8 text-white" />
+                      </div>
+                      <span className="text-sm text-gray-600">추천안함</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* 오버레이 메시지 */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="bg-white/90 backdrop-blur-sm rounded-lg py-3 px-6 border-gray-200 mt-8">
+                  <div className="text-center">
+                    <div className="w-16 h-16 bg-[#0072CE] rounded-full flex items-center justify-center mx-auto mb-4">
+                      <FiShoppingCart className="w-8 h-8 text-white" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-800 mb-2">
+                      상품을 구매 후 추천 여부를 남겨주세요!
+                    </h3>
+                    <p className="text-sm text-gray-600 mb-4">
+                      구매하신 상품에 대한 솔직한 리뷰를 남겨주시면<br />
+                      다른 사용자들에게 도움이 됩니다.
+                    </p>
+                    <button
+                      onClick={() => router.push(`/market/${productId}/buy`)}
+                      className="px-6 py-2 bg-[#0072CE] text-white rounded-md hover:bg-[#005fa3] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0072CE] focus-visible:ring-offset-2"
+                    >
+                      구매하러 가기
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* 상품 수정 모달 */}
       <ProductEditModal
         isOpen={showEditModal}
@@ -478,7 +738,7 @@ export default function ProductDetailPage() {
             </p>
           </div>
 
-          <DialogFooter className="flex gap-2">
+          <DialogFooter className="flex flex-col items-center gap-4 mt-8">
             <button
               onClick={() => setShowDeleteModal(false)}
               className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0072CE] focus-visible:ring-offset-2"
@@ -494,6 +754,7 @@ export default function ProductDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
     </div>
   );
 }

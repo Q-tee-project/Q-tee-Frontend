@@ -180,18 +180,17 @@ export function AssignmentCreateModal({
           </p>
 
           {/* 과목별 탭 */}
-          <div className="border-b border-gray-200">
-            <div className="flex">
+          <div className="mb-4">
+            <div className="flex gap-2">
               {subjectTabs.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveSubject(tab.id)}
-                  className={`border-b-2 font-medium text-sm ${
+                  className={`py-2 px-4 text-sm font-medium rounded transition-colors duration-150 cursor-pointer ${
                     activeSubject === tab.id
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      ? 'bg-[#E6F3FF] text-[#0085FF]'
+                      : 'bg-[#f5f5f5] text-[#999999]'
                   }`}
-                  style={{ padding: '10px 20px' }}
                 >
                   {tab.label}
                 </button>
