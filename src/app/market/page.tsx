@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
-import PopularProductsSlider from '@/components/market/PopularProductsSlider';
+import TrendyPopularProducts from '@/components/market/TrendyPopularProducts';
 
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -49,7 +49,7 @@ export default function MarketPage() {
     authorId: idx < 5 ? (userProfile?.id?.toString() || 'user123') : `user${idx}`,
     tags: ['중학교', '1학년', idx % 2 === 0 ? '국어' : '영어', '기출문제'],
   }));
-  // 인기상품(슬라이드) 데이터는 상위 5개로 제한
+  // 인기상품 데이터 (상위 5개)
   const featuredProducts = products.slice(0, 5);
 
   // 필터링된 상품 (탭에 따른 필터링)
@@ -120,12 +120,10 @@ export default function MarketPage() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-
-  // 페이지/탭 변경 시 상단으로 스크롤 (검색어 변경 시에는 스크롤하지 않음)
+  // 페이지/탭 변경 시 상단으로 스크롤
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [currentPage, selectedTab]);
-
 
   return (
     <div className="flex flex-col">
@@ -166,7 +164,7 @@ export default function MarketPage() {
           </button>
           <button
             onClick={() => router.push('/market/purchaseList')}
-            className="text-sm px-4 py-2 rounded-md bg-[#0072CE] text-white hover:bg-[#005fa3] transition-colors"
+            className="text-sm px-4 py-2 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors border border-gray-300"
           >
             구매목록
           </button>
@@ -175,19 +173,22 @@ export default function MarketPage() {
 
       {/* 인기상품 슬라이드 */}
       <Card className="flex-1 flex flex-col shadow-sm" style={{ margin: '2rem' }}>
-        <CardHeader className="py-3 px-6 border-b border-gray-100 flex items-center justify-between">
+        <CardHeader className="py-2 px-6 border-b border-gray-100 flex items-center justify-between">
 
 
           <CardTitle className="text-base font-medium">{selectedTab} 상품 목록</CardTitle>
-          <span className="text-sm font-normal" style={{ color: '#C8C8C8' }}>
+          <span className="text-sm font-normal text-gray-400">
             총 {filteredProducts.length}건
           </span>
 
         </CardHeader>
         <CardContent>
 
+          {/* 트렌디한 인기상품 */}
           {selectedTab === '전체' && (
-            <PopularProductsSlider products={featuredProducts} />
+            <div className="mb-8">
+              <TrendyPopularProducts products={featuredProducts} />
+            </div>
           )}
 
           {/* 정렬 & 검색 */}
@@ -241,7 +242,7 @@ export default function MarketPage() {
           </div>
 
           {/* 상품 그리드 */}
-          <div className={`grid ${cols} gap-6 transition-all duration-300`} style={{ minHeight: '600px' }}>
+          <div className={`grid ${cols} gap-6`} style={{ minHeight: '400px' }}>
             {loading ? (
               <div className="col-span-full flex justify-center items-center text-gray-500">
                 로딩 중...
@@ -261,15 +262,9 @@ export default function MarketPage() {
                   <div className="bg-gray-100 rounded-md h-48 mb-4 flex items-center justify-center text-gray-400 select-none">
                     이미지
                   </div>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      router.push(`/market/author/${product.authorId}`);
-                    }}
-                    className="text-gray-400 font-semibold text-sm mb-1 truncate hover:text-[#0072CE] transition-colors"
-                  >
+                  <p className="text-gray-400 font-semibold text-sm mb-1 truncate">
                     {product.author}
-                  </button>
+                  </p>
                   <p className="mb-2 font-semibold truncate">{product.title}</p>
                   <div className="flex flex-wrap gap-2 mb-3">
                     {product.tags.map((tag: string, idx: number) => (
