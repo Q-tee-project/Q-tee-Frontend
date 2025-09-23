@@ -42,7 +42,7 @@ export interface MathFormData {
   chapter_name: string;
   problem_count: number;
   difficulty_ratio: { A: number; B: number; C: number };
-  problem_type_ratio: { 객관식: number; 단답형: number; 서술형: number };
+  problem_type_ratio: { 객관식: number; 단답형: number };
   user_text?: string;
 }
 
@@ -92,8 +92,7 @@ export interface TaskStatus {
 // 문제 유형 enum
 export enum ProblemType {
   MULTIPLE_CHOICE = 'multiple_choice',
-  SHORT_ANSWER = 'short_answer',
-  ESSAY = 'essay'
+  SHORT_ANSWER = 'short_answer'
 }
 
 // 난이도 enum

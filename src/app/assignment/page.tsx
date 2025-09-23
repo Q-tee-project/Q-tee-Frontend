@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { MathService } from '@/services/mathService';
+import { mathService } from '@/services/mathService';
 import { useAuth } from '@/contexts/AuthContext';
 import { BookOpen, Calendar, Users, Clock } from 'lucide-react';
 
@@ -35,27 +35,27 @@ export default function AssignmentPage() {
   }, [userType, router]);
 
   // 과제 목록 로드
-  useEffect(() => {
-    if (userProfile?.id) {
-      loadAssignments();
-    }
-  }, [userProfile]);
+  // useEffect(() => {
+  //   if (userProfile?.id) {
+  //     loadAssignments();
+  //   }
+  // }, [userProfile]);
 
-  const loadAssignments = async () => {
-    try {
-      setIsLoading(true);
-      if (!userProfile?.id) {
-        console.error('사용자 정보가 없습니다');
-        return;
-      }
-      const assignmentList = await MathService.getStudentAssignments(userProfile.id);
-      setAssignments(assignmentList);
-    } catch (error) {
-      console.error('과제 목록 로드 실패:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // const loadAssignments = async () => {
+  //   try {
+  //     setIsLoading(true);
+  //     if (!userProfile?.id) {
+  //       console.error('사용자 정보가 없습니다');
+  //       return;
+  //     }
+  //     const assignmentList = await mathService.getStudentAssignments(userProfile.id);
+  //     setAssignments(assignmentList);
+  //   } catch (error) {
+  //     console.error('과제 목록 로드 실패:', error);
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
 
   const getStatusBadge = (status: string) => {
     switch (status) {

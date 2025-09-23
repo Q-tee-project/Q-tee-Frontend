@@ -43,9 +43,7 @@ export function AssignmentTab({ classId }: AssignmentTabProps) {
       if (activeSubject === 'korean') {
         data = await koreanService.getDeployedAssignments(classId.toString()); // Convert to string for API call if needed
       } else if (activeSubject === 'math') {
-        // Assuming mathService has a similar getDeployedAssignments method
-        // data = await mathService.getDeployedAssignments(classId.toString()); // Convert to string for API call if needed
-        console.warn("MathService.getDeployedAssignments is not yet implemented.");
+        data = await mathService.getDeployedAssignments(classId.toString()); // Convert to string for API call if needed
       }
       setAssignments(data);
     } catch (error) {
@@ -151,13 +149,11 @@ export function AssignmentTab({ classId }: AssignmentTabProps) {
         if (activeSubject === 'korean') {
           await koreanService.deployAssignment(deployRequest);
         } else if (activeSubject === 'math') {
-          // Assuming mathService has a similar deployAssignment method
-          // await mathService.deployAssignment(deployRequest);
-          console.warn("MathService.deployAssignment is not yet implemented.");
+          await mathService.deployAssignment(deployRequest);
         }
       }
       alert(`${selectedWorksheetIds.length}개의 과제가 성공적으로 생성되었습니다.`);
-      onAssignmentCreated();
+      handleAssignmentCreated();
     } catch (error) {
       console.error('Failed to create assignments:', error);
       alert('과제 생성에 실패했습니다.');
@@ -251,6 +247,9 @@ export function AssignmentTab({ classId }: AssignmentTabProps) {
               assignments={filteredAssignments}
               onSelectAssignment={handleSelectAssignment}
               onDeployAssignment={handleDeployAssignment}
+              classId={classId.toString()}
+              onRefresh={loadAssignments}
+              subject={activeSubject}
             />
           )}
         </>
