@@ -1,11 +1,12 @@
 'use client';
 
 import { PageHeader } from '@/components/layout/PageHeader';
-import { FiShoppingCart, FiChevronLeft, FiChevronRight, FiSearch, FiX } from 'react-icons/fi';
+import { FiShoppingCart, FiSearch, FiX } from 'react-icons/fi';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
+import TrendyPopularProducts from '@/components/market/TrendyPopularProducts';
 
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -34,8 +35,6 @@ export default function MarketPage() {
   const [selectedTab, setSelectedTab] = useState('전체');
   const [loading, setLoading] = useState(true);
 
-  // 인기상품 슬라이드 상태
-  const [currentSlide, setCurrentSlide] = useState(0);
   const [sortType, setSortType] = useState<'latest' | 'rating' | 'sales'>('latest');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchField, setSearchField] = useState<'title' | 'tags' | 'author'>('title');
@@ -50,7 +49,7 @@ export default function MarketPage() {
     authorId: idx < 5 ? (userProfile?.id?.toString() || 'user123') : `user${idx}`,
     tags: ['중학교', '1학년', idx % 2 === 0 ? '국어' : '영어', '기출문제'],
   }));
-  // 인기상품(슬라이드) 데이터는 상위 5개로 제한
+  // 인기상품 데이터 (상위 5개)
   const featuredProducts = products.slice(0, 5);
 
   // 필터링된 상품 (탭에 따른 필터링)
@@ -121,21 +120,10 @@ export default function MarketPage() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // 슬라이드 자동 변경
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % featuredProducts.length);
-    }, 8000);
-    return () => clearInterval(timer);
-  }, [featuredProducts.length]);
-
   // 페이지/탭 변경 시 상단으로 스크롤
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [currentPage, selectedTab]);
-
-  const nextSlide = () => setCurrentSlide((prev) => (prev + 1) % featuredProducts.length);
-  const prevSlide = () => setCurrentSlide((prev) => (prev - 1 + featuredProducts.length) % featuredProducts.length);
 
   return (
     <div className="flex flex-col">
@@ -190,75 +178,10 @@ export default function MarketPage() {
         </CardHeader>
         <CardContent>
 
+          {/* 트렌디한 인기상품 */}
           {selectedTab === '전체' && (
-            <div className="relative w-full my-10 flex flex-col items-center">
-              <section className="relative w-[85%] h-[440px] bg-white overflow-hidden rounded-lg shadow-md border border-gray-200">
-                {featuredProducts.map((p, idx) => (
-                  <div
-                    key={p.id}
-                    className={`absolute inset-0 flex will-change-[opacity,transform] transition-all duration-700 ease-[cubic-bezier(.22,.61,.36,1)] ${
-                      idx === currentSlide ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4 pointer-events-none'
-                    }`}
-                  >
-                    {/* 좌측 이미지 */}
-                    <div
-                      className="w-1/2 bg-gray-100 flex items-center justify-center cursor-pointer"
-                      onClick={() => router.push(`/market/${p.id}`)}
-                    >
-                      <span className="text-gray-400">이미지</span>
-                    </div>
-
-                    {/* 우측 정보 */}
-                    <div className="w-1/2 p-8 flex flex-col justify-center">
-                      <p className="text-gray-400 font-semibold text-sm mb-1">{p.author}</p>
-                      <h2 className="text-lg font-semibold mb-2">{p.title}</h2>
-                      <p className="text-gray-500 text-sm mb-3">{p.description}</p>
-                      <div className="flex flex-wrap gap-2 mb-3">
-                        {p.tags.map((tag: string, i: number) => (
-                          <span key={i} className="text-xs text-[#9E9E9E]">
-                            #{tag}
-                          </span>
-                        ))}
-                      </div>
-                      <div className="w-fit px-3 py-1 rounded-full bg-[#EFEFEF] text-[#0072CE] text-sm font-semibold">
-                        ₩{p.price.toLocaleString()}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </section>
-
-              {/* 좌우 버튼 */}
-              <button
-                onClick={prevSlide}
-                className="absolute left-[calc(50%-42.5%-50px)] top-[47%] -translate-y-1/2
-                           w-10 h-[440px] flex items-center justify-center
-                           bg-gradient-to-r from-gray-100 to-white rounded-lg transition-opacity hover:opacity-90"
-              >
-                <FiChevronLeft size={20} className="text-gray-700" />
-              </button>
-
-              <button
-                onClick={nextSlide}
-                className="absolute right-[calc(50%-42.5%-50px)] top-[47%] -translate-y-1/2
-                           w-10 h-[440px] flex items-center justify-center
-                           bg-gradient-to-l from-gray-100 to-white rounded-lg transition-opacity hover:opacity-90"
-              >
-                <FiChevronRight size={20} className="text-gray-700" />
-              </button>
-
-              {/* 하단 인디케이터 */}
-              <div className="mt-4 flex justify-center space-x-2">
-                {featuredProducts.map((_, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setCurrentSlide(idx)}
-                    className={`w-6 h-2 rounded-md transition-colors ${
-                      idx === currentSlide ? 'bg-[#0072CE]' : 'bg-gray-300'
-                    }`}
-                  />
-                ))}
-              </div>
+            <div className="mb-8">
+              <TrendyPopularProducts products={featuredProducts} />
             </div>
           )}
 
