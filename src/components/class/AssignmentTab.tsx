@@ -128,36 +128,34 @@ export function AssignmentTab({ classId }: AssignmentTabProps) {
     );
   };
 
-  const handleCreateAssignments = async () => {
-    if (selectedWorksheetIds.length === 0) {
-      alert('과제로 생성할 워크시트를 선택해주세요.');
+  const handleDeployWorksheets = (worksheetIds: number[]) => {
+    if (worksheetIds.length > 1) {
+      alert('현재 한 번에 하나의 워크시트만 과제로 배포할 수 있습니다.');
       return;
     }
 
-    try {
-      // For simplicity, assuming all students in the class will get the assignment
-      // In a real app, you might fetch student IDs from the classroom service
-      const studentIds: number[] = []; // TODO: Replace with actual student IDs from the class
+    const worksheetId = worksheetIds[0];
+    const worksheet = modalWorksheets.find(ws => ws.id === worksheetId);
 
-      for (const worksheetId of selectedWorksheetIds) {
-        const deployRequest: AssignmentDeployRequest = {
-          assignment_id: worksheetId, // This is actually worksheet_id in the backend deploy endpoint
-          classroom_id: classId, // classId is already a number
-          student_ids: studentIds, // Pass actual student IDs here
-        };
-
-        if (activeSubject === 'korean') {
-          await koreanService.deployAssignment(deployRequest);
-        } else if (activeSubject === 'math') {
-          await mathService.deployAssignment(deployRequest);
-        }
-      }
-      alert(`${selectedWorksheetIds.length}개의 과제가 성공적으로 생성되었습니다.`);
-      handleAssignmentCreated();
-    } catch (error) {
-      console.error('Failed to create assignments:', error);
-      alert('과제 생성에 실패했습니다.');
+    if (!worksheet) {
+      alert('선택된 워크시트를 찾을 수 없습니다.');
+      return;
     }
+
+    // Close the creation modal
+    setIsCreateModalOpen(false);
+
+    // Open the deployment modal by calling the existing handler
+    handleDeployAssignment({
+      id: worksheet.id,
+      worksheet_id: worksheet.id,
+      title: worksheet.title,
+      created_at: new Date().toISOString(),
+      subject: activeSubject,
+      unit_name: (worksheet as any).unit_name || 'Unknown',
+      chapter_name: (worksheet as any).chapter_name || 'Unknown',
+      problem_count: (worksheet as any).problem_count || 0,
+    });
   };
 
   const subjectTabs = [
@@ -259,6 +257,7 @@ export function AssignmentTab({ classId }: AssignmentTabProps) {
         onClose={() => setIsCreateModalOpen(false)}
         onAssignmentCreated={handleAssignmentCreated}
         classId={classId.toString()}
+        onDeploy={handleDeployWorksheets}
       />
 
       {selectedAssignmentForDeploy && (

@@ -2,10 +2,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { koreanService } from '@/services/koreanService';
+import { mathService } from '@/services/mathService';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FaArrowLeft, FaCheckCircle, FaTimesCircle, FaDotCircle } from 'react-icons/fa';
+import { LaTeXRenderer } from '@/components/LaTeXRenderer';
 
 interface StudentResultViewProps {
   assignmentId: number;
@@ -13,6 +15,7 @@ interface StudentResultViewProps {
   assignmentTitle: string;
   onBack: () => void;
   problems: any[];
+  isKorean?: boolean;
 }
 
 export function StudentResultView({
@@ -20,7 +23,8 @@ export function StudentResultView({
   studentId,
   assignmentTitle,
   onBack,
-  problems
+  problems,
+  isKorean = true
 }: StudentResultViewProps) {
   const [gradingResult, setGradingResult] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -38,7 +42,29 @@ export function StudentResultView({
   const loadGradingResult = async () => {
     try {
       setIsLoading(true);
-      const result = await koreanService.getStudentGradingResult(assignmentId, studentId);
+      let result;
+      if (isKorean) {
+        result = await koreanService.getStudentGradingResult(assignmentId, studentId);
+      } else {
+        // For math assignments, we need to get the assignment results and find the student's result
+        const assignmentResults = await mathService.getAssignmentResults(assignmentId);
+        const studentResult = Array.isArray(assignmentResults)
+          ? assignmentResults.find((r: any) => r.student_id === studentId || r.graded_by === studentId.toString())
+          : assignmentResults.results?.find((r: any) => r.student_id === studentId || r.graded_by === studentId.toString());
+
+        if (studentResult) {
+          result = {
+            total_score: studentResult.score || studentResult.total_score || 0,
+            max_possible_score: studentResult.max_possible_score || 100,
+            correct_count: studentResult.correct_count || 0,
+            total_problems: studentResult.total_problems || problems.length,
+            status: studentResult.status || 'completed',
+            problem_results: studentResult.problem_results || []
+          };
+        } else {
+          throw new Error('Student result not found');
+        }
+      }
       setGradingResult(result);
     } catch (error: any) {
       console.error('Failed to load grading result:', error);
@@ -75,43 +101,60 @@ export function StudentResultView({
   }
 
   const getAnswerStatus = (problemId: string) => {
-    const studentAnswer = gradingResult.multiple_choice_answers?.[problemId];
-    const problem = problems.find(p => p.id.toString() === problemId);
+    if (isKorean) {
+      // Korean assignment logic
+      const studentAnswer = gradingResult.multiple_choice_answers?.[problemId];
+      const problem = problems.find(p => p.id.toString() === problemId);
 
-    if (!problem || !studentAnswer) return null;
+      if (!problem || !studentAnswer) return null;
 
-    const isCorrect = studentAnswer === problem.correct_answer;
+      const isCorrect = studentAnswer === problem.correct_answer;
 
-    // Extract choice number from answer text
-    const extractChoiceNumber = (answerText: string) => {
-      // Check if answer already contains number (e.g., "1번. 텍스트" or "1. 텍스트")
-      const numberMatch = answerText.match(/^(\d+)번?\./);
-      if (numberMatch) {
-        return numberMatch[1];
-      }
-
-      // If no number found, try to find matching choice text
-      if (problem.choices) {
-        const choiceIndex = problem.choices.findIndex((choice: string) => choice === answerText);
-        if (choiceIndex !== -1) {
-          return (choiceIndex + 1).toString();
+      // Extract choice number from answer text
+      const extractChoiceNumber = (answerText: string) => {
+        // Check if answer already contains number (e.g., "1번. 텍스트" or "1. 텍스트")
+        const numberMatch = answerText.match(/^(\d+)번?\./);
+        if (numberMatch) {
+          return numberMatch[1];
         }
-      }
 
-      // Fallback: return original text
-      return answerText;
-    };
+        // If no number found, try to find matching choice text
+        if (problem.choices) {
+          const choiceIndex = problem.choices.findIndex((choice: string) => choice === answerText);
+          if (choiceIndex !== -1) {
+            return (choiceIndex + 1).toString();
+          }
+        }
 
-    const studentAnswerNumber = extractChoiceNumber(studentAnswer);
-    const correctAnswerNumber = extractChoiceNumber(problem.correct_answer);
+        // Fallback: return original text
+        return answerText;
+      };
 
-    return {
-      isCorrect,
-      studentAnswer: studentAnswerNumber,
-      correctAnswer: correctAnswerNumber,
-      studentAnswerText: studentAnswer,
-      correctAnswerText: problem.correct_answer
-    };
+      const studentAnswerNumber = extractChoiceNumber(studentAnswer);
+      const correctAnswerNumber = extractChoiceNumber(problem.correct_answer);
+
+      return {
+        isCorrect,
+        studentAnswer: studentAnswerNumber,
+        correctAnswer: correctAnswerNumber,
+        studentAnswerText: studentAnswer,
+        correctAnswerText: problem.correct_answer
+      };
+    } else {
+      // Math assignment logic - use problem_results from grading result
+      const problemResult = gradingResult.problem_results?.find((pr: any) => pr.problem_id.toString() === problemId);
+
+      if (!problemResult) return null;
+
+      return {
+        isCorrect: problemResult.is_correct,
+        studentAnswer: problemResult.user_answer,
+        correctAnswer: problemResult.correct_answer,
+        studentAnswerText: problemResult.user_answer,
+        correctAnswerText: problemResult.correct_answer,
+        explanation: problemResult.explanation
+      };
+    }
   };
 
   return (
@@ -216,7 +259,13 @@ export function StudentResultView({
 
                       {/* Question */}
                       <div className="mb-4">
-                        <p className="text-gray-900 font-medium">{problem.question}</p>
+                        <div className="text-gray-900 font-medium">
+                          {isKorean ? (
+                            <p>{problem.question}</p>
+                          ) : (
+                            <LaTeXRenderer content={problem.question || `문제 ${problem.sequence_order || problem.id}`} />
+                          )}
+                        </div>
                       </div>
 
                       {/* Choices */}
@@ -248,7 +297,13 @@ export function StudentResultView({
                                       <FaCheckCircle className="text-green-600 text-sm" title="정답" />
                                     )}
                                   </div>
-                                  <span className="flex-1">{choice}</span>
+                                  <div className="flex-1">
+                                    {isKorean ? (
+                                      <span>{choice}</span>
+                                    ) : (
+                                      <LaTeXRenderer content={choice || ''} />
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             );
@@ -263,11 +318,19 @@ export function StudentResultView({
                             <div className="flex items-center gap-4">
                               <div className="flex items-center gap-2">
                                 <FaDotCircle className="text-blue-600" />
-                                <span className="text-sm">내 답안: <strong>{answerStatus.studentAnswer}번</strong></span>
+                                <span className="text-sm">
+                                  내 답안: <strong>
+                                    {isKorean ? `${answerStatus.studentAnswer}번` : answerStatus.studentAnswer}
+                                  </strong>
+                                </span>
                               </div>
                               <div className="flex items-center gap-2">
                                 <FaCheckCircle className="text-green-600" />
-                                <span className="text-sm">정답: <strong>{answerStatus.correctAnswer}번</strong></span>
+                                <span className="text-sm">
+                                  정답: <strong>
+                                    {isKorean ? `${answerStatus.correctAnswer}번` : answerStatus.correctAnswer}
+                                  </strong>
+                                </span>
                               </div>
                             </div>
                             <Badge variant={answerStatus.isCorrect ? "default" : "destructive"}>
@@ -278,10 +341,16 @@ export function StudentResultView({
                       )}
 
                       {/* Explanation */}
-                      {problem.explanation && (
+                      {((isKorean && problem.explanation) || (!isKorean && answerStatus?.explanation)) && (
                         <div className="mt-4 p-4 bg-blue-50 rounded-lg">
                           <h4 className="font-medium text-blue-900 mb-2">해설</h4>
-                          <p className="text-blue-800 text-sm">{problem.explanation}</p>
+                          <div className="text-blue-800 text-sm">
+                            {isKorean ? (
+                              <p>{problem.explanation}</p>
+                            ) : (
+                              <LaTeXRenderer content={answerStatus?.explanation || ''} />
+                            )}
+                          </div>
                         </div>
                       )}
                     </div>

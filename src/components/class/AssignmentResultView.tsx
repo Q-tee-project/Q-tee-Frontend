@@ -9,6 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { FaArrowLeft, FaCheckCircle, FaTimesCircle, FaDotCircle } from 'react-icons/fa';
+import { LaTeXRenderer } from '@/components/LaTeXRenderer';
+import { TeacherGradingModal } from './TeacherGradingModal';
 import type { StudentProfile } from '@/services/authService';
 
 // 과제 결과 데이터 인터페이스
@@ -42,6 +44,8 @@ export function AssignmentResultView({ assignment, onBack }: { assignment: any, 
   const [problems, setProblems] = useState<any[]>([]);
   const [isProcessingAI, setIsProcessingAI] = useState(false);
   const [taskProgress, setTaskProgress] = useState<any>(null);
+  const [isTeacherGradingOpen, setIsTeacherGradingOpen] = useState(false);
+  const [selectedGradingSession, setSelectedGradingSession] = useState<AssignmentResult | null>(null);
 
   useEffect(() => {
     loadResults();
@@ -119,15 +123,22 @@ export function AssignmentResultView({ assignment, onBack }: { assignment: any, 
       if (isKorean) {
         await koreanService.approveGrade(sessionId);
       } else {
-        // 수학 과제 승인은 아직 구현되지 않음
-        alert("수학 과제 승인 기능은 아직 구현되지 않았습니다.");
-        return;
+        await mathService.approveGrade(sessionId);
       }
       loadResults(); // Refresh the results
     } catch (error) {
       console.error("Failed to approve grade:", error);
       alert("승인에 실패했습니다.");
     }
+  };
+
+  const handleOpenTeacherGrading = (session: AssignmentResult) => {
+    setSelectedGradingSession(session);
+    setIsTeacherGradingOpen(true);
+  };
+
+  const handleGradingSaved = () => {
+    loadResults(); // Refresh the results after grading is saved
   };
 
   const handleSessionClick = async (session: any) => {
@@ -353,9 +364,9 @@ export function AssignmentResultView({ assignment, onBack }: { assignment: any, 
 
               {(isKorean ? problems : sessionDetails.problem_results || [])
                 .sort((a: any, b: any) => isKorean ? a.sequence_order - b.sequence_order : a.problem_id - b.problem_id)
-                .map((item: any) => {
+                .map((item: any, index: number) => {
                   const problemId = isKorean ? item.id : item.problem_id;
-                  const problemNumber = isKorean ? item.sequence_order : item.problem_id;
+                  const problemNumber = isKorean ? item.sequence_order : index + 1;
                   const answerStatus = getAnswerStatus(problemId.toString());
 
                   return (
@@ -395,13 +406,17 @@ export function AssignmentResultView({ assignment, onBack }: { assignment: any, 
 
                             {/* Question */}
                             <div className="mb-4">
-                              <p className="text-gray-900 font-medium">
-                                {isKorean ? item.question : `문제 ${problemNumber}`}
-                              </p>
+                              <div className="text-gray-900 font-medium">
+                                {isKorean ? (
+                                  <p>{item.question}</p>
+                                ) : (
+                                  <LaTeXRenderer content={item.question || `문제 ${problemNumber}`} />
+                                )}
+                              </div>
                             </div>
 
-                            {/* Choices (Korean only) */}
-                            {isKorean && item.choices && (
+                            {/* Choices */}
+                            {item.choices && (
                               <div className="space-y-2 mb-4">
                                 {item.choices.map((choice: string, choiceIndex: number) => {
                                   const choiceNumber = (choiceIndex + 1).toString();
@@ -429,7 +444,13 @@ export function AssignmentResultView({ assignment, onBack }: { assignment: any, 
                                             <FaCheckCircle className="text-green-600 text-sm" title="정답" />
                                           )}
                                         </div>
-                                        <span className="flex-1">{choice}</span>
+                                        <div className="flex-1">
+                                          {isKorean ? (
+                                            <span>{choice}</span>
+                                          ) : (
+                                            <LaTeXRenderer content={choice || ''} />
+                                          )}
+                                        </div>
                                       </div>
                                     </div>
                                   );
@@ -470,9 +491,13 @@ export function AssignmentResultView({ assignment, onBack }: { assignment: any, 
                             {((isKorean && item.explanation) || (!isKorean && answerStatus?.explanation)) && (
                               <div className="mt-4 p-4 bg-blue-50 rounded-lg">
                                 <h4 className="font-medium text-blue-900 mb-2">해설</h4>
-                                <p className="text-blue-800 text-sm">
-                                  {isKorean ? item.explanation : answerStatus?.explanation}
-                                </p>
+                                <div className="text-blue-800 text-sm">
+                                  {isKorean ? (
+                                    <p>{item.explanation}</p>
+                                  ) : (
+                                    <LaTeXRenderer content={answerStatus?.explanation || ''} />
+                                  )}
+                                </div>
                               </div>
                             )}
                           </div>
@@ -540,6 +565,7 @@ export function AssignmentResultView({ assignment, onBack }: { assignment: any, 
               <TableHead>상태</TableHead>
               <TableHead>점수</TableHead>
               <TableHead>완료일시</TableHead>
+              <TableHead>채점 관리</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -578,11 +604,50 @@ export function AssignmentResultView({ assignment, onBack }: { assignment: any, 
                   </TableCell>
                   <TableCell>{finalScore}/100</TableCell>
                   <TableCell>{result.submitted_at ? new Date(result.submitted_at).toLocaleString('ko-KR') : (result.graded_at ? new Date(result.graded_at).toLocaleString('ko-KR') : '-')}</TableCell>
+                  <TableCell>
+                    {result.status === '완료' || result.status === 'final' || result.status === 'approved' ? (
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-green-600 border-green-600 hover:bg-green-50"
+                          onClick={() => handleOpenTeacherGrading(result)}
+                        >
+                          결과
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-blue-600 border-blue-600 hover:bg-blue-50"
+                          onClick={() => handleSessionClick(result)}
+                        >
+                          상세보기
+                        </Button>
+                      </div>
+                    ) : (
+                      <span className="text-gray-400 text-sm">-</span>
+                    )}
+                  </TableCell>
                 </TableRow>
               );
             })}
           </TableBody>
         </Table>
+      )}
+
+      {/* Teacher Grading Modal */}
+      {selectedGradingSession && (
+        <TeacherGradingModal
+          isOpen={isTeacherGradingOpen}
+          onClose={() => {
+            setIsTeacherGradingOpen(false);
+            setSelectedGradingSession(null);
+          }}
+          gradingSessionId={selectedGradingSession.grading_session_id || selectedGradingSession.id || 0}
+          studentName={selectedGradingSession.student_name || '알 수 없음'}
+          onGradingSaved={handleGradingSaved}
+          isKorean={isKorean}
+        />
       )}
     </div>
   );

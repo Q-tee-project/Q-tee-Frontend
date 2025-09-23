@@ -31,6 +31,7 @@ interface AssignmentCreateModalProps {
   onClose: () => void;
   onAssignmentCreated: () => void;
   classId: string;
+  onDeploy: (worksheetIds: number[]) => void;
 }
 
 export function AssignmentCreateModal({
@@ -38,6 +39,7 @@ export function AssignmentCreateModal({
   onClose,
   onAssignmentCreated,
   classId,
+  onDeploy,
 }: AssignmentCreateModalProps) {
   const { userProfile } = useAuth();
   const [activeSubject, setActiveSubject] = useState<'korean' | 'math'>('korean');
@@ -96,36 +98,8 @@ export function AssignmentCreateModal({
       alert('과제로 생성할 워크시트를 선택해주세요.');
       return;
     }
-
-    try {
-      // Fetch student IDs for the class
-      const students = await classroomService.getClassroomStudents(parseInt(classId));
-      const studentIds = students.map(student => student.id);
-
-      if (studentIds.length === 0) {
-        alert('클래스에 등록된 학생이 없습니다. 먼저 학생을 등록해주세요.');
-        return;
-      }
-
-      for (const worksheetId of selectedWorksheetIds) {
-        const deployRequest: AssignmentDeployRequest = {
-          assignment_id: worksheetId, // This is actually worksheet_id in the backend deploy endpoint
-          classroom_id: parseInt(classId),
-          student_ids: studentIds, // Pass actual student IDs here
-        };
-
-        if (activeSubject === 'korean') {
-          await koreanService.deployAssignment(deployRequest);
-        } else if (activeSubject === 'math') {
-          await mathService.deployAssignment(deployRequest);
-        }
-      }
-      alert(`${selectedWorksheetIds.length}개의 과제가 성공적으로 생성되었습니다.`);
-      onAssignmentCreated();
-    } catch (error) {
-      console.error('Failed to create assignments:', error);
-      alert(`과제 생성에 실패했습니다: ${error?.message || '알 수 없는 오류'}`);
-    }
+    onDeploy(selectedWorksheetIds);
+    onClose();
   };
 
   const subjectTabs = [
