@@ -15,7 +15,7 @@ export async function GET(
 
     if (subject === 'math') {
       targetUrl = 'http://localhost:8001';
-      endpoint = `/assignments/student/${studentId}`;
+      endpoint = `/api/assignments/student/${studentId}`;
     } else if (subject === 'korean') {
       targetUrl = 'http://localhost:8004';
       endpoint = `/api/assignments/student/${studentId}`;

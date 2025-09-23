@@ -327,8 +327,13 @@ export default function TestPage() {
     // 백엔드에 답안 임시 저장 (수학 과제이고 세션이 있는 경우에만)
     if (selectedSubject === Subject.MATH && testSession && isTestStarted) {
       try {
+        // 모든 답안을 일반 저장으로 처리 (손글씨 이미지 포함)
         await mathService.saveAnswer(testSession.session_id, problemId, answer);
-        console.log('수학 답안 임시 저장 완료:', { problemId, answer });
+        console.log('수학 답안 임시 저장 완료:', {
+          problemId,
+          answerType: answer.startsWith('data:image/') ? '손글씨 이미지' : '텍스트',
+          preview: answer.substring(0, 50)
+        });
       } catch (error) {
         console.error('답안 저장 실패:', error);
         // 실패해도 UI는 정상 작동하도록 함
@@ -336,6 +341,39 @@ export default function TestPage() {
     } else if (selectedSubject === '국어') {
       console.log('국어 답안 로컬 저장:', { problemId, answer });
       // 국어는 로컬에만 저장 (임시)
+    }
+  };
+
+  // OCR 처리 핸들러
+  const handleOCRCapture = async (problemId: number, imageBlob: Blob) => {
+    console.log('🔍 OCR 디버그: handleOCRCapture 호출됨', { problemId, blobSize: imageBlob.size });
+
+    if (!testSession || selectedSubject !== Subject.MATH) {
+      console.warn('OCR은 수학 과제에서만 지원됩니다.');
+      return;
+    }
+
+    try {
+      // Convert blob to File
+      const file = new File([imageBlob], `handwriting_${problemId}.png`, { type: 'image/png' });
+
+      // Submit with OCR processing
+      const result = await mathService.submitAnswerWithOCR(
+        testSession.session_id,
+        problemId,
+        answers[problemId] || '',
+        file
+      );
+
+      // If OCR returns text, update the answer
+      if (result.extracted_text) {
+        console.log('OCR 추출된 텍스트:', result.extracted_text);
+        handleAnswerChange(problemId, result.extracted_text);
+      }
+
+    } catch (error) {
+      console.error('OCR 처리 실패:', error);
+      alert('손글씨 인식에 실패했습니다. 다시 시도해주세요.');
     }
   };
 
@@ -569,6 +607,7 @@ export default function TestPage() {
                 onOpenScratchpad={() => setScratchpadOpen(true)}
                 getProblemTypeInKorean={getProblemTypeInKorean}
                 formatTime={formatTime}
+                onOCRCapture={handleOCRCapture}
               />
             ))}
 
