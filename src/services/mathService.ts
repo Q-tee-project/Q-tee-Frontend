@@ -588,7 +588,8 @@ export const mathService = {
       throw new Error('No authentication token found');
     }
 
-    const response = await fetch(`${API_BASE_URL}/grading/grading-sessions/${sessionId}`, {
+    // Use Next.js API route to proxy the request
+    const response = await fetch(`/api/grading/grading-sessions/${sessionId}?subject=math`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -597,7 +598,7 @@ export const mathService = {
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
+      const errorData = await response.json().catch(() => ({ detail: "Failed to get grading session details" }));
       throw new Error(errorData.detail || "Failed to get grading session details.");
     }
 
@@ -686,6 +687,59 @@ export const mathService = {
 
     const data = await response.json();
     console.log(`Approved grading session:`, data);
+    return data;
+  },
+
+  // Update grading session results
+  async updateGradingSession(sessionId: number, gradingData: any): Promise<any> {
+    const token = getToken();
+    if (!token) {
+      throw new Error("Authentication token not found. Please log in.");
+    }
+
+    // Use Next.js API route to proxy the request
+    const response = await fetch(`/api/grading/grading-sessions/${sessionId}?subject=math`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+      },
+      body: JSON.stringify(gradingData),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ detail: "Failed to update grading session" }));
+      throw new Error(errorData.detail || "Failed to update grading session.");
+    }
+
+    const data = await response.json();
+    console.log(`Updated grading session:`, data);
+    return data;
+  },
+
+  // Get student grading result (for student view)
+  async getStudentGradingResult(assignmentId: number, studentId: number): Promise<any> {
+    const token = getToken();
+    if (!token) {
+      throw new Error("Authentication token not found. Please log in.");
+    }
+
+    // Use Next.js API route to proxy the request
+    const response = await fetch(`/api/grading/assignments/${assignmentId}/students/${studentId}/result?subject=math`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ detail: "Failed to get student grading result" }));
+      throw new Error(errorData.detail || "Failed to get student grading result.");
+    }
+
+    const data = await response.json();
+    console.log(`Student grading result:`, data);
     return data;
   },
 };

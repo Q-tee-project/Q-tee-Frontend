@@ -16,6 +16,7 @@ import {
 import { Calendar, Users } from 'lucide-react';
 import { IoBookOutline } from "react-icons/io5";
 import { FaRegTrashAlt } from "react-icons/fa";
+import { TeacherGradingModal } from './TeacherGradingModal';
 
 interface AssignmentListProps {
   assignments: any[];
@@ -32,6 +33,8 @@ export function AssignmentList({ assignments, onSelectAssignment, onDeployAssign
   const [classStudents, setClassStudents] = useState<any[]>([]);
   const [isLoadingStudents, setIsLoadingStudents] = useState(false);
   const [assignmentResults, setAssignmentResults] = useState<{[key: number]: any[]}>({});
+  const [isTeacherGradingOpen, setIsTeacherGradingOpen] = useState(false);
+  const [selectedGradingSession, setSelectedGradingSession] = useState<any>(null);
 
   // 클래스 학생 정보 로드
   useEffect(() => {
@@ -53,43 +56,64 @@ export function AssignmentList({ assignments, onSelectAssignment, onDeployAssign
     }
   }, [classId]);
 
-  // 과제별 결과 로드
-  useEffect(() => {
-    const loadAssignmentResults = async () => {
-      const results: {[key: number]: any[]} = {};
+  // 과제별 결과 로드 함수
+  const loadAssignmentResults = async () => {
+    const results: {[key: number]: any[]} = {};
 
-      for (const assignment of assignments) {
-        try {
-          let assignmentResultData;
-          const isKorean = assignment.question_type !== undefined || assignment.korean_type !== undefined;
+    for (const assignment of assignments) {
+      try {
+        let assignmentResultData;
+        const isKorean = assignment.question_type !== undefined || assignment.korean_type !== undefined;
 
-          if (isKorean) {
-            assignmentResultData = await koreanService.getAssignmentResults(assignment.id);
-          } else {
-            assignmentResultData = await mathService.getAssignmentResults(assignment.id);
-          }
+        if (isKorean) {
+          assignmentResultData = await koreanService.getAssignmentResults(assignment.id);
+        } else {
+          assignmentResultData = await mathService.getAssignmentResults(assignment.id);
+        }
 
-          // API 응답이 배열인지 확인하고 안전하게 처리
-          if (Array.isArray(assignmentResultData)) {
-            results[assignment.id] = assignmentResultData;
-          } else if (assignmentResultData && typeof assignmentResultData === 'object' && 'results' in assignmentResultData) {
-            results[assignment.id] = (assignmentResultData as any).results || [];
-          } else {
-            results[assignment.id] = [];
-          }
-        } catch (error) {
-          console.error(`Failed to load results for assignment ${assignment.id}:`, error);
+        // API 응답이 배열인지 확인하고 안전하게 처리
+        if (Array.isArray(assignmentResultData)) {
+          results[assignment.id] = assignmentResultData;
+        } else if (assignmentResultData && typeof assignmentResultData === 'object' && 'results' in assignmentResultData) {
+          results[assignment.id] = (assignmentResultData as any).results || [];
+        } else {
           results[assignment.id] = [];
         }
+      } catch (error) {
+        console.error(`Failed to load results for assignment ${assignment.id}:`, error);
+        results[assignment.id] = [];
       }
+    }
 
-      setAssignmentResults(results);
-    };
+    setAssignmentResults(results);
+  };
 
+  // 과제별 결과 로드
+  useEffect(() => {
     if (assignments.length > 0) {
       loadAssignmentResults();
     }
   }, [assignments]);
+
+  // 채점 편집 모달 열기
+  const handleOpenTeacherGrading = (assignment: any, student: any, studentSubmission: any) => {
+    setSelectedGradingSession({
+      gradingSessionId: studentSubmission?.grading_session_id || studentSubmission?.id || 0,
+      studentName: student.name,
+      assignment: assignment,
+      student: student,
+      isKorean: assignment.question_type !== undefined || assignment.korean_type !== undefined
+    });
+    setIsTeacherGradingOpen(true);
+  };
+
+  // 채점 저장 완료 후 콜백
+  const handleGradingSaved = () => {
+    loadAssignmentResults(); // 결과 새로고침
+    if (onRefresh) {
+      onRefresh(); // 전체 과제 목록 새로고침
+    }
+  };
 
 
 
@@ -117,7 +141,7 @@ export function AssignmentList({ assignments, onSelectAssignment, onDeployAssign
                           </div>
                           <div className="flex items-center gap-1">
                             <Users className="w-4 h-4" />
-                            <span>{classStudents.length}명 배포</span>
+                            <span>{results.length}명 배포</span>
                           </div>
                           <div className="flex items-center gap-1">
                             <IoBookOutline className="w-4 h-4" />
@@ -287,14 +311,28 @@ export function AssignmentList({ assignments, onSelectAssignment, onDeployAssign
                               </TableCell>
                             </TableRow>
                           ) : (
-                            classStudents.map((student) => {
+                            (() => {
+                              const deployedStudentIds = new Set(results.map(r => r.student_id || parseInt(r.graded_by)).filter(id => id));
+                              const deployedStudents = classStudents.filter(s => deployedStudentIds.has(s.id));
+
+                              if (deployedStudents.length === 0) {
+                                return (
+                                  <TableRow>
+                                    <TableCell colSpan={9} className="text-center py-8">
+                                      <span style={{ fontSize: '14px', color: '#666666' }}>과제가 배포된 학생이 없습니다.</span>
+                                    </TableCell>
+                                  </TableRow>
+                                );
+                              }
+
+                              return deployedStudents.map((student) => {
                               // 실제 과제 제출 데이터 매칭
                               const resultsArray = Array.isArray(results) ? results : [];
                               const studentSubmission = resultsArray.find(
                                 (result: any) => result.student_id === student.id || result.graded_by === student.id.toString()
                               );
 
-                              const hasSubmitted = studentSubmission ? true : false;
+                              const hasSubmitted = !!(studentSubmission?.graded_at || studentSubmission?.submitted_at || studentSubmission?.created_at || (studentSubmission && Object.keys(studentSubmission).length > 0));
                               const totalProblems = studentSubmission?.total_problems || assignment.problem_count || 10;
                               const scorePerProblem = 100 / totalProblems;
                               const score = hasSubmitted ? Math.round((studentSubmission.correct_count || 0) * scorePerProblem) : null;
@@ -406,10 +444,36 @@ export function AssignmentList({ assignments, onSelectAssignment, onDeployAssign
                                         variant="outline"
                                         size="sm"
                                         className="text-gray-600 border-gray-300 hover:border-blue-600 hover:text-blue-600 bg-white"
-                                        onClick={(e) => {
+                                        onClick={async (e) => {
                                           e.stopPropagation();
-                                          // OCR + AI 채점 버튼 (수학 과제만)
-                                          console.log('OCR 채점:', student.name);
+                                          try {
+                                            const token = localStorage.getItem('access_token');
+                                            const response = await fetch(`/api/grading/assignments/${assignment.id}/start-ai-grading?subject=math`, {
+                                              method: 'POST',
+                                              headers: {
+                                                'Authorization': `Bearer ${token}`,
+                                                'Content-Type': 'application/json',
+                                              },
+                                            });
+
+                                            if (response.ok) {
+                                              const result = await response.json();
+                                              if (result.task_id) {
+                                                alert('OCR + AI 채점이 시작되었습니다. 완료 후 결과를 확인하세요.');
+                                                if (onRefresh) {
+                                                  onRefresh(); // Refresh assignment list
+                                                }
+                                              } else {
+                                                alert(result.message || 'OCR 채점을 시작할 수 없습니다.');
+                                              }
+                                            } else {
+                                              const error = await response.json();
+                                              alert(`채점 처리 실패: ${error.detail || '알 수 없는 오류'}`);
+                                            }
+                                          } catch (error) {
+                                            console.error('OCR grading error:', error);
+                                            alert('채점 처리 중 오류가 발생했습니다.');
+                                          }
                                         }}
                                       >
                                         OCR 채점
@@ -421,34 +485,49 @@ export function AssignmentList({ assignments, onSelectAssignment, onDeployAssign
                                     style={{ padding: '10px 12px' }}
                                   >
                                     {hasSubmitted ? (
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="text-green-600 border-green-600 hover:bg-green-50"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          // 해당 학생의 과제 결과로 바로 이동
-                                          if (onViewStudentResult) {
-                                            onViewStudentResult(assignment, student.id, student.name);
-                                          } else {
-                                            // 기존 방식 fallback
-                                            onSelectAssignment({
-                                              ...assignment,
-                                              selectedStudentId: student.id,
-                                              selectedStudentName: student.name
-                                            });
-                                          }
-                                        }}
-                                      >
-                                        결과
-                                      </Button>
+                                      <div className="flex gap-1 justify-center">
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          className="text-green-600 border-green-600 hover:bg-green-50"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            // 채점 편집 기능 - TeacherGradingModal 열기
+                                            handleOpenTeacherGrading(assignment, student, studentSubmission);
+                                          }}
+                                        >
+                                          편집
+                                        </Button>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          className="text-blue-600 border-blue-600 hover:bg-blue-50"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            // 학생 상세 결과 보기
+                                            if (onViewStudentResult) {
+                                              onViewStudentResult(assignment, student.id, student.name);
+                                            } else {
+                                              // 기존 방식 fallback
+                                              onSelectAssignment({
+                                                ...assignment,
+                                                selectedStudentId: student.id,
+                                                selectedStudentName: student.name
+                                              });
+                                            }
+                                          }}
+                                        >
+                                          상세
+                                        </Button>
+                                      </div>
                                     ) : (
                                       <span style={{ fontSize: '14px', color: '#999999' }}>-</span>
                                     )}
                                   </TableCell>
                                 </TableRow>
                               );
-                            })
+                            });
+                          })()
                           )}
                         </TableBody>
                       </Table>
@@ -459,6 +538,21 @@ export function AssignmentList({ assignments, onSelectAssignment, onDeployAssign
           );
         })}
       </Accordion>
+
+      {/* Teacher Grading Modal */}
+      {selectedGradingSession && (
+        <TeacherGradingModal
+          isOpen={isTeacherGradingOpen}
+          onClose={() => {
+            setIsTeacherGradingOpen(false);
+            setSelectedGradingSession(null);
+          }}
+          gradingSessionId={selectedGradingSession.gradingSessionId}
+          studentName={selectedGradingSession.studentName}
+          onGradingSaved={handleGradingSaved}
+          isKorean={selectedGradingSession.isKorean}
+        />
+      )}
     </div>
   );
 }

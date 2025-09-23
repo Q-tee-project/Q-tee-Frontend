@@ -23,7 +23,9 @@ import { EnglishService } from '@/services/englishService';
 
 const SUBJECTS = ['국어', '영어', '수학'];
 
+
 // 더 이상 변환 필요 없음 - 서버 데이터 직접 사용
+
 
 
 export default function CreatePage() {
@@ -46,7 +48,6 @@ export default function CreatePage() {
   // 현재 선택된 과목에 따른 상태
   const currentGeneration =
     subject === '국어' ? koreanGeneration : subject === '수학' ? mathGeneration : englishGeneration;
-
 
   // Toast 자동 닫기
   React.useEffect(() => {
@@ -92,7 +93,7 @@ export default function CreatePage() {
 
     try {
       // 현재 문제 찾기
-      const currentQuestion = currentGeneration.previewQuestions.find(q => q.id === questionId);
+      const currentQuestion = currentGeneration.previewQuestions.find((q) => q.id === questionId);
       console.log('📝 현재 문제:', currentQuestion);
 
       if (!currentQuestion) {
@@ -102,7 +103,7 @@ export default function CreatePage() {
 
       // 재생성 시작 상태로 설정
       currentGeneration.updateState({
-        regeneratingQuestionId: questionId
+        regeneratingQuestionId: questionId,
       });
 
       // MathService의 재생성 API 직접 호출
@@ -124,7 +125,7 @@ export default function CreatePage() {
           choices: currentQuestion.choices || [],
           correct_answer: currentQuestion.correct_answer || '',
           explanation: currentQuestion.explanation || '',
-        }
+        },
       };
 
       const taskResponse = await mathService.regenerateProblemAsync(regenerateData);
@@ -145,7 +146,7 @@ export default function CreatePage() {
                 const result = statusResponse.result;
 
                 // questionId는 프론트엔드 ID, backendId와 매칭해야 함
-                const updatedQuestions = currentGeneration.previewQuestions.map(q => {
+                const updatedQuestions = currentGeneration.previewQuestions.map((q) => {
                   // 프론트엔드 ID 또는 백엔드 ID 중 하나라도 매칭되면 업데이트
                   const isTargetQuestion = q.id === questionId || q.backendId === backendProblemId;
 
@@ -154,7 +155,7 @@ export default function CreatePage() {
                       frontendId: q.id,
                       backendId: q.backendId,
                       questionId,
-                      backendProblemId
+                      backendProblemId,
                     });
 
                     return {
@@ -173,45 +174,45 @@ export default function CreatePage() {
                   originalQuestions: currentGeneration.previewQuestions.length,
                   updatedQuestions: updatedQuestions.length,
                   questionId,
-                  result
+                  result,
                 });
 
                 // 상태 업데이트 with 강제 리렌더링
                 if (subject === '수학') {
                   // 완전히 새로운 배열과 객체 참조로 업데이트
-                  const newQuestions = updatedQuestions.map(q => ({
+                  const newQuestions = updatedQuestions.map((q) => ({
                     ...q,
                     // 수학 문제의 경우 choices를 options로도 매핑
                     options: q.choices || q.options,
-                    title: q.question || q.title
+                    title: q.question || q.title,
                   }));
 
                   mathGeneration.updateState({
                     previewQuestions: newQuestions,
                     regeneratingQuestionId: null,
                     showRegenerationInput: null,
-                    regenerationPrompt: ''
+                    regenerationPrompt: '',
                   });
                   console.log('✅ mathGeneration 상태 업데이트 완료');
                 } else {
-                  const newQuestions = updatedQuestions.map(q => ({
+                  const newQuestions = updatedQuestions.map((q) => ({
                     ...q,
                     // 다른 과목의 경우도 동일하게 매핑
                     options: q.choices || q.options,
-                    title: q.question || q.title
+                    title: q.question || q.title,
                   }));
 
                   currentGeneration.updateState({
                     previewQuestions: newQuestions,
                     regeneratingQuestionId: null,
                     showRegenerationInput: null,
-                    regenerationPrompt: ''
+                    regenerationPrompt: '',
                   });
                   console.log('✅ currentGeneration 상태 업데이트 완료');
                 }
 
                 // 컴포넌트 강제 리렌더링
-                setForceUpdateKey(prev => prev + 1);
+                setForceUpdateKey((prev) => prev + 1);
                 console.log('🔄 컴포넌트 강제 리렌더링 트리거');
 
                 alert('문제가 성공적으로 재생성되었습니다.');
@@ -221,12 +222,12 @@ export default function CreatePage() {
               }
 
               // 아직 진행 중이면 잠시 대기
-              await new Promise(resolve => setTimeout(resolve, interval));
+              await new Promise((resolve) => setTimeout(resolve, interval));
               attempts++;
             } catch (error) {
               console.error('작업 상태 확인 중 오류:', error);
               attempts++;
-              await new Promise(resolve => setTimeout(resolve, interval));
+              await new Promise((resolve) => setTimeout(resolve, interval));
             }
           }
 
@@ -243,7 +244,7 @@ export default function CreatePage() {
       currentGeneration.updateState({
         regeneratingQuestionId: null,
         showRegenerationInput: null,
-        regenerationPrompt: ''
+        regenerationPrompt: '',
       });
     }
   };
@@ -290,7 +291,6 @@ export default function CreatePage() {
     }
   };
 
-
   return (
     <div className="flex flex-col" style={{ padding: '20px', display: 'flex', gap: '20px' }}>
       {/* 헤더 영역 */}
@@ -304,8 +304,14 @@ export default function CreatePage() {
       {/* 메인 컨텐츠 영역 */}
       <div className="flex-1 min-h-0">
         <div className="flex gap-6 h-full">
-          <Card className="w-1/3 flex flex-col shadow-sm h-[calc(100vh-200px)]" style={{ gap: '0', padding: '0' }}>
-            <CardHeader className="flex flex-row items-center justify-between border-b border-gray-100" style={{ padding: '20px' }}>
+          <Card
+            className="w-1/3 flex flex-col shadow-sm h-[calc(100vh-200px)]"
+            style={{ gap: '0', padding: '0' }}
+          >
+            <CardHeader
+              className="flex flex-row items-center justify-between border-b border-gray-100"
+              style={{ padding: '20px' }}
+            >
               <CardTitle className="text-lg font-semibold text-gray-900">문제 생성</CardTitle>
             </CardHeader>
             <CardContent className="flex-1 min-h-0" style={{ padding: '20px' }}>
@@ -327,7 +333,7 @@ export default function CreatePage() {
                   ))}
                 </div>
               </div>
-              
+
               {/* 과목별 컴포넌트 렌더링 */}
               <div className="overflow-y-auto pr-2" style={{ height: 'calc(100vh - 400px)' }}>
                 {subject === '국어' && (
@@ -344,13 +350,11 @@ export default function CreatePage() {
                 )}
                 {subject === '수학' && (
                   <div className="space-y-4">
-
                     {/* 수학 생성 컴포넌트 */}
                     <MathGenerator
                       onGenerate={handleGenerate}
                       isGenerating={currentGeneration.isGenerating}
                     />
-
                   </div>
                 )}
                 {!subject && (
@@ -368,13 +372,20 @@ export default function CreatePage() {
           </Card>
 
           {/* 오른쪽 영역 - 결과 미리보기 자리 */}
-          <Card className="flex-1 flex flex-col shadow-sm h-[calc(100vh-200px)]" style={{ gap: '0', padding: '0' }}>
-            <CardHeader className="flex flex-row items-center justify-between border-b border-gray-100" style={{ padding: '20px' }}>
+          <Card
+            className="flex-1 flex flex-col shadow-sm h-[calc(100vh-200px)]"
+            style={{ gap: '0', padding: '0' }}
+          >
+            <CardHeader
+              className="flex flex-row items-center justify-between border-b border-gray-100"
+              style={{ padding: '20px' }}
+            >
               <CardTitle className="text-lg font-semibold text-gray-900">문제지</CardTitle>
             </CardHeader>
             <CardContent className="flex-1 flex flex-col">
               {/* 영어는 EnglishWorksheetDetail 컴포넌트 사용 */}
               {subject === '영어' ? (
+
                 englishGeneration.worksheetData && englishGeneration.worksheetData.questions && englishGeneration.worksheetData.questions.length > 0 ? (
                   <EnglishWorksheetDetail
                     selectedWorksheet={englishGeneration.worksheetData}
@@ -487,6 +498,7 @@ export default function CreatePage() {
                     }
                   </div>
                 )
+
               ) : (
                 // 다른 과목은 기존 방식 (forceUpdateKey로 강제 리렌더링)
                 <QuestionPreview
@@ -520,7 +532,6 @@ export default function CreatePage() {
         error={currentGeneration.errorMessage}
         onClose={() => currentGeneration.clearError()}
       />
-
     </div>
   );
 }

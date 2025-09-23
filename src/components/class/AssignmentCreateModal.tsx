@@ -35,6 +35,7 @@ interface AssignmentCreateModalProps {
   onClose: () => void;
   onAssignmentCreated: () => void;
   classId: string;
+  onDeploy: (worksheetIds: number[]) => void;
 }
 
 export function AssignmentCreateModal({
@@ -42,6 +43,7 @@ export function AssignmentCreateModal({
   onClose,
   onAssignmentCreated,
   classId,
+  onDeploy,
 }: AssignmentCreateModalProps) {
   const { userProfile } = useAuth();
   const [activeSubject, setActiveSubject] = useState<'korean' | 'math' | 'english'>('korean');
@@ -104,6 +106,7 @@ export function AssignmentCreateModal({
       return;
     }
 
+
     try {
       // Fetch student IDs for the class
       const students = await classroomService.getClassroomStudents(parseInt(classId));
@@ -148,6 +151,7 @@ export function AssignmentCreateModal({
       console.error('Failed to create assignments:', error);
       alert(`과제 생성에 실패했습니다: ${error?.message || '알 수 없는 오류'}`);
     }
+
   };
 
   const subjectTabs = [
