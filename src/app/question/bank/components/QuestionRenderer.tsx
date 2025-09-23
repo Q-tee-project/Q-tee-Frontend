@@ -316,7 +316,7 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = ({
               <div className="ml-4 space-y-3">
                 {question.question_choices.map((choice: string, choiceIndex: number) => {
                   const optionLabel = (choiceIndex + 1).toString();
-                  const isCorrect = Number(question.correct_answer) === choiceIndex;
+                  const isCorrect = Number(question.correct_answer) === (choiceIndex + 1);
 
                   return (
                     <div
@@ -353,6 +353,16 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = ({
             {/* 정답 및 해설 (정답지 모드일 때) */}
             {showAnswerSheet && (
               <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                {/* 단답형, 서술형 문제인 경우 정답 표시 */}
+                {(question.question_type === '단답형' || question.question_type === '서술형') && (
+                  <div className="mb-3 p-3 bg-green-100 border border-green-300 rounded-lg">
+                    <div className="text-sm font-semibold text-green-800 mb-1">✓ 정답:</div>
+                    <div className="text-sm text-green-900 font-medium">
+                      {question.correct_answer || '정답 정보가 없습니다'}
+                    </div>
+                  </div>
+                )}
+
                 <div className="text-sm font-semibold text-blue-800 mb-2">해설:</div>
                 <div className="text-sm text-blue-800 mb-3">
                   {question.explanation || '해설 정보가 없습니다'}

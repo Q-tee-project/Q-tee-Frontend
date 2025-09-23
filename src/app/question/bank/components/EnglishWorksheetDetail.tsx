@@ -95,11 +95,8 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
     setEditingQuestionId(question.question_id);
     setEditingQuestion(question); // 원본 문제 정보 저장
 
-    // 객관식 정답을 인덱스에서 사용자 번호로 변환 (0,1,2,3 -> 1,2,3,4)
+    // 정답은 이미 1-based로 저장되어 있으므로 그대로 사용
     let displayCorrectAnswer = question.correct_answer || '';
-    if (question.question_type === '객관식' && !isNaN(question.correct_answer)) {
-      displayCorrectAnswer = (parseInt(question.correct_answer) + 1).toString();
-    }
 
     setEditFormData({
       question_text: question.question_text || '',
@@ -388,7 +385,7 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
           {isEditingTitle ? (
             <div className="flex items-center gap-2">
               <Input
-                value={editedTitle}
+                defaultValue={editedTitle}
                 onChange={(e) => onEditedTitleChange(e.target.value)}
                 className="text-2xl font-bold text-gray-900 text-center border-2 border-[#0072CE]"
                 onKeyDown={(e) => {
@@ -399,6 +396,7 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
                   }
                 }}
                 autoFocus
+                onFocus={(e) => e.target.select()}
               />
               <Button
                 onClick={onSaveTitle}

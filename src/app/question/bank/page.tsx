@@ -80,7 +80,6 @@ export default function BankPage() {
     editFormData,
     isEditingTitle,
     editedTitle,
-    setEditedTitle,
     isRegenerating,
     handleEditProblem,
     handleSaveProblem,
@@ -89,6 +88,7 @@ export default function BankPage() {
     handleStartEditTitle,
     handleCancelEditTitle,
     handleSaveTitle,
+    handleEditedTitleChange,
     handleRegenerateProblem,
   } = useWorksheetEdit(selectedSubject);
 
@@ -158,7 +158,7 @@ export default function BankPage() {
                   currentBank.selectedWorksheet &&
                   handleSaveTitle(currentBank.selectedWorksheet.id, currentBank.loadWorksheets)
                 }
-                onEditedTitleChange={setEditedTitle}
+                onEditedTitleChange={handleEditedTitleChange}
                 onRefresh={() => {
                   if (currentBank.selectedWorksheet) {
                     const worksheetId = currentBank.selectedWorksheet.worksheet_id;

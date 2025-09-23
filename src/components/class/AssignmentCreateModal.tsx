@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
 import { IoIosClose } from "react-icons/io";
-import { koreanService, KoreanWorksheet, AssignmentDeployRequest } from '@/services/koreanService';
+import { koreanService, KoreanWorksheet, AssignmentDeployRequest, Worksheet } from '@/services/koreanService';
 import { mathService } from '@/services/mathService';
 import { Worksheet as MathWorksheet } from '@/services/marketApi'; // Re-using Worksheet interface from marketApi for math
 import { useAuth } from '@/contexts/AuthContext';
@@ -55,7 +55,7 @@ export function AssignmentCreateModal({
 
     setIsLoading(true);
     try {
-      let fetchedWorksheets: (KoreanWorksheet | MathWorksheet)[] = [];
+      let fetchedWorksheets: (KoreanWorksheet | MathWorksheet | EnglishWorksheet)[] = [];
       if (activeSubject === 'korean') {
         const response = await koreanService.getKoreanWorksheets();
         fetchedWorksheets = response.worksheets;
@@ -64,7 +64,7 @@ export function AssignmentCreateModal({
         fetchedWorksheets = response.worksheets;
       } else if (activeSubject === 'english') {
         const response = await EnglishService.getEnglishWorksheets();
-        fetchedWorksheets = response;
+        fetchedWorksheets = response as EnglishWorksheet[];
       }
       setWorksheets(fetchedWorksheets);
       setSelectedWorksheetIds([]); // Reset selections when worksheets are reloaded
@@ -86,7 +86,7 @@ export function AssignmentCreateModal({
   const handleSelectAll = (checked: boolean) => {
     setSelectAll(checked);
     if (checked) {
-      setSelectedWorksheetIds(worksheets.map(ws => ws.id));
+      setSelectedWorksheetIds(worksheets.map(ws => activeSubject === 'english' ? (ws as EnglishWorksheet).worksheet_id : (ws as any).id));
     } else {
       setSelectedWorksheetIds([]);
     }
@@ -131,16 +131,20 @@ export function AssignmentCreateModal({
           await mathService.deployAssignment(deployRequest);
         } else if (activeSubject === 'english') {
           const englishDeployRequest: EnglishAssignmentDeployRequest = {
-            worksheet_id: worksheetId as number, // 영어는 worksheet_id를 number로
+            assignment_id: worksheetId as number, // 영어는 assignment_id로 백엔드에 전송
             classroom_id: parseInt(classId),
             student_ids: studentIds,
           };
+          console.log('🚀 영어 과제 배포 시작:', englishDeployRequest);
+          console.log('🚀 worksheetId 타입:', typeof worksheetId, worksheetId);
+          console.log('🚀 classId 타입:', typeof classId, classId);
+          console.log('🚀 studentIds 타입:', typeof studentIds, studentIds);
           await EnglishService.deployAssignment(englishDeployRequest);
         }
       }
       alert(`${selectedWorksheetIds.length}개의 과제가 성공적으로 생성되었습니다.`);
       onAssignmentCreated();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to create assignments:', error);
       alert(`과제 생성에 실패했습니다: ${error?.message || '알 수 없는 오류'}`);
     }
@@ -230,31 +234,35 @@ export function AssignmentCreateModal({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {worksheets.map((worksheet) => (
-                      <TableRow key={worksheet.id}>
+                    {worksheets.map((worksheet) => {
+                      const worksheetId = activeSubject === 'english' ? (worksheet as EnglishWorksheet).worksheet_id : (worksheet as any).id;
+                      return (
+                      <TableRow key={worksheetId}>
                         <TableCell>
                           <Checkbox
-                            checked={selectedWorksheetIds.includes(worksheet.id)}
+                            checked={selectedWorksheetIds.includes(worksheetId)}
                             onCheckedChange={(checked) =>
-                              handleSelectWorksheet(worksheet.id, checked as boolean)
+                              handleSelectWorksheet(worksheetId, checked as boolean)
                             }
                           />
                         </TableCell>
-                        <TableCell className="font-medium">{activeSubject !== 'english' ? worksheet.title : worksheet.worksheet_name || 'N/A'}</TableCell>
+                        <TableCell className="font-medium">
+                          {activeSubject === 'english' ? (worksheet as EnglishWorksheet).worksheet_name || 'N/A' : (worksheet as any).title}
+                        </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <Badge
                               className="text-sm"
                               style={{
-                                backgroundColor: worksheet.school_level === '중학교' ? '#E6F3FF' : '#FFF5E9',
+                                backgroundColor: (worksheet as any).school_level === '중학교' ? '#E6F3FF' : '#FFF5E9',
                                 border: 'none',
-                                color: worksheet.school_level === '중학교' ? '#0085FF' : '#FF9F2D',
+                                color: (worksheet as any).school_level === '중학교' ? '#0085FF' : '#FF9F2D',
                                 padding: '6px 12px',
                                 minWidth: '60px',
                                 textAlign: 'center',
                               }}
                             >
-                              {worksheet.school_level}
+                              {(worksheet as any).school_level || '중학교'}
                             </Badge>
                             <Badge
                               className="text-sm"
@@ -267,16 +275,18 @@ export function AssignmentCreateModal({
                                 textAlign: 'center',
                               }}
                             >
-                              {worksheet.grade}학년
+                              {(worksheet as any).grade || 1}학년
                             </Badge>
                           </div>
                         </TableCell>
                         <TableCell>
                           <div className="text-sm">
-                            <div className="font-medium">{activeSubject !== 'english' ? worksheet.unit_name : worksheet.problem_type || 'N/A'}</div>
+                            <div className="font-medium">
+                              {activeSubject === 'english' ? (worksheet as EnglishWorksheet).problem_type || 'N/A' : (worksheet as any).unit_name || 'N/A'}
+                            </div>
                             {
                               activeSubject !== 'english' && (
-                                <div className="text-gray-500">{worksheet.chapter_name || 'N/A'}</div>
+                                <div className="text-gray-500">{(worksheet as any).chapter_name || 'N/A'}</div>
                               )
                             }
                           </div>
@@ -293,14 +303,15 @@ export function AssignmentCreateModal({
                               textAlign: 'center',
                             }}
                           >
-                            {activeSubject !== 'english' ? worksheet.problem_count : worksheet.total_questions}문제
+                            {activeSubject === 'english' ? (worksheet as EnglishWorksheet).total_questions : (worksheet as any).problem_count}문제
                           </Badge>
                         </TableCell>
                         <TableCell className="text-sm text-gray-600">
-                          {new Date(worksheet.created_at).toLocaleDateString('ko-KR')}
+                          {new Date((worksheet as any).created_at).toLocaleDateString('ko-KR')}
                         </TableCell>
                       </TableRow>
-                    ))}
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>

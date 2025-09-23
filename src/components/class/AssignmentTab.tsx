@@ -15,6 +15,7 @@ import { AssignmentCreateModal } from './AssignmentCreateModal';
 import { AssignmentResultView } from './AssignmentResultView';
 import { StudentAssignmentModal } from './StudentAssignmentModal';
 import { Worksheet } from '@/services/koreanService'; // Re-using Worksheet interface from koreanService
+import { EnglishWorksheetData } from '@/types/english';
 
 interface AssignmentTabProps {
   classId: number; // Changed to number
@@ -32,7 +33,7 @@ export function AssignmentTab({ classId }: AssignmentTabProps) {
   const [isDeployModalOpen, setIsDeployModalOpen] = useState(false);
 
   // State for AssignmentCreateModal
-  const [modalWorksheets, setModalWorksheets] = useState<Worksheet[]>([]);
+  const [modalWorksheets, setModalWorksheets] = useState<Worksheet[] | EnglishWorksheetData[]>([]);
   const [modalIsLoading, setModalIsLoading] = useState(false);
   const [selectedWorksheetIds, setSelectedWorksheetIds] = useState<(string | number)[]>([]);
   const [selectAllWorksheets, setSelectAllWorksheets] = useState(false);
@@ -64,6 +65,7 @@ export function AssignmentTab({ classId }: AssignmentTabProps) {
     setModalIsLoading(true);
     try {
       let fetchedWorksheets: Worksheet[] = [];
+      let fetchedEnglishWorksheets: EnglishWorksheetData[] = [];
       if (activeSubject === 'korean') {
         const response = await koreanService.getKoreanWorksheets();
         fetchedWorksheets = response.worksheets;
@@ -72,10 +74,13 @@ export function AssignmentTab({ classId }: AssignmentTabProps) {
         const response = await mathService.getMathWorksheets();
         fetchedWorksheets = response.worksheets;
       } else if (activeSubject === 'english') {
+        console.log('📚 영어 워크시트 목록 로딩 시작...');
         const response = await EnglishService.getEnglishWorksheets();
-        fetchedWorksheets = response;
+        console.log('📚 영어 워크시트 API 응답:', response);
+        console.log('📚 영어 워크시트 개수:', response?.length);
+        fetchedEnglishWorksheets = response as EnglishWorksheetData[];
       }
-      setModalWorksheets(fetchedWorksheets);
+      setModalWorksheets(fetchedEnglishWorksheets);
       setSelectedWorksheetIds([]); // Reset selections when worksheets are reloaded
       setSelectAllWorksheets(false);
     } catch (error) {
@@ -125,7 +130,7 @@ export function AssignmentTab({ classId }: AssignmentTabProps) {
   const handleSelectAllWorksheets = (checked: boolean) => {
     setSelectAllWorksheets(checked);
     if (checked) {
-      setSelectedWorksheetIds(modalWorksheets.map(ws => ws.id));
+      setSelectedWorksheetIds(modalWorksheets.map(ws => activeSubject === 'english' ? (ws as EnglishWorksheetData).worksheet_id : (ws as any).id));
     } else {
       setSelectedWorksheetIds([]);
     }
@@ -165,7 +170,7 @@ export function AssignmentTab({ classId }: AssignmentTabProps) {
           console.warn("MathService.deployAssignment is not yet implemented.");
         } else if (activeSubject === 'english') {
           const englishDeployRequest: EnglishAssignmentDeployRequest = {
-            worksheet_id: worksheetId as number, // 영어는 worksheet_id
+            assignment_id: worksheetId as number, // 영어는 assignment_id로 백엔드에 전송
             classroom_id: classId,
             student_ids: studentIds,
           };

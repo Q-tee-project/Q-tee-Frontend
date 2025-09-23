@@ -18,7 +18,7 @@ type EnglishLLMResponseAndRequest = EnglishWorksheetData;
 
 // 영어 과제 배포 요청 (백엔드 API와 일치)
 export interface EnglishAssignmentDeployRequest {
-  worksheet_id: number;      // 영어 워크시트 ID
+  assignment_id: number;     // 영어 워크시트 ID (백엔드에서는 assignment_id로 요구)
   classroom_id: number;      // 클래스룸 ID
   student_ids: number[];     // 학생 ID 목록
 }
@@ -57,17 +57,25 @@ export class EnglishService {
     const currentUser = JSON.parse(localStorage.getItem('user_profile') || '{}');
     const userId = currentUser?.id;
 
+    console.log('📚 영어 워크시트 API 호출 - userId:', userId);
+
     if (!userId) {
       throw new Error('로그인이 필요합니다.');
     }
 
-    const response = await fetch(`${ENGLISH_API_BASE}/worksheets?user_id=${userId}&limit=100`);
+    const apiUrl = `${ENGLISH_API_BASE}/worksheets?user_id=${userId}&limit=100`;
+    console.log('📚 영어 워크시트 API URL:', apiUrl);
+
+    const response = await fetch(apiUrl);
 
     if (!response.ok) {
+      console.error('📚 영어 워크시트 API 에러:', response.status, response.statusText);
       throw new Error(`English API Error: ${response.status}`);
     }
 
     const data = await response.json();
+    console.log('📚 영어 워크시트 원시 데이터:', data);
+    console.log('📚 영어 워크시트 반환 데이터:', data || []);
     return data || [];
   }
 
@@ -175,7 +183,7 @@ export class EnglishService {
 
     const result = await response.json();
     return {
-      worksheet_id: worksheetData.worksheet_id || 0,
+      worksheet_id: result.worksheet_id || worksheetData.worksheet_id || 0,
       message: result.message || '영어 워크시트가 저장되었습니다.',
     };
   }
@@ -403,6 +411,8 @@ export class EnglishService {
   }
 
   static async deployAssignment(deployRequest: EnglishAssignmentDeployRequest): Promise<any> {
+    console.log('📤 영어 과제 배포 요청:', deployRequest);
+
     const response = await fetch(`${ENGLISH_API_BASE}/assignments/deploy`, {
       method: 'POST',
       headers: {
@@ -412,7 +422,15 @@ export class EnglishService {
     });
 
     if (!response.ok) {
-      throw new Error(`English API Error: ${response.status}`);
+      let errorMessage = `English API Error: ${response.status}`;
+      try {
+        const errorData = await response.text();
+        errorMessage += ` - ${errorData}`;
+        console.error('📤 영어 과제 배포 실패:', errorData);
+      } catch (e) {
+        // JSON 파싱 실패 시 기본 메시지 사용
+      }
+      throw new Error(errorMessage);
     }
 
     return response.json();
@@ -436,6 +454,90 @@ export class EnglishService {
     }
 
     const data = await response.json();
+    return data?.assignments || [];
+  }
+
+  // 영어 과제 상세 정보 조회 (학생용)
+  static async getAssignmentDetail(assignmentId: number, studentId: number): Promise<any> {
+    const currentUser = JSON.parse(localStorage.getItem('user_profile') || '{}');
+    const userId = currentUser?.id;
+
+    if (!userId) {
+      throw new Error('로그인이 필요합니다.');
+    }
+
+    const response = await fetch(
+      `${ENGLISH_API_BASE}/assignments/${assignmentId}/student/${studentId}?user_id=${userId}`
+    );
+
+    if (!response.ok) {
+      throw new Error(`English API Error: ${response.status}`);
+    }
+
+    return response.json();
+  }
+
+  // 영어 학생 과제 목록 조회
+  static async getStudentAssignments(studentId: number): Promise<any[]> {
+    const currentUser = JSON.parse(localStorage.getItem('user_profile') || '{}');
+    const userId = currentUser?.id;
+
+    if (!userId) {
+      throw new Error('로그인이 필요합니다.');
+    }
+
+    const response = await fetch(
+      `${ENGLISH_API_BASE}/assignments/student/${studentId}?user_id=${userId}`
+    );
+
+    if (!response.ok) {
+      throw new Error(`English API Error: ${response.status}`);
+    }
+
+    const data = await response.json();
     return data || [];
+  }
+
+  // 영어 과제 제출
+  static async submitTest(assignmentId: number, studentId: number, answers: Record<number, string>): Promise<any> {
+    const currentUser = JSON.parse(localStorage.getItem('user_profile') || '{}');
+    const userId = currentUser?.id;
+
+    if (!userId) {
+      throw new Error('로그인이 필요합니다.');
+    }
+
+    const submissionData = {
+      assignment_id: assignmentId,
+      student_id: studentId,
+      answers: answers,
+      user_id: userId
+    };
+
+    console.log('📤 영어 과제 제출 데이터:', submissionData);
+
+    const response = await fetch(`${ENGLISH_API_BASE}/assignments/submit`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(submissionData),
+    });
+
+    if (!response.ok) {
+      let errorMessage = `English API Error: ${response.status}`;
+      try {
+        const errorData = await response.text();
+        errorMessage += ` - ${errorData}`;
+        console.error('📤 영어 과제 제출 실패:', errorData);
+      } catch (e) {
+        // JSON 파싱 실패 시 기본 메시지 사용
+      }
+      throw new Error(errorMessage);
+    }
+
+    const result = await response.json();
+    console.log('📤 영어 과제 제출 성공:', result);
+    return result;
   }
 }

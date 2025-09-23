@@ -22,17 +22,18 @@ export const useEnglishWorksheetSave = () => {
     const currentUser = JSON.parse(localStorage.getItem('user_profile') || '{}');
     const userId = currentUser?.id;
 
-    // questions 배열의 null 값들을 빈 문자열로 처리 (DB NOT NULL 제약조건 때문)
+    // questions 배열의 null 값들을 빈 문자열로 처리하고 correct_answer를 문자열로 변환
     const processedQuestions = worksheetData.questions?.map(question => ({
       ...question,
       example_content: question.example_content || '',
       example_original_content: question.example_original_content || '',
       example_korean_translation: question.example_korean_translation || '',
+      correct_answer: String(question.correct_answer), // 모든 답안을 문자열로 변환
     })) || [];
 
     return {
       ...worksheetData,
-      worksheet_id: currentWorksheetId || Date.now(),
+      worksheet_id: currentWorksheetId || 0,
       teacher_id: userId,
       worksheet_name: worksheetName,
       worksheet_date: now.toISOString().split('T')[0],

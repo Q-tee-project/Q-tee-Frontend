@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
       endpoint = '/api/assignments/deploy';
     } else if (subject === 'english') {
       targetUrl = 'http://localhost:8002';
-      endpoint = '/api/assignments/deploy';
+      endpoint = '/api/english/assignments/deploy';
     } else {
       return NextResponse.json(
         { error: 'Invalid subject' },
