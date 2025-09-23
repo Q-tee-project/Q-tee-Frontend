@@ -8,16 +8,7 @@ import { VscBellDot } from 'react-icons/vsc';
 import { FaUserCircle } from 'react-icons/fa';
 import { LuUser, LuLogOut } from 'react-icons/lu';
 import { useAuth } from '@/contexts/AuthContext';
-import {
-  LuMail,
-  LuCalendar,
-  LuShoppingCart,
-  LuTriangleAlert,
-  LuCheck,
-  LuPencilLine,
-  LuX,
-  LuTrash2,
-} from 'react-icons/lu';
+import Notification from './Notification';
 
 export default function Header() {
   const router = useRouter();
@@ -26,41 +17,6 @@ export default function Header() {
   const [isBellOpen, setIsBellOpen] = React.useState(false);
   const profileMenuRef = React.useRef<HTMLLIElement | null>(null);
   const bellMenuRef = React.useRef<HTMLLIElement | null>(null);
-
-  type NotificationType = 'message' | 'schedule' | 'market' | 'missing' | 'graded' | 'problem';
-  type Notification = { id: string; type: NotificationType; title: string };
-
-  const typeMeta: Record<NotificationType, { label: string; icon: React.ReactNode }> = {
-    message: { label: '쪽지 알림', icon: <LuMail size={18} /> },
-    schedule: { label: '일정 알림', icon: <LuCalendar size={18} /> },
-    market: { label: '마켓 알림', icon: <LuShoppingCart size={18} /> },
-    missing: { label: '미제출 알림', icon: <LuTriangleAlert size={18} /> },
-    graded: { label: '채점 알림', icon: <LuCheck size={18} /> },
-    problem: { label: '문제 알림', icon: <LuPencilLine size={18} /> },
-  };
-
-  const [notifications, setNotifications] = React.useState<Notification[]>([
-    { id: 'm-1', type: 'message', title: '새 쪽지 1건' },
-    { id: 'm-2', type: 'message', title: '새 쪽지 1건' },
-    { id: 's-1', type: 'schedule', title: '오늘 일정' },
-    { id: 's-2', type: 'schedule', title: '내일 일정' },
-    { id: 'mk-1', type: 'market', title: '마켓 업데이트' },
-    { id: 'mi-1', type: 'missing', title: '미제출 과제' },
-    { id: 'g-1', type: 'graded', title: '채점 완료' },
-    { id: 'p-1', type: 'problem', title: '새 문제 등록' },
-  ]);
-
-  const [expandedType, setExpandedType] = React.useState<NotificationType | null>(null);
-
-  const handleRemoveNotification = (id: string) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
-  };
-
-  const handleClearAll = () => {
-    setNotifications([]);
-    setExpandedType(null);
-    setIsBellOpen(false);
-  };
 
   const toggleProfileMenu = () => {
     if (!isAuthenticated) {
@@ -107,6 +63,7 @@ export default function Header() {
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, []);
+
   return (
     <>
       <header
@@ -120,9 +77,7 @@ export default function Header() {
         role="banner"
         aria-label="상단 네비게이션"
       >
-
         <div className="flex items-center justify-between w-full" style={{ paddingLeft: '10px', paddingRight: '10px' }}>
-
           <div className="flex items-center gap-md">
             <Link href="/" aria-label="홈으로 이동">
               <Image src="/logo.svg" alt="Q-Tee 로고" width={28} height={28} priority />
@@ -136,7 +91,6 @@ export default function Header() {
               display: 'flex',
               alignItems: 'center'}}
               ref={bellMenuRef}>
-                
                 <button
                   type="button"
                   aria-label="알림"
@@ -157,269 +111,11 @@ export default function Header() {
                 >
                   <VscBellDot size={22} />
                 </button>
-                {isBellOpen && (
-                  <div
-                    role="menu"
-                    aria-label="알림"
-                    style={{
-                      position: 'absolute',
-                      top: 'calc(100% + 8px)',
-                      right: 0,
-                      width: '280px',
-                      background: '#FFFFFF',
-                      border: '1px solid #D1D1D1',
-                      borderRadius: '14px',
-                      boxShadow: '0 12px 34px rgba(0,0,0,0.10)',
-                      padding: '16px',
-                      zIndex: 1000,
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                      <button
-                        aria-label="모든 알림 삭제"
-                        onClick={handleClearAll}
-                        style={{
-                          all: 'unset',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          width: '28px',
-                          height: '28px',
-                          color: '#6B7280',
-                          cursor: 'pointer',
-                          borderRadius: '8px',
-                        }}
-                      >
-                        <LuTrash2 size={16} />
-                      </button>
-                    </div>
-
-                    {(() => {
-                      return (
-                        <div
-                          className="notif-scroll"
-                          style={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '12px',
-                            marginTop: '4px',
-                            maxHeight: '300px',
-                            overflowY: 'auto',
-                          }}
-                        >
-                          {Object.entries(
-                            notifications.reduce<Record<NotificationType, Notification[]>>(
-                              (acc, cur) => {
-                                if (!acc[cur.type]) acc[cur.type] = [];
-                                acc[cur.type].push(cur);
-                                return acc;
-                              },
-                              {
-                                message: [],
-                                schedule: [],
-                                market: [],
-                                missing: [],
-                                graded: [],
-                                problem: [],
-                              },
-                            ),
-                          )
-                            .filter(([_, list]) => list.length > 0)
-                            .map(([typeKey, list], groupIndex) => {
-                              const t = typeKey as NotificationType;
-                              const meta = typeMeta[t];
-                              const isOpen = expandedType === t;
-                              const latest = list[list.length - 1];
-                              const panelMaxHeight = isOpen
-                                ? Math.min(280, list.length * 64 + 40)
-                                : 0;
-                              return (
-                                <div
-                                  key={t}
-                                  className="notif-item"
-                                  style={{
-                                    animationDelay: `${groupIndex * 60}ms`,
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    gap: '12px',
-                                  }}
-                                >
-                                  <button
-                                    onClick={() =>
-                                      setExpandedType((prev) => (prev === t ? null : t))
-                                    }
-                                    aria-label={`${latest?.title ?? meta.label} ${
-                                      list.length
-                                    }개 보기`}
-                                    style={{
-                                      all: 'unset',
-                                      display: 'block',
-                                      position: 'relative',
-                                      cursor: 'pointer',
-                                    }}
-                                  >
-                                    {list.length >= 2 && (
-                                      <div
-                                        aria-hidden
-                                        style={{
-                                          position: 'absolute',
-                                          inset: 0,
-                                          transform: 'translateY(6px)',
-                                          background: '#2F2F2F',
-                                          borderRadius: '10px',
-                                          opacity: 0.8,
-                                          filter: 'brightness(0.9)',
-                                        }}
-                                      />
-                                    )}
-                                    {list.length >= 2 && (
-                                      <div
-                                        aria-hidden
-                                        style={{
-                                          position: 'absolute',
-                                          inset: 0,
-                                          transform: 'translateY(3px)',
-                                          background: '#2F2F2F',
-                                          borderRadius: '10px',
-                                          opacity: 0.9,
-                                        }}
-                                      />
-                                    )}
-                                    <div
-                                      style={{
-                                        position: 'relative',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'space-between',
-                                        gap: '12px',
-                                        background: '#2F2F2F',
-                                        color: '#FFFFFF',
-                                        padding: '12px 14px',
-                                        borderRadius: '10px',
-                                      }}
-                                    >
-                                      <div
-                                        style={{
-                                          display: 'flex',
-                                          alignItems: 'center',
-                                          gap: '10px',
-                                        }}
-                                      >
-                                        <span aria-hidden>{meta.icon}</span>
-                                        <span style={{ fontSize: '14px' }}>
-                                          {latest?.title ?? meta.label}
-                                        </span>
-                                      </div>
-                                      <div
-                                        style={{
-                                          display: 'flex',
-                                          alignItems: 'center',
-                                          gap: '10px',
-                                        }}
-                                      >
-                                        <span
-                                          style={{
-                                            fontSize: '12px',
-                                            color: '#E5E7EB',
-                                            background: 'rgba(255,255,255,0.12)',
-                                            padding: '2px 8px',
-                                            borderRadius: '9999px',
-                                          }}
-                                        >
-                                          {list.length}
-                                        </span>
-                                      </div>
-                                    </div>
-                                  </button>
-                                  <div
-                                    style={{
-                                      overflow: 'hidden',
-                                      transition: 'max-height 220ms ease',
-                                      maxHeight: panelMaxHeight,
-                                    }}
-                                  >
-                                    {isOpen && (
-                                      <div
-                                        style={{
-                                          display: 'flex',
-                                          flexDirection: 'column',
-                                          gap: '12px',
-                                        }}
-                                      >
-                                        {list.map((n, index) => (
-                                          <div
-                                            key={n.id}
-                                            className="notif-item"
-                                            style={{
-                                              position: 'relative',
-                                              animationDelay: `${index * 60}ms`,
-                                            }}
-                                          >
-                                            <div
-                                              aria-hidden
-                                              style={{
-                                                position: 'absolute',
-                                                left: '6px',
-                                                right: '6px',
-                                                bottom: '-3px',
-                                                height: '6px',
-                                                borderRadius: '6px',
-                                                background: 'rgba(0,0,0,0.12)',
-                                                filter: 'blur(4px)',
-                                              }}
-                                            />
-                                            <div
-                                              style={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'space-between',
-                                                gap: '12px',
-                                                background: '#2F2F2F',
-                                                color: '#FFFFFF',
-                                                padding: '12px 14px',
-                                                borderRadius: '10px',
-                                              }}
-                                            >
-                                              <div
-                                                style={{
-                                                  display: 'flex',
-                                                  alignItems: 'center',
-                                                  gap: '10px',
-                                                }}
-                                              >
-                                                <span aria-hidden>{typeMeta[n.type].icon}</span>
-                                                <span style={{ fontSize: '14px' }}>{n.title}</span>
-                                              </div>
-                                              <button
-                                                aria-label={`${n.title} 닫기`}
-                                                style={{
-                                                  all: 'unset',
-                                                  display: 'inline-flex',
-                                                  alignItems: 'center',
-                                                  justifyContent: 'center',
-                                                  width: '24px',
-                                                  height: '24px',
-                                                  cursor: 'pointer',
-                                                  color: '#FFFFFF',
-                                                }}
-                                                onClick={() => handleRemoveNotification(n.id)}
-                                              >
-                                                <LuX size={18} />
-                                              </button>
-                                            </div>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              );
-                            })}
-                        </div>
-                      );
-                    })()}
-                  </div>
-                )}
+                <Notification 
+                  isOpen={isBellOpen} 
+                  onClose={() => setIsBellOpen(false)} 
+                  bellMenuRef={bellMenuRef} 
+                />
               </li>
               <li style={{ position: 'relative',
                 marginRight: '20px', 
