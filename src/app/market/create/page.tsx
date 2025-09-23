@@ -44,8 +44,15 @@ export default function CreateMarketPage() {
     worksheetId: null,
   });
 
-  const [images, setImages] = useState<UploadedImage[]>([]);
+  const [images, setImages] = useState<any[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [worksheets, setWorksheets] = useState<any[]>([]);
+  const [problems, setProblems] = useState<any[]>([]);
+  const [selectedProblems, setSelectedProblems] = useState<number[]>([]);
+  const [selectedWorksheet, setSelectedWorksheet] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  
   // 태그 드롭다운 선택 상태
   const [school, setSchool] = useState<string>('');
   const [grade, setGrade] = useState<string>('');
@@ -74,6 +81,22 @@ export default function CreateMarketPage() {
     }
 
     setForm(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubjectChange = (value: string) => {
+    setForm(prev => ({ ...prev, subject: value, worksheetId: null }));
+    setSelectedWorksheet(null);
+    setProblems([]);
+    setSelectedProblems([]);
+  };
+
+  const handleWorksheetChange = (worksheetId: number) => {
+    setForm(prev => ({ ...prev, worksheetId }));
+    const worksheet = worksheets.find(w => w.id === worksheetId);
+    setSelectedWorksheet(worksheet);
+    if (worksheet) {
+      setProblems(worksheet.problems || []);
+    }
   };
   
 
@@ -185,9 +208,7 @@ export default function CreateMarketPage() {
           </button>
           <button
             onClick={handleSubmit}
-
             className="text-sm px-4 py-2 rounded-md bg-[#0072CE] text-white hover:bg-[#005fa3] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0072CE] focus-visible:ring-offset-2"
-
           >
             {submitting ? '등록 중...' : '등록하기'}
           </button>
@@ -195,7 +216,7 @@ export default function CreateMarketPage() {
       </nav>
 
       {/* 메인 카드 */}
-      <Card className="m-8 flex-1 flex flex-col shadow-sm">
+      <Card className="flex-1 flex flex-col shadow-sm" style={{ margin: '2rem' }}>
         <CardHeader className="py-3 px-6 border-b border-gray-100">
           <CardTitle className="text-base font-medium">
             상품 등록
@@ -403,60 +424,75 @@ export default function CreateMarketPage() {
                 </div>
               </div>
 
-              {/* 가격 */}
-              <div className="mb-4 flex items-center">
-                <label className="block mr-3 text-sm font-medium text-gray-700">
-                  가격
-
+              {/* 상품 설명 */}
+              <div>
+                <label className="block mb-2 text-sm font-medium text-gray-700">
+                  상품 설명
                 </label>
-                <div className="text-sm text-gray-500 mb-3">
-                  구매 전 고객이 볼 수 있는 미리보기 문제를 선택하세요. ({selectedProblems.length}/3)
-                </div>
-                <div className="max-h-96 overflow-y-auto border border-gray-200 rounded-md">
-                  {problems.map((problem) => (
-                    <div
-                      key={problem.id}
-                      className={`p-4 border-b border-gray-100 cursor-pointer transition-colors ${
-                        selectedProblems.includes(problem.id)
-                          ? 'bg-blue-50 border-l-4 border-l-blue-500'
-                          : 'hover:bg-gray-50'
-                      }`}
-                      onClick={() => toggleProblemSelection(problem.id)}
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className={`w-5 h-5 rounded border-2 flex items-center justify-center mt-1 ${
+                <textarea
+                  name="description"
+                  value={form.description}
+                  onChange={handleChange}
+                  placeholder="상품 설명을 입력하세요"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#0072CE]"
+                  rows={4}
+                />
+              </div>
+
+              {/* 문제 선택 */}
+              {form.worksheetId && (
+                <div>
+                  <label className="block mb-2 text-sm font-medium text-gray-700">
+                    미리보기 문제 선택 (최대 3개)
+                  </label>
+                  <div className="text-sm text-gray-500 mb-3">
+                    구매 전 고객이 볼 수 있는 미리보기 문제를 선택하세요. ({selectedProblems.length}/3)
+                  </div>
+                  <div className="max-h-96 overflow-y-auto border border-gray-200 rounded-md">
+                    {problems.map((problem) => (
+                      <div
+                        key={problem.id}
+                        className={`p-4 border-b border-gray-100 cursor-pointer transition-colors ${
                           selectedProblems.includes(problem.id)
-                            ? 'bg-blue-500 border-blue-500'
-                            : 'border-gray-300'
-                        }`}>
-                          {selectedProblems.includes(problem.id) && (
-                            <FiCheck className="w-3 h-3 text-white" />
-                          )}
-                        </div>
-                        <div className="flex-1">
-                          <div className="font-medium text-sm">문제 {problem.sequence_order}</div>
-                          <div className="text-sm text-gray-700 mt-1 line-clamp-2">
-                            {problem.question.length > 100
-                              ? `${problem.question.substring(0, 100)}...`
-                              : problem.question
-                            }
+                            ? 'bg-blue-50 border-l-4 border-l-blue-500'
+                            : 'hover:bg-gray-50'
+                        }`}
+                        onClick={() => toggleProblemSelection(problem.id)}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className={`w-5 h-5 rounded border-2 flex items-center justify-center mt-1 ${
+                            selectedProblems.includes(problem.id)
+                              ? 'bg-blue-500 border-blue-500'
+                              : 'border-gray-300'
+                          }`}>
+                            {selectedProblems.includes(problem.id) && (
+                              <FiCheck className="w-3 h-3 text-white" />
+                            )}
                           </div>
-                          <div className="flex gap-2 mt-2">
-                            <span className="text-xs px-2 py-1 bg-gray-100 rounded">
-                              {problem.problem_type}
-                            </span>
-                            <span className="text-xs px-2 py-1 bg-gray-100 rounded">
-                              난이도: {problem.difficulty}
-                            </span>
+                          <div className="flex-1">
+                            <div className="font-medium text-sm">문제 {problem.sequence_order}</div>
+                            <div className="text-sm text-gray-700 mt-1 line-clamp-2">
+                              {problem.question.length > 100
+                                ? `${problem.question.substring(0, 100)}...`
+                                : problem.question
+                              }
+                            </div>
+                            <div className="flex gap-2 mt-2">
+                              <span className="text-xs px-2 py-1 bg-gray-100 rounded">
+                                {problem.problem_type}
+                              </span>
+                              <span className="text-xs px-2 py-1 bg-gray-100 rounded">
+                                난이도: {problem.difficulty}
+                              </span>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
         </CardContent>
       </Card>
     </div>
