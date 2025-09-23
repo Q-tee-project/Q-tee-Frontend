@@ -57,7 +57,7 @@ export default function MathGenerator({ onGenerate, isGenerating }: MathGenerato
     try {
       console.log('🔍 교육과정 로딩 시작:', { school, grade, semester });
       const response = await fetch(
-        `http://localhost:8001/curriculum/structure?school_level=${encodeURIComponent(
+        `http://localhost:8001/api/curriculum/structure?school_level=${encodeURIComponent(
           school,
         )}`,
       );

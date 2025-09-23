@@ -1,5 +1,5 @@
 import { useProblemGeneration, PreviewQuestion } from './useProblemGeneration';
-import { MathService } from '@/services/mathService';
+import { mathService } from '@/services/mathService';
 import { useState } from 'react';
 
 export const useMathGeneration = () => {
@@ -48,7 +48,7 @@ export const useMathGeneration = () => {
       // 문제 생성 API 호출 (Bearer 토큰 포함)
       const token = localStorage.getItem('access_token');
       const response = await fetch(
-        `http://localhost:8001/generate?user_id=${userId}`,
+        `http://localhost:8001/api/worksheets/generate?user_id=${userId}`,
         {
           method: 'POST',
           headers: {
@@ -107,17 +107,14 @@ export const useMathGeneration = () => {
 
       // 재생성 API 호출 (Bearer 토큰 포함)
       const token = localStorage.getItem('access_token');
-      const response = await fetch(
-        `http://localhost:8001/regenerate?user_id=${userId}`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          body: JSON.stringify(regenerationData),
+      const response = await fetch(`http://localhost:8001/api/regenerate?user_id=${userId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-      );
+        body: JSON.stringify(regenerationData),
+      });
 
       if (!response.ok) {
         const errorData = await response.text();
@@ -197,7 +194,7 @@ export const useMathGeneration = () => {
 
     const poll = async () => {
       try {
-        const apiUrl = `http://localhost:8001/tasks/${taskId}`;
+        const apiUrl = `http://localhost:8001/api/tasks/${taskId}`;
         const token = localStorage.getItem('access_token');
         const response = await fetch(apiUrl, {
           headers: {
@@ -259,7 +256,7 @@ export const useMathGeneration = () => {
         throw new Error('로그인이 필요합니다.');
       }
 
-      const apiUrl = `http://localhost:8001/worksheets/${worksheetId}?user_id=${userId}`;
+      const apiUrl = `http://localhost:8001/api/worksheets/${worksheetId}?user_id=${userId}`;
       const token = localStorage.getItem('access_token');
       const response = await fetch(apiUrl, {
         headers: {
@@ -332,7 +329,11 @@ export const useMathGeneration = () => {
 
         // 문제 유효성 검증 (기준 완화 및 상세 분석)
         const validQuestions = convertedQuestions.filter((q, index) => {
-          console.log(`\n🔍 문제 ${index + 1} 검증 중:`, q.question || q.title);
+          console.log(
+            `
+🔍 문제 ${index + 1} 검증 중:`,
+            q.question || q.title,
+          );
 
           const hasQuestion =
             q.question && typeof q.question === 'string' && q.question.trim().length > 0;
@@ -434,13 +435,16 @@ export const useMathGeneration = () => {
 
         updateState({
           previewQuestions: validQuestions,
-          currentWorksheetId: worksheetId // 워크시트 ID 저장
+          currentWorksheetId: worksheetId, // 워크시트 ID 저장
         });
 
         // 검증이 활성화된 경우 실제 생성된 문제들에 대해 검증 수행
         if (enableValidation && validQuestions.length > 0) {
           console.log('🔍 AI 검증 시스템 시작');
-          console.log('📄 검증할 문제 데이터 (JSON):', JSON.stringify(validQuestions.slice(0, 2), null, 2));
+          console.log(
+            '📄 검증할 문제 데이터 (JSON):',
+            JSON.stringify(validQuestions.slice(0, 2), null, 2),
+          );
           console.log(`📊 총 ${validQuestions.length}개 문제 검증 예정`);
 
           setTimeout(async () => {
@@ -459,7 +463,8 @@ export const useMathGeneration = () => {
                 const hasChoices = problem.choices && problem.choices.length > 0;
                 const questionLength = problem.question?.length || 0;
                 const explanationLength = problem.explanation?.length || 0;
-                const hasCorrectAnswer = problem.correct_answer && problem.correct_answer.trim().length > 0;
+                const hasCorrectAnswer =
+                  problem.correct_answer && problem.correct_answer.trim().length > 0;
 
                 // 정답 정확성 검증 시뮬레이션
                 let answerAccuracy: 'correct' | 'incorrect' | 'unclear' = 'correct';
@@ -467,8 +472,9 @@ export const useMathGeneration = () => {
                   answerAccuracy = 'unclear';
                 } else if (hasChoices && problem.correct_answer) {
                   // 객관식의 경우 정답이 선택지에 있는지 확인
-                  const isInChoices = problem.choices?.includes(problem.correct_answer) ||
-                                     ['A', 'B', 'C', 'D'].includes(problem.correct_answer.toUpperCase());
+                  const isInChoices =
+                    problem.choices?.includes(problem.correct_answer) ||
+                    ['A', 'B', 'C', 'D'].includes(problem.correct_answer.toUpperCase());
                   answerAccuracy = isInChoices ? 'correct' : 'incorrect';
                 }
 
@@ -530,18 +536,18 @@ export const useMathGeneration = () => {
                     math_correctness: mathCorrectness,
                     overall_score: Math.min(100, qualityScore),
                     issues,
-                    suggestions
+                    suggestions,
                   },
                   qualityScore,
                   isValid: qualityScore >= 80,
-                  needsReview: qualityScore >= 60 && qualityScore < 80
+                  needsReview: qualityScore >= 60 && qualityScore < 80,
                 };
               });
 
               console.log('🔍 문제별 분석 결과:', problemAnalysis);
 
-              const validCount = problemAnalysis.filter(p => p.isValid).length;
-              const reviewCount = problemAnalysis.filter(p => p.needsReview).length;
+              const validCount = problemAnalysis.filter((p) => p.isValid).length;
+              const reviewCount = problemAnalysis.filter((p) => p.needsReview).length;
               const invalidCount = problemAnalysis.length - validCount - reviewCount;
 
               const validationSummary = {
@@ -550,14 +556,23 @@ export const useMathGeneration = () => {
                 auto_approved: validCount,
                 manual_review_needed: reviewCount,
                 invalid_problems: invalidCount,
-                validity_rate: Math.round((validCount + reviewCount) / validQuestions.length * 100),
-                auto_approval_rate: Math.round(validCount / validQuestions.length * 100),
-                common_issues: reviewCount > 0 ? {
-                  '해설 보완 필요': problemAnalysis.filter(p => p.validation_result.explanation_quality === 'needs_improvement').length,
-                  '정답 확인 필요': problemAnalysis.filter(p => p.validation_result.answer_accuracy === 'unclear').length,
-                  '내용 검토 권장': Math.min(reviewCount, 2)
-                } : {},
-                problem_details: problemAnalysis
+                validity_rate: Math.round(
+                  ((validCount + reviewCount) / validQuestions.length) * 100,
+                ),
+                auto_approval_rate: Math.round((validCount / validQuestions.length) * 100),
+                common_issues:
+                  reviewCount > 0
+                    ? {
+                        '해설 보완 필요': problemAnalysis.filter(
+                          (p) => p.validation_result.explanation_quality === 'needs_improvement',
+                        ).length,
+                        '정답 확인 필요': problemAnalysis.filter(
+                          (p) => p.validation_result.answer_accuracy === 'unclear',
+                        ).length,
+                        '내용 검토 권장': Math.min(reviewCount, 2),
+                      }
+                    : {},
+                problem_details: problemAnalysis,
               };
 
               console.log('📋 최종 검증 요약:', validationSummary);
@@ -606,7 +621,7 @@ export const useMathGeneration = () => {
       let result;
 
       try {
-        result = await MathService.generateMathProblemsWithValidation(requestData);
+        result = await mathService.generateMathProblemsWithValidation(requestData);
       } catch (error: any) {
         console.log('🔄 검증 포함 문제 생성: 기존 방식 + 후처리 검증으로 진행');
 
@@ -681,7 +696,6 @@ export const useMathGeneration = () => {
           errorMessage: `❌ ${invalid_problems}개 문제에서 오류가 발견되었습니다. 수정 또는 재생성이 필요합니다.`,
         });
       }
-
     } catch (error: any) {
       console.error('검증 포함 문제 생성 오류:', error);
       updateState({
@@ -698,9 +712,13 @@ export const useMathGeneration = () => {
 
       const request = worksheetId
         ? { worksheet_id: worksheetId }
-        : { problem_ids: previewQuestions.map(q => q.backendId).filter((id): id is number => id !== undefined) };
+        : {
+            problem_ids: previewQuestions
+              .map((q) => q.backendId)
+              .filter((id): id is number => id !== undefined),
+          };
 
-      const result = await MathService.validateExistingProblems(request);
+      const result = await mathService.validateExistingProblems(request);
 
       console.log('📊 기존 문제 검증 결과:', result);
 
@@ -710,7 +728,9 @@ export const useMathGeneration = () => {
         return {
           ...question,
           validation_result: validationResult,
-          validation_status: validationResult?.auto_approve ? 'auto_approved' as const : 'manual_review_needed' as const,
+          validation_status: validationResult?.auto_approve
+            ? ('auto_approved' as const)
+            : ('manual_review_needed' as const),
         };
       });
 
@@ -718,7 +738,6 @@ export const useMathGeneration = () => {
 
       // 검증 결과를 problem_details 형태로 변환
       const problemDetails = result.problems.map((problem: any, index: number) => {
-
         // 문제 정합성 평가
         const hasValidQuestion = problem.question && problem.question.trim().length > 10;
         const hasValidAnswer = problem.correct_answer && problem.correct_answer.trim().length > 0;
@@ -733,8 +752,9 @@ export const useMathGeneration = () => {
         // 객관식 정답 정합성 (정답이 선택지에 있는지)
         let answerChoiceConsistency: 'correct' | 'incorrect' | 'unclear' = 'correct';
         if (problem.choices && problem.choices.length > 0) {
-          const answerInChoices = ['A', 'B', 'C', 'D'].includes(problem.correct_answer?.toUpperCase()) ||
-                                 problem.choices.includes(problem.correct_answer);
+          const answerInChoices =
+            ['A', 'B', 'C', 'D'].includes(problem.correct_answer?.toUpperCase()) ||
+            problem.choices.includes(problem.correct_answer);
           answerChoiceConsistency = answerInChoices ? 'correct' : 'incorrect';
         }
 
@@ -772,15 +792,15 @@ export const useMathGeneration = () => {
             math_correctness: answerExplanationConsistency,
             overall_score: Math.min(100, score),
             issues,
-            suggestions
-          }
+            suggestions,
+          },
         };
       });
 
       // 검증 요약에 상세 정보 추가
       const enhancedSummary = {
         ...result.summary,
-        problem_details: problemDetails
+        problem_details: problemDetails,
       };
 
       setValidationSummary(enhancedSummary);
