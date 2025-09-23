@@ -26,6 +26,7 @@ interface TestInterfaceProps {
   onOpenScratchpad: () => void;
   getProblemTypeInKorean: (type: string) => string;
   formatTime: (seconds: number) => string;
+  onOCRCapture?: (problemId: number, imageBlob: Blob) => void;
 }
 
 export function TestInterface({
@@ -44,6 +45,7 @@ export function TestInterface({
   onOpenScratchpad,
   getProblemTypeInKorean,
   formatTime,
+  onOCRCapture,
 }: TestInterfaceProps) {
   return (
     <Card className="w-5/6 flex flex-col shadow-sm">
@@ -166,10 +168,14 @@ export function TestInterface({
                         </Button>
                       </div>
                       <HandwritingCanvas
+                        key={`short-answer-${currentProblem.id}`}
                         width={580}
                         height={120}
                         value={answers[currentProblem.id] || ''}
                         onChange={(value) => onAnswerChange(currentProblem.id, value)}
+                        onImageCapture={(blob) => onOCRCapture?.(currentProblem.id, blob)}
+                        enableOCR={true}
+                        problemType={currentProblem.problem_type}
                         className="w-full"
                       />
                     </div>
@@ -190,10 +196,14 @@ export function TestInterface({
                         </Button>
                       </div>
                       <HandwritingCanvas
+                        key={`essay-${currentProblem.id}`}
                         width={580}
                         height={300}
                         value={answers[currentProblem.id] || ''}
                         onChange={(value) => onAnswerChange(currentProblem.id, value)}
+                        onImageCapture={(blob) => onOCRCapture?.(currentProblem.id, blob)}
+                        enableOCR={true}
+                        problemType={currentProblem.problem_type}
                         className="w-full"
                       />
                     </div>

@@ -2,14 +2,25 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ sessionId: string }> }
+  { params }: { params: Promise<{ assignmentId: string }> }
 ) {
   try {
-    const { sessionId } = await params;
-    const body = await request.json();
+    const { assignmentId } = await params;
+    const url = new URL(request.url);
+    const subject = url.searchParams.get('subject') || 'math';
 
-    const targetUrl = 'http://localhost:8001';
-    const endpoint = `/api/test-sessions/test-sessions/${sessionId}/submit`;
+    let targetUrl = '';
+    let endpoint = '';
+
+    if (subject === 'math') {
+      targetUrl = 'http://localhost:8001';
+      endpoint = `/api/grading/assignments/${assignmentId}/start-ai-grading`;
+    } else {
+      return NextResponse.json(
+        { error: 'AI grading only supported for math assignments' },
+        { status: 400 }
+      );
+    }
 
     const authHeader = request.headers.get('authorization');
     const headers: HeadersInit = {
@@ -22,7 +33,6 @@ export async function POST(
     const response = await fetch(`${targetUrl}${endpoint}`, {
       method: 'POST',
       headers,
-      body: JSON.stringify(body),
     });
 
     const data = await response.json();
@@ -33,7 +43,7 @@ export async function POST(
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Test submission proxy error:', error);
+    console.error('AI grading start proxy error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
