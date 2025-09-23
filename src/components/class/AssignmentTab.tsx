@@ -3,6 +3,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { koreanService, Assignment, KoreanWorksheet, AssignmentDeployRequest } from '@/services/koreanService';
 import { mathService } from '@/services/mathService';
+import { EnglishAssignmentDeployRequest, EnglishService } from '@/services/englishService';
+import { classroomService } from '@/services/authService';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -13,6 +15,7 @@ import { AssignmentCreateModal } from './AssignmentCreateModal';
 import { AssignmentResultView } from './AssignmentResultView';
 import { StudentAssignmentModal } from './StudentAssignmentModal';
 import { Worksheet } from '@/services/koreanService'; // Re-using Worksheet interface from koreanService
+import { EnglishWorksheetData } from '@/types/english';
 
 interface AssignmentTabProps {
   classId: number; // Changed to number
@@ -30,9 +33,9 @@ export function AssignmentTab({ classId }: AssignmentTabProps) {
   const [isDeployModalOpen, setIsDeployModalOpen] = useState(false);
 
   // State for AssignmentCreateModal
-  const [modalWorksheets, setModalWorksheets] = useState<Worksheet[]>([]);
+  const [modalWorksheets, setModalWorksheets] = useState<Worksheet[] | EnglishWorksheetData[]>([]);
   const [modalIsLoading, setModalIsLoading] = useState(false);
-  const [selectedWorksheetIds, setSelectedWorksheetIds] = useState<number[]>([]);
+  const [selectedWorksheetIds, setSelectedWorksheetIds] = useState<(string | number)[]>([]);
   const [selectAllWorksheets, setSelectAllWorksheets] = useState(false);
 
   // Load assignments for the main list
@@ -41,9 +44,14 @@ export function AssignmentTab({ classId }: AssignmentTabProps) {
       setIsLoading(true);
       let data: Assignment[] = [];
       if (activeSubject === 'korean') {
-        data = await koreanService.getDeployedAssignments(classId.toString()); // Convert to string for API call if needed
+        data = await koreanService.getDeployedAssignments(classId.toString());
       } else if (activeSubject === 'math') {
         data = await mathService.getDeployedAssignments(classId.toString()); // Convert to string for API call if needed
+        // Assuming mathService has a similar getDeployedAssignments method
+        // data = await mathService.getDeployedAssignments(classId.toString());
+        console.warn("MathService.getDeployedAssignments is not yet implemented.");
+      } else if (activeSubject === 'english') {
+        data = await EnglishService.getDeployedAssignments(classId.toString());
       }
       setAssignments(data);
     } catch (error) {
@@ -58,6 +66,7 @@ export function AssignmentTab({ classId }: AssignmentTabProps) {
     setModalIsLoading(true);
     try {
       let fetchedWorksheets: Worksheet[] = [];
+      let fetchedEnglishWorksheets: EnglishWorksheetData[] = [];
       if (activeSubject === 'korean') {
         const response = await koreanService.getKoreanWorksheets();
         fetchedWorksheets = response.worksheets;
@@ -65,8 +74,14 @@ export function AssignmentTab({ classId }: AssignmentTabProps) {
         // Assuming mathService has a similar getMathWorksheets method
         const response = await mathService.getMathWorksheets();
         fetchedWorksheets = response.worksheets;
+      } else if (activeSubject === 'english') {
+        console.log('📚 영어 워크시트 목록 로딩 시작...');
+        const response = await EnglishService.getEnglishWorksheets();
+        console.log('📚 영어 워크시트 API 응답:', response);
+        console.log('📚 영어 워크시트 개수:', response?.length);
+        fetchedEnglishWorksheets = response as EnglishWorksheetData[];
       }
-      setModalWorksheets(fetchedWorksheets);
+      setModalWorksheets(fetchedEnglishWorksheets);
       setSelectedWorksheetIds([]); // Reset selections when worksheets are reloaded
       setSelectAllWorksheets(false);
     } catch (error) {
@@ -116,13 +131,13 @@ export function AssignmentTab({ classId }: AssignmentTabProps) {
   const handleSelectAllWorksheets = (checked: boolean) => {
     setSelectAllWorksheets(checked);
     if (checked) {
-      setSelectedWorksheetIds(modalWorksheets.map(ws => ws.id));
+      setSelectedWorksheetIds(modalWorksheets.map(ws => activeSubject === 'english' ? (ws as EnglishWorksheetData).worksheet_id : (ws as any).id));
     } else {
       setSelectedWorksheetIds([]);
     }
   };
 
-  const handleSelectWorksheet = (worksheetId: number, checked: boolean) => {
+  const handleSelectWorksheet = (worksheetId: string | number, checked: boolean) => {
     setSelectedWorksheetIds(prev =>
       checked ? [...prev, worksheetId] : prev.filter(id => id !== worksheetId)
     );
@@ -134,12 +149,49 @@ export function AssignmentTab({ classId }: AssignmentTabProps) {
       return;
     }
 
-    const worksheetId = worksheetIds[0];
-    const worksheet = modalWorksheets.find(ws => ws.id === worksheetId);
 
-    if (!worksheet) {
-      alert('선택된 워크시트를 찾을 수 없습니다.');
-      return;
+    try {
+      // 클래스의 학생 목록 조회
+      const students = await classroomService.getClassroomStudents(classId);
+      const studentIds = students.map(student => student.id);
+
+      if (studentIds.length === 0) {
+        alert('클래스에 등록된 학생이 없습니다. 먼저 학생을 등록해주세요.');
+        return;
+      } 
+
+      for (const worksheetId of selectedWorksheetIds) {
+        if (activeSubject === 'korean') {
+          const deployRequest: AssignmentDeployRequest = {
+            assignment_id: worksheetId as number,
+            classroom_id: classId,
+            student_ids: studentIds,
+          };
+          await koreanService.deployAssignment(deployRequest);
+        } else if (activeSubject === 'math') {
+          const deployRequest: AssignmentDeployRequest = {
+            assignment_id: worksheetId as number,
+            classroom_id: classId,
+            student_ids: studentIds,
+          };
+          await mathService.deployAssignment(deployRequest);
+          console.warn("MathService.deployAssignment is not yet implemented.");
+        } else if (activeSubject === 'english') {
+          const englishDeployRequest: EnglishAssignmentDeployRequest = {
+            assignment_id: worksheetId as number,
+            classroom_id: classId,
+            student_ids: studentIds,
+          };
+          await EnglishService.deployAssignment(englishDeployRequest);
+        }
+      }
+      alert(`${selectedWorksheetIds.length}개의 과제가 성공적으로 생성되었습니다.`);
+      handleAssignmentCreated();
+      handleAssignmentCreated();
+    } catch (error) {
+      console.error('Failed to create assignments:', error);
+      alert(`과제 생성에 실패했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
+
     }
 
     // Close the creation modal

@@ -3,7 +3,10 @@
 import { ColumnDef } from '@tanstack/react-table';
 import { Worksheet } from '@/types/math';
 import { KoreanWorksheet } from '@/types/korean';
-import { EnglishWorksheet } from '@/types/english';
+import { EnglishWorksheetData } from '@/types/english';
+
+// 타입 별칭
+type EnglishWorksheet = EnglishWorksheetData;
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 
@@ -114,7 +117,7 @@ export const columns: ColumnDef<AnyWorksheet>[] = [
 
       return (
         <div className="text-center">
-          <span className="text-sm text-gray-500">{typeInfo}</span>
+          <span className="text-sm text-gray-500">{typeInfo as string}</span>
         </div>
       );
     },

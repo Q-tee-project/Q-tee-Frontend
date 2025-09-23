@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { FiPlus, FiCheck } from 'react-icons/fi';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import {
   Card,
   CardHeader,
@@ -479,8 +480,19 @@ export default function CreateMarketPage() {
               <div className="mb-4 flex items-center">
                 <label className="block mr-3 text-sm font-medium text-gray-700">
                   가격
-
                 </label>
+                <Input
+                  type="number"
+                  value={form.price}
+                  onChange={(e) => handleChange({ target: { name: 'price', value: e.target.value } })}
+                  placeholder="가격을 입력하세요"
+                  className="w-40 h-9 text-sm"
+                />
+                <span className="ml-2 text-sm text-gray-500">원</span>
+              </div>
+
+              {/* 미리보기 문제 선택 */}
+              <div className="mb-4">
                 <div className="text-sm text-gray-500 mb-3">
                   구매 전 고객이 볼 수 있는 미리보기 문제를 선택하세요. ({selectedProblems.length}/3)
                 </div>
@@ -527,7 +539,6 @@ export default function CreateMarketPage() {
                   ))}
                 </div>
               </div>
-            )}
           </div>
         </CardContent>
       </Card>

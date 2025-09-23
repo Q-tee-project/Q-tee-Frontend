@@ -22,6 +22,7 @@ export const useWorksheetEdit = (selectedSubject?: string) => {
   });
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState('');
+  const [originalTitle, setOriginalTitle] = useState('');
   const [isRegenerating, setIsRegenerating] = useState(false);
 
   const handleEditProblem = (problem: AnyProblem) => {
@@ -100,17 +101,21 @@ export const useWorksheetEdit = (selectedSubject?: string) => {
   };
 
   const handleStartEditTitle = (currentTitle: string) => {
+    setOriginalTitle(currentTitle); // 원래 제목 저장
     setEditedTitle(currentTitle);
     setIsEditingTitle(true);
   };
 
   const handleCancelEditTitle = () => {
     setIsEditingTitle(false);
-    setEditedTitle('');
+    setEditedTitle(originalTitle); // 취소 시 원래 제목으로 복원
   };
 
   const handleSaveTitle = async (worksheetId: number, onSuccess: () => void) => {
-    if (!editedTitle.trim()) return;
+    if (!editedTitle.trim()) {
+      alert('제목을 입력해주세요.');
+      return;
+    }
 
     try {
       // 과목에 따라 적절한 서비스 사용
@@ -245,6 +250,10 @@ export const useWorksheetEdit = (selectedSubject?: string) => {
     return { success: false, error: '작업이 시간 초과되었습니다.' };
   };
 
+  const handleEditedTitleChange = (value: string) => {
+    setEditedTitle(value);
+  };
+
   return {
     isEditDialogOpen,
     setIsEditDialogOpen,
@@ -252,7 +261,6 @@ export const useWorksheetEdit = (selectedSubject?: string) => {
     editFormData,
     isEditingTitle,
     editedTitle,
-    setEditedTitle,
     isRegenerating,
     handleEditProblem,
     handleSaveProblem,
@@ -261,6 +269,7 @@ export const useWorksheetEdit = (selectedSubject?: string) => {
     handleStartEditTitle,
     handleCancelEditTitle,
     handleSaveTitle,
+    handleEditedTitleChange,
     handleRegenerateProblem,
   };
 };

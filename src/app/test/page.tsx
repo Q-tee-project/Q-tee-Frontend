@@ -27,7 +27,9 @@ import { TestResultModal } from './components/TestResultModal';
 import { AssignmentList } from '@/components/test/AssignmentList';
 import { TestInterface } from '@/components/test/TestInterface';
 import { KoreanTestInterface } from '@/components/test/KoreanTestInterface';
+import { EnglishTestInterface } from '@/components/test/EnglishTestInterface';
 import { StudentResultView } from '@/components/test/StudentResultView';
+import { EnglishService } from '@/services/englishService';
 
 export default function TestPage() {
   const { userProfile } = useAuth();
@@ -36,6 +38,7 @@ export default function TestPage() {
     null,
   );
   const [worksheetProblems, setWorksheetProblems] = useState<(MathProblem | KoreanProblem)[]>([]);
+  const [englishPassages, setEnglishPassages] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedSubject, setSelectedSubject] = useState<string>('국어');
@@ -117,6 +120,13 @@ export default function TestPage() {
         } catch (error) {
           console.log('국어 과제 없음 또는 오류:', error);
         }
+      } else if (selectedSubject === '영어') {
+        try {
+          assignmentData = await EnglishService.getStudentAssignments(userProfile.id);
+          console.log('영어 과제 데이터:', assignmentData);
+        } catch (error) {
+          console.log('영어 과제 없음 또는 오류:', error);
+        }
       }
 
       // 과제 데이터를 워크시트 형식으로 변환
@@ -136,6 +146,21 @@ export default function TestPage() {
             grade: 1, // 기본값
             subject: selectedSubject, // 과목 정보 추가
           } as KoreanWorksheet;
+        } else if (selectedSubject === '영어') {
+          return {
+            id: assignment.assignment?.id || assignment.assignment_id,
+            title: assignment.assignment?.title || assignment.title,
+            unit_name: assignment.assignment?.problem_type || '',
+            chapter_name: assignment.assignment?.problem_type || '',
+            problem_count: assignment.assignment?.total_questions || assignment.total_questions,
+            status: assignment.deployment?.status || assignment.status,
+            deployed_at: assignment.deployment?.deployed_at || assignment.deployed_at,
+            created_at: assignment.assignment?.created_at || assignment.created_at,
+            school_level: '중학교', // 기본값
+            grade: 1, // 기본값
+            semester: 1, // 기본값
+            subject: selectedSubject, // 과목 정보 추가
+          } as Worksheet;
         } else {
           return {
             id: assignment.assignment_id,
@@ -199,7 +224,16 @@ export default function TestPage() {
         assignmentDetail = await mathService.getAssignmentDetail(worksheetId, userProfile.id);
       } else if (selectedSubject === '국어') {
         assignmentDetail = await koreanService.getAssignmentDetail(worksheetId, userProfile.id);
-      } else {
+      } else if (selectedSubject === '영어') {
+        try {
+          assignmentDetail = await EnglishService.getAssignmentDetail(worksheetId, userProfile.id);
+        } catch (error) {
+          console.error('영어 과제 상세 정보 로드 실패:', error);
+          setError('영어 서버에 연결할 수 없습니다. 서버가 실행 중인지 확인해주세요.');
+          return;
+        }
+      }
+      else {
         console.log('📚 지원하지 않는 과목:', selectedSubject);
         setError('해당 과목은 아직 지원되지 않습니다.');
         return;
@@ -207,23 +241,42 @@ export default function TestPage() {
       console.log('📚 과제 상세 정보 전체:', assignmentDetail);
       console.log('📚 과제 정보:', assignmentDetail?.assignment);
       console.log('📚 배포 정보:', assignmentDetail?.deployment);
-      console.log('📚 문제 목록:', assignmentDetail?.problems);
-      console.log('📚 문제 개수:', assignmentDetail?.problems?.length || 0);
+
+      // 과목별로 다른 필드명 사용
+      let problems = [];
+      if (selectedSubject === '영어') {
+        problems = assignmentDetail?.questions || [];
+        console.log('📚 영어 문제 목록:', problems);
+        console.log('📚 영어 문제 개수:', problems.length);
+
+        // 영어 지문 데이터 저장
+        const passages = assignmentDetail?.passages || [];
+        setEnglishPassages(passages);
+        console.log('📚 영어 지문 목록:', passages);
+        console.log('📚 영어 지문 개수:', passages.length);
+      } else {
+        problems = assignmentDetail?.problems || [];
+        console.log('📚 문제 목록:', problems);
+        console.log('📚 문제 개수:', problems.length);
+
+        // 영어가 아닌 경우 지문 데이터 초기화
+        setEnglishPassages([]);
+      }
 
       // 응답 구조 확인
       if (assignmentDetail) {
         console.log('📚 응답 키들:', Object.keys(assignmentDetail));
-        if (assignmentDetail.problems) {
-          console.log('📚 첫 번째 문제:', assignmentDetail.problems[0]);
+        if (problems.length > 0) {
+          console.log('📚 첫 번째 문제:', problems[0]);
         }
       }
 
-      if (!assignmentDetail.problems || assignmentDetail.problems.length === 0) {
+      if (!problems || problems.length === 0) {
         console.warn('⚠️ 문제가 없습니다. 과제가 제대로 생성되었는지 확인하세요.');
         setError('과제에 문제가 없습니다. 선생님에게 문의하세요.');
       }
 
-      setWorksheetProblems(assignmentDetail.problems || []);
+      setWorksheetProblems(problems);
     } catch (error: any) {
       console.error('❌ 과제 문제 로드 실패:', error);
       console.error('❌ 에러 상세:', {
@@ -289,6 +342,10 @@ export default function TestPage() {
         // 국어는 세션 없이 바로 시작
         setIsTestStarted(true);
         console.log('국어 과제 시작');
+      } else if (selectedSubject === '영어') {
+        // 영어는 세션 없이 바로 시작 (국어와 동일)
+        setIsTestStarted(true);
+        console.log('영어 과제 시작');
       } else {
         // 수학은 세션 기반으로 시작
         const session = await mathService.startTest(selectedWorksheet.id, userProfile.id);
@@ -427,6 +484,24 @@ export default function TestPage() {
         setTestResult(result);
         setShowResultModal(true);
         console.log('국어 과제 제출 완료:', result);
+      } else if (selectedSubject === '영어') {
+        // 영어 과제 제출
+        if (!selectedWorksheet || !userProfile) return;
+        try {
+          console.log('🎯 영어 과제 제출 전 answers 상태:', answers);
+          const result = await EnglishService.submitTest(
+            selectedWorksheet.id,
+            userProfile.id,
+            answers,
+          );
+          setTestResult(result);
+          setShowResultModal(true);
+          console.log('영어 과제 제출 완료:', result);
+        } catch (error) {
+          console.error('영어 과제 제출 실패:', error);
+          alert('영어 과제 제출에 실패했습니다. 다시 시도해주세요.');
+          return;
+        }
       }
 
       setIsTestStarted(false);
@@ -504,6 +579,7 @@ export default function TestPage() {
             worksheets={filteredWorksheets as Worksheet[]}
             selectedWorksheet={selectedWorksheet as Worksheet}
             worksheetProblems={worksheetProblems as MathProblem[]}
+            worksheetEnglishProblems={selectedSubject === '영어' ? worksheetProblems as any[] : []}
             isTestStarted={isTestStarted}
             answers={answers}
             currentProblemIndex={currentProblemIndex}
@@ -566,6 +642,28 @@ export default function TestPage() {
                 selectedWorksheet={selectedWorksheet as KoreanWorksheet}
                 currentProblem={currentProblem as KoreanProblem}
                 worksheetProblems={worksheetProblems as KoreanProblem[]}
+                currentProblemIndex={currentProblemIndex}
+                answers={answers}
+                timeRemaining={timeRemaining}
+                isSubmitting={isSubmitting}
+                onAnswerChange={handleAnswerChange}
+                onPreviousProblem={goToPreviousProblem}
+                onNextProblem={goToNextProblem}
+                onSubmitTest={submitTest}
+                onBackToAssignmentList={() => {
+                  setIsTestStarted(false);
+                  setTestSession(null);
+                  setCurrentProblemIndex(0);
+                  setAnswers({});
+                }}
+                formatTime={formatTime}
+              />
+            ) : selectedSubject === '영어' ? (
+              <EnglishTestInterface
+                selectedWorksheet={selectedWorksheet as any}
+                currentProblem={currentProblem as any}
+                worksheetProblems={worksheetProblems as any[]}
+                passages={englishPassages}
                 currentProblemIndex={currentProblemIndex}
                 answers={answers}
                 timeRemaining={timeRemaining}

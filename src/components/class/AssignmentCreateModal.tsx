@@ -20,12 +20,16 @@ import {
 } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
 import { IoIosClose } from "react-icons/io";
-import { koreanService, KoreanWorksheet, AssignmentDeployRequest } from '@/services/koreanService';
+import { koreanService, KoreanWorksheet, AssignmentDeployRequest, Worksheet } from '@/services/koreanService';
 import { mathService } from '@/services/mathService';
 import { Worksheet as MathWorksheet } from '@/services/marketApi'; // Re-using Worksheet interface from marketApi for math
 import { useAuth } from '@/contexts/AuthContext';
-import { classroomService } from '@/services/authService'; // Import classroomService
+import { classroomService } from '@/services/authService';
+import { EnglishService, EnglishAssignmentDeployRequest } from '@/services/englishService';
+import { EnglishWorksheetData } from '@/types/english';
 
+// 타입 별칭
+type EnglishWorksheet = EnglishWorksheetData;
 interface AssignmentCreateModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -42,10 +46,10 @@ export function AssignmentCreateModal({
   onDeploy,
 }: AssignmentCreateModalProps) {
   const { userProfile } = useAuth();
-  const [activeSubject, setActiveSubject] = useState<'korean' | 'math'>('korean');
-  const [worksheets, setWorksheets] = useState<(KoreanWorksheet | MathWorksheet)[]>([]);
+  const [activeSubject, setActiveSubject] = useState<'korean' | 'math' | 'english'>('korean');
+  const [worksheets, setWorksheets] = useState<(KoreanWorksheet | MathWorksheet | EnglishWorksheet)[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedWorksheetIds, setSelectedWorksheetIds] = useState<number[]>([]);
+  const [selectedWorksheetIds, setSelectedWorksheetIds] = useState<(string | number)[]>([]);
   const [selectAll, setSelectAll] = useState(false);
 
   const loadWorksheets = useCallback(async () => {
@@ -53,13 +57,16 @@ export function AssignmentCreateModal({
 
     setIsLoading(true);
     try {
-      let fetchedWorksheets: (KoreanWorksheet | MathWorksheet)[] = [];
+      let fetchedWorksheets: (KoreanWorksheet | MathWorksheet | EnglishWorksheet)[] = [];
       if (activeSubject === 'korean') {
         const response = await koreanService.getKoreanWorksheets();
         fetchedWorksheets = response.worksheets;
       } else if (activeSubject === 'math') {
         const response = await mathService.getMathWorksheets();
         fetchedWorksheets = response.worksheets;
+      } else if (activeSubject === 'english') {
+        const response = await EnglishService.getEnglishWorksheets();
+        fetchedWorksheets = response as EnglishWorksheet[];
       }
       setWorksheets(fetchedWorksheets);
       setSelectedWorksheetIds([]); // Reset selections when worksheets are reloaded
@@ -81,13 +88,13 @@ export function AssignmentCreateModal({
   const handleSelectAll = (checked: boolean) => {
     setSelectAll(checked);
     if (checked) {
-      setSelectedWorksheetIds(worksheets.map(ws => ws.id));
+      setSelectedWorksheetIds(worksheets.map(ws => activeSubject === 'english' ? (ws as EnglishWorksheet).worksheet_id : (ws as any).id));
     } else {
       setSelectedWorksheetIds([]);
     }
   };
 
-  const handleSelectWorksheet = (worksheetId: number, checked: boolean) => {
+  const handleSelectWorksheet = (worksheetId: string | number, checked: boolean) => {
     setSelectedWorksheetIds(prev =>
       checked ? [...prev, worksheetId] : prev.filter(id => id !== worksheetId)
     );
@@ -98,13 +105,59 @@ export function AssignmentCreateModal({
       alert('과제로 생성할 워크시트를 선택해주세요.');
       return;
     }
-    onDeploy(selectedWorksheetIds);
-    onClose();
+
+
+    try {
+      // Fetch student IDs for the class
+      const students = await classroomService.getClassroomStudents(parseInt(classId));
+      const studentIds = students.map(student => student.id);
+
+      if (studentIds.length === 0) {
+        alert('클래스에 등록된 학생이 없습니다. 먼저 학생을 등록해주세요.');
+        return;
+      }
+      console.log(selectedWorksheetIds, studentIds, activeSubject);
+      for (const worksheetId of selectedWorksheetIds) {
+        if (activeSubject === 'korean') {
+          const deployRequest: AssignmentDeployRequest = {
+            assignment_id: worksheetId as number,
+            classroom_id: parseInt(classId),
+            student_ids: studentIds,
+          };
+          await koreanService.deployAssignment(deployRequest);
+        } else if (activeSubject === 'math') {
+          const deployRequest: AssignmentDeployRequest = {
+            assignment_id: worksheetId as number,
+            classroom_id: parseInt(classId),
+            student_ids: studentIds,
+          };
+          await mathService.deployAssignment(deployRequest);
+        } else if (activeSubject === 'english') {
+          const englishDeployRequest: EnglishAssignmentDeployRequest = {
+            assignment_id: worksheetId as number, // 영어는 assignment_id로 백엔드에 전송
+            classroom_id: parseInt(classId),
+            student_ids: studentIds,
+          };
+          console.log('🚀 영어 과제 배포 시작:', englishDeployRequest);
+          console.log('🚀 worksheetId 타입:', typeof worksheetId, worksheetId);
+          console.log('🚀 classId 타입:', typeof classId, classId);
+          console.log('🚀 studentIds 타입:', typeof studentIds, studentIds);
+          await EnglishService.deployAssignment(englishDeployRequest);
+        }
+      }
+      alert(`${selectedWorksheetIds.length}개의 과제가 성공적으로 생성되었습니다.`);
+      onAssignmentCreated();
+    } catch (error: any) {
+      console.error('Failed to create assignments:', error);
+      alert(`과제 생성에 실패했습니다: ${error?.message || '알 수 없는 오류'}`);
+    }
+
   };
 
   const subjectTabs = [
     { id: 'korean' as const, label: '국어' },
     { id: 'math' as const, label: '수학' },
+    { id: 'english' as const, label: '영어' },
   ];
 
   return (
@@ -131,18 +184,17 @@ export function AssignmentCreateModal({
           </p>
 
           {/* 과목별 탭 */}
-          <div className="border-b border-gray-200">
-            <div className="flex">
+          <div className="mb-4">
+            <div className="flex gap-2">
               {subjectTabs.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveSubject(tab.id)}
-                  className={`border-b-2 font-medium text-sm ${
+                  className={`py-2 px-4 text-sm font-medium rounded transition-colors duration-150 cursor-pointer ${
                     activeSubject === tab.id
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      ? 'bg-[#E6F3FF] text-[#0085FF]'
+                      : 'bg-[#f5f5f5] text-[#999999]'
                   }`}
-                  style={{ padding: '10px 20px' }}
                 >
                   {tab.label}
                 </button>
@@ -172,37 +224,48 @@ export function AssignmentCreateModal({
                       </TableHead>
                       <TableHead>제목</TableHead>
                       <TableHead>학교/학년</TableHead>
-                      <TableHead>단원</TableHead>
+                      {activeSubject !== 'english' && (
+                        <TableHead>단원</TableHead>
+                      )}
+                      {
+                        activeSubject === 'english' && (
+                          <TableHead>문제유형</TableHead>
+                        )
+                      }
                       <TableHead>문제수</TableHead>
                       <TableHead>생성일</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {worksheets.map((worksheet) => (
-                      <TableRow key={worksheet.id}>
+                    {worksheets.map((worksheet) => {
+                      const worksheetId = activeSubject === 'english' ? (worksheet as EnglishWorksheet).worksheet_id : (worksheet as any).id;
+                      return (
+                      <TableRow key={worksheetId}>
                         <TableCell>
                           <Checkbox
-                            checked={selectedWorksheetIds.includes(worksheet.id)}
+                            checked={selectedWorksheetIds.includes(worksheetId)}
                             onCheckedChange={(checked) =>
-                              handleSelectWorksheet(worksheet.id, checked as boolean)
+                              handleSelectWorksheet(worksheetId, checked as boolean)
                             }
                           />
                         </TableCell>
-                        <TableCell className="font-medium">{worksheet.title}</TableCell>
+                        <TableCell className="font-medium">
+                          {activeSubject === 'english' ? (worksheet as EnglishWorksheet).worksheet_name || 'N/A' : (worksheet as any).title}
+                        </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <Badge
                               className="text-sm"
                               style={{
-                                backgroundColor: worksheet.school_level === '중학교' ? '#E6F3FF' : '#FFF5E9',
+                                backgroundColor: (worksheet as any).school_level === '중학교' ? '#E6F3FF' : '#FFF5E9',
                                 border: 'none',
-                                color: worksheet.school_level === '중학교' ? '#0085FF' : '#FF9F2D',
+                                color: (worksheet as any).school_level === '중학교' ? '#0085FF' : '#FF9F2D',
                                 padding: '6px 12px',
                                 minWidth: '60px',
                                 textAlign: 'center',
                               }}
                             >
-                              {worksheet.school_level}
+                              {(worksheet as any).school_level || '중학교'}
                             </Badge>
                             <Badge
                               className="text-sm"
@@ -215,14 +278,20 @@ export function AssignmentCreateModal({
                                 textAlign: 'center',
                               }}
                             >
-                              {worksheet.grade}학년
+                              {(worksheet as any).grade || 1}학년
                             </Badge>
                           </div>
                         </TableCell>
                         <TableCell>
                           <div className="text-sm">
-                            <div className="font-medium">{worksheet.unit_name || 'N/A'}</div>
-                            <div className="text-gray-500">{worksheet.chapter_name || 'N/A'}</div>
+                            <div className="font-medium">
+                              {activeSubject === 'english' ? (worksheet as EnglishWorksheet).problem_type || 'N/A' : (worksheet as any).unit_name || 'N/A'}
+                            </div>
+                            {
+                              activeSubject !== 'english' && (
+                                <div className="text-gray-500">{(worksheet as any).chapter_name || 'N/A'}</div>
+                              )
+                            }
                           </div>
                         </TableCell>
                         <TableCell>
@@ -237,14 +306,15 @@ export function AssignmentCreateModal({
                               textAlign: 'center',
                             }}
                           >
-                            {worksheet.problem_count}문제
+                            {activeSubject === 'english' ? (worksheet as EnglishWorksheet).total_questions : (worksheet as any).problem_count}문제
                           </Badge>
                         </TableCell>
                         <TableCell className="text-sm text-gray-600">
-                          {new Date(worksheet.created_at).toLocaleDateString('ko-KR')}
+                          {new Date((worksheet as any).created_at).toLocaleDateString('ko-KR')}
                         </TableCell>
                       </TableRow>
-                    ))}
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>

@@ -1,92 +1,13 @@
 import { useState } from 'react';
 import { useProblemGeneration, PreviewQuestion } from './useProblemGeneration';
 import { EnglishService } from '@/services/englishService';
-import { EnglishFormData, EnglishGenerationResponse, EnglishLLMResponseAndRequest, EnglishPassage, EnglishQuestion } from '@/types/english';
-import {
-  EnglishUIData,
-  ParsedPassage,
-  ParsedQuestion,
-  ParsedPassageContent,
-  ParsedContentItem,
-  PassageMetadata
-} from '@/types/englishUI';
+import { EnglishWorksheetGeneratorFormData, EnglishGenerationResponse, EnglishWorksheetData, EnglishPassage, EnglishQuestion } from '@/types/english';
 
-// 데이터 변환 함수들
-const transformPassageContent = (content: any): ParsedPassageContent => {
-  return {
-    metadata: content.metadata ? {
-      sender: content.metadata.sender,
-      recipient: content.metadata.recipient,
-      subject: content.metadata.subject,
-      date: content.metadata.date,
-      participants: content.metadata.participants,
-      rating: content.metadata.rating,
-      productName: content.metadata.product_name,
-      reviewer: content.metadata.reviewer,
-    } : undefined,
-    content: content.content?.map((item: any): ParsedContentItem => ({
-      type: item.type,
-      value: item.value,
-      items: item.items,
-      pairs: item.pairs,
-      speaker: item.speaker,
-      line: item.line,
-    })) || []
-  };
-};
+// 타입 별칭 (기존 코드 호환성)
+type EnglishFormData = EnglishWorksheetGeneratorFormData;
+type EnglishLLMResponseAndRequest = EnglishWorksheetData;
 
-const transformPassage = (passage: EnglishPassage): ParsedPassage => {
-  return {
-    id: passage.passage_id,
-    type: passage.passage_type,
-    content: transformPassageContent(passage.passage_content),
-    originalContent: transformPassageContent(passage.original_content),
-    koreanTranslation: transformPassageContent(passage.korean_translation),
-    relatedQuestionIds: passage.related_questions,
-  };
-};
-
-
-const transformQuestion = (question: EnglishQuestion): ParsedQuestion => {
-  return {
-    id: question.question_id,
-    questionText: question.question_text,
-    type: question.question_type,
-    subject: question.question_subject,
-    difficulty: question.question_difficulty,
-    detailType: question.question_detail_type,
-    passageId: question.question_passage_id ?? undefined,
-    exampleContent: question.example_content,
-    exampleOriginalContent: question.example_original_content,
-    exampleKoreanTranslation: question.example_korean_translation,
-    choices: question.question_choices || [],
-    correctAnswer: question.question_type === '객관식'
-      ? parseInt(question.correct_answer) - 1  // 1-based → 0-based index
-      : question.correct_answer,
-    explanation: question.explanation,
-    learningPoint: question.learning_point,
-  };
-};
-
-const transformToUIData = (response: EnglishLLMResponseAndRequest): EnglishUIData => {
-  return {
-    worksheetInfo: {
-      id: response.worksheet_id,
-      teacherId: response.teacher_id,
-      name: response.worksheet_name,
-      date: response.worksheet_date,
-      time: response.worksheet_time,
-      duration: response.worksheet_duration,
-      subject: response.worksheet_subject,
-      level: response.worksheet_level,
-      grade: response.worksheet_grade,
-      problemType: response.problem_type,
-      totalQuestions: response.total_questions,
-    },
-    passages: response.passages?.map(transformPassage) || [],
-    questions: response.questions?.map(transformQuestion) || [],
-  };
-};
+// 변환 없이 서버 데이터 직접 사용
 
 export const useEnglishGeneration = () => {
   const {
@@ -103,12 +24,17 @@ export const useEnglishGeneration = () => {
     clearError,
   } = useProblemGeneration();
 
-  // UI 데이터 상태 추가
-  const [uiData, setUiData] = useState<EnglishUIData | null>(null);
+  // 서버 데이터 상태 직접 사용
+  const [worksheetData, setWorksheetData] = useState<EnglishWorksheetData | null>(null);
 
-  // UI 데이터 리셋 함수
-  const resetUIData = () => {
-    setUiData(null);
+  // 데이터 리셋 함수
+  const resetWorksheetData = () => {
+    setWorksheetData(null);
+  };
+
+  // 데이터 직접 업데이트 함수
+  const updateWorksheetData = (newData: EnglishWorksheetData | null) => {
+    setWorksheetData(newData);
   };
 
   // 실제 영어 문제 생성
@@ -121,8 +47,8 @@ export const useEnglishGeneration = () => {
         errorMessage: '',
       });
 
-      // UI 데이터 초기화
-      setUiData(null);
+      // 데이터 초기화
+      setWorksheetData(null);
 
       // 실제 API 호출
       const response: EnglishGenerationResponse = await EnglishService.generateEnglishProblems(formData);
@@ -133,11 +59,10 @@ export const useEnglishGeneration = () => {
         generationProgress: 100
       });
 
-      // LLM 응답이 있으면 UI 데이터로 변환
+      // LLM 응답이 있으면 직접 저장 (변환 없이)
       if (response.llm_response) {
-        const transformedData = transformToUIData(response.llm_response);
-        setUiData(transformedData);
-        console.log('변환된 UI 데이터:', transformedData);
+        setWorksheetData(response.llm_response);
+        console.log('서버 데이터 직접 사용:', response.llm_response);
       }
 
       console.log('영어 문제 생성 응답:', response);
@@ -152,8 +77,8 @@ export const useEnglishGeneration = () => {
         errorMessage,
         generationProgress: 0
       });
-      // 에러 시 UI 데이터도 초기화
-      setUiData(null);
+      // 에러 시 데이터 초기화
+      setWorksheetData(null);
       throw error;
     }
   };
@@ -168,11 +93,12 @@ export const useEnglishGeneration = () => {
     showRegenerationInput,
     lastGenerationData,
     errorMessage,
-    uiData,
+    worksheetData,
     generateEnglishProblems,
     updateState,
     resetGeneration,
-    resetUIData,
+    resetWorksheetData,
     clearError,
+    updateWorksheetData,
   };
 };

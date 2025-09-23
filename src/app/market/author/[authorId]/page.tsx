@@ -1,12 +1,11 @@
 'use client';
 
 import { PageHeader } from '@/components/layout/PageHeader';
-import { FiShoppingCart, FiSearch, FiX } from 'react-icons/fi';
-import { useRouter } from 'next/navigation';
+import { FiShoppingCart, FiSearch, FiX, FiArrowLeft } from 'react-icons/fi';
+import { useRouter, useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
-import TrendyPopularProducts from '@/components/market/TrendyPopularProducts';
 
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -24,11 +23,11 @@ interface Product {
 
 type MarketProduct = Product;
 
-
 const TABS = ['전체', '국어', '영어', '수학'];
 
-export default function MarketPage() {
+export default function AuthorMarketPage() {
   const router = useRouter();
+  const { authorId } = useParams();
   const { userProfile } = useAuth();
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
@@ -39,8 +38,8 @@ export default function MarketPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchField, setSearchField] = useState<'title' | 'tags' | 'author'>('title');
 
-  // 상품 데이터
-  const products: Product[] = Array.from({ length: 22 }).map((_, idx) => ({
+  // 상품 데이터 - 특정 author의 상품만 필터링
+  const allProducts: Product[] = Array.from({ length: 22 }).map((_, idx) => ({
     id: (idx + 1).toString(),
     title: `상품 ${idx + 1}`,
     description: '중학교 1학년 국어 기출문제 2단원',
@@ -49,15 +48,22 @@ export default function MarketPage() {
     authorId: idx < 5 ? (userProfile?.id?.toString() || 'user123') : `user${idx}`,
     tags: ['중학교', '1학년', idx % 2 === 0 ? '국어' : '영어', '기출문제'],
   }));
-  // 인기상품 데이터 (상위 5개)
-  const featuredProducts = products.slice(0, 5);
+
+  // 특정 author의 상품만 필터링
+  const authorProducts = allProducts.filter(product => product.authorId === authorId);
 
   // 필터링된 상품 (탭에 따른 필터링)
-  const filteredProducts = products.filter((product) => {
+  const filteredProducts = authorProducts.filter((product) => {
     if (selectedTab === '전체') return true;
     return product.tags.includes(selectedTab);
   });
 
+  // author 정보 (임시 데이터)
+  const authorInfo = {
+    name: authorProducts.length > 0 ? authorProducts[0].author : 'Unknown Author',
+    totalProducts: authorProducts.length,
+    joinDate: '2024-01-01', // 임시 데이터
+  };
 
   // 상품 로딩 함수
   const loadProducts = () => {
@@ -72,7 +78,6 @@ export default function MarketPage() {
   useEffect(() => {
     loadProducts();
   }, [currentPage, selectedTab]);
-
 
   // 정렬 + 검색 적용
   const sortedAndFilteredProducts = filteredProducts
@@ -103,7 +108,6 @@ export default function MarketPage() {
     currentPage * itemsPerPage
   );
 
-
   // 반응형 그리드
   const [cols, setCols] = useState('grid-cols-1');
   useEffect(() => {
@@ -120,10 +124,12 @@ export default function MarketPage() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+
   // 페이지/탭 변경 시 상단으로 스크롤
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [currentPage, selectedTab]);
+
 
   return (
     <div className="flex flex-col">
@@ -154,45 +160,39 @@ export default function MarketPage() {
             </button>
           ))}
         </div>
-
         <div className="flex space-x-4">
           <button
             onClick={() => router.push('/market/myMarket')}
-            className="text-sm px-4 py-2 rounded-md bg-[#0072CE] text-white hover:bg-[#005fa3] transition-colors"
+            className="text-sm px-4 py-2 rounded-md bg-[#0072CE] text-white hover:bg-[#005fa3] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0072CE] focus-visible:ring-offset-2"
           >
             마이마켓
           </button>
-          <button
-            onClick={() => router.push('/market/purchaseList')}
-            className="text-sm px-4 py-2 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors border border-gray-300"
-          >
-            구매목록
-          </button>
         </div>
-      </nav>
+        </nav>
 
       {/* 인기상품 슬라이드 */}
       <Card className="flex-1 flex flex-col shadow-sm" style={{ margin: '2rem' }}>
-        <CardHeader className="py-2 px-6 border-b border-gray-100 flex items-center justify-between">
-
-
-          <CardTitle className="text-base font-medium">{selectedTab} 상품 목록</CardTitle>
-          <span className="text-sm font-normal text-gray-400">
+        <CardHeader className="py-3 px-6 border-b border-gray-100 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => router.back()}
+              className="w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-800 flex items-center justify-center shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0072CE] focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+              aria-label="뒤로가기"
+            >
+              <FiArrowLeft className="w-5 h-5" />
+            </button>
+            <CardTitle className="text-base font-medium">
+              <span style={{ color: '#0072CE' }}>{authorInfo.name}</span>의 {selectedTab} 상품 목록
+            </CardTitle>
+          </div>
+           
+          <span className="text-sm font-normal" style={{ color: '#C8C8C8' }}>
             총 {filteredProducts.length}건
           </span>
-
         </CardHeader>
         <CardContent>
 
-          {/* 트렌디한 인기상품 */}
-          {selectedTab === '전체' && (
-            <div className="mb-8">
-              <TrendyPopularProducts products={featuredProducts} />
-            </div>
-          )}
-
           {/* 정렬 & 검색 */}
-          {/* 드롭다운은 Select 컴포넌트로 대체 */}
           <div className="w-full flex justify-between items-center mb-4 mt-6">
             {/* 정렬 Select */}
             <Select value={sortType} onValueChange={(v) => setSortType(v as 'latest' | 'rating' | 'sales')}>
@@ -238,18 +238,17 @@ export default function MarketPage() {
                 </SelectContent>
               </Select>
             </div>
-
           </div>
 
           {/* 상품 그리드 */}
-          <div className={`grid ${cols} gap-6`} style={{ minHeight: '400px' }}>
+          <div className={`grid ${cols} gap-6 transition-all duration-300`} style={{ minHeight: '600px' }}>
             {loading ? (
               <div className="col-span-full flex justify-center items-center text-gray-500">
                 로딩 중...
               </div>
             ) : displayedProducts.length === 0 ? (
               <div className="col-span-full flex justify-center items-center text-gray-500">
-                등록된 상품이 없습니다.
+                {authorInfo.name}님이 등록한 상품이 없습니다.
               </div>
             ) : (
               displayedProducts.map((product: Product) => (
@@ -258,7 +257,6 @@ export default function MarketPage() {
                   onClick={() => router.push(`/market/${product.id}`)}
                   className="cursor-pointer rounded-lg border border-gray-200 bg-white p-4 shadow-sm hover:shadow-md transition-transform hover:scale-[1.02]"
                 >
-
                   <div className="bg-gray-100 rounded-md h-48 mb-4 flex items-center justify-center text-gray-400 select-none">
                     이미지
                   </div>
@@ -269,7 +267,6 @@ export default function MarketPage() {
                   <div className="flex flex-wrap gap-2 mb-3">
                     {product.tags.map((tag: string, idx: number) => (
                       <span key={idx} className="text-[#9E9E9E] text-xs select-none">
-
                         #{tag}
                       </span>
                     ))}

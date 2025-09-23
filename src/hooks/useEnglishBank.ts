@@ -1,6 +1,10 @@
 import { useEffect } from 'react';
 import { EnglishService } from '@/services/englishService';
-import { EnglishWorksheet, EnglishProblem } from '@/types/english';
+import { EnglishWorksheetData, EnglishQuestion } from '@/types/english';
+
+// 타입 별칭 (기존 코드 호환성)
+type EnglishWorksheet = EnglishWorksheetData;
+type EnglishProblem = EnglishQuestion;
 import { useBankState } from './useBankState';
 
 export const useEnglishBank = () => {
@@ -49,7 +53,7 @@ export const useEnglishBank = () => {
     }
   };
 
-  const loadWorksheetProblems = async (worksheetId: string) => {
+  const loadWorksheetProblems = async (worksheetId: number) => {
     try {
       const worksheetDetail = await EnglishService.getEnglishWorksheetDetail(worksheetId);
       console.log('=== 영어 워크시트 상세 API 응답 ===');
