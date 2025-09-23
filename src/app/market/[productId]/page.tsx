@@ -58,13 +58,15 @@ export default function ProductDetailPage() {
   // 리뷰 통계 데이터 (임시 데이터)
   const reviewStats = {
     satisfactionRate: 92, // 만족도 퍼센트
-    totalReviews: 500, // 전체 리뷰 수
+    totalReviews: 500, // 전체 리뷰 수 
     breakdown: {
       recommend: { count: 459, percentage: 92 },
       normal: { count: 25, percentage: 5 },
       notRecommend: { count: 16, percentage: 3 }
     }
   };
+
+  
 
 
   // 이미지 관리 상태
@@ -225,7 +227,7 @@ export default function ProductDetailPage() {
         variant="market"
         description="상품의 상세 이미지를 확인하고 구매할 수 있습니다"
       />
-      <Card className="mx-8 mb-8 shadow-sm">
+      <Card className="flex-1 flex flex-col shadow-sm" style={{ margin: '2rem' }}>
       <CardHeader className="py-3 px-6 border-b border-gray-100 flex items-center justify-between">
         <button
             onClick={() => router.back()}
@@ -402,7 +404,12 @@ export default function ProductDetailPage() {
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-2">
                 {/* <div className="w-12 h-12 rounded-full bg-gray-200" /> */}
-                <p className="font-semibold text-gray-700">{product.author}</p>
+                <button
+                  onClick={() => router.push(`/market/author/${product.authorId}`)}
+                  className="font-semibold text-gray-700 hover:text-[#0072CE] transition-colors"
+                >
+                  {product.author}
+                </button>
               </div>
               
               {/* 상품 제목 */}
@@ -482,7 +489,7 @@ export default function ProductDetailPage() {
       </Card>
 
       {/* 리뷰 섹션 */}
-      <Card className="mx-8 mb-8 shadow-sm">
+      <Card className="flex-1 flex flex-col shadow-sm" style={{ margin: '2rem' }}>
         <CardHeader className="py-3 px-6 border-b border-gray-100 flex items-center justify-between">
           <CardTitle className="text-lg font-semibold text-gray-800">상품 리뷰</CardTitle>
           {/* 테스트용 구매 상태 토글 버튼 */}
@@ -508,7 +515,7 @@ export default function ProductDetailPage() {
                   <div className="relative group">
                     <FiInfo className="w-4 h-4 text-gray-400 hover:text-gray-600 cursor-help" />
                     <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-10">
-                      전체 평가 중 추천 평균
+                      전체 평가 중 추천 비율
                     </div>
                   </div>
                 </div>
@@ -714,7 +721,7 @@ export default function ProductDetailPage() {
 
       {/* 삭제 확인 모달 */}
       <Dialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
-        <DialogContent className="bg-card text-card-foreground flex flex-col gap-6 rounded-xl border py-12 mx-8 mb-8 shadow-sm max-w-lg">
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-red-600">
               <FiTrash2 className="w-5 h-5" />

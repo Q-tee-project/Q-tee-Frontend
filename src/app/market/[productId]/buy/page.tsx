@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { FiShoppingCart, FiArrowLeft } from 'react-icons/fi';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { motion } from 'framer-motion';
 
 export default function ProductBuyPage() {
   const { productId } = useParams();
@@ -48,7 +49,7 @@ export default function ProductBuyPage() {
         description="안전하고 간편한 결제"
       />
 
-      <div className="mx-4 lg:mx-8 mb-24 grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="mx-4 lg:mx-8 mb-24 grid grid-cols-1 lg:grid-cols-3 gap-6 mt-10">
         {/* 좌측: 결제 수단 및 약관 */}
         <div className="lg:col-span-2 flex flex-col gap-6">
           {/* 결제 수단 카드 */}
