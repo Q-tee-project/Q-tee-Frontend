@@ -59,9 +59,7 @@ export default function TestPage() {
       case ProblemType.MULTIPLE_CHOICE:
       case '객관식':
         return '객관식';
-      case ProblemType.ESSAY:
-      case '서술형':
-        return '서술형';
+
       case ProblemType.SHORT_ANSWER:
       case '단답형':
         return '단답형';
@@ -332,7 +330,7 @@ export default function TestPage() {
         console.log('수학 답안 임시 저장 완료:', {
           problemId,
           answerType: answer.startsWith('data:image/') ? '손글씨 이미지' : '텍스트',
-          preview: answer.substring(0, 50)
+          preview: answer.substring(0, 50),
         });
       } catch (error) {
         console.error('답안 저장 실패:', error);
@@ -362,7 +360,7 @@ export default function TestPage() {
         testSession.session_id,
         problemId,
         answers[problemId] || '',
-        file
+        file,
       );
 
       // If OCR returns text, update the answer
@@ -370,7 +368,6 @@ export default function TestPage() {
         console.log('OCR 추출된 텍스트:', result.extracted_text);
         handleAnswerChange(problemId, result.extracted_text);
       }
-
     } catch (error) {
       console.error('OCR 처리 실패:', error);
       alert('손글씨 인식에 실패했습니다. 다시 시도해주세요.');

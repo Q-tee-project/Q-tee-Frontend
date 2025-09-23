@@ -10,8 +10,6 @@ import MathGenerator from '@/components/subjects/MathGenerator';
 import { QuestionPreview } from '@/components/question/QuestionPreview';
 import { EnglishQuestionPreview } from '@/components/question/EnglishQuestionPreview';
 import { ErrorToast } from '@/app/question/bank/components/ErrorToast';
-import { ValidationDashboard } from '@/components/validation/ValidationDashboard';
-import { ValidationReportModal } from '@/components/validation/ValidationReportModal';
 import { useKoreanGeneration } from '@/hooks/useKoreanGeneration';
 import { useMathGeneration } from '@/hooks/useMathGeneration';
 import { useEnglishGeneration } from '@/hooks/useEnglishGeneration';
@@ -24,7 +22,6 @@ const SUBJECTS = ['국어', '영어', '수학'];
 export default function CreatePage() {
   const [subject, setSubject] = useState<string>('');
   const [forceUpdateKey, setForceUpdateKey] = useState(0); // 강제 리렌더링을 위한 키
-  const [showValidationReport, setShowValidationReport] = useState(false); // 검증 리포트 모달 상태
 
   // 과목별 생성 훅들
   const koreanGeneration = useKoreanGeneration();
@@ -65,12 +62,7 @@ export default function CreatePage() {
   // 과목별 문제 생성 핸들러
   const handleGenerate = (data: any) => {
     if (subject === '수학') {
-      // 검증 기능이 활성화된 경우 검증 포함 생성 사용
-      if (mathGeneration.enableValidation) {
-        mathGeneration.generateMathProblemsWithValidation(data);
-      } else {
-        mathGeneration.generateMathProblems(data);
-      }
+      mathGeneration.generateMathProblems(data);
     } else if (subject === '국어') {
       koreanGeneration.generateKoreanProblems(data);
     } else if (subject === '영어') {
@@ -336,29 +328,6 @@ export default function CreatePage() {
                 )}
                 {subject === '수학' && (
                   <div className="space-y-4">
-                    {/* 검증 옵션 토글 */}
-                    <div className="border rounded-lg p-3 bg-blue-50">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="text-sm font-medium text-blue-900">AI 문제 검증</h4>
-                          <p className="text-xs text-blue-700">
-                            생성된 문제의 정확성을 AI가 자동으로 검증합니다
-                          </p>
-                        </div>
-                        <button
-                          onClick={mathGeneration.toggleValidation}
-                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                            mathGeneration.enableValidation ? 'bg-blue-600' : 'bg-gray-300'
-                          }`}
-                        >
-                          <span
-                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                              mathGeneration.enableValidation ? 'translate-x-6' : 'translate-x-1'
-                            }`}
-                          />
-                        </button>
-                      </div>
-                    </div>
 
                     {/* 수학 생성 컴포넌트 */}
                     <MathGenerator
@@ -366,14 +335,6 @@ export default function CreatePage() {
                       isGenerating={currentGeneration.isGenerating}
                     />
 
-                    {/* 검증 대시보드 (수학일 때만, 검증 요약이 있을 때만) */}
-                    {mathGeneration.validationSummary && (
-                      <ValidationDashboard
-                        summary={mathGeneration.validationSummary}
-                        compact={true}
-                        className="mt-4"
-                      />
-                    )}
                   </div>
                 )}
                 {!subject && (
@@ -394,25 +355,6 @@ export default function CreatePage() {
           <Card className="flex-1 flex flex-col shadow-sm h-[calc(100vh-200px)]" style={{ gap: '0', padding: '0' }}>
             <CardHeader className="flex flex-row items-center justify-between border-b border-gray-100" style={{ padding: '20px' }}>
               <CardTitle className="text-lg font-semibold text-gray-900">문제지</CardTitle>
-              {/* 수학 과목이고 검증이 활성화된 경우 검증 버튼 표시 */}
-              {subject === '수학' && mathGeneration.enableValidation && mathGeneration.validationSummary && (
-                <div className="flex items-center space-x-3">
-                  <span className="text-sm text-gray-600">
-                    검증 완료: {mathGeneration.validationSummary.auto_approved}개 승인
-                  </span>
-                  <ValidationDashboard
-                    summary={mathGeneration.validationSummary}
-                    compact={true}
-                    className="max-w-xs"
-                  />
-                  <button
-                    onClick={() => setShowValidationReport(true)}
-                    className="px-3 py-1 bg-blue-600 text-white text-xs rounded-md hover:bg-blue-700 transition-colors"
-                  >
-                    상세 리포트
-                  </button>
-                </div>
-              )}
             </CardHeader>
             <CardContent className="flex-1 flex flex-col">
               {/* 영어는 새로운 UI 컴포넌트 사용 */}
@@ -470,29 +412,6 @@ export default function CreatePage() {
         onClose={() => currentGeneration.clearError()}
       />
 
-      {/* Validation Toast 제거 - 문제지 섹션에 통합 */}
-
-      {/* 개발용: 검증 상태 모니터링 */}
-      {subject === '수학' && process.env.NODE_ENV === 'development' && mathGeneration.enableValidation && (
-        <div className="fixed bottom-4 left-4 bg-blue-900 text-white p-2 rounded text-xs z-50 max-w-xs">
-          <div className="font-bold mb-1">🔍 AI 검증 시스템</div>
-          <div>상태: {mathGeneration.showValidationToast ? '검증 완료' : '대기 중'}</div>
-          <div>문제 수: {mathGeneration.previewQuestions.length}</div>
-          {mathGeneration.validationSummary && (
-            <div className="mt-1 pt-1 border-t border-blue-700">
-              <div>승인: {mathGeneration.validationSummary.auto_approved}</div>
-              <div>검토: {mathGeneration.validationSummary.manual_review_needed}</div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* 검증 상세 리포트 모달 */}
-      <ValidationReportModal
-        isOpen={showValidationReport}
-        onClose={() => setShowValidationReport(false)}
-        summary={mathGeneration.validationSummary}
-      />
     </div>
   );
 }

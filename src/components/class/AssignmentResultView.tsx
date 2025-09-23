@@ -3,35 +3,72 @@
 import React, { useState, useEffect } from 'react';
 import { koreanService } from '@/services/koreanService';
 import { mathService } from '@/services/mathService';
+import { classroomService } from '@/services/authService';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { FaArrowLeft, FaCheckCircle, FaTimesCircle, FaDotCircle } from 'react-icons/fa';
+import type { StudentProfile } from '@/services/authService';
+
+// 과제 결과 데이터 인터페이스
+interface AssignmentResult {
+  id?: number;
+  grading_session_id?: number;
+  student_id: number;
+  student_name: string;
+  school: string;
+  grade: string;
+  status: string;
+  total_score: number;
+  max_possible_score: number;
+  correct_count: number;
+  total_problems: number;
+  graded_at?: string;
+  submitted_at?: string;
+  graded_by?: string;
+  problem_results?: any[];
+}
 
 export function AssignmentResultView({ assignment, onBack }: { assignment: any, onBack: () => void }) {
   // 과제 유형 구분: Korean 과제는 question_type 필드가 있고, Math 과제는 unit_name 필드가 있음
   const isKorean = assignment.question_type !== undefined || assignment.korean_type !== undefined;
-  const service = isKorean ? koreanService : mathService;
 
-  // 디버깅용 로그
-  console.log('AssignmentResultView - assignment:', assignment);
-  console.log('AssignmentResultView - assignment.question_type:', assignment.question_type);
-  console.log('AssignmentResultView - assignment.unit_name:', assignment.unit_name);
-  console.log('AssignmentResultView - isKorean:', isKorean);
-  const [results, setResults] = useState<any[]>([]);
+  const [results, setResults] = useState<AssignmentResult[]>([]);
+  const [students, setStudents] = useState<StudentProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedSession, setSelectedSession] = useState<any>(null);
+  const [selectedSession, setSelectedSession] = useState<AssignmentResult | null>(null);
   const [sessionDetails, setSessionDetails] = useState<any>(null);
   const [problems, setProblems] = useState<any[]>([]);
   const [isProcessingAI, setIsProcessingAI] = useState(false);
-  const [taskId, setTaskId] = useState<string | null>(null);
   const [taskProgress, setTaskProgress] = useState<any>(null);
 
   useEffect(() => {
     loadResults();
     loadProblems();
+    loadStudents();
   }, [assignment.id]);
+
+  const loadStudents = async () => {
+    try {
+      console.log('Assignment object:', assignment);
+      console.log('Available assignment keys:', Object.keys(assignment));
+
+      const classId = assignment.class_id || assignment.classroom_id || assignment.classId;
+      console.log('Trying to use class_id:', classId);
+
+      if (classId) {
+        console.log('Making API call to get students for class:', classId);
+        const studentList = await classroomService.getClassroomStudents(classId);
+        console.log('Loaded students from class:', studentList);
+        setStudents(studentList);
+      } else {
+        console.log('No class_id found in assignment:', assignment);
+      }
+    } catch (error) {
+      console.error("Failed to load students:", error);
+    }
+  };
 
   const loadProblems = async () => {
     try {
@@ -189,13 +226,11 @@ export function AssignmentResultView({ assignment, onBack }: { assignment: any, 
             const result = status.result;
             alert(`OCR + AI 채점 완료!\n처리된 손글씨 답안: ${result.processed_count}개\n업데이트된 세션: ${result.updated_sessions}개\n새로 생성된 세션: ${result.newly_graded_sessions}개`);
             setIsProcessingAI(false);
-            setTaskId(null);
             setTaskProgress(null);
             loadResults();
           } else if (status.status === 'FAILURE') {
             alert(`채점 처리 실패: ${status.info?.error || '알 수 없는 오류'}`);
             setIsProcessingAI(false);
-            setTaskId(null);
             setTaskProgress(null);
           } else if (status.status === 'PROGRESS') {
             // 진행중인 경우 2초 후 다시 폴링
@@ -230,7 +265,6 @@ export function AssignmentResultView({ assignment, onBack }: { assignment: any, 
       if (response.ok) {
         const result = await response.json();
         if (result.task_id) {
-          setTaskId(result.task_id);
           // 태스크 상태 폴링 시작
           pollTaskStatus(result.task_id);
         } else {
@@ -491,35 +525,63 @@ export function AssignmentResultView({ assignment, onBack }: { assignment: any, 
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Student</TableHead>
-              <TableHead>Score</TableHead>
-              <TableHead>Correct/Total</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Submitted At</TableHead>
-              <TableHead>Actions</TableHead>
+              <TableHead>이름</TableHead>
+              <TableHead>학교/학년</TableHead>
+              <TableHead>상태</TableHead>
+              <TableHead>점수</TableHead>
+              <TableHead>완료일시</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {results.map((result, index) => (
-              <TableRow key={result.id || result.grading_session_id || index} className="cursor-pointer hover:bg-gray-50" onClick={() => handleSessionClick(result)}>
-                <TableCell>{result.graded_by}</TableCell>
-                <TableCell>{result.total_score}/{result.max_possible_score}</TableCell>
-                <TableCell>{result.correct_count}/{result.total_problems}</TableCell>
-                <TableCell>
-                  <Badge variant={result.status === 'final' ? 'default' : 'secondary'}>
-                    {result.status}
-                  </Badge>
-                </TableCell>
-                <TableCell>{new Date(result.graded_at).toLocaleString('ko-KR')}</TableCell>
-                <TableCell onClick={(e) => e.stopPropagation()}>
-                  {result.status === 'pending_approval' && (
-                    <Button onClick={() => handleApprove(result.id)} size="sm">
-                      Approve
-                    </Button>
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
+            {results.map((result, index) => {
+              const totalProblems = result.total_problems || 10;
+              const scorePerProblem = 100 / totalProblems;
+              const finalScore = Math.round((result.correct_count || 0) * scorePerProblem);
+
+              // 학생 ID로 실제 학생 정보 찾기 - 다양한 타입 변환 시도
+              const studentId = result.student_id || result.graded_by;
+              const student = studentId ? students.find(s =>
+                s.id === studentId ||           // 직접 비교
+                s.id === parseInt(String(studentId)) ||  // 숫자로 변환
+                s.id.toString() === String(studentId) || // 문자열로 변환
+                s.username === String(studentId) // username으로도 시도
+              ) : undefined;
+
+              // 디버깅 로그 (첫 번째 결과만)
+              if (index === 0) {
+                console.log('Assignment type (isKorean):', isKorean);
+                console.log('Result data:', result);
+                console.log('Available result keys:', Object.keys(result));
+                console.log('student_id:', result.student_id);
+                console.log('graded_by:', result.graded_by);
+                console.log('Calculated studentId:', studentId);
+                console.log('Found student:', student);
+              }
+
+              // 실제 학생 데이터의 name을 우선 사용
+              const studentName = student?.name || result.student_name || result.graded_by || '알 수 없음';
+
+              // 학교/학년 정보는 실제 학생 데이터에서 가져오기
+              const schoolInfo = student
+                ? `${student.school_level === 'middle' ? '중학교' : '고등학교'} ${student.grade}학년`
+                : (result.school !== '정보없음' && result.grade !== '정보없음'
+                   ? `${result.school} ${result.grade}`
+                   : '-');
+
+              return (
+                <TableRow key={result.id || result.grading_session_id || index} className="cursor-pointer hover:bg-gray-50" onClick={() => handleSessionClick(result)}>
+                  <TableCell>{studentName}</TableCell>
+                  <TableCell>{schoolInfo}</TableCell>
+                  <TableCell>
+                    <Badge variant={result.status === '완료' || result.status === 'final' || result.status === 'approved' ? 'default' : 'secondary'}>
+                      {result.status === '완료' || result.status === 'final' || result.status === 'approved' ? '완료' : '미완료'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>{finalScore}/100</TableCell>
+                  <TableCell>{result.submitted_at ? new Date(result.submitted_at).toLocaleString('ko-KR') : (result.graded_at ? new Date(result.graded_at).toLocaleString('ko-KR') : '-')}</TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       )}
