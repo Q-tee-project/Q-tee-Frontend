@@ -4,8 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+import { Card, CardContent } from '@/components/ui/card';
 import { FaCheckCircle, FaTimesCircle, FaEdit, FaSave, FaTimes } from 'react-icons/fa';
 import { LaTeXRenderer } from '@/components/LaTeXRenderer';
 import { mathService } from '@/services/mathService';
@@ -109,24 +108,6 @@ export function TeacherGradingModal({
     setEditingProblems(newEditingProblems);
   };
 
-  const updateProblemScore = (problemId: number, newScore: number) => {
-    const maxScore = sessionDetails?.max_possible_score ?
-      sessionDetails.max_possible_score / sessionDetails.total_problems : 10;
-
-    if (newScore < 0) newScore = 0;
-    if (newScore > maxScore) newScore = maxScore;
-
-    setProblemScores(prev => ({
-      ...prev,
-      [problemId]: newScore
-    }));
-
-    // 점수 변경 시 정답/오답 상태는 자동으로 변경하지 않음
-    // 사용자가 명시적으로 정답/오답 버튼을 클릭해야 변경됨
-
-    setHasChanges(true);
-  };
-
   const toggleCorrectness = (problemId: number) => {
     const newCorrectness = !problemCorrectness[problemId];
     setProblemCorrectness(prev => ({
@@ -134,8 +115,11 @@ export function TeacherGradingModal({
       [problemId]: newCorrectness
     }));
 
-    // 정답/오답 변경 시 점수는 자동으로 변경하지 않음
-    // 점수와 정답/오답 상태를 독립적으로 관리
+    // 정답/오답 변경 시 점수 자동 설정 (정답=10점, 오답=0점)
+    setProblemScores(prev => ({
+      ...prev,
+      [problemId]: newCorrectness ? 10 : 0
+    }));
 
     setHasChanges(true);
   };
@@ -191,10 +175,10 @@ export function TeacherGradingModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {studentName} 학생 채점 결과 편집
+            {studentName} 학생 채점 편집
           </DialogTitle>
         </DialogHeader>
 
@@ -203,51 +187,14 @@ export function TeacherGradingModal({
             <p>채점 정보를 불러오는 중...</p>
           </div>
         ) : sessionDetails ? (
-          <div className="space-y-6">
-            {/* Summary Card */}
-            <Card>
-              <CardHeader>
-                <CardTitle>채점 결과 요약</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-4 gap-4">
-                  <div className="text-center bg-gray-100 rounded-lg p-4">
-                    <p className="text-sm text-gray-600 mb-2">총 점수</p>
-                    <p className="text-2xl font-bold text-gray-900">
-                      {calculateTotalScore()} / {sessionDetails.max_possible_score}점
-                    </p>
-                  </div>
-                  <div className="text-center bg-gray-100 rounded-lg p-4">
-                    <p className="text-sm text-gray-600 mb-2">맞춘 개수</p>
-                    <p className="text-2xl font-bold text-gray-900">
-                      {calculateCorrectCount()} / {sessionDetails.total_problems}개
-                    </p>
-                  </div>
-                  <div className="text-center bg-gray-100 rounded-lg p-4">
-                    <p className="text-sm text-gray-600 mb-2">정답률</p>
-                    <p className="text-2xl font-bold text-gray-900">
-                      {Math.round((calculateCorrectCount() / sessionDetails.total_problems) * 100)}%
-                    </p>
-                  </div>
-                  <div className="text-center bg-gray-100 rounded-lg p-4">
-                    <p className="text-sm text-gray-600 mb-2">상태</p>
-                    <p className="text-2xl font-bold text-gray-900">
-                      {hasChanges ? '편집 중' : '저장됨'}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
+          <div className="space-y-4">
             {/* Problem Results */}
             <div className="space-y-4">
-              <h3 className="text-xl font-semibold">문제별 채점 결과</h3>
+              <h3 className="text-lg font-semibold">문제별 채점 결과</h3>
 
               {sessionDetails.problem_results.map((problem, index) => {
                 const isEditing = editingProblems.has(problem.problem_id);
-                const currentScore = problemScores[problem.problem_id];
                 const currentCorrectness = problemCorrectness[problem.problem_id];
-                const maxScore = sessionDetails.max_possible_score / sessionDetails.total_problems;
 
                 return (
                   <Card key={problem.problem_id} className="border-l-4 border-l-gray-200">
@@ -332,38 +279,42 @@ export function TeacherGradingModal({
                             </div>
 
                             {isEditing ? (
-                              <div className="space-y-4">
-                                <div className="flex items-center gap-4">
+                              <div className="flex items-center gap-4">
+                                <Button
+                                  variant={currentCorrectness ? "default" : "outline"}
+                                  size="lg"
+                                  onClick={() => toggleCorrectness(problem.problem_id)}
+                                  className={`px-6 py-3 ${
+                                    currentCorrectness
+                                      ? "bg-green-600 hover:bg-green-700 text-white"
+                                      : "bg-red-50 border-red-200 text-red-600 hover:bg-red-100"
+                                  }`}
+                                >
                                   <div className="flex items-center gap-2">
-                                    <label className="text-sm font-medium">점수:</label>
-                                    <Input
-                                      type="number"
-                                      min="0"
-                                      max={maxScore}
-                                      value={currentScore}
-                                      onChange={(e) => updateProblemScore(problem.problem_id, parseFloat(e.target.value) || 0)}
-                                      className="w-20"
-                                    />
-                                    <span className="text-sm text-gray-600">/ {maxScore}점</span>
+                                    {currentCorrectness ? (
+                                      <FaCheckCircle className="text-lg" />
+                                    ) : (
+                                      <FaTimesCircle className="text-lg" />
+                                    )}
+                                    {currentCorrectness ? "정답 (10점)" : "오답 (0점)"}
                                   </div>
-                                  <Button
-                                    variant={currentCorrectness ? "default" : "outline"}
-                                    size="sm"
-                                    onClick={() => toggleCorrectness(problem.problem_id)}
-                                    className={currentCorrectness ? "bg-green-600 hover:bg-green-700" : ""}
-                                  >
-                                    {currentCorrectness ? "정답" : "오답"}
-                                  </Button>
-                                </div>
+                                </Button>
+                                <span className="text-sm text-gray-500">
+                                  클릭하여 정답/오답을 변경하세요
+                                </span>
                               </div>
                             ) : (
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-4">
-                                  <span className="text-sm">점수: <strong>{currentScore}점</strong></span>
-                                  <Badge variant={currentCorrectness ? "default" : "destructive"}>
-                                    {currentCorrectness ? "정답" : "오답"}
-                                  </Badge>
-                                </div>
+                              <div className="flex items-center gap-4">
+                                <Badge
+                                  variant={currentCorrectness ? "default" : "destructive"}
+                                  className={`px-4 py-2 text-sm ${
+                                    currentCorrectness
+                                      ? "bg-green-100 text-green-800 border-green-200"
+                                      : "bg-red-100 text-red-800 border-red-200"
+                                  }`}
+                                >
+                                  {currentCorrectness ? "✓ 정답 (10점)" : "✗ 오답 (0점)"}
+                                </Badge>
                               </div>
                             )}
                           </div>
