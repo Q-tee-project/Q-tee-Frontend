@@ -143,7 +143,7 @@ export function AssignmentTab({ classId }: AssignmentTabProps) {
     );
   };
 
-  const handleDeployWorksheets = (worksheetIds: number[]) => {
+  const handleDeployWorksheets = async (worksheetIds: number[]) => {
     if (worksheetIds.length > 1) {
       alert('현재 한 번에 하나의 워크시트만 과제로 배포할 수 있습니다.');
       return;

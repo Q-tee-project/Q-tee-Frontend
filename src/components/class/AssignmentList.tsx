@@ -65,11 +65,15 @@ export function AssignmentList({ assignments, onSelectAssignment, onDeployAssign
         let assignmentResultData;
         const isKorean = assignment.question_type !== undefined || assignment.korean_type !== undefined;
 
+        console.log(`🔍 Loading results for assignment ${assignment.id} (${isKorean ? 'Korean' : 'Math'})`);
+
         if (isKorean) {
           assignmentResultData = await koreanService.getAssignmentResults(assignment.id);
         } else {
           assignmentResultData = await mathService.getAssignmentResults(assignment.id);
         }
+
+        console.log(`📊 Raw API response for assignment ${assignment.id}:`, assignmentResultData);
 
         // API 응답이 배열인지 확인하고 안전하게 처리
         if (Array.isArray(assignmentResultData)) {
@@ -141,7 +145,7 @@ export function AssignmentList({ assignments, onSelectAssignment, onDeployAssign
                           </div>
                           <div className="flex items-center gap-1">
                             <Users className="w-4 h-4" />
-                            <span>{results.length}명 배포</span>
+                            <span>{results.length}명 제출</span>
                           </div>
                           <div className="flex items-center gap-1">
                             <IoBookOutline className="w-4 h-4" />
@@ -312,40 +316,47 @@ export function AssignmentList({ assignments, onSelectAssignment, onDeployAssign
                             </TableRow>
                           ) : (
                             (() => {
-                              const deployedStudentIds = new Set(results.map(r => r.student_id || parseInt(r.graded_by)).filter(id => id));
-                              const deployedStudents = classStudents.filter(s => deployedStudentIds.has(s.id));
+                              // 수학과 국어 모두 results 배열을 직접 사용 (API 응답 구조가 통일됨)
+                              const deployedStudents = Array.isArray(results) ? results : [];
 
-                              if (deployedStudents.length === 0) {
+                              // 클래스 학생 정보와 매치
+                              const studentsWithInfo = deployedStudents.map(result => {
+                                const studentInfo = classStudents.find(s => s.id === result.student_id);
+                                return {
+                                  ...result,
+                                  name: studentInfo?.name || result.student_name || `학생${result.student_id}`,
+                                  school_level: studentInfo?.school_level || 'middle',
+                                  grade: studentInfo?.grade || result.grade || '1'
+                                };
+                              });
+
+                              if (studentsWithInfo.length === 0) {
                                 return (
                                   <TableRow>
                                     <TableCell colSpan={9} className="text-center py-8">
-                                      <span style={{ fontSize: '14px', color: '#666666' }}>과제가 배포된 학생이 없습니다.</span>
+                                      <span style={{ fontSize: '14px', color: '#666666' }}>
+                                        배포된 학생이 없습니다.<br/>
+                                        <small style={{ color: '#999' }}>학생에게 과제를 배포하면 여기에 표시됩니다.</small>
+                                      </span>
                                     </TableCell>
                                   </TableRow>
                                 );
                               }
 
-                              return deployedStudents.map((student) => {
-                              // 실제 과제 제출 데이터 매칭
-                              const resultsArray = Array.isArray(results) ? results : [];
-                              const studentSubmission = resultsArray.find(
-                                (result: any) => result.student_id === student.id || result.graded_by === student.id.toString()
-                              );
+                              return studentsWithInfo.map((studentResult) => {
+                              // 상태에 따른 응시 여부 결정 (수학과 동일)
+                              const hasSubmitted = studentResult.status === "완료" || studentResult.status === "제출완료";
+                              const score = hasSubmitted ? studentResult.score : null;
 
-                              const hasSubmitted = !!(studentSubmission?.graded_at || studentSubmission?.submitted_at || studentSubmission?.created_at || (studentSubmission && Object.keys(studentSubmission).length > 0));
-                              const totalProblems = studentSubmission?.total_problems || assignment.problem_count || 10;
-                              const scorePerProblem = 100 / totalProblems;
-                              const score = hasSubmitted ? Math.round((studentSubmission.correct_count || 0) * scorePerProblem) : null;
-
-                              // 소요 시간 계산 (임시로 설정, 실제로는 백엔드에서 제공해야 함)
+                              // 소요 시간 계산 (임시로 설정)
                               const duration = hasSubmitted ? '정보없음' : null;
-                              const completedAt = hasSubmitted && studentSubmission.graded_at
-                                ? new Date(studentSubmission.graded_at).toLocaleString('ko-KR')
+                              const completedAt = hasSubmitted && studentResult.completed_at
+                                ? new Date(studentResult.completed_at).toLocaleString('ko-KR')
                                 : null;
 
                               return (
                                 <TableRow
-                                  key={student.id}
+                                  key={studentResult.student_id}
                                   className="hover:bg-gray-50 transition-colors"
                                   style={{ borderBottom: '1px solid #e1e1e1' }}
                                 >
@@ -357,7 +368,7 @@ export function AssignmentList({ assignments, onSelectAssignment, onDeployAssign
                                       padding: '10px 12px'
                                     }}
                                   >
-                                    {student.name || '이름 없음'}
+                                    {studentResult.name || '이름 없음'}
                                   </TableCell>
                                   <TableCell
                                     className="text-center"
@@ -366,13 +377,13 @@ export function AssignmentList({ assignments, onSelectAssignment, onDeployAssign
                                     <Badge
                                       className="rounded-[4px]"
                                       style={{
-                                        backgroundColor: student.school_level === 'middle' ? '#E6F3FF' : '#FFF5E9',
-                                        color: student.school_level === 'middle' ? '#0085FF' : '#FF9F2D',
+                                        backgroundColor: studentResult.school_level === 'middle' ? '#E6F3FF' : '#FFF5E9',
+                                        color: studentResult.school_level === 'middle' ? '#0085FF' : '#FF9F2D',
                                         padding: '5px 10px',
                                         fontSize: '14px',
                                       }}
                                     >
-                                      {student.school_level === 'middle' ? '중학교' : '고등학교'}
+                                      {studentResult.school_level === 'middle' ? '중학교' : '고등학교'}
                                     </Badge>
                                   </TableCell>
                                   <TableCell
@@ -388,7 +399,7 @@ export function AssignmentList({ assignments, onSelectAssignment, onDeployAssign
                                         fontSize: '14px',
                                       }}
                                     >
-                                      {student.grade}학년
+                                      {studentResult.grade}학년
                                     </Badge>
                                   </TableCell>
                                   <TableCell
@@ -493,7 +504,7 @@ export function AssignmentList({ assignments, onSelectAssignment, onDeployAssign
                                           onClick={(e) => {
                                             e.stopPropagation();
                                             // 채점 편집 기능 - TeacherGradingModal 열기
-                                            handleOpenTeacherGrading(assignment, student, studentSubmission);
+                                            handleOpenTeacherGrading(assignment, studentResult, studentResult);
                                           }}
                                         >
                                           편집
@@ -506,13 +517,13 @@ export function AssignmentList({ assignments, onSelectAssignment, onDeployAssign
                                             e.stopPropagation();
                                             // 학생 상세 결과 보기
                                             if (onViewStudentResult) {
-                                              onViewStudentResult(assignment, student.id, student.name);
+                                              onViewStudentResult(assignment, studentResult.student_id, studentResult.name);
                                             } else {
                                               // 기존 방식 fallback
                                               onSelectAssignment({
                                                 ...assignment,
-                                                selectedStudentId: student.id,
-                                                selectedStudentName: student.name
+                                                selectedStudentId: studentResult.student_id,
+                                                selectedStudentName: studentResult.name
                                               });
                                             }
                                           }}
