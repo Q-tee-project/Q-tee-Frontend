@@ -25,9 +25,10 @@ interface AssignmentListProps {
   onViewStudentResult?: (assignment: any, studentId: number, studentName: string) => void;
   classId: string;
   onRefresh?: () => void;
+  subject: 'korean' | 'english' | 'math';
 }
 
-export function AssignmentList({ assignments, onSelectAssignment, onDeployAssignment, onDeleteAssignment, onViewStudentResult, classId, onRefresh }: AssignmentListProps) {
+export function AssignmentList({ assignments, onSelectAssignment, onDeployAssignment, onDeleteAssignment, onViewStudentResult, classId, onRefresh, subject }: AssignmentListProps) {
   const [classStudents, setClassStudents] = useState<any[]>([]);
   const [isLoadingStudents, setIsLoadingStudents] = useState(false);
   const [assignmentResults, setAssignmentResults] = useState<{[key: number]: any[]}>({});
@@ -90,17 +91,7 @@ export function AssignmentList({ assignments, onSelectAssignment, onDeployAssign
     }
   }, [assignments]);
 
-  // 주기적으로 과제 상태 업데이트 (30초마다)
-  useEffect(() => {
-    if (!onRefresh) return;
 
-    const interval = setInterval(() => {
-      console.log('과제 상태 자동 새로고침');
-      onRefresh();
-    }, 30000);
-
-    return () => clearInterval(interval);
-  }, [onRefresh]);
 
   if (assignments.length === 0) {
     return null; // Let the parent component handle the empty state
@@ -113,67 +104,56 @@ export function AssignmentList({ assignments, onSelectAssignment, onDeployAssign
           const results = assignmentResults[assignment.id] || [];
 
           return (
-            <div key={assignment.id}>
-              <AccordionItem value={`assignment-${assignment.id}`} className="border-0">
-                <AccordionTrigger
-                  className="border rounded-lg p-4 hover:no-underline data-[state=open]:border-[#0072CE] transition-colors"
-                  style={{ alignItems: 'center' }}
-                >
-                  <div className="flex items-center justify-between w-full pr-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-4 text-sm text-gray-600 mb-2">
-                        <div className="flex items-center gap-1">
-                          <Calendar className="w-4 h-4" />
-                          <span>
-                            {new Date(assignment.created_at).toLocaleDateString('ko-KR')}
-                          </span>
+              <AccordionItem key={assignment.id} value={`assignment-${assignment.id}`} className="border rounded-lg data-[state=open]:border-[#0072CE] transition-colors">
+                <AccordionTrigger className="p-4 hover:no-underline w-full">
+                  <div className="flex items-center justify-between w-full">
+                    <div className="text-left">
+                        <div className="flex items-center gap-4 text-sm text-gray-600 mb-2">
+                          <div className="flex items-center gap-1">
+                            <Calendar className="w-4 h-4" />
+                            <span>
+                              {new Date(assignment.created_at).toLocaleDateString('ko-KR')}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Users className="w-4 h-4" />
+                            <span>{classStudents.length}명 배포</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <IoBookOutline className="w-4 h-4" />
+                            <span>{assignment.unit_name} {assignment.chapter_name}</span>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-1">
-                          <Users className="w-4 h-4" />
-                          <span>{classStudents.length}명 배포</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <IoBookOutline className="w-4 h-4" />
-                          <span>{assignment.unit_name} {assignment.chapter_name}</span>
-                        </div>
-                      </div>
-                      <h4 className="text-lg font-semibold text-gray-900 mb-3">{assignment.title}</h4>
-
-                      {/* 배포 및 삭제 버튼 */}
-                      <div className="flex gap-2">
-                        {onDeployAssignment && (
-                          <Button
-                            size="sm"
-                            className="bg-blue-600 text-white hover:bg-blue-700"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onDeployAssignment(assignment);
-                            }}
-                          >
-                            배포하기
-                          </Button>
-                        )}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (onDeleteAssignment) {
-                              onDeleteAssignment(assignment);
-                            } else {
-                              console.log('과제 삭제:', assignment.title);
-                            }
-                          }}
-                          className="hover:bg-red-50 hover:border-red-200"
-                          style={{ padding: '10px' }}
-                        >
-                          <FaRegTrashAlt className="w-4 h-4" />
-                        </Button>
-                      </div>
+                        <h4 className="text-lg font-semibold text-gray-900">{assignment.title}</h4>
                     </div>
                   </div>
                 </AccordionTrigger>
-                <AccordionContent className="border rounded-lg mt-2 p-4">
+                <AccordionContent className="p-4">
+                  {/* 배포 및 삭제 버튼 */}
+                  <div className="flex gap-2 justify-end mb-4">
+                    {onDeployAssignment && (
+                      <Button
+                        size="sm"
+                        className="bg-blue-600 text-white hover:bg-blue-700"
+                        onClick={() => onDeployAssignment(assignment)}
+                      >
+                        배포하기
+                      </Button>
+                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        if (onDeleteAssignment) {
+                          onDeleteAssignment(assignment);
+                        }
+                      }}
+                      className="hover:bg-red-50 hover:border-red-200"
+                      style={{ padding: '10px' }}
+                    >
+                      <FaRegTrashAlt className="w-4 h-4" />
+                    </Button>
+                  </div>
                   <div className="space-y-4">
                     {/* 학생별 풀이 결과 테이블 */}
                     <div>
@@ -265,18 +245,20 @@ export function AssignmentList({ assignments, onSelectAssignment, onDeployAssign
                             >
                               완료일시
                             </TableHead>
-                            <TableHead
-                              className="font-semibold text-center border-b"
-                              style={{
-                                fontSize: '16px',
-                                color: '#666666',
-                                borderBottomColor: '#666666',
-                                padding: '10px 12px',
-                                width: '10%'
-                              }}
-                            >
-                              재전송
-                            </TableHead>
+                            {subject === 'math' && (
+                              <TableHead
+                                className="font-semibold text-center border-b"
+                                style={{
+                                  fontSize: '16px',
+                                  color: '#666666',
+                                  borderBottomColor: '#666666',
+                                  padding: '10px 12px',
+                                  width: '10%'
+                                }}
+                              >
+                                OCR 채점
+                              </TableHead>
+                            )}
                             <TableHead
                               className="font-semibold text-center border-b"
                               style={{
@@ -415,27 +397,25 @@ export function AssignmentList({ assignments, onSelectAssignment, onDeployAssign
                                   >
                                     {hasSubmitted && completedAt ? completedAt : '-'}
                                   </TableCell>
-                                  <TableCell
-                                    className="text-center"
-                                    style={{ padding: '10px 12px' }}
-                                  >
-                                    {!hasSubmitted ? (
+                                  {subject === 'math' && (
+                                    <TableCell
+                                      className="text-center"
+                                      style={{ padding: '10px 12px' }}
+                                    >
                                       <Button
                                         variant="outline"
                                         size="sm"
                                         className="text-gray-600 border-gray-300 hover:border-blue-600 hover:text-blue-600 bg-white"
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          // 재전송 로직
-                                          console.log('재전송:', student.name);
+                                          // OCR + AI 채점 버튼 (수학 과제만)
+                                          console.log('OCR 채점:', student.name);
                                         }}
                                       >
-                                        재전송
+                                        OCR 채점
                                       </Button>
-                                    ) : (
-                                      <span style={{ fontSize: '14px', color: '#999999' }}>-</span>
-                                    )}
-                                  </TableCell>
+                                    </TableCell>
+                                  )}
                                   <TableCell
                                     className="text-center"
                                     style={{ padding: '10px 12px' }}
@@ -476,7 +456,6 @@ export function AssignmentList({ assignments, onSelectAssignment, onDeployAssign
                   </div>
                 </AccordionContent>
               </AccordionItem>
-            </div>
           );
         })}
       </Accordion>
