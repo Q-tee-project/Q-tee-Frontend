@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { FiPlus, FiCheck } from 'react-icons/fi';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import {
   Card,
   CardHeader,
@@ -14,14 +15,12 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import {
   createProduct,
-  getKoreanWorksheets,
-  getMathWorksheets,
-  getKoreanWorksheetProblems,
-  getMathWorksheetProblems,
-  Worksheet,
-  Problem,
-  MarketProductCreate
+  MarketProductCreate,
+  Worksheet, // Keep Worksheet interface from marketApi for now
+  Problem, // Keep Problem interface from marketApi for now
 } from '@/services/marketApi';
+import { koreanService, KoreanWorksheet } from '@/services/koreanService';
+import { mathService } from '@/services/mathService';
 
 
 type FormData = {
@@ -30,7 +29,13 @@ type FormData = {
   price: string;
   subject: string;
   worksheetId: number | null;
+  tags?: string; // Added tags to form data
 };
+
+interface UploadedImage {
+  file: File;
+  preview: string;
+}
 
 export default function CreateMarketPage() {
   const router = useRouter();
@@ -42,25 +47,24 @@ export default function CreateMarketPage() {
     price: '',
     subject: '',
     worksheetId: null,
+    tags: '',
   });
 
-  const [images, setImages] = useState<any[]>([]);
+  const [images, setImages] = useState<UploadedImage[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [worksheets, setWorksheets] = useState<any[]>([]);
-  const [problems, setProblems] = useState<any[]>([]);
-  const [selectedProblems, setSelectedProblems] = useState<number[]>([]);
-  const [selectedWorksheet, setSelectedWorksheet] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  
-  // 태그 드롭다운 선택 상태
   const [school, setSchool] = useState<string>('');
   const [grade, setGrade] = useState<string>('');
   const [semester, setSemester] = useState<string>('');
-  const [subject, setSubject] = useState<string>('');
+  const [subject, setSubject] = useState<string>(''); // This is for the tag dropdown, distinct from form.subject
   const [mathSemester, setMathSemester] = useState<string>('');
   const [questionCount, setQuestionCount] = useState<string>('');
 
+  const [worksheets, setWorksheets] = useState<Worksheet[]>([]);
+  const [problems, setProblems] = useState<Problem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [selectedProblems, setSelectedProblems] = useState<number[]>([]);
+  const [selectedWorksheet, setSelectedWorksheet] = useState<Worksheet | null>(null);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | { target: { name: string; value: string } }
@@ -83,22 +87,70 @@ export default function CreateMarketPage() {
     setForm(prev => ({ ...prev, [name]: value }));
   };
 
+  const fetchWorksheets = useCallback(async () => {
+    if (!userProfile?.id || !form.subject) return;
+
+    setLoading(true);
+    try {
+      let fetchedWorksheets: Worksheet[] = [];
+      if (form.subject === '국어') {
+        const response = await koreanService.getKoreanWorksheets();
+        fetchedWorksheets = response.worksheets;
+      } else if (form.subject === '수학') {
+        const response = await mathService.getMathWorksheets();
+        fetchedWorksheets = response.worksheets;
+      }
+      setWorksheets(fetchedWorksheets);
+    } catch (error) {
+      console.error('Failed to fetch worksheets:', error);
+      alert('문제지 목록을 불러오는데 실패했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  }, [userProfile?.id, form.subject]);
+
+  const fetchProblemsForWorksheet = useCallback(async (worksheetId: number, subjectType: string) => {
+    setLoading(true);
+    try {
+      let fetchedProblems: Problem[] = [];
+      let fetchedWorksheet: Worksheet | null = null;
+
+      if (subjectType === '국어') {
+        const response = await koreanService.getKoreanWorksheetProblems(worksheetId);
+        fetchedProblems = response.problems;
+        fetchedWorksheet = response.worksheet;
+      } else if (subjectType === '수학') {
+        const response = await mathService.getMathWorksheetProblems(worksheetId);
+        fetchedProblems = response.problems;
+        fetchedWorksheet = response.worksheet;
+      }
+      setProblems(fetchedProblems);
+      setSelectedWorksheet(fetchedWorksheet);
+      setSelectedProblems([]); // Reset selected problems when worksheet changes
+    } catch (error) {
+      console.error('Failed to fetch problems:', error);
+      alert('문제 목록을 불러오는데 실패했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchWorksheets();
+  }, [fetchWorksheets]);
+
   const handleSubjectChange = (value: string) => {
     setForm(prev => ({ ...prev, subject: value, worksheetId: null }));
-    setSelectedWorksheet(null);
+    setWorksheets([]);
     setProblems([]);
     setSelectedProblems([]);
+    setSelectedWorksheet(null);
   };
 
-  const handleWorksheetChange = (worksheetId: number) => {
-    setForm(prev => ({ ...prev, worksheetId }));
-    const worksheet = worksheets.find(w => w.id === worksheetId);
-    setSelectedWorksheet(worksheet);
-    if (worksheet) {
-      setProblems(worksheet.problems || []);
-    }
+  const handleWorksheetChange = (value: number) => {
+    setForm(prev => ({ ...prev, worksheetId: value }));
+    fetchProblemsForWorksheet(value, form.subject);
   };
-  
 
   // 문제 선택/해제 (최대 3개)
   const toggleProblemSelection = (problemId: number) => {
@@ -113,7 +165,6 @@ export default function CreateMarketPage() {
       }
     });
   };
-  
 
   const handleSubmit = async () => {
     // 유효성 검사
@@ -170,7 +221,6 @@ export default function CreateMarketPage() {
       setSubmitting(false);
     }
   };
-  
 
   const isFormValid = form.title.trim() && form.subject && form.worksheetId && form.price && Number(form.price) > 0 && selectedProblems.length > 0;
 
@@ -208,7 +258,9 @@ export default function CreateMarketPage() {
           </button>
           <button
             onClick={handleSubmit}
+
             className="text-sm px-4 py-2 rounded-md bg-[#0072CE] text-white hover:bg-[#005fa3] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0072CE] focus-visible:ring-offset-2"
+
           >
             {submitting ? '등록 중...' : '등록하기'}
           </button>
@@ -216,7 +268,7 @@ export default function CreateMarketPage() {
       </nav>
 
       {/* 메인 카드 */}
-      <Card className="flex-1 flex flex-col shadow-sm" style={{ margin: '2rem' }}>
+      <Card className="m-8 flex-1 flex flex-col shadow-sm">
         <CardHeader className="py-3 px-6 border-b border-gray-100">
           <CardTitle className="text-base font-medium">
             상품 등록
@@ -424,75 +476,70 @@ export default function CreateMarketPage() {
                 </div>
               </div>
 
-              {/* 상품 설명 */}
-              <div>
-                <label className="block mb-2 text-sm font-medium text-gray-700">
-                  상품 설명
+              {/* 가격 */}
+              <div className="mb-4 flex items-center">
+                <label className="block mr-3 text-sm font-medium text-gray-700">
+                  가격
                 </label>
-                <textarea
-                  name="description"
-                  value={form.description}
-                  onChange={handleChange}
-                  placeholder="상품 설명을 입력하세요"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#0072CE]"
-                  rows={4}
+                <Input
+                  type="number"
+                  value={form.price}
+                  onChange={(e) => handleChange({ target: { name: 'price', value: e.target.value } })}
+                  placeholder="가격을 입력하세요"
+                  className="w-40 h-9 text-sm"
                 />
+                <span className="ml-2 text-sm text-gray-500">원</span>
               </div>
 
-              {/* 문제 선택 */}
-              {form.worksheetId && (
-                <div>
-                  <label className="block mb-2 text-sm font-medium text-gray-700">
-                    미리보기 문제 선택 (최대 3개)
-                  </label>
-                  <div className="text-sm text-gray-500 mb-3">
-                    구매 전 고객이 볼 수 있는 미리보기 문제를 선택하세요. ({selectedProblems.length}/3)
-                  </div>
-                  <div className="max-h-96 overflow-y-auto border border-gray-200 rounded-md">
-                    {problems.map((problem) => (
-                      <div
-                        key={problem.id}
-                        className={`p-4 border-b border-gray-100 cursor-pointer transition-colors ${
+              {/* 미리보기 문제 선택 */}
+              <div className="mb-4">
+                <div className="text-sm text-gray-500 mb-3">
+                  구매 전 고객이 볼 수 있는 미리보기 문제를 선택하세요. ({selectedProblems.length}/3)
+                </div>
+                <div className="max-h-96 overflow-y-auto border border-gray-200 rounded-md">
+                  {problems.map((problem) => (
+                    <div
+                      key={problem.id}
+                      className={`p-4 border-b border-gray-100 cursor-pointer transition-colors ${
+                        selectedProblems.includes(problem.id)
+                          ? 'bg-blue-50 border-l-4 border-l-blue-500'
+                          : 'hover:bg-gray-50'
+                      }`}
+                      onClick={() => toggleProblemSelection(problem.id)}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className={`w-5 h-5 rounded border-2 flex items-center justify-center mt-1 ${
                           selectedProblems.includes(problem.id)
-                            ? 'bg-blue-50 border-l-4 border-l-blue-500'
-                            : 'hover:bg-gray-50'
-                        }`}
-                        onClick={() => toggleProblemSelection(problem.id)}
-                      >
-                        <div className="flex items-start gap-3">
-                          <div className={`w-5 h-5 rounded border-2 flex items-center justify-center mt-1 ${
-                            selectedProblems.includes(problem.id)
-                              ? 'bg-blue-500 border-blue-500'
-                              : 'border-gray-300'
-                          }`}>
-                            {selectedProblems.includes(problem.id) && (
-                              <FiCheck className="w-3 h-3 text-white" />
-                            )}
+                            ? 'bg-blue-500 border-blue-500'
+                            : 'border-gray-300'
+                        }`}>
+                          {selectedProblems.includes(problem.id) && (
+                            <FiCheck className="w-3 h-3 text-white" />
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-medium text-sm">문제 {problem.sequence_order}</div>
+                          <div className="text-sm text-gray-700 mt-1 line-clamp-2">
+                            {problem.question.length > 100
+                              ? `${problem.question.substring(0, 100)}...`
+                              : problem.question
+                            }
                           </div>
-                          <div className="flex-1">
-                            <div className="font-medium text-sm">문제 {problem.sequence_order}</div>
-                            <div className="text-sm text-gray-700 mt-1 line-clamp-2">
-                              {problem.question.length > 100
-                                ? `${problem.question.substring(0, 100)}...`
-                                : problem.question
-                              }
-                            </div>
-                            <div className="flex gap-2 mt-2">
-                              <span className="text-xs px-2 py-1 bg-gray-100 rounded">
-                                {problem.problem_type}
-                              </span>
-                              <span className="text-xs px-2 py-1 bg-gray-100 rounded">
-                                난이도: {problem.difficulty}
-                              </span>
-                            </div>
+                          <div className="flex gap-2 mt-2">
+                            <span className="text-xs px-2 py-1 bg-gray-100 rounded">
+                              {problem.problem_type}
+                            </span>
+                            <span className="text-xs px-2 py-1 bg-gray-100 rounded">
+                              난이도: {problem.difficulty}
+                            </span>
                           </div>
                         </div>
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  ))}
                 </div>
-              )}
-            </div>
+              </div>
+          </div>
         </CardContent>
       </Card>
     </div>
