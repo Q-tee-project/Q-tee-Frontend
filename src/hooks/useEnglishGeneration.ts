@@ -63,6 +63,14 @@ export const useEnglishGeneration = () => {
       if (response.llm_response) {
         setWorksheetData(response.llm_response);
         console.log('서버 데이터 직접 사용:', response.llm_response);
+
+        // 지문 데이터 특별히 확인
+        console.log('📚 생성된 지문 데이터:', {
+          passagesCount: response.llm_response.passages?.length || 0,
+          passages: response.llm_response.passages,
+          questionsCount: response.llm_response.questions?.length || 0,
+          questionsWithPassageId: response.llm_response.questions?.filter(q => q.question_passage_id).length || 0,
+        });
       }
 
       console.log('영어 문제 생성 응답:', response);

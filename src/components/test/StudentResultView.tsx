@@ -290,8 +290,9 @@ export function StudentResultView({
     );
   }
 
-  const currentScore = calculateScoreFromCorrectness();
-  const maxScore = isEnglish ? sessionDetails.max_score : (isMath ? sessionDetails.max_possible_score : problems.length * (problems.length <= 10 ? 10 : 5));
+  // 서버에 저장된 실제 점수 사용 (선생님이 수정한 점수 반영)
+  const currentScore = sessionDetails.total_score || sessionDetails.score || 0;
+  const maxScore = sessionDetails.max_score || sessionDetails.max_possible_score || (problems.length * (problems.length <= 10 ? 10 : 5));
   const correctCount = isEnglish
     ? sessionDetails.question_results?.filter((qr: any) => qr.is_correct).length || 0
     : isMath
@@ -440,7 +441,11 @@ export function StudentResultView({
                               variant={answerStatus.isCorrect ? "default" : "destructive"}
                               className="text-sm"
                             >
-                              {(isKorean || isEnglish) ? `${answerStatus.studentAnswer}번` : answerStatus.studentAnswer}
+                              {(isKorean || isEnglish) ?
+                                answerStatus.studentAnswer === '(답안 없음)' ?
+                                  answerStatus.studentAnswer :
+                                  `${answerStatus.studentAnswer}번`
+                                : answerStatus.studentAnswer}
                             </Badge>
                           ) : (
                             <span className="text-gray-400 text-sm">답안 없음</span>
@@ -452,7 +457,11 @@ export function StudentResultView({
                       <TableCell>
                         <div className="text-center">
                           <Badge variant="outline" className="text-sm text-green-600">
-                            {(isKorean || isEnglish) ? `${answerStatus?.correctAnswer}번` : answerStatus?.correctAnswer}
+                            {(isKorean || isEnglish) ?
+                              answerStatus?.correctAnswer === '(답안 없음)' ?
+                                answerStatus.correctAnswer :
+                                `${answerStatus.correctAnswer}번`
+                              : answerStatus?.correctAnswer}
                           </Badge>
                         </div>
                       </TableCell>

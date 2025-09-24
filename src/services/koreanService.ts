@@ -344,14 +344,15 @@ export const koreanService = {
 
     // First get assignment results to find the grading session
     const assignmentResults = await this.getAssignmentResults(assignmentId);
-    const studentSession = assignmentResults.find((session: any) => session.graded_by === studentId);
+    const resultsArray = Array.isArray(assignmentResults) ? assignmentResults : (assignmentResults as any).results || [];
+    const studentSession = resultsArray.find((session: any) => session.student_id === studentId);
 
     if (!studentSession) {
       throw new Error('No grading result found for this student');
     }
 
     // Get detailed session info
-    const sessionDetails = await this.getGradingSessionDetails(studentSession.id);
+    const sessionDetails = await this.getGradingSessionDetails(studentSession.grading_session_id || studentSession.id);
     return sessionDetails;
   },
 

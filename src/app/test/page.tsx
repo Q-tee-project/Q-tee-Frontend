@@ -472,6 +472,9 @@ export default function TestPage() {
         const result = await mathService.submitTest(testSession.session_id, answers);
         setTestResult(result);
         setShowResultModal(true);
+
+        // 과제 목록 새로 불러오기 (상태 업데이트 반영)
+        await loadWorksheets();
       } else if (selectedSubject === '국어') {
         // 국어 과제 제출
         if (!selectedWorksheet || !userProfile) return;
@@ -483,6 +486,9 @@ export default function TestPage() {
         setTestResult(result);
         setShowResultModal(true);
         console.log('국어 과제 제출 완료:', result);
+
+        // 과제 목록 새로 불러오기 (상태 업데이트 반영)
+        await loadWorksheets();
       } else if (selectedSubject === '영어') {
         // 영어 과제 제출
         if (!selectedWorksheet || !userProfile) return;
@@ -496,6 +502,9 @@ export default function TestPage() {
           setTestResult(result);
           setShowResultModal(true);
           console.log('영어 과제 제출 완료:', result);
+
+          // 과제 목록 새로 불러오기 (상태 업데이트 반영)
+          await loadWorksheets();
         } catch (error) {
           console.error('영어 과제 제출 실패:', error);
           alert('영어 과제 제출에 실패했습니다. 다시 시도해주세요.');
@@ -504,17 +513,6 @@ export default function TestPage() {
       }
 
       setIsTestStarted(false);
-
-      // 과제 상태를 "응시"로 업데이트
-      if (selectedWorksheet) {
-        setWorksheets((prev) =>
-          prev.map((worksheet) =>
-            worksheet.id === selectedWorksheet.id
-              ? { ...worksheet, status: 'completed' }
-              : worksheet,
-          ),
-        );
-      }
     } catch (error: any) {
       console.error('과제 제출 실패:', error);
       setError('과제 제출에 실패했습니다: ' + error.message);

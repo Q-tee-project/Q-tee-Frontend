@@ -87,9 +87,22 @@ export const useWorksheetEdit = (selectedSubject?: string) => {
       // 과목에 따라 적절한 서비스 사용
       if (selectedSubject === '국어') {
         // 국어는 현재 워크시트 업데이트 사용
-        await koreanService.updateProblem(editingProblem.id, updateData);
+        await koreanService.updateProblem((editingProblem as any).id, updateData);
       } else if (selectedSubject === '수학') {
-        await mathService.updateProblem(editingProblem.id, updateData);
+        await mathService.updateProblem((editingProblem as any).id, updateData);
+      } else if (selectedSubject === '영어') {
+        // 영어 문제는 question_id 사용하고 다른 필드명 사용
+        const englishProblem = editingProblem as EnglishQuestion;
+        const englishUpdateData = {
+          question_text: updateData.question,
+          question_type: updateData.problem_type,
+          question_difficulty: updateData.difficulty,
+          question_choices: updateData.choices,
+          correct_answer: updateData.correct_answer,
+          explanation: updateData.explanation,
+        };
+        // 워크시트 ID와 문제 ID가 필요하므로 현재는 지원하지 않음
+        throw new Error('영어 문제 편집은 현재 지원되지 않습니다.');
       } else {
         throw new Error('지원되지 않는 과목입니다.');
       }
@@ -146,6 +159,8 @@ export const useWorksheetEdit = (selectedSubject?: string) => {
         await mathService.updateMathWorksheet(worksheetId, {
           title: editedTitle.trim(),
         });
+      } else if (selectedSubject === '영어') {
+        await EnglishService.updateEnglishWorksheetTitle(worksheetId, editedTitle.trim());
       } else {
         throw new Error('지원되지 않는 과목입니다.');
       }
@@ -166,8 +181,12 @@ export const useWorksheetEdit = (selectedSubject?: string) => {
     try {
       setIsRegenerating(true);
 
+      const problemId = selectedSubject === '영어'
+        ? (editingProblem as EnglishQuestion).question_id
+        : (editingProblem as any).id;
+
       const regenerateData = {
-        problem_id: editingProblem.id,
+        problem_id: problemId,
         requirements: requirements || '',
         current_problem: {
           question: editFormData.question,
