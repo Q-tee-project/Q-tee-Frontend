@@ -9,6 +9,14 @@ import {
   EnglishDataRegenerationRequest,
 } from '@/types/english';
 
+// Helper function to get auth token
+const getToken = () => {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem('access_token');
+  }
+  return null;
+};
+
 // 타입 별칭 생성 (기존 코드 호환성)
 type EnglishFormData = EnglishWorksheetGeneratorFormData;
 type EnglishWorksheet = EnglishWorksheetData;
@@ -559,10 +567,9 @@ export class EnglishService {
   }
 
   // 영어 과제 결과 조회
-  static async getEnglishAssignmentResults(assignmentId: number): Promise<EnglishAssignmentResult[]> {
+  static async getEnglishAssignmentResults(assignmentId: number): Promise<any> {
     try {
-      // 모든 결과를 가져온 후 assignment_id로 필터링
-      const response = await fetch(`${ENGLISH_API_BASE}/grading-results`, {
+      const response = await fetch(`${ENGLISH_API_BASE}/assignments/${assignmentId}/results`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -573,10 +580,8 @@ export class EnglishService {
         throw new Error(`English API Error: ${response.status}`);
       }
 
-      const allResults = await response.json();
-
-      // assignment_id (worksheet_id)로 필터링
-      return allResults.filter((result: any) => result.worksheet_id === assignmentId);
+      const data = await response.json();
+      return data.results || [];
     } catch (error) {
       console.error('Failed to load English assignment results:', error);
       throw error;
@@ -586,10 +591,17 @@ export class EnglishService {
   // 영어 assignment 결과 상세 조회
   static async getEnglishAssignmentResultDetail(resultId: string): Promise<any> {
     try {
-      const response = await fetch(`${ENGLISH_API_BASE}/grading-results/${resultId}`, {
+      const token = getToken();
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      // Use Next.js proxy to avoid CORS and authentication issues
+      const response = await fetch(`/api/grading/grading-sessions/${resultId}?subject=english`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
       });
 
@@ -622,6 +634,94 @@ export class EnglishService {
       return await response.json();
     } catch (error) {
       console.error('Failed to approve English grade:', error);
+      throw error;
+    }
+  }
+
+  // 영어 AI 채점 시작 (워크시트 기반)
+  static async startEnglishAIGrading(worksheetId: number): Promise<any> {
+    try {
+      const currentUser = JSON.parse(localStorage.getItem('user_profile') || '{}');
+      const userId = currentUser?.id;
+
+      if (!userId) {
+        throw new Error('로그인이 필요합니다.');
+      }
+
+      // 영어 백엔드에서 지원하는 실제 엔드포인트 사용
+      const response = await fetch(`${ENGLISH_API_BASE}/worksheets/${worksheetId}/start-grading`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ user_id: userId }),
+      });
+
+      if (!response.ok) {
+        // 대안 엔드포인트 시도
+        const altResponse = await fetch(`${ENGLISH_API_BASE}/grading/start`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ worksheet_id: worksheetId, user_id: userId }),
+        });
+
+        if (!altResponse.ok) {
+          throw new Error(`English API Error: ${response.status}`);
+        }
+
+        return await altResponse.json();
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Failed to start English AI grading:', error);
+      throw error;
+    }
+  }
+
+  // 영어 AI 채점 상태 확인
+  static async getEnglishGradingTaskStatus(taskId: string): Promise<any> {
+    try {
+      const response = await fetch(`${ENGLISH_API_BASE}/grading/tasks/${taskId}/status`);
+
+      if (!response.ok) {
+        throw new Error(`English API Error: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Failed to get English grading task status:', error);
+      throw error;
+    }
+  }
+
+  // 영어 채점 세션 업데이트
+  static async updateEnglishGradingSession(resultId: string, gradingData: any): Promise<any> {
+    try {
+      const token = getToken();
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      // Use Next.js proxy for the update as well
+      const response = await fetch(`/api/grading/grading-sessions/${resultId}?subject=english`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(gradingData),
+      });
+
+      if (!response.ok) {
+        throw new Error(`English API Error: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Failed to update English grading session:', error);
       throw error;
     }
   }

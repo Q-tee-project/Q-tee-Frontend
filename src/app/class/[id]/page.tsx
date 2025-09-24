@@ -8,7 +8,6 @@ import { Users } from 'lucide-react';
 import { AssignmentTab } from '@/components/class/AssignmentTab';
 import { StudentManagementTab } from '@/components/class/StudentManagementTab';
 import { ApprovalTab as StudentApprovalTab } from '@/components/class/StudentApprovalTab';
-import { GradingApprovalTab } from '@/components/class/GradingApprovalTab';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { classroomService, Classroom } from '@/services/authService';
 import { Button } from '@/components/ui/button';
@@ -165,7 +164,6 @@ export default function ClassDetailPage({ params }: ClassDetailPageProps) {
     { id: 'assignment', label: '과제 목록', count: 0 },
     { id: 'student', label: '학생 관리', count: 0 },
     { id: 'approval', label: '승인 대기', count: 0 },
-    { id: 'grading_approval', label: '채점 승인', count: 0 },
   ];
 
   return (
@@ -250,7 +248,6 @@ export default function ClassDetailPage({ params }: ClassDetailPageProps) {
               {activeTab === 'approval' && (
                 <StudentApprovalTab classId={classId.toString()} onStudentApproved={handleStudentApproved} />
               )}
-              {activeTab === 'grading_approval' && <GradingApprovalTab classId={classId.toString()} />}
             </div>
           </div>
         </div>

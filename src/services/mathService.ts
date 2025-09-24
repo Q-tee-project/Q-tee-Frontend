@@ -556,30 +556,6 @@ export const mathService = {
     return data;
   },
 
-  // Approve a grading session
-  async approveGrade(sessionId: number): Promise<any> {
-    const token = getToken();
-    if (!token) {
-      throw new Error('No authentication token found');
-    }
-
-    const response = await fetch(`${API_BASE_URL}/grading/grading-sessions/${sessionId}/approve`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
-      },
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.detail || "Failed to approve grade.");
-    }
-
-    const data = await response.json();
-    console.log(`Grade approved:`, data);
-    return data;
-  },
 
   // Get detailed grading session results
   async getGradingSessionDetails(sessionId: number): Promise<any> {

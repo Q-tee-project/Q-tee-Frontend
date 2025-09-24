@@ -3,7 +3,14 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { classroomService } from '@/services/authService';
 import { koreanService } from '@/services/koreanService';
 import { mathService } from '@/services/mathService';
@@ -15,9 +22,8 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { Calendar, Users } from 'lucide-react';
-import { IoBookOutline } from "react-icons/io5";
-import { FaRegTrashAlt } from "react-icons/fa";
-import { TeacherGradingModal } from './TeacherGradingModal';
+import { IoBookOutline } from 'react-icons/io5';
+import { FaRegTrashAlt } from 'react-icons/fa';
 
 interface AssignmentListProps {
   assignments: any[];
@@ -30,12 +36,19 @@ interface AssignmentListProps {
   subject: 'korean' | 'english' | 'math';
 }
 
-export function AssignmentList({ assignments, onSelectAssignment, onDeployAssignment, onDeleteAssignment, onViewStudentResult, classId, onRefresh, subject }: AssignmentListProps) {
+export function AssignmentList({
+  assignments,
+  onSelectAssignment,
+  onDeployAssignment,
+  onDeleteAssignment,
+  onViewStudentResult,
+  classId,
+  onRefresh,
+  subject,
+}: AssignmentListProps) {
   const [classStudents, setClassStudents] = useState<any[]>([]);
   const [isLoadingStudents, setIsLoadingStudents] = useState(false);
-  const [assignmentResults, setAssignmentResults] = useState<{[key: number]: any[]}>({});
-  const [isTeacherGradingOpen, setIsTeacherGradingOpen] = useState(false);
-  const [selectedGradingSession, setSelectedGradingSession] = useState<any>(null);
+  const [assignmentResults, setAssignmentResults] = useState<{ [key: number]: any[] }>({});
 
   // 클래스 학생 정보 로드
   useEffect(() => {
@@ -59,24 +72,33 @@ export function AssignmentList({ assignments, onSelectAssignment, onDeployAssign
 
   // 과제별 결과 로드 함수
   const loadAssignmentResults = async () => {
-    const results: {[key: number]: any[]} = {};
+    const results: { [key: number]: any[] } = {};
 
     for (const assignment of assignments) {
       try {
         let assignmentResultData;
-        const isKorean = assignment.question_type !== undefined || assignment.korean_type !== undefined;
+        const isKorean =
+          assignment.question_type !== undefined || assignment.korean_type !== undefined;
         const isEnglish = assignment.problem_type !== undefined && !isKorean;
 
-        console.log(`🔍 Loading results for assignment ${assignment.id} (${isKorean ? 'Korean' : isEnglish ? 'English' : 'Math'})`);
+        console.log(
+          `🔍 Loading results for assignment ${assignment.id} (${
+            isKorean ? 'Korean' : isEnglish ? 'English' : 'Math'
+          })`,
+        );
 
         if (isKorean) {
           assignmentResultData = await koreanService.getAssignmentResults(assignment.id);
         } else if (isEnglish) {
-          assignmentResultData = await EnglishService.getEnglishAssignmentResults(assignment.worksheet_id);
+          assignmentResultData = await EnglishService.getEnglishAssignmentResults(
+            assignment.id,
+          );
           // 영어 결과를 표준 형식으로 변환 (student_name으로 student_id 매칭)
           assignmentResultData = assignmentResultData.map((result: any) => {
             // student_name으로 student_id 찾기
-            const matchedStudent = classStudents.find(student => student.name === result.student_name);
+            const matchedStudent = classStudents.find(
+              (student) => student.name === result.student_name,
+            );
             const studentId = matchedStudent ? matchedStudent.id : 0;
 
             return {
@@ -94,7 +116,7 @@ export function AssignmentList({ assignments, onSelectAssignment, onDeployAssign
               graded_at: result.created_at,
               submitted_at: result.created_at,
               graded_by: result.student_name,
-              problem_results: []
+              problem_results: [],
             };
           });
         } else {
@@ -106,7 +128,11 @@ export function AssignmentList({ assignments, onSelectAssignment, onDeployAssign
         // API 응답이 배열인지 확인하고 안전하게 처리
         if (Array.isArray(assignmentResultData)) {
           results[assignment.id] = assignmentResultData;
-        } else if (assignmentResultData && typeof assignmentResultData === 'object' && 'results' in assignmentResultData) {
+        } else if (
+          assignmentResultData &&
+          typeof assignmentResultData === 'object' &&
+          'results' in assignmentResultData
+        ) {
           results[assignment.id] = (assignmentResultData as any).results || [];
         } else {
           results[assignment.id] = [];
@@ -132,28 +158,6 @@ export function AssignmentList({ assignments, onSelectAssignment, onDeployAssign
     setAssignmentResults({});
   }, [subject]);
 
-  // 채점 편집 모달 열기
-  const handleOpenTeacherGrading = (assignment: any, student: any, studentSubmission: any) => {
-    setSelectedGradingSession({
-      gradingSessionId: studentSubmission?.grading_session_id || studentSubmission?.id || 0,
-      studentName: student.name,
-      assignment: assignment,
-      student: student,
-      isKorean: assignment.question_type !== undefined || assignment.korean_type !== undefined
-    });
-    setIsTeacherGradingOpen(true);
-  };
-
-  // 채점 저장 완료 후 콜백
-  const handleGradingSaved = () => {
-    loadAssignmentResults(); // 결과 새로고침
-    if (onRefresh) {
-      onRefresh(); // 전체 과제 목록 새로고침
-    }
-  };
-
-
-
   if (assignments.length === 0) {
     return null; // Let the parent component handle the empty state
   }
@@ -165,69 +169,154 @@ export function AssignmentList({ assignments, onSelectAssignment, onDeployAssign
           const results = assignmentResults[assignment.id] || [];
 
           return (
-              <AccordionItem key={assignment.id} value={`assignment-${assignment.id}`} className="border rounded-lg data-[state=open]:border-[#0072CE] transition-colors">
-                <AccordionTrigger className="p-4 hover:no-underline w-full">
-                  <div className="flex items-center justify-between w-full">
-                    <div className="text-left">
-                        <div className="flex items-center gap-4 text-sm text-gray-600 mb-2">
-                          <div className="flex items-center gap-1">
-                            <Calendar className="w-4 h-4" />
-                            <span>
-                              {new Date(assignment.created_at).toLocaleDateString('ko-KR')}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Users className="w-4 h-4" />
-                            <span>{results.length}명 배포</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <IoBookOutline className="w-4 h-4" />
-                            <span>
-                              {assignment.problem_type ? (
-                                assignment.problem_type
-                              ) : (
-                                `${assignment.unit_name} ${assignment.chapter_name}`
-                              )}
-                            </span>
-                          </div>
-                        </div>
-                        <h4 className="text-lg font-semibold text-gray-900">{assignment.title}</h4>
+            <AccordionItem
+              key={assignment.id}
+              value={`assignment-${assignment.id}`}
+              className="border rounded-lg data-[state=open]:border-[#0072CE] transition-colors"
+            >
+              <AccordionTrigger className="p-4 hover:no-underline w-full">
+                <div className="flex items-center justify-between w-full">
+                  <div className="text-left">
+                    <div className="flex items-center gap-4 text-sm text-gray-600 mb-2">
+                      <div className="flex items-center gap-1">
+                        <Calendar className="w-4 h-4" />
+                        <span>{new Date(assignment.created_at).toLocaleDateString('ko-KR')}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Users className="w-4 h-4" />
+                        <span>{results.length}명 배포</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <IoBookOutline className="w-4 h-4" />
+                        <span>
+                          {assignment.problem_type
+                            ? assignment.problem_type
+                            : `${assignment.unit_name} ${assignment.chapter_name}`}
+                        </span>
+                      </div>
                     </div>
+                    <h4 className="text-lg font-semibold text-gray-900">{assignment.title}</h4>
                   </div>
-                </AccordionTrigger>
-                <AccordionContent className="p-4">
-                  {/* 배포 및 삭제 버튼 */}
-                  <div className="flex gap-2 justify-end mb-4">
-                    {onDeployAssignment && (
-                      <Button
-                        size="sm"
-                        className="bg-blue-600 text-white hover:bg-blue-700"
-                        onClick={() => onDeployAssignment(assignment)}
-                      >
-                        배포하기
-                      </Button>
-                    )}
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="p-4">
+                {/* 배포 및 삭제 버튼 */}
+                <div className="flex gap-2 justify-end mb-4">
+                  {onDeployAssignment && (
                     <Button
-                      variant="outline"
                       size="sm"
-                      onClick={() => {
-                        if (onDeleteAssignment) {
-                          onDeleteAssignment(assignment);
-                        }
-                      }}
-                      className="hover:bg-red-50 hover:border-red-200"
-                      style={{ padding: '10px' }}
+                      className="bg-blue-600 text-white hover:bg-blue-700"
+                      onClick={() => onDeployAssignment(assignment)}
                     >
-                      <FaRegTrashAlt className="w-4 h-4" />
+                      배포하기
                     </Button>
-                  </div>
-                  <div className="space-y-4">
-                    {/* 학생별 풀이 결과 테이블 */}
-                    <div>
-                      <h2 className="text-lg font-semibold text-gray-900">학생별 풀이 결과</h2>
-                      <Table>
-                        <TableHeader>
-                          <TableRow className="hover:bg-transparent">
+                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      if (onDeleteAssignment) {
+                        onDeleteAssignment(assignment);
+                      }
+                    }}
+                    className="hover:bg-red-50 hover:border-red-200"
+                    style={{ padding: '10px' }}
+                  >
+                    <FaRegTrashAlt className="w-4 h-4" />
+                  </Button>
+                </div>
+                <div className="space-y-4">
+                  {/* 학생별 풀이 결과 테이블 */}
+                  <div>
+                    <h2 className="text-lg font-semibold text-gray-900">학생별 풀이 결과</h2>
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="hover:bg-transparent">
+                          <TableHead
+                            className="font-semibold text-center border-b"
+                            style={{
+                              fontSize: '16px',
+                              color: '#666666',
+                              borderBottomColor: '#666666',
+                              padding: '10px 12px',
+                              width: '12%',
+                            }}
+                          >
+                            이름
+                          </TableHead>
+                          <TableHead
+                            className="font-semibold text-center border-b"
+                            style={{
+                              fontSize: '16px',
+                              color: '#666666',
+                              borderBottomColor: '#666666',
+                              padding: '10px 12px',
+                              width: '10%',
+                            }}
+                          >
+                            학교
+                          </TableHead>
+                          <TableHead
+                            className="font-semibold text-center border-b"
+                            style={{
+                              fontSize: '16px',
+                              color: '#666666',
+                              borderBottomColor: '#666666',
+                              padding: '10px 12px',
+                              width: '8%',
+                            }}
+                          >
+                            학년
+                          </TableHead>
+                          <TableHead
+                            className="font-semibold text-center border-b"
+                            style={{
+                              fontSize: '16px',
+                              color: '#666666',
+                              borderBottomColor: '#666666',
+                              padding: '10px 12px',
+                              width: '10%',
+                            }}
+                          >
+                            응시 현황
+                          </TableHead>
+                          <TableHead
+                            className="font-semibold text-center border-b"
+                            style={{
+                              fontSize: '16px',
+                              color: '#666666',
+                              borderBottomColor: '#666666',
+                              padding: '10px 12px',
+                              width: '8%',
+                            }}
+                          >
+                            점수
+                          </TableHead>
+                          <TableHead
+                            className="font-semibold text-center border-b"
+                            style={{
+                              fontSize: '16px',
+                              color: '#666666',
+                              borderBottomColor: '#666666',
+                              padding: '10px 12px',
+                              width: '10%',
+                            }}
+                          >
+                            소요 시간
+                          </TableHead>
+                          <TableHead
+                            className="font-semibold text-center border-b"
+                            style={{
+                              fontSize: '16px',
+                              color: '#666666',
+                              borderBottomColor: '#666666',
+                              padding: '10px 12px',
+                              width: '12%',
+                            }}
+                          >
+                            완료일시
+                          </TableHead>
+                          {subject === 'math' && (
                             <TableHead
                               className="font-semibold text-center border-b"
                               style={{
@@ -235,163 +324,99 @@ export function AssignmentList({ assignments, onSelectAssignment, onDeployAssign
                                 color: '#666666',
                                 borderBottomColor: '#666666',
                                 padding: '10px 12px',
-                                width: '12%'
+                                width: '10%',
                               }}
                             >
-                              이름
+                              OCR 채점
                             </TableHead>
-                            <TableHead
-                              className="font-semibold text-center border-b"
-                              style={{
-                                fontSize: '16px',
-                                color: '#666666',
-                                borderBottomColor: '#666666',
-                                padding: '10px 12px',
-                                width: '10%'
-                              }}
-                            >
-                              학교
-                            </TableHead>
-                            <TableHead
-                              className="font-semibold text-center border-b"
-                              style={{
-                                fontSize: '16px',
-                                color: '#666666',
-                                borderBottomColor: '#666666',
-                                padding: '10px 12px',
-                                width: '8%'
-                              }}
-                            >
-                              학년
-                            </TableHead>
-                            <TableHead
-                              className="font-semibold text-center border-b"
-                              style={{
-                                fontSize: '16px',
-                                color: '#666666',
-                                borderBottomColor: '#666666',
-                                padding: '10px 12px',
-                                width: '10%'
-                              }}
-                            >
-                              응시 현황
-                            </TableHead>
-                            <TableHead
-                              className="font-semibold text-center border-b"
-                              style={{
-                                fontSize: '16px',
-                                color: '#666666',
-                                borderBottomColor: '#666666',
-                                padding: '10px 12px',
-                                width: '8%'
-                              }}
-                            >
-                              점수
-                            </TableHead>
-                            <TableHead
-                              className="font-semibold text-center border-b"
-                              style={{
-                                fontSize: '16px',
-                                color: '#666666',
-                                borderBottomColor: '#666666',
-                                padding: '10px 12px',
-                                width: '10%'
-                              }}
-                            >
-                              소요 시간
-                            </TableHead>
-                            <TableHead
-                              className="font-semibold text-center border-b"
-                              style={{
-                                fontSize: '16px',
-                                color: '#666666',
-                                borderBottomColor: '#666666',
-                                padding: '10px 12px',
-                                width: '12%'
-                              }}
-                            >
-                              완료일시
-                            </TableHead>
-                            {subject === 'math' && (
-                              <TableHead
-                                className="font-semibold text-center border-b"
-                                style={{
-                                  fontSize: '16px',
-                                  color: '#666666',
-                                  borderBottomColor: '#666666',
-                                  padding: '10px 12px',
-                                  width: '10%'
-                                }}
-                              >
-                                OCR 채점
-                              </TableHead>
-                            )}
-                            <TableHead
-                              className="font-semibold text-center border-b"
-                              style={{
-                                fontSize: '16px',
-                                color: '#666666',
-                                borderBottomColor: '#666666',
-                                padding: '10px 12px',
-                                width: '12%'
-                              }}
-                            >
-                              채점 결과
-                            </TableHead>
+                          )}
+                          <TableHead
+                            className="font-semibold text-center border-b"
+                            style={{
+                              fontSize: '16px',
+                              color: '#666666',
+                              borderBottomColor: '#666666',
+                              padding: '10px 12px',
+                              width: '12%',
+                            }}
+                          >
+                            채점 결과
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {isLoadingStudents ? (
+                          <TableRow>
+                            <TableCell colSpan={9} className="text-center py-8">
+                              <span style={{ fontSize: '14px', color: '#666666' }}>
+                                학생 정보를 불러오는 중...
+                              </span>
+                            </TableCell>
                           </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {isLoadingStudents ? (
-                            <TableRow>
-                              <TableCell colSpan={9} className="text-center py-8">
-                                <span style={{ fontSize: '14px', color: '#666666' }}>학생 정보를 불러오는 중...</span>
-                              </TableCell>
-                            </TableRow>
-                          ) : classStudents.length === 0 ? (
-                            <TableRow>
-                              <TableCell colSpan={9} className="text-center py-8">
-                                <span style={{ fontSize: '14px', color: '#666666' }}>등록된 학생이 없습니다.</span>
-                              </TableCell>
-                            </TableRow>
-                          ) : (
-                            (() => {
-                              // 수학과 국어 모두 results 배열을 직접 사용 (API 응답 구조가 통일됨)
-                              const deployedStudents = Array.isArray(results) ? results : [];
+                        ) : classStudents.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={9} className="text-center py-8">
+                              <span style={{ fontSize: '14px', color: '#666666' }}>
+                                등록된 학생이 없습니다.
+                              </span>
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          (() => {
+                            // 수학과 국어 모두 results 배열을 직접 사용 (API 응답 구조가 통일됨)
+                            const deployedStudents = Array.isArray(results) ? results : [];
 
-                              // 클래스 학생 정보와 매치
-                              const studentsWithInfo = deployedStudents.map(result => {
-                                const studentInfo = classStudents.find(s => s.id === result.student_id);
-                                return {
-                                  ...result,
-                                  name: studentInfo?.name || result.student_name || `학생${result.student_id}`,
-                                  school_level: studentInfo?.school_level || 'middle',
-                                  grade: studentInfo?.grade || result.grade || '1'
-                                };
-                              });
+                            // 클래스 학생 정보와 매치
+                            const studentsWithInfo = deployedStudents.map((result) => {
+                              const studentInfo = classStudents.find(
+                                (s) => s.id === result.student_id,
+                              );
+                              return {
+                                ...result,
+                                name:
+                                  studentInfo?.name ||
+                                  result.student_name ||
+                                  `학생${result.student_id}`,
+                                school_level: studentInfo?.school_level || 'middle',
+                                grade: studentInfo?.grade || result.grade || '1',
+                              };
+                            });
 
-                              if (studentsWithInfo.length === 0) {
-                                return (
-                                  <TableRow>
-                                    <TableCell colSpan={9} className="text-center py-8">
-                                      <span style={{ fontSize: '14px', color: '#666666' }}>
-                                        배포된 학생이 없습니다.<br/>
-                                        <small style={{ color: '#999' }}>학생에게 과제를 배포하면 여기에 표시됩니다.</small>
-                                      </span>
-                                    </TableCell>
-                                  </TableRow>
-                                );
-                              }
+                            if (studentsWithInfo.length === 0) {
+                              return (
+                                <TableRow>
+                                  <TableCell colSpan={9} className="text-center py-8">
+                                    <span style={{ fontSize: '14px', color: '#666666' }}>
+                                      배포된 학생이 없습니다.
+                                      <br />
+                                      <small style={{ color: '#999' }}>
+                                        학생에게 과제를 배포하면 여기에 표시됩니다.
+                                      </small>
+                                    </span>
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            }
 
-                              return studentsWithInfo.map((studentResult) => {
+                            return studentsWithInfo.map((studentResult) => {
                               // 상태에 따른 응시 여부 결정 (영어 과제 포함)
-                              const hasSubmitted = studentResult.status === "완료" || studentResult.status === "제출완료" || studentResult.status === "completed";
-                              const score = hasSubmitted ? (studentResult.score || studentResult.total_score) : null;
+                              const hasSubmitted =
+                                studentResult.status === '완료' ||
+                                studentResult.status === '제출완료' ||
+                                studentResult.status === 'completed';
+                              const score = hasSubmitted
+                                ? studentResult.score || studentResult.total_score
+                                : null;
 
                               // 소요 시간 계산 (임시로 설정)
                               const duration = hasSubmitted ? '정보없음' : null;
-                              const completedAt = hasSubmitted && (studentResult.completed_at || studentResult.submitted_at)
-                                ? new Date(studentResult.completed_at || studentResult.submitted_at).toLocaleString('ko-KR')
-                                : null;
+                              const completedAt =
+                                hasSubmitted &&
+                                (studentResult.completed_at || studentResult.submitted_at)
+                                  ? new Date(
+                                      studentResult.completed_at || studentResult.submitted_at,
+                                    ).toLocaleString('ko-KR')
+                                  : null;
 
                               return (
                                 <TableRow
@@ -404,7 +429,7 @@ export function AssignmentList({ assignments, onSelectAssignment, onDeployAssign
                                     style={{
                                       fontSize: '14px',
                                       color: '#666666',
-                                      padding: '10px 12px'
+                                      padding: '10px 12px',
                                     }}
                                   >
                                     {studentResult.name || '이름 없음'}
@@ -416,13 +441,21 @@ export function AssignmentList({ assignments, onSelectAssignment, onDeployAssign
                                     <Badge
                                       className="rounded-[4px]"
                                       style={{
-                                        backgroundColor: studentResult.school_level === 'middle' ? '#E6F3FF' : '#FFF5E9',
-                                        color: studentResult.school_level === 'middle' ? '#0085FF' : '#FF9F2D',
+                                        backgroundColor:
+                                          studentResult.school_level === 'middle'
+                                            ? '#E6F3FF'
+                                            : '#FFF5E9',
+                                        color:
+                                          studentResult.school_level === 'middle'
+                                            ? '#0085FF'
+                                            : '#FF9F2D',
                                         padding: '5px 10px',
                                         fontSize: '14px',
                                       }}
                                     >
-                                      {studentResult.school_level === 'middle' ? '중학교' : '고등학교'}
+                                      {studentResult.school_level === 'middle'
+                                        ? '중학교'
+                                        : '고등학교'}
                                     </Badge>
                                   </TableCell>
                                   <TableCell
@@ -462,7 +495,9 @@ export function AssignmentList({ assignments, onSelectAssignment, onDeployAssign
                                     style={{ padding: '10px 12px' }}
                                   >
                                     <span style={{ fontSize: '14px', color: '#666666' }}>
-                                      {hasSubmitted && score !== null ? `${score}점` : '-'}
+                                      {hasSubmitted && score !== null && score !== undefined
+                                        ? `${score}점`
+                                        : '0점'}
                                     </span>
                                   </TableCell>
                                   <TableCell
@@ -470,7 +505,7 @@ export function AssignmentList({ assignments, onSelectAssignment, onDeployAssign
                                     style={{
                                       fontSize: '14px',
                                       color: '#666666',
-                                      padding: '10px 12px'
+                                      padding: '10px 12px',
                                     }}
                                   >
                                     {hasSubmitted && duration ? duration : '-'}
@@ -480,7 +515,7 @@ export function AssignmentList({ assignments, onSelectAssignment, onDeployAssign
                                     style={{
                                       fontSize: '14px',
                                       color: '#666666',
-                                      padding: '10px 12px'
+                                      padding: '10px 12px',
                                     }}
                                   >
                                     {hasSubmitted && completedAt ? completedAt : '-'}
@@ -498,27 +533,39 @@ export function AssignmentList({ assignments, onSelectAssignment, onDeployAssign
                                           e.stopPropagation();
                                           try {
                                             const token = localStorage.getItem('access_token');
-                                            const response = await fetch(`/api/grading/assignments/${assignment.id}/start-ai-grading?subject=math`, {
-                                              method: 'POST',
-                                              headers: {
-                                                'Authorization': `Bearer ${token}`,
-                                                'Content-Type': 'application/json',
+                                            const response = await fetch(
+                                              `/api/grading/assignments/${assignment.id}/start-ai-grading?subject=math`,
+                                              {
+                                                method: 'POST',
+                                                headers: {
+                                                  Authorization: `Bearer ${token}`,
+                                                  'Content-Type': 'application/json',
+                                                },
                                               },
-                                            });
+                                            );
 
                                             if (response.ok) {
                                               const result = await response.json();
                                               if (result.task_id) {
-                                                alert('OCR + AI 채점이 시작되었습니다. 완료 후 결과를 확인하세요.');
+                                                alert(
+                                                  'OCR + AI 채점이 시작되었습니다. 완료 후 결과를 확인하세요.',
+                                                );
                                                 if (onRefresh) {
                                                   onRefresh(); // Refresh assignment list
                                                 }
                                               } else {
-                                                alert(result.message || 'OCR 채점을 시작할 수 없습니다.');
+                                                alert(
+                                                  result.message ||
+                                                    'OCR 채점을 시작할 수 없습니다.',
+                                                );
                                               }
                                             } else {
                                               const error = await response.json();
-                                              alert(`채점 처리 실패: ${error.detail || '알 수 없는 오류'}`);
+                                              alert(
+                                                `채점 처리 실패: ${
+                                                  error.detail || '알 수 없는 오류'
+                                                }`,
+                                              );
                                             }
                                           } catch (error) {
                                             console.error('OCR grading error:', error);
@@ -535,41 +582,31 @@ export function AssignmentList({ assignments, onSelectAssignment, onDeployAssign
                                     style={{ padding: '10px 12px' }}
                                   >
                                     {hasSubmitted ? (
-                                      <div className="flex gap-1 justify-center">
-                                        <Button
-                                          variant="outline"
-                                          size="sm"
-                                          className="text-green-600 border-green-600 hover:bg-green-50"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            // 채점 편집 기능 - TeacherGradingModal 열기
-                                            handleOpenTeacherGrading(assignment, studentResult, studentResult);
-                                          }}
-                                        >
-                                          편집
-                                        </Button>
-                                        <Button
-                                          variant="outline"
-                                          size="sm"
-                                          className="text-blue-600 border-blue-600 hover:bg-blue-50"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            // 학생 상세 결과 보기
-                                            if (onViewStudentResult) {
-                                              onViewStudentResult(assignment, studentResult.student_id, studentResult.name);
-                                            } else {
-                                              // 기존 방식 fallback
-                                              onSelectAssignment({
-                                                ...assignment,
-                                                selectedStudentId: studentResult.student_id,
-                                                selectedStudentName: studentResult.name
-                                              });
-                                            }
-                                          }}
-                                        >
-                                          상세
-                                        </Button>
-                                      </div>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="text-green-600 border-green-600 hover:bg-green-50"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          // 채점 편집 기능 - AssignmentResultView로 연결
+                                          if (onViewStudentResult) {
+                                            onViewStudentResult(
+                                              assignment,
+                                              studentResult.student_id,
+                                              studentResult.name,
+                                            );
+                                          } else {
+                                            // 기존 방식 fallback
+                                            onSelectAssignment({
+                                              ...assignment,
+                                              selectedStudentId: studentResult.student_id,
+                                              selectedStudentName: studentResult.name,
+                                            });
+                                          }
+                                        }}
+                                      >
+                                        편집
+                                      </Button>
                                     ) : (
                                       <span style={{ fontSize: '14px', color: '#999999' }}>-</span>
                                     )}
@@ -578,31 +615,16 @@ export function AssignmentList({ assignments, onSelectAssignment, onDeployAssign
                               );
                             });
                           })()
-                          )}
-                        </TableBody>
-                      </Table>
-                    </div>
+                        )}
+                      </TableBody>
+                    </Table>
                   </div>
-                </AccordionContent>
-              </AccordionItem>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
           );
         })}
       </Accordion>
-
-      {/* Teacher Grading Modal */}
-      {selectedGradingSession && (
-        <TeacherGradingModal
-          isOpen={isTeacherGradingOpen}
-          onClose={() => {
-            setIsTeacherGradingOpen(false);
-            setSelectedGradingSession(null);
-          }}
-          gradingSessionId={selectedGradingSession.gradingSessionId}
-          studentName={selectedGradingSession.studentName}
-          onGradingSaved={handleGradingSaved}
-          isKorean={selectedGradingSession.isKorean}
-        />
-      )}
     </div>
   );
 }

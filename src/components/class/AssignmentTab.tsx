@@ -197,17 +197,38 @@ export function AssignmentTab({ classId }: AssignmentTabProps) {
     // Close the creation modal
     setIsCreateModalOpen(false);
 
-    // Open the deployment modal by calling the existing handler
-    handleDeployAssignment({
-      id: worksheet.id,
-      worksheet_id: worksheet.id,
-      title: worksheet.title,
-      created_at: new Date().toISOString(),
-      subject: activeSubject,
-      unit_name: (worksheet as any).unit_name || 'Unknown',
-      chapter_name: (worksheet as any).chapter_name || 'Unknown',
-      problem_count: (worksheet as any).problem_count || 0,
-    });
+    // 첫 번째 선택된 워크시트로 배포 모달 열기 (선택사항)
+    if (selectedWorksheetIds.length > 0) {
+      const firstSelectedId = selectedWorksheetIds[0];
+
+      // Worksheet인지 EnglishWorksheetData인지 구분하여 처리
+      const selectedWorksheet = modalWorksheets.find(ws => {
+        if ('id' in ws) {
+          return ws.id === firstSelectedId;
+        } else if ('worksheet_id' in ws) {
+          return ws.worksheet_id === firstSelectedId;
+        }
+        return false;
+      });
+
+      if (selectedWorksheet) {
+        // Assignment 타입에 맞는 속성들만 사용
+        const assignmentData: Assignment = {
+          id: ('id' in selectedWorksheet) ? selectedWorksheet.id : (selectedWorksheet as EnglishWorksheetData).worksheet_id || 0,
+          worksheet_id: ('id' in selectedWorksheet) ? selectedWorksheet.id : (selectedWorksheet as EnglishWorksheetData).worksheet_id || 0,
+          title: ('title' in selectedWorksheet) ? selectedWorksheet.title : (selectedWorksheet as EnglishWorksheetData).worksheet_name || 'Unknown',
+          classroom_id: classId,
+          teacher_id: 0, // Will be set by backend
+          korean_type: '',
+          question_type: '',
+          problem_count: ('problem_count' in selectedWorksheet) ? selectedWorksheet.problem_count || 0 : 0,
+          is_deployed: 'pending',
+          created_at: new Date().toISOString(),
+        };
+
+        handleDeployAssignment(assignmentData);
+      }
+    }
   };
 
   const subjectTabs = [
