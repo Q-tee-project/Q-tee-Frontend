@@ -3,11 +3,13 @@
 import { useState } from 'react';
 import { mathService } from '@/services/mathService';
 import { koreanService } from '@/services/koreanService';
+import { EnglishService } from '@/services/englishService';
 import { MathProblem } from '@/types/math';
 import { KoreanProblem } from '@/types/korean';
+import { EnglishQuestion } from '@/types/english';
 import { autoConvertToLatex } from '@/utils/mathLatexConverter';
 
-type AnyProblem = MathProblem | KoreanProblem;
+type AnyProblem = MathProblem | KoreanProblem | EnglishQuestion;
 
 export const useWorksheetEdit = (selectedSubject?: string) => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -27,17 +29,34 @@ export const useWorksheetEdit = (selectedSubject?: string) => {
 
   const handleEditProblem = (problem: AnyProblem) => {
     setEditingProblem(problem);
-    setEditFormData({
-      question: problem.question,
-      problem_type:
-        (problem as any).problem_type ||
-        (problem as any).korean_type ||
-        'multiple_choice',
-      difficulty: problem.difficulty,
-      choices: problem.choices && problem.choices.length > 0 ? problem.choices : ['', '', '', ''],
-      correct_answer: problem.correct_answer || '',
-      explanation: problem.explanation || '',
-    });
+
+    // 영어 문제 처리
+    if (selectedSubject === '영어') {
+      const englishProblem = problem as EnglishQuestion;
+      setEditFormData({
+        question: englishProblem.question_text || '',
+        problem_type: englishProblem.question_type || '객관식',
+        difficulty: englishProblem.question_difficulty || '중',
+        choices: englishProblem.question_choices && englishProblem.question_choices.length > 0
+          ? englishProblem.question_choices
+          : ['', '', '', ''],
+        correct_answer: String(englishProblem.correct_answer) || '',
+        explanation: englishProblem.explanation || '',
+      });
+    } else {
+      // 기존 국어/수학 문제 처리
+      setEditFormData({
+        question: (problem as any).question,
+        problem_type:
+          (problem as any).problem_type ||
+          (problem as any).korean_type ||
+          'multiple_choice',
+        difficulty: (problem as any).difficulty,
+        choices: (problem as any).choices && (problem as any).choices.length > 0 ? (problem as any).choices : ['', '', '', ''],
+        correct_answer: (problem as any).correct_answer || '',
+        explanation: (problem as any).explanation || '',
+      });
+    }
     setIsEditDialogOpen(true);
   };
 

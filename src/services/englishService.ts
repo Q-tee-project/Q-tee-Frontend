@@ -25,6 +25,23 @@ export interface EnglishAssignmentDeployRequest {
 
 const ENGLISH_API_BASE = 'http://localhost:8002/api/english';
 
+// 영어 결과 관련 타입
+export interface EnglishAssignmentResult {
+  id: number;
+  result_id: string;
+  worksheet_id: number;
+  student_name: string;
+  student_id?: number;
+  completion_time: number;
+  total_score: number;
+  max_score: number;
+  percentage: number;
+  needs_review: boolean;
+  is_reviewed: boolean;
+  created_at: string;
+  worksheet_name?: string;
+}
+
 export class EnglishService {
   // 영어 문제 생성
   static async generateEnglishProblems(
@@ -539,5 +556,73 @@ export class EnglishService {
     const result = await response.json();
     console.log('📤 영어 과제 제출 성공:', result);
     return result;
+  }
+
+  // 영어 과제 결과 조회
+  static async getEnglishAssignmentResults(assignmentId: number): Promise<EnglishAssignmentResult[]> {
+    try {
+      // 모든 결과를 가져온 후 assignment_id로 필터링
+      const response = await fetch(`${ENGLISH_API_BASE}/grading-results`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`English API Error: ${response.status}`);
+      }
+
+      const allResults = await response.json();
+
+      // assignment_id (worksheet_id)로 필터링
+      return allResults.filter((result: any) => result.worksheet_id === assignmentId);
+    } catch (error) {
+      console.error('Failed to load English assignment results:', error);
+      throw error;
+    }
+  }
+
+  // 영어 assignment 결과 상세 조회
+  static async getEnglishAssignmentResultDetail(resultId: string): Promise<any> {
+    try {
+      const response = await fetch(`${ENGLISH_API_BASE}/grading-results/${resultId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`English API Error: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Failed to load English assignment result detail:', error);
+      throw error;
+    }
+  }
+
+  // 영어 채점 결과 승인/리뷰
+  static async approveEnglishGrade(resultId: string, reviewData?: any): Promise<any> {
+    try {
+      const response = await fetch(`${ENGLISH_API_BASE}/grading-results/${resultId}/review`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(reviewData || { is_reviewed: true }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`English API Error: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Failed to approve English grade:', error);
+      throw error;
+    }
   }
 }
