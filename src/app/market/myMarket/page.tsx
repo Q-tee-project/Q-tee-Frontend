@@ -165,7 +165,7 @@ export default function MyMarketPage() {
   };
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col" style={{ padding: '20px', display: 'flex', gap: '20px' }}>
       <PageHeader
         icon={<FiShoppingCart />}
         title="마이마켓"
@@ -174,7 +174,7 @@ export default function MyMarketPage() {
       />
 
       {/* 탭 & 버튼 */}
-      <nav className="flex justify-between items-center mt-6 mb-4 px-8">
+      <nav className="flex justify-between items-center">
         <div className="flex space-x-6">
           {TABS.map((tab) => (
             <button
@@ -211,7 +211,7 @@ export default function MyMarketPage() {
       </nav>
 
       {/* 상품 카드 */}
-      <Card className="flex-1 flex flex-col shadow-sm" style={{ margin: '2rem' }}>
+      <Card className="flex-1 flex flex-col shadow-sm">
         <CardHeader className="py-2 px-6 border-b border-gray-100 flex items-center justify-between">
 
           <CardTitle className="text-base font-medium">

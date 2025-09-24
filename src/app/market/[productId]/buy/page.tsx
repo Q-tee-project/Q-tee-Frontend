@@ -41,7 +41,7 @@ export default function ProductBuyPage() {
   };
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col" style={{ padding: '20px', display: 'flex', gap: '20px' }}>
       <PageHeader
         icon={<FiShoppingCart />}
         title="마켓플레이스"

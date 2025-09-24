@@ -239,7 +239,7 @@ export default function CreateMarketPage() {
 
   
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col" style={{ padding: '20px', display: 'flex', gap: '20px' }}>
       <PageHeader
         icon={<FiPlus />}
         title="마켓 상품 등록하기"
@@ -248,7 +248,7 @@ export default function CreateMarketPage() {
       />
 
       {/* 상단 버튼 */}
-      <nav className="flex justify-end items-center mt-6 mb-4 px-8">
+      <nav className="flex justify-end items-center">
         <div className="flex space-x-4">
           <button
             onClick={() => router.push('/market/myMarket')}

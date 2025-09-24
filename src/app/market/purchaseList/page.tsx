@@ -110,7 +110,7 @@ export default function PurchaseListPage() {
   }, [currentPage]);
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col" style={{ padding: '20px', display: 'flex', gap: '20px' }}>
       <PageHeader
         icon={<FiShoppingCart />}
         title="마켓플레이스"
@@ -119,7 +119,7 @@ export default function PurchaseListPage() {
       />
 
       {/* 구매 리스트 */}
-      <Card className="flex-1 flex flex-col shadow-sm" style={{ margin: '2rem' }}>
+      <Card className="flex-1 flex flex-col shadow-sm">
         <CardHeader className="py-3 px-6 border-b border-gray-100 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button

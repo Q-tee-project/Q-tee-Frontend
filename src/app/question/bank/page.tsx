@@ -7,18 +7,18 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { useMathBank } from '@/hooks/useMathBank';
 import { useKoreanBank } from '@/hooks/useKoreanBank';
 import { useEnglishBank } from '@/hooks/useEnglishBank';
-import { useWorksheetEdit } from './hooks/useWorksheetEdit';
-import { useDistribution } from './hooks/useDistribution';
-import { WorksheetList } from './components/WorksheetList';
-import { MathWorksheetDetail } from './components/MathWorksheetDetail';
-import { KoreanWorksheetDetail } from './components/KoreanWorksheetDetail';
-import { EnglishWorksheetDetail } from './components/EnglishWorksheetDetail';
-import { MathProblemEditDialog } from './components/MathProblemEditDialog';
-import { KoreanProblemEditDialog } from './components/KoreanProblemEditDialog';
-import { EnglishProblemEditDialog } from './components/EnglishProblemEditDialog';
-import { DistributionDialog } from './components/DistributionDialog';
-import { ErrorToast } from './components/ErrorToast';
-import { LoadingOverlay } from './components/LoadingOverlay';
+import { useWorksheetEdit } from '@/hooks/bank/useWorksheetEdit';
+import { useDistribution } from '@/hooks/bank/useDistribution';
+import { WorksheetList } from '@/components/bank/WorksheetList';
+import { MathWorksheetDetail } from '@/components/bank/MathWorksheetDetail';
+import { KoreanWorksheetDetail } from '@/components/bank/KoreanWorksheetDetail';
+import { EnglishWorksheetDetail } from '@/components/bank/EnglishWorksheetDetail';
+import { MathProblemEditDialog } from '@/components/bank/MathProblemEditDialog';
+import { KoreanProblemEditDialog } from '@/components/bank/KoreanProblemEditDialog';
+import { EnglishProblemEditDialog } from '@/components/bank/EnglishProblemEditDialog';
+import { DistributionDialog } from '@/components/bank/DistributionDialog';
+import { ErrorToast } from '@/components/bank/ErrorToast';
+import { LoadingOverlay } from '@/components/bank/LoadingOverlay';
 
 // 과목별 컴포넌트 타입 정의 - 각 컴포넌트가 받는 실제 props에 맞춤
 interface WorksheetDetailProps<T = any, P = any> {
