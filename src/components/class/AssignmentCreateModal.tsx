@@ -106,52 +106,64 @@ export function AssignmentCreateModal({
       return;
     }
 
-
     try {
-      // Fetch student IDs for the class
-      const students = await classroomService.getClassroomStudents(parseInt(classId));
-      const studentIds = students.map(student => student.id);
+      if (activeSubject === 'english') {
+        // 영어의 경우 학생 목록을 가져와서 바로 deploy
+        const students = await classroomService.getClassroomStudents(parseInt(classId));
+        const studentIds = students.map(student => student.id);
 
-      if (studentIds.length === 0) {
-        alert('클래스에 등록된 학생이 없습니다. 먼저 학생을 등록해주세요.');
-        return;
-      }
-      console.log(selectedWorksheetIds, studentIds, activeSubject);
-      for (const worksheetId of selectedWorksheetIds) {
-        if (activeSubject === 'korean') {
-          const deployRequest: AssignmentDeployRequest = {
+        for (const worksheetId of selectedWorksheetIds) {
+          const deployRequest = {
             assignment_id: worksheetId as number,
-            classroom_id: parseInt(classId),
             student_ids: studentIds,
+            classroom_id: parseInt(classId)
           };
-          await koreanService.deployAssignment(deployRequest);
-        } else if (activeSubject === 'math') {
-          const deployRequest: AssignmentDeployRequest = {
-            assignment_id: worksheetId as number,
-            classroom_id: parseInt(classId),
-            student_ids: studentIds,
-          };
-          await mathService.deployAssignment(deployRequest);
-        } else if (activeSubject === 'english') {
-          const englishDeployRequest: EnglishAssignmentDeployRequest = {
-            assignment_id: worksheetId as number, // 영어는 assignment_id로 백엔드에 전송
-            classroom_id: parseInt(classId),
-            student_ids: studentIds,
-          };
-          console.log('🚀 영어 과제 배포 시작:', englishDeployRequest);
-          console.log('🚀 worksheetId 타입:', typeof worksheetId, worksheetId);
-          console.log('🚀 classId 타입:', typeof classId, classId);
-          console.log('🚀 studentIds 타입:', typeof studentIds, studentIds);
-          await EnglishService.deployAssignment(englishDeployRequest);
+
+          const response = await fetch('/api/assignments/deploy', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+            },
+            body: JSON.stringify({ ...deployRequest, subject: activeSubject }),
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || '과제 배포에 실패했습니다.');
+          }
         }
+        alert(`${selectedWorksheetIds.length}개의 영어 과제가 성공적으로 배포되었습니다.`);
+      } else {
+        // 국어, 수학의 경우 기존 create 방식 사용
+        for (const worksheetId of selectedWorksheetIds) {
+          const createRequest = {
+            worksheet_id: worksheetId as number,
+            classroom_id: parseInt(classId),
+            subject: activeSubject
+          };
+
+          const response = await fetch('/api/assignments/create', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+            },
+            body: JSON.stringify(createRequest),
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || '과제 생성에 실패했습니다.');
+          }
+        }
+        alert(`${selectedWorksheetIds.length}개의 과제가 성공적으로 생성되었습니다.`);
       }
-      alert(`${selectedWorksheetIds.length}개의 과제가 성공적으로 생성되었습니다.`);
       onAssignmentCreated();
     } catch (error: any) {
       console.error('Failed to create assignments:', error);
       alert(`과제 생성에 실패했습니다: ${error?.message || '알 수 없는 오류'}`);
     }
-
   };
 
   const subjectTabs = [

@@ -15,6 +15,7 @@ import { KoreanWorksheetDetail } from './components/KoreanWorksheetDetail';
 import { EnglishWorksheetDetail } from './components/EnglishWorksheetDetail';
 import { MathProblemEditDialog } from './components/MathProblemEditDialog';
 import { KoreanProblemEditDialog } from './components/KoreanProblemEditDialog';
+import { EnglishProblemEditDialog } from './components/EnglishProblemEditDialog';
 import { DistributionDialog } from './components/DistributionDialog';
 import { ErrorToast } from './components/ErrorToast';
 import { LoadingOverlay } from './components/LoadingOverlay';
@@ -206,7 +207,7 @@ export default function BankPage() {
             handleRegenerateProblem(requirements);
           }}
         />
-      ) : (
+      ) : selectedSubject === '국어' ? (
         <KoreanProblemEditDialog
           isOpen={isEditDialogOpen}
           onOpenChange={setIsEditDialogOpen}
@@ -224,7 +225,25 @@ export default function BankPage() {
             handleRegenerateProblem(requirements);
           }}
         />
-      )}
+      ) : selectedSubject === '영어' ? (
+        <EnglishProblemEditDialog
+          isOpen={isEditDialogOpen}
+          onOpenChange={setIsEditDialogOpen}
+          editFormData={editFormData}
+          onFormChange={handleEditFormChange}
+          onChoiceChange={handleChoiceChange}
+          onSave={() =>
+            handleSaveProblem(async () => {
+              if (currentBank.selectedWorksheet) {
+                await currentBank.loadWorksheets();
+              }
+            })
+          }
+          onRegenerate={(requirements) => {
+            handleRegenerateProblem(requirements);
+          }}
+        />
+      ) : null}
     </div>
   );
 }
