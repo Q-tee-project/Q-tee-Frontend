@@ -91,7 +91,7 @@ export default function JoinPage() {
       }
       
       // 회원가입 성공 후 로그인 페이지로 이동
-      router.push('/login');
+      router.push('/');
     } catch (error: any) {
       console.error('Signup error:', error);
       setError(error?.message || '회원가입에 실패했습니다. 다시 시도해주세요.');
@@ -101,7 +101,7 @@ export default function JoinPage() {
   };
 
   const handleBackClick = () => {
-    router.push('/login');
+    router.push('/');
   };
 
   return (
