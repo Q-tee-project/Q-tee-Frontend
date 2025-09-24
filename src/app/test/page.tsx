@@ -23,7 +23,6 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { ScratchpadModal } from '@/components/ScratchpadModal';
 import { Input } from '@/components/ui/input';
 import { IoSearch } from 'react-icons/io5';
-import { TestResultModal } from './components/TestResultModal';
 import { AssignmentList } from '@/components/test/AssignmentList';
 import { TestInterface } from '@/components/test/TestInterface';
 import { KoreanTestInterface } from '@/components/test/KoreanTestInterface';
@@ -782,14 +781,6 @@ export default function TestPage() {
         />
       )}
 
-      {/* 채점 결과 모달 */}
-      {testResult && (
-        <TestResultModal
-          isOpen={showResultModal}
-          onClose={() => setShowResultModal(false)}
-          testResult={testResult}
-        />
-      )}
 
       {/* 로딩 오버레이 */}
       {isLoading && (
