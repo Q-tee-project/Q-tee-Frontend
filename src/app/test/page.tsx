@@ -454,14 +454,12 @@ export default function TestPage() {
     const answeredCount = Object.keys(answers).length;
     const totalProblems = worksheetProblems.length;
 
+    // 모든 문제를 풀어야만 제출 가능하도록 변경
     if (answeredCount < totalProblems) {
-      if (
-        !confirm(
-          `${totalProblems - answeredCount}개 문제에 답하지 않았습니다. 그래도 제출하시겠습니까?`,
-        )
-      ) {
-        return;
-      }
+      alert(
+        `모든 문제를 풀어야 제출할 수 있습니다.\n현재 ${answeredCount}/${totalProblems}개 문제를 풀었습니다.\n남은 문제: ${totalProblems - answeredCount}개`
+      );
+      return;
     }
 
     try {

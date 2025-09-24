@@ -407,10 +407,10 @@ export function EnglishTestInterface({
                     {currentProblemIndex === worksheetProblems.length - 1 ? (
                       <Button
                         onClick={onSubmitTest}
-                        disabled={isSubmitting}
-                        className="bg-green-600 hover:bg-green-700 text-white"
+                        disabled={isSubmitting || Object.keys(answers).length < worksheetProblems.length}
+                        className="bg-green-600 hover:bg-green-700 text-white disabled:bg-gray-400"
                       >
-                        {isSubmitting ? '제출 중...' : '시험 제출'}
+                        {isSubmitting ? '제출 중...' : Object.keys(answers).length < worksheetProblems.length ? `시험 제출 (${Object.keys(answers).length}/${worksheetProblems.length})` : '시험 제출'}
                       </Button>
                     ) : (
                       <Button
