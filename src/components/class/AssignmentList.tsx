@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { classroomService } from '@/services/authService';
 import { koreanService } from '@/services/koreanService';
 import { mathService } from '@/services/mathService';
+import { EnglishService } from '@/services/englishService';
 import {
   Accordion,
   AccordionContent,
@@ -64,11 +65,38 @@ export function AssignmentList({ assignments, onSelectAssignment, onDeployAssign
       try {
         let assignmentResultData;
         const isKorean = assignment.question_type !== undefined || assignment.korean_type !== undefined;
+        const isEnglish = assignment.problem_type !== undefined && !isKorean;
 
-        console.log(`🔍 Loading results for assignment ${assignment.id} (${isKorean ? 'Korean' : 'Math'})`);
+        console.log(`🔍 Loading results for assignment ${assignment.id} (${isKorean ? 'Korean' : isEnglish ? 'English' : 'Math'})`);
 
         if (isKorean) {
           assignmentResultData = await koreanService.getAssignmentResults(assignment.id);
+        } else if (isEnglish) {
+          assignmentResultData = await EnglishService.getEnglishAssignmentResults(assignment.worksheet_id);
+          // 영어 결과를 표준 형식으로 변환 (student_name으로 student_id 매칭)
+          assignmentResultData = assignmentResultData.map((result: any) => {
+            // student_name으로 student_id 찾기
+            const matchedStudent = classStudents.find(student => student.name === result.student_name);
+            const studentId = matchedStudent ? matchedStudent.id : 0;
+
+            return {
+              id: parseInt(result.id),
+              grading_session_id: result.result_id,
+              student_id: studentId, // 매칭된 student_id 사용
+              student_name: result.student_name,
+              school: '',
+              grade: '',
+              status: 'completed', // 제출 완료로 설정
+              total_score: result.total_score,
+              max_possible_score: result.max_score,
+              correct_count: Math.floor(result.total_score),
+              total_problems: result.max_score,
+              graded_at: result.created_at,
+              submitted_at: result.created_at,
+              graded_by: result.student_name,
+              problem_results: []
+            };
+          });
         } else {
           assignmentResultData = await mathService.getAssignmentResults(assignment.id);
         }
@@ -92,12 +120,12 @@ export function AssignmentList({ assignments, onSelectAssignment, onDeployAssign
     setAssignmentResults(results);
   };
 
-  // 과제별 결과 로드
+  // 과제별 결과 로드 (학생 정보가 로드된 후에)
   useEffect(() => {
-    if (assignments.length > 0) {
+    if (assignments.length > 0 && classStudents.length > 0) {
       loadAssignmentResults();
     }
-  }, [assignments]);
+  }, [assignments, classStudents]);
 
   // 과목 변경 시 결과 초기화
   useEffect(() => {
@@ -154,7 +182,13 @@ export function AssignmentList({ assignments, onSelectAssignment, onDeployAssign
                           </div>
                           <div className="flex items-center gap-1">
                             <IoBookOutline className="w-4 h-4" />
-                            <span>{assignment.unit_name} {assignment.chapter_name}</span>
+                            <span>
+                              {assignment.problem_type ? (
+                                assignment.problem_type
+                              ) : (
+                                `${assignment.unit_name} ${assignment.chapter_name}`
+                              )}
+                            </span>
                           </div>
                         </div>
                         <h4 className="text-lg font-semibold text-gray-900">{assignment.title}</h4>
@@ -349,14 +383,14 @@ export function AssignmentList({ assignments, onSelectAssignment, onDeployAssign
                               }
 
                               return studentsWithInfo.map((studentResult) => {
-                              // 상태에 따른 응시 여부 결정 (수학과 동일)
-                              const hasSubmitted = studentResult.status === "완료" || studentResult.status === "제출완료";
-                              const score = hasSubmitted ? studentResult.score : null;
+                              // 상태에 따른 응시 여부 결정 (영어 과제 포함)
+                              const hasSubmitted = studentResult.status === "완료" || studentResult.status === "제출완료" || studentResult.status === "completed";
+                              const score = hasSubmitted ? (studentResult.score || studentResult.total_score) : null;
 
                               // 소요 시간 계산 (임시로 설정)
                               const duration = hasSubmitted ? '정보없음' : null;
-                              const completedAt = hasSubmitted && studentResult.completed_at
-                                ? new Date(studentResult.completed_at).toLocaleString('ko-KR')
+                              const completedAt = hasSubmitted && (studentResult.completed_at || studentResult.submitted_at)
+                                ? new Date(studentResult.completed_at || studentResult.submitted_at).toLocaleString('ko-KR')
                                 : null;
 
                               return (

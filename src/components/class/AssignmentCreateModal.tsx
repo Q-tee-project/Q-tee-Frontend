@@ -107,35 +107,63 @@ export function AssignmentCreateModal({
     }
 
     try {
-      // 과제 생성 (배포하지 않음)
-      for (const worksheetId of selectedWorksheetIds) {
-        const createRequest = {
-          worksheet_id: worksheetId as number,
-          classroom_id: parseInt(classId),
-          subject: activeSubject
-        };
+      if (activeSubject === 'english') {
+        // 영어의 경우 학생 목록을 가져와서 바로 deploy
+        const students = await classroomService.getClassroomStudents(parseInt(classId));
+        const studentIds = students.map(student => student.id);
 
-        const response = await fetch('/api/assignments/create', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-          },
-          body: JSON.stringify(createRequest),
-        });
+        for (const worksheetId of selectedWorksheetIds) {
+          const deployRequest = {
+            assignment_id: worksheetId as number,
+            student_ids: studentIds,
+            classroom_id: parseInt(classId)
+          };
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.detail || '과제 생성에 실패했습니다.');
+          const response = await fetch('/api/assignments/deploy', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+            },
+            body: JSON.stringify({ ...deployRequest, subject: activeSubject }),
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || '과제 배포에 실패했습니다.');
+          }
         }
+        alert(`${selectedWorksheetIds.length}개의 영어 과제가 성공적으로 배포되었습니다.`);
+      } else {
+        // 국어, 수학의 경우 기존 create 방식 사용
+        for (const worksheetId of selectedWorksheetIds) {
+          const createRequest = {
+            worksheet_id: worksheetId as number,
+            classroom_id: parseInt(classId),
+            subject: activeSubject
+          };
+
+          const response = await fetch('/api/assignments/create', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+            },
+            body: JSON.stringify(createRequest),
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || '과제 생성에 실패했습니다.');
+          }
+        }
+        alert(`${selectedWorksheetIds.length}개의 과제가 성공적으로 생성되었습니다.`);
       }
-      alert(`${selectedWorksheetIds.length}개의 과제가 성공적으로 생성되었습니다.`);
       onAssignmentCreated();
     } catch (error: any) {
       console.error('Failed to create assignments:', error);
       alert(`과제 생성에 실패했습니다: ${error?.message || '알 수 없는 오류'}`);
     }
-
   };
 
   const subjectTabs = [

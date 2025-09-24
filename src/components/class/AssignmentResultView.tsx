@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { koreanService } from '@/services/koreanService';
 import { mathService } from '@/services/mathService';
+import { EnglishService } from '@/services/englishService';
 import { classroomService } from '@/services/authService';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -33,8 +34,9 @@ interface AssignmentResult {
 }
 
 export function AssignmentResultView({ assignment, onBack }: { assignment: any, onBack: () => void }) {
-  // 과제 유형 구분: Korean 과제는 question_type 필드가 있고, Math 과제는 unit_name 필드가 있음
+  // 과제 유형 구분: Korean 과제는 question_type 필드가 있고, Math 과제는 unit_name 필드가 있고, English 과제는 problem_type 필드가 있음
   const isKorean = assignment.question_type !== undefined || assignment.korean_type !== undefined;
+  const isEnglish = assignment.problem_type !== undefined && !isKorean;
 
   const [results, setResults] = useState<AssignmentResult[]>([]);
   const [students, setStudents] = useState<StudentProfile[]>([]);
@@ -85,6 +87,10 @@ export function AssignmentResultView({ assignment, onBack }: { assignment: any, 
       if (isKorean) {
         data = await koreanService.getKoreanWorksheetProblems(assignment.worksheet_id);
         setProblems(data.problems);
+      } else if (isEnglish) {
+        // 영어 과제의 경우 워크시트 상세 정보를 가져와서 문제들 추출
+        data = await EnglishService.getEnglishWorksheetDetail(assignment.worksheet_id);
+        setProblems(data.questions || []);
       } else {
         // 수학 과제의 경우 문제는 채점 결과에서 가져옴
         console.log("Math assignment - problems will be loaded from grading results");
@@ -100,6 +106,27 @@ export function AssignmentResultView({ assignment, onBack }: { assignment: any, 
       let data;
       if (isKorean) {
         data = await koreanService.getAssignmentResults(assignment.id);
+      } else if (isEnglish) {
+        // 영어 과제 결과 가져오기 - worksheet_id로 검색
+        data = await EnglishService.getEnglishAssignmentResults(assignment.worksheet_id);
+        // 영어 결과 형식을 표준 형식으로 변환
+        data = data.map((result: any) => ({
+          id: parseInt(result.id), // string을 number로 변환
+          grading_session_id: result.result_id,
+          student_id: result.student_id || 0,
+          student_name: result.student_name,
+          school: '',
+          grade: '',
+          status: result.is_reviewed ? 'approved' : 'pending',
+          total_score: result.total_score,
+          max_possible_score: result.max_score,
+          correct_count: Math.floor(result.total_score), // 실제 점수 사용
+          total_problems: result.max_score,
+          graded_at: result.created_at,
+          submitted_at: result.created_at, // 영어는 채점과 제출이 동시에 이뤄짐
+          graded_by: result.student_name,
+          problem_results: []
+        }));
       } else {
         // 수학 과제 결과 가져오기
         data = await mathService.getAssignmentResults(assignment.id);
@@ -122,6 +149,12 @@ export function AssignmentResultView({ assignment, onBack }: { assignment: any, 
     try {
       if (isKorean) {
         await koreanService.approveGrade(sessionId);
+      } else if (isEnglish) {
+        // 영어의 경우 result_id (string)를 사용
+        const session = results.find(r => r.id === sessionId);
+        if (session && session.grading_session_id) {
+          await EnglishService.approveEnglishGrade(session.grading_session_id.toString());
+        }
       } else {
         await mathService.approveGrade(sessionId);
       }
@@ -149,6 +182,14 @@ export function AssignmentResultView({ assignment, onBack }: { assignment: any, 
         // 한국어 과제의 경우 기존 방식 사용
         const details = await koreanService.getGradingSessionDetails(session.id);
         setSessionDetails(details);
+      } else if (isEnglish) {
+        // 영어 과제의 경우 result_id로 상세 정보 가져오기
+        if (session.grading_session_id) {
+          const details = await EnglishService.getEnglishAssignmentResultDetail(session.grading_session_id.toString());
+          setSessionDetails(details);
+        } else {
+          setSessionDetails(session);
+        }
       } else {
         // 수학 과제의 경우 session 자체에 이미 problem_results가 포함되어 있음
         setSessionDetails(session);
