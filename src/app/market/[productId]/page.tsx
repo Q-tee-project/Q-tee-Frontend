@@ -220,14 +220,14 @@ export default function ProductDetailPage() {
 
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col" style={{ padding: '20px', display: 'flex', gap: '20px' }}>
       <PageHeader
         icon={<FiShoppingCart />}
         title="마켓플레이스"
         variant="market"
         description="상품의 상세 이미지를 확인하고 구매할 수 있습니다"
       />
-      <Card className="flex-1 flex flex-col shadow-sm" style={{ margin: '2rem' }}>
+      <Card className="flex-1 flex flex-col shadow-sm">
       <CardHeader className="py-3 px-6 border-b border-gray-100 flex items-center justify-between">
         <button
             onClick={() => router.back()}
