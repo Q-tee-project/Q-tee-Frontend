@@ -1,4 +1,3 @@
-import { KoreanGradingSession } from "@/components/class/GradingApprovalTab"; // Assuming the interface is exported
 
 // Base Worksheet interface
 export interface Worksheet {
@@ -81,53 +80,7 @@ const getToken = (): string | null => {
 };
 
 export const koreanService = {
-  getPendingGradingSessions: async (classId: string): Promise<KoreanGradingSession[]> => {
-    const token = getToken();
-    if (!token) {
-      throw new Error("Authentication token not found. Please log in.");
-    }
 
-    const response = await fetch(`${API_BASE_URL}/grading/grading-sessions/pending`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
-      },
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.detail || "Failed to fetch pending grading sessions.");
-    }
-
-    const data: KoreanGradingSession[] = await response.json();
-    console.log(`Fetched pending grading sessions:`, data);
-    return data;
-  },
-
-  approveGradingSession: async (sessionId: number): Promise<KoreanGradingSession> => {
-    const token = getToken();
-    if (!token) {
-      throw new Error("Authentication token not found. Please log in.");
-    }
-
-    const response = await fetch(`${API_BASE_URL}/grading/grading-sessions/${sessionId}/approve`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
-      },
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.detail || "Failed to approve grading session.");
-    }
-
-    const data: KoreanGradingSession = await response.json();
-    console.log(`Approved grading session:`, data);
-    return data;
-  },
 
   getKoreanWorksheets: async (skip: number = 0, limit: number = 20): Promise<{ worksheets: KoreanWorksheet[], total: number }> => {
     const token = getToken();
@@ -356,30 +309,6 @@ export const koreanService = {
     return data;
   },
 
-  // Approve a grading session
-  async approveGrade(sessionId: number): Promise<any> {
-    const token = getToken();
-    if (!token) {
-      throw new Error('No authentication token found');
-    }
-
-    const response = await fetch(`${API_BASE_URL}/grading/grading-sessions/${sessionId}/approve`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
-      },
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.detail || "Failed to approve grade.");
-    }
-
-    const data = await response.json();
-    console.log(`Grade approved:`, data);
-    return data;
-  },
 
   // Get detailed grading session results
   async getGradingSessionDetails(sessionId: number): Promise<any> {
@@ -424,6 +353,32 @@ export const koreanService = {
     // Get detailed session info
     const sessionDetails = await this.getGradingSessionDetails(studentSession.id);
     return sessionDetails;
+  },
+
+  // Update grading session results
+  async updateGradingSession(sessionId: number, gradingData: any): Promise<any> {
+    const token = getToken();
+    if (!token) {
+      throw new Error("Authentication token not found. Please log in.");
+    }
+
+    const response = await fetch(`${API_BASE_URL}/grading/grading-sessions/${sessionId}/update`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+      },
+      body: JSON.stringify(gradingData),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || "Failed to update grading session.");
+    }
+
+    const data = await response.json();
+    console.log(`Updated grading session:`, data);
+    return data;
   },
 
   async updateKoreanWorksheet(worksheetId: number, data: any): Promise<any> {

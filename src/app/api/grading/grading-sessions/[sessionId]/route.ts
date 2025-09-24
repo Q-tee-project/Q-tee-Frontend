@@ -18,19 +18,35 @@ export async function GET(
     }
 
     // Forward to the appropriate service based on subject
-    const serviceUrl = subject === 'korean'
-      ? process.env.NEXT_PUBLIC_KOREAN_API_URL || 'http://localhost:8004/api'
-      : process.env.NEXT_PUBLIC_MATH_API_URL || 'http://localhost:8001/api';
+    let serviceUrl;
+    if (subject === 'korean') {
+      serviceUrl = process.env.NEXT_PUBLIC_KOREAN_API_URL || 'http://localhost:8004/api';
+    } else if (subject === 'english') {
+      serviceUrl = process.env.NEXT_PUBLIC_ENGLISH_API_URL || 'http://localhost:8002/api/english';
+    } else {
+      serviceUrl = process.env.NEXT_PUBLIC_MATH_API_URL || 'http://localhost:8001/api';
+    }
 
-    const targetUrl = `${serviceUrl}/grading/grading-sessions/${sessionId}`;
+    let targetUrl;
+    if (subject === 'english') {
+      targetUrl = `${serviceUrl}/grading-results/${sessionId}`;
+    } else {
+      targetUrl = `${serviceUrl}/grading/grading-sessions/${sessionId}`;
+    }
     console.log(`[API] Forwarding to: ${targetUrl}`);
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+
+    // English service doesn't require authorization
+    if (subject !== 'english') {
+      headers['Authorization'] = authHeader;
+    }
 
     const response = await fetch(targetUrl, {
       method: 'GET',
-      headers: {
-        'Authorization': authHeader,
-        'Content-Type': 'application/json',
-      },
+      headers,
     });
 
     console.log(`[API] Backend response status: ${response.status}`);
@@ -78,16 +94,34 @@ export async function PUT(
     const requestBody = await request.json();
 
     // Forward to the appropriate service based on subject
-    const serviceUrl = subject === 'korean'
-      ? process.env.NEXT_PUBLIC_KOREAN_API_URL || 'http://localhost:8004/api'
-      : process.env.NEXT_PUBLIC_MATH_API_URL || 'http://localhost:8001/api';
+    let serviceUrl;
+    if (subject === 'korean') {
+      serviceUrl = process.env.NEXT_PUBLIC_KOREAN_API_URL || 'http://localhost:8004/api';
+    } else if (subject === 'english') {
+      serviceUrl = process.env.NEXT_PUBLIC_ENGLISH_API_URL || 'http://localhost:8002/api/english';
+    } else {
+      serviceUrl = process.env.NEXT_PUBLIC_MATH_API_URL || 'http://localhost:8001/api';
+    }
 
-    const response = await fetch(`${serviceUrl}/grading/grading-sessions/${sessionId}/update`, {
+    let updateUrl;
+    if (subject === 'english') {
+      updateUrl = `${serviceUrl}/grading-results/${sessionId}/update`;
+    } else {
+      updateUrl = `${serviceUrl}/grading/grading-sessions/${sessionId}/update`;
+    }
+
+    const updateHeaders: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+
+    // English service doesn't require authorization
+    if (subject !== 'english') {
+      updateHeaders['Authorization'] = authHeader;
+    }
+
+    const response = await fetch(updateUrl, {
       method: 'PUT',
-      headers: {
-        'Authorization': authHeader,
-        'Content-Type': 'application/json',
-      },
+      headers: updateHeaders,
       body: JSON.stringify(requestBody),
     });
 

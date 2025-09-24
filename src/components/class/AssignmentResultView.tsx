@@ -8,10 +8,24 @@ import { classroomService } from '@/services/authService';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { FaArrowLeft, FaCheckCircle, FaTimesCircle, FaDotCircle } from 'react-icons/fa';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  FaArrowLeft,
+  FaCheckCircle,
+  FaTimesCircle,
+  FaDotCircle,
+  FaEdit,
+  FaSave,
+  FaTimes,
+} from 'react-icons/fa';
 import { LaTeXRenderer } from '@/components/LaTeXRenderer';
-import { TeacherGradingModal } from './TeacherGradingModal';
 import type { StudentProfile } from '@/services/authService';
 
 // 과제 결과 데이터 인터페이스
@@ -33,7 +47,13 @@ interface AssignmentResult {
   problem_results?: any[];
 }
 
-export function AssignmentResultView({ assignment, onBack }: { assignment: any, onBack: () => void }) {
+export function AssignmentResultView({
+  assignment,
+  onBack,
+}: {
+  assignment: any;
+  onBack: () => void;
+}) {
   // 과제 유형 구분: Korean 과제는 question_type 필드가 있고, Math 과제는 unit_name 필드가 있고, English 과제는 problem_type 필드가 있음
   const isKorean = assignment.question_type !== undefined || assignment.korean_type !== undefined;
   const isEnglish = assignment.problem_type !== undefined && !isKorean;
@@ -46,8 +66,10 @@ export function AssignmentResultView({ assignment, onBack }: { assignment: any, 
   const [problems, setProblems] = useState<any[]>([]);
   const [isProcessingAI, setIsProcessingAI] = useState(false);
   const [taskProgress, setTaskProgress] = useState<any>(null);
-  const [isTeacherGradingOpen, setIsTeacherGradingOpen] = useState(false);
-  const [selectedGradingSession, setSelectedGradingSession] = useState<AssignmentResult | null>(null);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editingProblems, setEditingProblems] = useState<Set<string>>(new Set());
+  const [problemCorrectness, setProblemCorrectness] = useState<{ [key: string]: boolean }>({});
+  const [hasChanges, setHasChanges] = useState(false);
 
   useEffect(() => {
     loadResults();
@@ -58,15 +80,29 @@ export function AssignmentResultView({ assignment, onBack }: { assignment: any, 
   // selectedStudentId가 있으면 해당 학생의 결과를 바로 로드
   useEffect(() => {
     if (assignment.selectedStudentId && results.length > 0) {
-      const studentSession = results.find(result => {
+      const studentSession = results.find((result) => {
         const studentId = result.student_id || result.graded_by;
-        return studentId === assignment.selectedStudentId || studentId === assignment.selectedStudentId.toString();
+        return (
+          studentId === assignment.selectedStudentId ||
+          studentId === assignment.selectedStudentId.toString()
+        );
       });
       if (studentSession) {
         handleSessionClick(studentSession);
       }
     }
   }, [assignment.selectedStudentId, results]);
+
+  // sessionDetails가 변경될 때마다 편집 상태 초기화
+  useEffect(() => {
+    if (sessionDetails) {
+      initializeEditState();
+      // 학생별 상세 페이지에서는 자동으로 편집 모드 활성화
+      if (assignment.selectedStudentId && !isEditMode) {
+        setIsEditMode(true);
+      }
+    }
+  }, [sessionDetails]);
 
   const loadStudents = async () => {
     try {
@@ -77,7 +113,7 @@ export function AssignmentResultView({ assignment, onBack }: { assignment: any, 
         setStudents(studentList);
       }
     } catch (error) {
-      console.error("Failed to load students:", error);
+      console.error('Failed to load students:', error);
     }
   };
 
@@ -93,10 +129,20 @@ export function AssignmentResultView({ assignment, onBack }: { assignment: any, 
         setProblems(data.questions || []);
       } else {
         // 수학 과제의 경우 문제는 채점 결과에서 가져옴
-        console.log("Math assignment - problems will be loaded from grading results");
+        console.log('Math assignment - problems will be loaded from grading results');
+
+        // 수학 워크시트 문제 정보도 시도해보기
+        try {
+          data = await mathService.getMathWorksheetProblems(assignment.worksheet_id);
+          if (data && data.problems) {
+            setProblems(data.problems);
+          }
+        } catch (error) {
+          console.log('Math worksheet problems not available:', error);
+        }
       }
     } catch (error) {
-      console.error("Failed to load problems:", error);
+      console.error('Failed to load problems:', error);
     }
   };
 
@@ -107,26 +153,9 @@ export function AssignmentResultView({ assignment, onBack }: { assignment: any, 
       if (isKorean) {
         data = await koreanService.getAssignmentResults(assignment.id);
       } else if (isEnglish) {
-        // 영어 과제 결과 가져오기 - worksheet_id로 검색
-        data = await EnglishService.getEnglishAssignmentResults(assignment.worksheet_id);
-        // 영어 결과 형식을 표준 형식으로 변환
-        data = data.map((result: any) => ({
-          id: parseInt(result.id), // string을 number로 변환
-          grading_session_id: result.result_id,
-          student_id: result.student_id || 0,
-          student_name: result.student_name,
-          school: '',
-          grade: '',
-          status: result.is_reviewed ? 'approved' : 'pending',
-          total_score: result.total_score,
-          max_possible_score: result.max_score,
-          correct_count: Math.floor(result.total_score), // 실제 점수 사용
-          total_problems: result.max_score,
-          graded_at: result.created_at,
-          submitted_at: result.created_at, // 영어는 채점과 제출이 동시에 이뤄짐
-          graded_by: result.student_name,
-          problem_results: []
-        }));
+        // 영어 과제 결과 가져오기 - 새로운 API 사용
+        data = await EnglishService.getEnglishAssignmentResults(assignment.id);
+        // 영어 결과는 이미 표준 형식으로 반환됨
       } else {
         // 수학 과제 결과 가져오기
         data = await mathService.getAssignmentResults(assignment.id);
@@ -139,39 +168,246 @@ export function AssignmentResultView({ assignment, onBack }: { assignment: any, 
         setResults([]);
       }
     } catch (error) {
-      console.error("Failed to load assignment results:", error);
+      console.error('Failed to load assignment results:', error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleApprove = async (sessionId: number) => {
-    try {
-      if (isKorean) {
-        await koreanService.approveGrade(sessionId);
-      } else if (isEnglish) {
-        // 영어의 경우 result_id (string)를 사용
-        const session = results.find(r => r.id === sessionId);
-        if (session && session.grading_session_id) {
-          await EnglishService.approveEnglishGrade(session.grading_session_id.toString());
-        }
-      } else {
-        await mathService.approveGrade(sessionId);
-      }
-      loadResults(); // Refresh the results
-    } catch (error) {
-      console.error("Failed to approve grade:", error);
-      alert("승인에 실패했습니다.");
+
+  const handleEditModeToggle = () => {
+    setIsEditMode(!isEditMode);
+    if (!isEditMode && sessionDetails) {
+      // 편집 모드 진입 시 초기 상태 설정
+      initializeEditState();
     }
   };
 
-  const handleOpenTeacherGrading = (session: AssignmentResult) => {
-    setSelectedGradingSession(session);
-    setIsTeacherGradingOpen(true);
+  const initializeEditState = () => {
+    if (!sessionDetails) return;
+
+    const correctness: {[key: string]: boolean} = {};
+
+    if (isKorean) {
+      // 국어의 경우 problems 기반으로 정답/오답 상태 계산
+      problems.forEach((problem) => {
+        const problemId = problem.id.toString();
+        const answerStatus = getAnswerStatus(problemId);
+
+        console.log(`Korean problem ${problemId}:`, answerStatus);
+
+        // problem_results에서도 확인 (국어도 problem_results가 있을 수 있음)
+        let isCorrect = answerStatus?.isCorrect || false;
+        if (sessionDetails.problem_results) {
+          const problemResult = sessionDetails.problem_results.find((pr: any) =>
+            pr.problem_id?.toString() === problemId || pr.id?.toString() === problemId
+          );
+          if (problemResult) {
+            isCorrect = problemResult.is_correct || false;
+          }
+        }
+
+        correctness[problemId] = isCorrect;
+      });
+    } else if (isEnglish) {
+      // 영어의 경우 problems 기반으로 정답/오답 상태 계산 (영어 백엔드 구조에 맞춤)
+      problems.forEach((problem) => {
+        const problemId = problem.question_id?.toString() || problem.id?.toString();
+        if (problemId) {
+          const answerStatus = getAnswerStatus(problemId);
+          correctness[problemId] = answerStatus?.isCorrect || false;
+        }
+      });
+    } else {
+      // 수학의 경우: 모든 problems 기반으로 초기화하고, problem_results에서 실제 결과 덮어쓰기
+      problems.forEach((problem) => {
+        const problemId = problem.id.toString();
+        // 기본적으로 오답으로 초기화
+        correctness[problemId] = false;
+
+        // problem_results에서 실제 결과 찾기
+        if (sessionDetails.problem_results) {
+          const problemResult = sessionDetails.problem_results.find((pr: any) =>
+            pr.problem_id.toString() === problemId
+          );
+          if (problemResult) {
+            correctness[problemId] = problemResult.is_correct || false;
+          }
+        }
+      });
+    }
+
+    setProblemCorrectness(correctness);
+    setHasChanges(false);
   };
 
-  const handleGradingSaved = () => {
-    loadResults(); // Refresh the results after grading is saved
+  const toggleProblemCorrectness = (problemId: string) => {
+    const newCorrectness = !problemCorrectness[problemId];
+    setProblemCorrectness(prev => ({
+      ...prev,
+      [problemId]: newCorrectness
+    }));
+    setHasChanges(true);
+  };
+
+  const calculateScoreFromCorrectness = () => {
+    // 전체 문제 수는 assignment 정보나 problems 배열에서 가져오기
+    let totalProblems = 0;
+
+    if (assignment.problem_count) {
+      totalProblems = assignment.problem_count;
+    } else if (problems && problems.length > 0) {
+      totalProblems = problems.length;
+    } else if (assignment.total_problems) {
+      totalProblems = assignment.total_problems;
+    } else {
+      // 마지막 수단으로 problemCorrectness 길이 사용
+      totalProblems = Object.keys(problemCorrectness).length;
+    }
+
+    const correctCount = Object.values(problemCorrectness).filter(correct => correct).length;
+
+    if (totalProblems === 0 || correctCount === 0) return 0;
+
+    // 기존 세션의 points_per_problem 값 사용, 없으면 계산
+    const scorePerProblem = sessionDetails?.points_per_problem != null
+      ? sessionDetails.points_per_problem
+      : (totalProblems <= 10 ? 10 : 5);
+    return correctCount * scorePerProblem;
+  };
+
+  const saveGradingChanges = async () => {
+    if (!sessionDetails || !hasChanges) return;
+
+
+    try {
+      const totalScore = calculateScoreFromCorrectness();
+      const correctCount = Object.values(problemCorrectness).filter(correct => correct).length;
+
+      if (isKorean) {
+        // 국어 채점 저장
+        const updatedAnswers: {[key: string]: boolean} = {};
+        Object.keys(problemCorrectness).forEach(problemId => {
+          updatedAnswers[problemId] = problemCorrectness[problemId];
+        });
+
+        const payload = {
+          problem_corrections: updatedAnswers,
+          total_score: totalScore,
+          correct_count: correctCount,
+          status: 'final'
+        };
+
+        // 국어 세션 ID 찾기
+        const koreanSessionId = sessionDetails.id || selectedSession?.id || selectedSession?.grading_session_id;
+        if (!koreanSessionId) {
+          throw new Error('국어 채점 세션 ID를 찾을 수 없습니다.');
+        }
+
+        await koreanService.updateGradingSession(koreanSessionId, payload);
+        alert('채점 결과가 저장되었습니다.');
+      } else if (isEnglish) {
+        // 영어 채점 저장
+        const resultId = sessionDetails.id || sessionDetails.result_id;
+        if (!resultId) {
+          throw new Error('영어 채점 결과 ID를 찾을 수 없습니다.');
+        }
+
+        // 전체 문제 수 계산 (같은 로직 사용)
+        let totalProblems = 0;
+        if (assignment.problem_count) {
+          totalProblems = assignment.problem_count;
+        } else if (problems && problems.length > 0) {
+          totalProblems = problems.length;
+        } else if (assignment.total_problems) {
+          totalProblems = assignment.total_problems;
+        } else {
+          totalProblems = Object.keys(problemCorrectness).length;
+        }
+
+        const updatedAnswers = Object.keys(problemCorrectness).map(problemId => ({
+          question_id: parseInt(problemId),
+          is_correct: problemCorrectness[problemId],
+          score: problemCorrectness[problemId] ? (totalProblems <= 10 ? 10 : 5) : 0
+        }));
+
+        const payload = {
+          answers: updatedAnswers,
+          total_score: totalScore,
+          correct_count: correctCount,
+          is_reviewed: true
+        };
+
+        await EnglishService.updateEnglishGradingSession(resultId.toString(), payload);
+        alert('채점 결과가 저장되었습니다.');
+      } else {
+        // 수학 채점 저장
+        const mathSessionId = sessionDetails.id || selectedSession?.id || selectedSession?.grading_session_id;
+        if (!mathSessionId) {
+          throw new Error('수학 채점 세션 ID를 찾을 수 없습니다.');
+        }
+
+        // 전체 문제 수 계산 (같은 로직 사용)
+        let totalProblems = 0;
+        if (assignment.problem_count) {
+          totalProblems = assignment.problem_count;
+        } else if (problems && problems.length > 0) {
+          totalProblems = problems.length;
+        } else if (assignment.total_problems) {
+          totalProblems = assignment.total_problems;
+        } else {
+          totalProblems = Object.keys(problemCorrectness).length;
+        }
+
+        // 기존 세션의 points_per_problem 값 사용, 없으면 계산
+        const pointsPerProblem = sessionDetails.points_per_problem ||
+          (totalProblems <= 10 ? 10 : 5);
+
+        const updatedResults = Object.keys(problemCorrectness).map(problemId => ({
+          problem_id: parseInt(problemId),
+          is_correct: problemCorrectness[problemId],
+          score: problemCorrectness[problemId] ? pointsPerProblem : 0
+        }));
+
+        const payload = {
+          problem_results: updatedResults,
+          total_score: totalScore,
+          correct_count: correctCount,
+          status: 'final'
+        };
+
+        await mathService.updateGradingSession(mathSessionId, payload);
+        alert('채점 결과가 저장되었습니다.');
+      }
+
+      setHasChanges(false);
+      setIsEditMode(false);
+      loadResults(); // 결과 새로고침
+
+      // 세션 상세 정보도 새로고침
+      if (selectedSession) {
+        await handleSessionClick(selectedSession);
+      }
+    } catch (error) {
+      console.error('Failed to save grading changes:', error);
+      let errorMessage = '알 수 없는 오류가 발생했습니다';
+
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === 'object' && error !== null) {
+        // 객체인 경우 JSON으로 변환하여 표시
+        try {
+          errorMessage = JSON.stringify(error, null, 2);
+        } catch (jsonError) {
+          errorMessage = String(error);
+        }
+      } else {
+        errorMessage = String(error);
+      }
+
+
+      alert(`저장에 실패했습니다:\n${errorMessage}`);
+    }
   };
 
   const handleSessionClick = async (session: any) => {
@@ -180,23 +416,67 @@ export function AssignmentResultView({ assignment, onBack }: { assignment: any, 
 
       if (isKorean) {
         // 한국어 과제의 경우 기존 방식 사용
-        const details = await koreanService.getGradingSessionDetails(session.id);
-        setSessionDetails(details);
-      } else if (isEnglish) {
-        // 영어 과제의 경우 result_id로 상세 정보 가져오기
-        if (session.grading_session_id) {
-          const details = await EnglishService.getEnglishAssignmentResultDetail(session.grading_session_id.toString());
+        try {
+          // session.id 또는 session.grading_session_id 사용
+          const sessionId = session.id || session.grading_session_id;
+          if (!sessionId) {
+            throw new Error('No valid session ID found');
+          }
+          const details = await koreanService.getGradingSessionDetails(sessionId);
           setSessionDetails(details);
-        } else {
-          setSessionDetails(session);
+        } catch (error) {
+          console.warn('Korean grading session details not available, using session data:', error);
+          // API가 실패하면 session 데이터를 직접 사용
+          setSessionDetails({
+            ...session,
+            multiple_choice_answers: session.multiple_choice_answers || {},
+            problem_results: session.problem_results || []
+          });
+        }
+      } else if (isEnglish) {
+        // 영어 과제의 경우 API를 호출하여 상세 정보 가져오기 (문제 정보 포함)
+        try {
+          const resultId = session.result_id || session.grading_session_id || session.id;
+          if (resultId) {
+            console.log('English resultId:', resultId, 'Type:', typeof resultId);
+            const details = await EnglishService.getEnglishAssignmentResultDetail(resultId.toString());
+            console.log('English session details:', details);
+
+            setSessionDetails(details);
+
+            // 영어 문제 정보를 problems 배열에 설정
+            if (details.worksheet_data?.questions) {
+              setProblems(details.worksheet_data.questions);
+            }
+          } else {
+            console.log('Using English session data directly:', session);
+            setSessionDetails({
+              ...session,
+              answers: session.answers || [],
+              questions: session.questions || [],
+              total_score: session.total_score || 0,
+              correct_count: session.correct_count || 0,
+              total_problems: session.total_problems || session.max_possible_score || 10
+            });
+          }
+        } catch (error) {
+          console.warn('English assignment result details not available, using session data:', error);
+          setSessionDetails({
+            ...session,
+            answers: session.answers || [],
+            questions: session.questions || [],
+            total_score: session.total_score || 0,
+            correct_count: session.correct_count || 0,
+            total_problems: session.total_problems || session.max_possible_score || 10
+          });
         }
       } else {
         // 수학 과제의 경우 session 자체에 이미 problem_results가 포함되어 있음
         setSessionDetails(session);
       }
     } catch (error) {
-      console.error("Failed to load session details:", error);
-      alert("세션 상세 정보를 불러오는데 실패했습니다.");
+      console.error('Failed to load session details:', error);
+      alert('세션 상세 정보를 불러오는데 실패했습니다.');
     }
   };
 
@@ -216,12 +496,43 @@ export function AssignmentResultView({ assignment, onBack }: { assignment: any, 
 
     if (isKorean) {
       // Korean 과제의 경우 기존 로직 사용
-      const studentAnswer = sessionDetails.multiple_choice_answers?.[problemId];
-      const problem = problems.find(p => p.id.toString() === problemId);
 
-      if (!problem || !studentAnswer) return null;
+      // 다양한 방법으로 학생 답안 찾기
+      let studentAnswer = sessionDetails.multiple_choice_answers?.[problemId] ||
+                         sessionDetails.answers?.[problemId] ||
+                         sessionDetails.student_answers?.[problemId];
 
-      const isCorrect = studentAnswer === problem.correct_answer;
+      // problem_results에서 답안 찾기 시도
+      if (!studentAnswer && sessionDetails.problem_results) {
+        const problemResult = sessionDetails.problem_results.find((pr: any) =>
+          pr.problem_id?.toString() === problemId || pr.id?.toString() === problemId
+        );
+        if (problemResult) {
+          studentAnswer = problemResult.user_answer || problemResult.student_answer;
+        }
+      }
+
+      const problem = problems.find((p) => p.id.toString() === problemId);
+
+      if (!problem) {
+        return null;
+      }
+
+      if (!studentAnswer) {
+        return {
+          isCorrect: false,
+          studentAnswer: '(답안 없음)',
+          correctAnswer: problem.correct_answer,
+          studentAnswerText: '(답안 없음)',
+          correctAnswerText: problem.correct_answer,
+          aiFeedback: null,
+        };
+      }
+
+      // 편집 모드일 때 problemCorrectness 상태 우선 사용
+      const isCorrect = isEditMode && problemCorrectness.hasOwnProperty(problemId)
+        ? problemCorrectness[problemId]
+        : studentAnswer === problem.correct_answer;
 
       // Extract choice number from answer text
       const extractChoiceNumber = (answerText: string) => {
@@ -251,22 +562,62 @@ export function AssignmentResultView({ assignment, onBack }: { assignment: any, 
         studentAnswer: studentAnswerNumber,
         correctAnswer: correctAnswerNumber,
         studentAnswerText: studentAnswer,
-        correctAnswerText: problem.correct_answer
+        correctAnswerText: problem.correct_answer,
+        aiFeedback: null,
       };
-    } else {
-      // Math 과제의 경우 problem_results에서 직접 가져오기
-      const problemResult = sessionDetails.problem_results?.find((pr: any) => pr.problem_id.toString() === problemId);
+    } else if (isEnglish) {
+      // 영어 과제의 경우 sessionDetails의 question_results에서 찾기 (영어 백엔드 구조에 맞춤)
+      const questionResult = sessionDetails.question_results?.find(
+        (qr: any) => qr.question_id.toString() === problemId
+      );
+      const question = problems.find((q) => q.question_id?.toString() === problemId);
 
-      if (!problemResult) return null;
+      if (!questionResult) {
+        console.log(`No question result found for problem ${problemId}`, sessionDetails.question_results);
+        return null;
+      }
+
+      const isCorrect = questionResult.is_correct || false;
 
       return {
-        isCorrect: problemResult.is_correct,
-        studentAnswer: problemResult.user_answer,
-        correctAnswer: problemResult.correct_answer,
-        studentAnswerText: problemResult.user_answer,
-        correctAnswerText: problemResult.correct_answer,
-        explanation: problemResult.explanation
+        isCorrect,
+        studentAnswer: questionResult.student_answer,
+        correctAnswer: questionResult.correct_answer || (question ? question.correct_answer : '(수동 채점 필요)'),
+        studentAnswerText: questionResult.student_answer,
+        correctAnswerText: questionResult.correct_answer || (question ? question.correct_answer : '(수동 채점 필요)'),
+        aiFeedback: questionResult.ai_feedback || null,
       };
+    } else {
+      // Math 과제의 경우: problem_results에서 찾고, 없으면 problems에서 기본 정보 가져오기
+      const problemResult = sessionDetails.problem_results?.find(
+        (pr: any) => pr.problem_id.toString() === problemId,
+      );
+
+      if (problemResult) {
+        return {
+          isCorrect: problemResult.is_correct,
+          studentAnswer: problemResult.user_answer,
+          correctAnswer: problemResult.correct_answer,
+          studentAnswerText: problemResult.user_answer,
+          correctAnswerText: problemResult.correct_answer,
+          explanation: problemResult.explanation,
+          aiFeedback: problemResult.ai_feedback || null,
+        };
+      } else {
+        // problem_results에 없는 문제: problems 배열에서 기본 정보 가져오기
+        const problem = problems.find((p) => p.id.toString() === problemId);
+        if (!problem) return null;
+
+        return {
+          isCorrect: false, // 기본값: 오답
+          studentAnswer: '(답안 없음)',
+          correctAnswer: problem.correct_answer || '',
+          studentAnswerText: '(답안 없음)',
+          correctAnswerText: problem.correct_answer || '',
+          explanation: problem.explanation || '',
+          aiFeedback: null,
+        };
+      }
     }
   };
 
@@ -277,7 +628,7 @@ export function AssignmentResultView({ assignment, onBack }: { assignment: any, 
       try {
         const response = await fetch(`/api/grading/tasks/${taskId}/status?subject=math`, {
           headers: {
-            'Authorization': `Bearer ${token}`,
+            Authorization: `Bearer ${token}`,
           },
         });
 
@@ -287,7 +638,9 @@ export function AssignmentResultView({ assignment, onBack }: { assignment: any, 
 
           if (status.status === 'SUCCESS') {
             const result = status.result;
-            alert(`OCR + AI 채점 완료!\n처리된 손글씨 답안: ${result.processed_count}개\n업데이트된 세션: ${result.updated_sessions}개\n새로 생성된 세션: ${result.newly_graded_sessions}개`);
+            alert(
+              `OCR + AI 채점 완료!\n처리된 손글씨 답안: ${result.processed_count}개\n업데이트된 세션: ${result.updated_sessions}개\n새로 생성된 세션: ${result.newly_graded_sessions}개`,
+            );
             setIsProcessingAI(false);
             setTaskProgress(null);
             loadResults();
@@ -316,14 +669,20 @@ export function AssignmentResultView({ assignment, onBack }: { assignment: any, 
     try {
       setIsProcessingAI(true);
       const token = localStorage.getItem('access_token');
+      const subject = isEnglish ? 'english' : 'math';
 
-      const response = await fetch(`/api/grading/assignments/${assignment.id}/start-ai-grading?subject=math`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
+      // 영어의 경우 worksheet_id를 사용
+      const assignmentId = isEnglish ? assignment.worksheet_id : assignment.id;
+      const response = await fetch(
+        `/api/grading/assignments/${assignmentId}/start-ai-grading?subject=${subject}`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
         },
-      });
+      );
 
       if (response.ok) {
         const result = await response.json();
@@ -331,13 +690,28 @@ export function AssignmentResultView({ assignment, onBack }: { assignment: any, 
           // 태스크 상태 폴링 시작
           pollTaskStatus(result.task_id);
         } else {
-          alert(result.message);
+          alert(result.message || (isEnglish ? 'AI 채점이 완료되었습니다.' : '채점이 완료되었습니다.'));
           setIsProcessingAI(false);
+          loadResults(); // 결과 새로고침
         }
       } else {
-        const error = await response.json();
-        alert(`채점 처리 실패: ${error.detail || '알 수 없는 오류'}`);
-        setIsProcessingAI(false);
+        // 영어의 경우 프록시가 실패하면 직접 영어 서비스 호출
+        if (isEnglish) {
+          try {
+            await EnglishService.startEnglishAIGrading(assignment.worksheet_id);
+            alert('영어 AI 채점이 시작되었습니다.');
+            setIsProcessingAI(false);
+            loadResults();
+          } catch (englishError) {
+            console.error('Direct English AI grading failed:', englishError);
+            alert(`영어 AI 채점 실패: ${englishError instanceof Error ? englishError.message : '알 수 없는 오류'}`);
+            setIsProcessingAI(false);
+          }
+        } else {
+          const error = await response.json();
+          alert(`채점 처리 실패: ${error.detail || error.error || '알 수 없는 오류'}`);
+          setIsProcessingAI(false);
+        }
       }
     } catch (error) {
       console.error('AI grading error:', error);
@@ -350,16 +724,57 @@ export function AssignmentResultView({ assignment, onBack }: { assignment: any, 
     return (
       <div className="mx-auto p-6">
         {/* Header */}
-        <div className="flex items-center mb-6">
-          <button
-            onClick={handleBackToList}
-            className="mr-4 p-2 rounded-md text-gray-400 hover:text-gray-600 transition-colors duration-200"
-          >
-            <FaArrowLeft className="h-5 w-5" />
-          </button>
-          <h1 className="text-2xl font-bold text-gray-900">
-            학생 {assignment.selectedStudentName || selectedSession.graded_by} - 채점 결과
-          </h1>
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center">
+            <button
+              onClick={handleBackToList}
+              className="mr-4 p-2 rounded-md text-gray-400 hover:text-gray-600 transition-colors duration-200"
+            >
+              <FaArrowLeft className="h-5 w-5" />
+            </button>
+            <h1 className="text-2xl font-bold text-gray-900">
+              학생 {assignment.selectedStudentName || selectedSession.graded_by} - 채점 결과 편집
+            </h1>
+          </div>
+
+          {/* 편집 모드 토글 버튼 */}
+          <div className="flex items-center gap-2">
+            {isEditMode && (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsEditMode(false);
+                    setHasChanges(false);
+                  }}
+                  className="flex items-center gap-2"
+                >
+                  <FaTimes className="text-sm" />
+                  취소
+                </Button>
+                <Button
+                  onClick={saveGradingChanges}
+                  disabled={!hasChanges}
+                  className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"
+                >
+                  <FaSave className="text-sm" />
+                  저장
+                </Button>
+              </>
+            )}
+            <Button
+              variant={isEditMode ? "secondary" : "outline"}
+              onClick={handleEditModeToggle}
+              className={`flex items-center gap-2 ${
+                isEditMode
+                  ? "bg-orange-100 border-orange-300 text-orange-800"
+                  : "text-green-600 border-green-600 hover:bg-green-50"
+              }`}
+            >
+              <FaEdit className="text-sm" />
+              {isEditMode ? "편집 중" : "편집"}
+            </Button>
+          </div>
         </div>
 
         {sessionDetails ? (
@@ -374,25 +789,31 @@ export function AssignmentResultView({ assignment, onBack }: { assignment: any, 
                   <div className="text-center bg-gray-100 rounded-lg p-4">
                     <p className="text-sm text-gray-600 mb-2">점수</p>
                     <p className="text-2xl font-bold text-gray-900">
-                      {sessionDetails.total_score} 점
+                      {isEditMode
+                        ? calculateScoreFromCorrectness()
+                        : (sessionDetails.total_score !== undefined && sessionDetails.total_score !== null
+                          ? sessionDetails.total_score
+                          : 0)} 점
                     </p>
                   </div>
                   <div className="text-center bg-gray-100 rounded-lg p-4">
                     <p className="text-sm text-gray-600 mb-2">풀이시간</p>
-                    <p className="text-2xl font-bold text-gray-900">
-                      00:00:00
-                    </p>
+                    <p className="text-2xl font-bold text-gray-900">00:00:00</p>
                   </div>
                   <div className="text-center bg-gray-100 rounded-lg p-4">
                     <p className="text-sm text-gray-600 mb-2">맞춘 개수</p>
                     <p className="text-2xl font-bold text-gray-900">
-                      {sessionDetails.correct_count} 개
+                      {isEditMode
+                        ? Object.values(problemCorrectness).filter(correct => correct).length
+                        : (sessionDetails.correct_count || 0)} 개
                     </p>
                   </div>
                   <div className="text-center bg-gray-100 rounded-lg p-4">
                     <p className="text-sm text-gray-600 mb-2">틀린 개수</p>
                     <p className="text-2xl font-bold text-gray-900">
-                      {sessionDetails.total_problems - sessionDetails.correct_count} 개
+                      {isEditMode
+                        ? Object.values(problemCorrectness).filter(correct => !correct).length
+                        : ((sessionDetails.total_problems || 0) - (sessionDetails.correct_count || 0))} 개
                     </p>
                   </div>
                 </div>
@@ -403,11 +824,26 @@ export function AssignmentResultView({ assignment, onBack }: { assignment: any, 
             <div className="space-y-4">
               <h2 className="text-xl font-semibold mb-4">문제별 결과</h2>
 
-              {(isKorean ? problems : sessionDetails.problem_results || [])
-                .sort((a: any, b: any) => isKorean ? a.sequence_order - b.sequence_order : a.problem_id - b.problem_id)
+              {(isEnglish
+                ? (sessionDetails.worksheet_data?.questions || [])
+                : (isKorean || problems.length > 0 ? problems : sessionDetails.problem_results || []))
+                .sort((a: any, b: any) => {
+                  if (isKorean) return a.sequence_order - b.sequence_order;
+                  if (isEnglish) return (a.question_id || 0) - (b.question_id || 0);
+                  // 수학: problems 배열이 있으면 sequence_order, 없으면 problem_id
+                  if (problems.length > 0) return (a.sequence_order || 0) - (b.sequence_order || 0);
+                  return a.problem_id - b.problem_id;
+                })
                 .map((item: any, index: number) => {
-                  const problemId = isKorean ? item.id : item.problem_id;
-                  const problemNumber = isKorean ? item.sequence_order : index + 1;
+                  // 수학에서 problems 배열이 있으면 문제 정보 사용
+                  let problemItem = item;
+
+                  const problemId = isKorean ? item.id :
+                    (isEnglish ? item.question_id :
+                    (problems.length > 0 ? item.id : item.problem_id));
+                  const problemNumber = isKorean ? item.sequence_order :
+                    (isEnglish ? item.question_id :
+                    (problems.length > 0 ? (item.sequence_order || index + 1) : index + 1));
                   const answerStatus = getAnswerStatus(problemId.toString());
 
                   return (
@@ -436,7 +872,9 @@ export function AssignmentResultView({ assignment, onBack }: { assignment: any, 
                             {isKorean && item.source_text && (
                               <div className="bg-gray-50 p-4 rounded-lg mb-4">
                                 <div className="text-sm text-gray-600 mb-2">
-                                  {item.source_title && <span className="font-medium">{item.source_title}</span>}
+                                  {item.source_title && (
+                                    <span className="font-medium">{item.source_title}</span>
+                                  )}
                                   {item.source_author && <span> - {item.source_author}</span>}
                                 </div>
                                 <div className="text-sm leading-relaxed whitespace-pre-wrap">
@@ -450,8 +888,19 @@ export function AssignmentResultView({ assignment, onBack }: { assignment: any, 
                               <div className="text-gray-900 font-medium">
                                 {isKorean ? (
                                   <p>{item.question}</p>
+                                ) : isEnglish ? (
+                                  <div>
+                                    {item.question_text && <p>{item.question_text}</p>}
+                                    {item.passage && (
+                                      <div className="bg-gray-50 p-3 rounded mt-2 mb-2">
+                                        <p className="text-sm text-gray-700 whitespace-pre-wrap">{item.passage}</p>
+                                      </div>
+                                    )}
+                                  </div>
                                 ) : (
-                                  <LaTeXRenderer content={item.question || `문제 ${problemNumber}`} />
+                                  <LaTeXRenderer
+                                    content={problemItem.question || item.question || `문제 ${problemNumber}`}
+                                  />
                                 )}
                               </div>
                             </div>
@@ -461,16 +910,20 @@ export function AssignmentResultView({ assignment, onBack }: { assignment: any, 
                               <div className="space-y-2 mb-4">
                                 {item.choices.map((choice: string, choiceIndex: number) => {
                                   const choiceNumber = (choiceIndex + 1).toString();
-                                  const isStudentAnswer = answerStatus?.studentAnswer === choiceNumber;
-                                  const isCorrectAnswer = answerStatus?.correctAnswer === choiceNumber;
+                                  const isStudentAnswer = isEnglish
+                                    ? answerStatus?.studentAnswer === choice
+                                    : answerStatus?.studentAnswer === choiceNumber;
+                                  const isCorrectAnswer = isEnglish
+                                    ? answerStatus?.correctAnswer === choice
+                                    : answerStatus?.correctAnswer === choiceNumber;
 
-                                  let choiceStyle = "p-3 rounded-lg border ";
+                                  let choiceStyle = 'p-3 rounded-lg border ';
                                   if (isCorrectAnswer) {
-                                    choiceStyle += "bg-green-100 border-green-300 text-green-800";
+                                    choiceStyle += 'bg-green-100 border-green-300 text-green-800';
                                   } else if (isStudentAnswer && !isCorrectAnswer) {
-                                    choiceStyle += "bg-red-100 border-red-300 text-red-800";
+                                    choiceStyle += 'bg-red-100 border-red-300 text-red-800';
                                   } else {
-                                    choiceStyle += "bg-gray-50 border-gray-200";
+                                    choiceStyle += 'bg-gray-50 border-gray-200';
                                   }
 
                                   return (
@@ -479,14 +932,22 @@ export function AssignmentResultView({ assignment, onBack }: { assignment: any, 
                                         <div className="flex items-center gap-2">
                                           <span className="font-medium">{choiceNumber}.</span>
                                           {isStudentAnswer && (
-                                            <FaDotCircle className="text-blue-600 text-sm" title="학생이 선택한 답" />
+                                            <FaDotCircle
+                                              className="text-blue-600 text-sm"
+                                              title="학생이 선택한 답"
+                                            />
                                           )}
                                           {isCorrectAnswer && (
-                                            <FaCheckCircle className="text-green-600 text-sm" title="정답" />
+                                            <FaCheckCircle
+                                              className="text-green-600 text-sm"
+                                              title="정답"
+                                            />
                                           )}
                                         </div>
                                         <div className="flex-1">
                                           {isKorean ? (
+                                            <span>{choice}</span>
+                                          ) : isEnglish ? (
                                             <span>{choice}</span>
                                           ) : (
                                             <LaTeXRenderer content={choice || ''} />
@@ -499,7 +960,38 @@ export function AssignmentResultView({ assignment, onBack }: { assignment: any, 
                               </div>
                             )}
 
-                            {/* Answer Summary */}
+                            {/* 영어 단답형/서술형 답안 표시 */}
+                            {isEnglish && !item.choices && answerStatus && (
+                              <div className="bg-gray-50 p-4 rounded-lg mb-4">
+                                <div className="space-y-3">
+                                  <div>
+                                    <span className="text-sm text-gray-600 font-medium">학생 답안:</span>
+                                    <div className="mt-1 p-2 bg-white rounded border">
+                                      <p className="text-sm">{answerStatus.studentAnswer || '(답안 없음)'}</p>
+                                    </div>
+                                  </div>
+                                  {answerStatus.correctAnswer !== '(수동 채점 필요)' && (
+                                    <div>
+                                      <span className="text-sm text-gray-600 font-medium">예시 답안:</span>
+                                      <div className="mt-1 p-2 bg-green-50 rounded border border-green-200">
+                                        <p className="text-sm text-green-800">{answerStatus.correctAnswer}</p>
+                                      </div>
+                                    </div>
+                                  )}
+                                  {/* AI 피드백 표시 */}
+                                  {answerStatus.aiFeedback && (
+                                    <div>
+                                      <span className="text-sm text-gray-600 font-medium">AI 채점 피드백:</span>
+                                      <div className="mt-1 p-3 bg-blue-50 rounded border border-blue-200">
+                                        <p className="text-sm text-blue-800 whitespace-pre-wrap">{answerStatus.aiFeedback}</p>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Answer Summary and Edit Controls */}
                             {answerStatus && (
                               <div className="bg-gray-50 p-4 rounded-lg">
                                 <div className="flex items-center justify-between">
@@ -507,29 +999,59 @@ export function AssignmentResultView({ assignment, onBack }: { assignment: any, 
                                     <div className="flex items-center gap-2">
                                       <FaDotCircle className="text-blue-600" />
                                       <span className="text-sm">
-                                        학생 답안: <strong>
-                                          {isKorean ? `${answerStatus.studentAnswer}번` : answerStatus.studentAnswer}
+                                        학생 답안:{' '}
+                                        <strong>
+                                          {isKorean
+                                            ? `${answerStatus.studentAnswer}번`
+                                            : isEnglish
+                                              ? (answerStatus.studentAnswer || '(답안 없음)')
+                                              : answerStatus.studentAnswer}
                                         </strong>
                                       </span>
                                     </div>
                                     <div className="flex items-center gap-2">
                                       <FaCheckCircle className="text-green-600" />
                                       <span className="text-sm">
-                                        정답: <strong>
-                                          {isKorean ? `${answerStatus.correctAnswer}번` : answerStatus.correctAnswer}
+                                        {isEnglish && answerStatus.correctAnswer === '(수동 채점 필요)' ? '수동 채점:' : '정답:'}{' '}
+                                        <strong>
+                                          {isKorean
+                                            ? `${answerStatus.correctAnswer}번`
+                                            : answerStatus.correctAnswer}
                                         </strong>
                                       </span>
                                     </div>
                                   </div>
-                                  <Badge variant={answerStatus.isCorrect ? "default" : "destructive"}>
-                                    {answerStatus.isCorrect ? "정답" : "오답"}
-                                  </Badge>
+
+                                  {/* 편집 모드에서 정답/오답 토글 버튼 */}
+                                  {isEditMode ? (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => toggleProblemCorrectness(problemId.toString())}
+                                      className={`px-4 py-2 ${
+                                        (problemCorrectness[problemId.toString()] ?? answerStatus.isCorrect)
+                                          ? "bg-green-100 border-green-300 text-green-800 hover:bg-green-200"
+                                          : "bg-red-100 border-red-300 text-red-800 hover:bg-red-200"
+                                      }`}
+                                    >
+                                      {(problemCorrectness[problemId.toString()] ?? answerStatus.isCorrect)
+                                        ? "✓ 정답"
+                                        : "✗ 오답"}
+                                    </Button>
+                                  ) : (
+                                    <Badge
+                                      variant={answerStatus.isCorrect ? 'default' : 'destructive'}
+                                    >
+                                      {answerStatus.isCorrect ? '정답' : '오답'}
+                                    </Badge>
+                                  )}
                                 </div>
                               </div>
                             )}
 
                             {/* Explanation */}
-                            {((isKorean && item.explanation) || (!isKorean && answerStatus?.explanation)) && (
+                            {((isKorean && item.explanation) ||
+                              (!isKorean && answerStatus?.explanation)) && (
                               <div className="mt-4 p-4 bg-blue-50 rounded-lg">
                                 <h4 className="font-medium text-blue-900 mb-2">해설</h4>
                                 <div className="text-blue-800 text-sm">
@@ -549,14 +1071,6 @@ export function AssignmentResultView({ assignment, onBack }: { assignment: any, 
                 })}
             </div>
 
-            {/* Approval Button */}
-            {sessionDetails.status === 'pending_approval' && (
-              <div className="flex justify-end mt-6">
-                <Button onClick={() => handleApprove(sessionDetails.id)} className="bg-green-600 hover:bg-green-700 text-white">
-                  결과 승인하기
-                </Button>
-              </div>
-            )}
           </>
         ) : (
           <div className="flex items-center justify-center py-8">
@@ -571,26 +1085,29 @@ export function AssignmentResultView({ assignment, onBack }: { assignment: any, 
     <div className="p-6">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center">
-          <button onClick={onBack} className="mr-4 p-2 rounded-md text-gray-400 hover:text-gray-600 transition-colors duration-200">
+          <button
+            onClick={onBack}
+            className="mr-4 p-2 rounded-md text-gray-400 hover:text-gray-600 transition-colors duration-200"
+          >
             <FaArrowLeft className="h-5 w-5" />
           </button>
-          <h2 className="text-xl font-semibold">Results for {assignment.title}</h2>
         </div>
 
-        {/* OCR + AI 채점 버튼 (수학 과제만) */}
-        {!isKorean && (
+        {/* AI 채점 버튼 (수학 과제용만) */}
+        {!isKorean && !isEnglish && (
           <Button
             onClick={handleStartAIGrading}
             disabled={isProcessingAI}
             className="bg-blue-600 hover:bg-blue-700 text-white"
           >
             {isProcessingAI
-              ? (taskProgress?.info?.status || 'OCR 처리중...') +
+              ? (taskProgress?.info?.status || (isEnglish ? 'AI 채점 중...' : 'OCR 처리중...')) +
                 (taskProgress?.info?.current && taskProgress?.info?.total
                   ? ` (${taskProgress.info.current}%)`
                   : '')
-              : 'OCR + AI 채점 시작'
-            }
+              : isEnglish
+                ? 'AI 채점 시작 (단답형/서술형)'
+                : 'OCR + AI 채점 시작'}
           </Button>
         )}
       </div>
@@ -613,48 +1130,80 @@ export function AssignmentResultView({ assignment, onBack }: { assignment: any, 
             {results.map((result, index) => {
               const totalProblems = result.total_problems || 10;
               const scorePerProblem = 100 / totalProblems;
-              const finalScore = Math.round((result.correct_count || 0) * scorePerProblem);
+              const finalScore = result.total_score !== undefined && result.total_score !== null
+                ? result.total_score
+                : 0;
 
               // 학생 ID로 실제 학생 정보 찾기 - 다양한 타입 변환 시도
               const studentId = result.student_id || result.graded_by;
-              const student = studentId ? students.find(s =>
-                s.id === studentId ||           // 직접 비교
-                s.id === parseInt(String(studentId)) ||  // 숫자로 변환
-                s.id.toString() === String(studentId) || // 문자열로 변환
-                s.username === String(studentId) // username으로도 시도
-              ) : undefined;
+              const student = studentId
+                ? students.find(
+                    (s) =>
+                      s.id === studentId || // 직접 비교
+                      s.id === parseInt(String(studentId)) || // 숫자로 변환
+                      s.id.toString() === String(studentId) || // 문자열로 변환
+                      s.username === String(studentId), // username으로도 시도
+                  )
+                : undefined;
 
               // 실제 학생 데이터의 name을 우선 사용
-              const studentName = student?.name || result.student_name || result.graded_by || '알 수 없음';
+              const studentName =
+                student?.name || result.student_name || result.graded_by || '알 수 없음';
 
               // 학교/학년 정보는 실제 학생 데이터에서 가져오기
               const schoolInfo = student
-                ? `${student.school_level === 'middle' ? '중학교' : '고등학교'} ${student.grade}학년`
-                : (result.school !== '정보없음' && result.grade !== '정보없음'
-                   ? `${result.school} ${result.grade}`
-                   : '-');
+                ? `${student.school_level === 'middle' ? '중학교' : '고등학교'} ${
+                    student.grade
+                  }학년`
+                : result.school !== '정보없음' && result.grade !== '정보없음'
+                ? `${result.school} ${result.grade}`
+                : '-';
 
               return (
-                <TableRow key={result.id || result.grading_session_id || index} className="cursor-pointer hover:bg-gray-50" onClick={() => handleSessionClick(result)}>
+                <TableRow
+                  key={result.id || result.grading_session_id || index}
+                  className="cursor-pointer hover:bg-gray-50"
+                  onClick={() => handleSessionClick(result)}
+                >
                   <TableCell>{studentName}</TableCell>
                   <TableCell>{schoolInfo}</TableCell>
                   <TableCell>
-                    <Badge variant={result.status === '완료' || result.status === 'final' || result.status === 'approved' ? 'default' : 'secondary'}>
-                      {result.status === '완료' || result.status === 'final' || result.status === 'approved' ? '완료' : '미완료'}
+                    <Badge
+                      variant={
+                        result.status === '완료' ||
+                        result.status === 'final' ||
+                        result.status === 'approved'
+                          ? 'default'
+                          : 'secondary'
+                      }
+                    >
+                      {result.status === '완료' ||
+                      result.status === 'final' ||
+                      result.status === 'approved'
+                        ? '완료'
+                        : '미완료'}
                     </Badge>
                   </TableCell>
                   <TableCell>{finalScore}/100</TableCell>
-                  <TableCell>{result.submitted_at ? new Date(result.submitted_at).toLocaleString('ko-KR') : (result.graded_at ? new Date(result.graded_at).toLocaleString('ko-KR') : '-')}</TableCell>
                   <TableCell>
-                    {result.status === '완료' || result.status === 'final' || result.status === 'approved' ? (
+                    {result.submitted_at
+                      ? new Date(result.submitted_at).toLocaleString('ko-KR')
+                      : result.graded_at
+                      ? new Date(result.graded_at).toLocaleString('ko-KR')
+                      : '-'}
+                  </TableCell>
+                  <TableCell>
+                    {result.status === '완료' ||
+                    result.status === 'final' ||
+                    result.status === 'approved' ? (
                       <div className="flex gap-2">
                         <Button
                           variant="outline"
                           size="sm"
                           className="text-green-600 border-green-600 hover:bg-green-50"
-                          onClick={() => handleOpenTeacherGrading(result)}
+                          onClick={() => handleSessionClick(result)}
                         >
-                          결과
+                          편집
                         </Button>
                         <Button
                           variant="outline"
@@ -674,21 +1223,6 @@ export function AssignmentResultView({ assignment, onBack }: { assignment: any, 
             })}
           </TableBody>
         </Table>
-      )}
-
-      {/* Teacher Grading Modal */}
-      {selectedGradingSession && (
-        <TeacherGradingModal
-          isOpen={isTeacherGradingOpen}
-          onClose={() => {
-            setIsTeacherGradingOpen(false);
-            setSelectedGradingSession(null);
-          }}
-          gradingSessionId={selectedGradingSession.grading_session_id || selectedGradingSession.id || 0}
-          studentName={selectedGradingSession.student_name || '알 수 없음'}
-          onGradingSaved={handleGradingSaved}
-          isKorean={isKorean}
-        />
       )}
     </div>
   );

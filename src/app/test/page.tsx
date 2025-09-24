@@ -302,8 +302,8 @@ export default function TestPage() {
     console.log('📝 showStudentResult 현재값:', showStudentResult);
     setSelectedWorksheet(worksheet);
 
-    // Check if this is a completed assignment (completed 상태)
-    const isCompleted = (worksheet as any).status === 'completed';
+    // Check if this is a completed assignment (completed 또는 submitted 상태)
+    const isCompleted = (worksheet as any).status === 'completed' || (worksheet as any).status === 'submitted';
     console.log('📝 응시 완료 여부:', isCompleted);
 
     if (isCompleted && userProfile) {
@@ -595,6 +595,14 @@ export default function TestPage() {
           {/* 문제 풀이 화면 */}
           {(() => {
             if (showStudentResult && selectedWorksheet && userProfile) {
+              // Determine subject based on selectedSubject
+              let subject: 'korean' | 'math' | 'english' = 'korean';
+              if (selectedSubject === '수학') {
+                subject = 'math';
+              } else if (selectedSubject === '영어') {
+                subject = 'english';
+              }
+
               return (
                 <StudentResultView
                   assignmentId={selectedWorksheet.id}
@@ -602,6 +610,7 @@ export default function TestPage() {
                   assignmentTitle={selectedWorksheet.title}
                   onBack={handleBackFromResult}
                   problems={worksheetProblems}
+                  subject={subject}
                 />
               );
             }
@@ -617,16 +626,30 @@ export default function TestPage() {
                 <div className="text-gray-500 text-sm mb-4">
                   문제 수: {worksheetProblems.length}개 | 제한 시간: 60분
                 </div>
-                <div className="text-gray-500 text-sm mb-6">
-                  "과제 시작하기" 버튼을 눌러 과제를 시작하세요
-                </div>
-                {worksheetProblems.length > 0 && (
+                {((selectedWorksheet as any).status === 'completed' || (selectedWorksheet as any).status === 'submitted') ? (
+                  <div className="text-orange-600 text-sm mb-6">
+                    이미 완료된 과제입니다. 결과를 확인하려면 과제를 다시 클릭하세요.
+                  </div>
+                ) : (
+                  <div className="text-gray-500 text-sm mb-6">
+                    "과제 시작하기" 버튼을 눌러 과제를 시작하세요
+                  </div>
+                )}
+                {worksheetProblems.length > 0 && (selectedWorksheet as any).status !== 'completed' && (selectedWorksheet as any).status !== 'submitted' && (
                   <Button
                     onClick={startTest}
                     disabled={isLoading}
                     className="bg-[#0072CE] hover:bg-[#0056A3] text-white"
                   >
                     {isLoading ? '시작 중...' : '문제 풀기'}
+                  </Button>
+                )}
+                {((selectedWorksheet as any).status === 'completed' || (selectedWorksheet as any).status === 'submitted') && (
+                  <Button
+                    onClick={() => handleWorksheetSelect(selectedWorksheet)}
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    결과 보기
                   </Button>
                 )}
               </div>

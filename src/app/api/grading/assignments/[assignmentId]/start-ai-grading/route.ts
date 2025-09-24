@@ -15,9 +15,12 @@ export async function POST(
     if (subject === 'math') {
       targetUrl = 'http://localhost:8001';
       endpoint = `/api/grading/assignments/${assignmentId}/start-ai-grading`;
+    } else if (subject === 'english') {
+      targetUrl = 'http://localhost:8002';
+      endpoint = `/api/english/worksheets/${assignmentId}/start-grading`;
     } else {
       return NextResponse.json(
-        { error: 'AI grading only supported for math assignments' },
+        { error: 'AI grading only supported for math and english assignments' },
         { status: 400 }
       );
     }
