@@ -99,6 +99,11 @@ export function AssignmentList({ assignments, onSelectAssignment, onDeployAssign
     }
   }, [assignments]);
 
+  // 과목 변경 시 결과 초기화
+  useEffect(() => {
+    setAssignmentResults({});
+  }, [subject]);
+
   // 채점 편집 모달 열기
   const handleOpenTeacherGrading = (assignment: any, student: any, studentSubmission: any) => {
     setSelectedGradingSession({
@@ -145,7 +150,7 @@ export function AssignmentList({ assignments, onSelectAssignment, onDeployAssign
                           </div>
                           <div className="flex items-center gap-1">
                             <Users className="w-4 h-4" />
-                            <span>{results.length}명 제출</span>
+                            <span>{results.length}명 배포</span>
                           </div>
                           <div className="flex items-center gap-1">
                             <IoBookOutline className="w-4 h-4" />
