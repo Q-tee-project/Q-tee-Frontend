@@ -185,15 +185,16 @@ export interface EnglishRegenerationRequest {
 export interface EnglishRegenerationResponse {
   status: 'success' | 'error';
   message: string;
-  regenerated_question?: EnglishQuestion;
-  regenerated_passage?: EnglishPassage;
-  regenerated_related_questions?: EnglishQuestion[]; // v2.0 새로 추가
+  regenerated_passage?: EnglishPassage | null;   // 지문이 있으면 항상 포함
+  regenerated_questions?: EnglishQuestion[] | null; // 모든 재생성된 문제를 담는 통합 배열
+  warnings?: string[] | null;
+  failed_questions?: any[] | null;
   error_details?: string;
 }
 
 // 데이터 기반 재생성 요청을 위한 새로운 타입
 export interface EnglishDataRegenerationRequest {
-  question_data: EnglishQuestion;
+  questions_data: EnglishQuestion[]; // 기본 문제와 연관 문제를 모두 포함하는 배열
   passage_data?: EnglishPassage;
   regeneration_request: EnglishRegenerationRequest;
 }

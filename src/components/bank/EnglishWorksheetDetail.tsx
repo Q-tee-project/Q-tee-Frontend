@@ -15,6 +15,125 @@ import { EnglishService } from '@/services/englishService';
 import { PassageRenderer } from './PassageRenderer';
 import { QuestionRenderer } from './QuestionRenderer';
 
+// english.ts 타입 정의에 따라 데이터를 정제하는 헬퍼 함수
+const sanitizeQuestionData = (question: EnglishQuestion): EnglishQuestion => ({
+  question_id: question.question_id,
+  question_text: question.question_text,
+  question_type: question.question_type,
+  question_subject: question.question_subject,
+  question_difficulty: question.question_difficulty,
+  question_detail_type: question.question_detail_type,
+  question_passage_id: question.question_passage_id,
+  example_content: question.example_content,
+  example_original_content: question.example_original_content,
+  example_korean_translation: question.example_korean_translation,
+  question_choices: question.question_choices,
+  correct_answer: question.correct_answer,
+  explanation: question.explanation,
+  learning_point: question.learning_point,
+});
+
+const sanitizePassageData = (passage: EnglishPassage): EnglishPassage => ({
+  passage_id: passage.passage_id,
+  passage_type: passage.passage_type,
+  passage_content: passage.passage_content,
+  original_content: passage.original_content,
+  korean_translation: passage.korean_translation,
+  related_questions: passage.related_questions,
+});
+
+const RegenerationPreviewModal: React.FC<RegenerationPreviewModalProps> = ({
+  isOpen,
+  onClose,
+  onApply,
+  previewData,
+}) => {
+  const [showAnswers, setShowAnswers] = useState(false);
+
+  if (!isOpen || !previewData) {
+    return null;
+  }
+
+  const { original, regenerated } = previewData;
+
+  // "재생성된 결과" 컬럼에 표시할 콘텐츠 결정
+  const regeneratedPassageToShow = regenerated.passage || original.passage;
+  const mainRegeneratedQuestion = regenerated.question;
+  // 연관 문제가 재생성되었다면 해당 데이터를, 아니라면 원본 연관 문제 데이터를 사용
+  const relatedRegeneratedQuestions = regenerated.relatedQuestions || original.relatedQuestions;
+
+  const originalQuestions = [original.question, ...(original.relatedQuestions || [])].filter(Boolean) as EnglishQuestion[];
+  const regeneratedQuestions = [mainRegeneratedQuestion, ...(relatedRegeneratedQuestions || [])].filter(Boolean) as EnglishQuestion[];
+
+  const renderContent = (
+    title: string,
+    passage: EnglishPassage | null | undefined,
+    questions: EnglishQuestion[],
+    isOriginal: boolean
+  ) => (
+    <div className="flex flex-col gap-4">
+      <h3 className="text-lg font-semibold text-center sticky top-0 bg-white py-2 z-10 border-b">{title}</h3>
+      <div className="p-4 border rounded-lg bg-gray-50/50 flex-1">
+        {passage && (
+          <PassageRenderer
+            passage={passage}
+            showAnswerSheet={showAnswers}
+            // 미리보기에서는 편집 비활성화
+            editingPassageId={null}
+            editFormData={{}}
+            isLoading={false}
+            onStartEdit={() => {}}
+            onSave={() => {}}
+            onCancelEdit={() => {}}
+            onEditFormDataChange={() => {}}
+          />
+        )}
+        {questions.map((q, index) => (
+          <QuestionRenderer
+            key={isOriginal ? `orig-${q.question_id}` : `regen-${q.question_id}`}
+            question={q}
+            questionIndex={index}
+            showAnswerSheet={showAnswers}
+            // 미리보기에서는 편집 및 재생성 비활성화
+            editingQuestionId={null}
+            editFormData={{}}
+            isLoading={false}
+            showRegenerateButtons={false}
+            onStartEdit={() => {}}
+            onSave={() => {}}
+            onCancelEdit={() => {}}
+            onEditFormDataChange={() => {}}
+            onOpenRegenerateModal={() => {}}
+          />
+        ))}
+      </div>
+    </div>
+  );
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-7xl w-full max-h-[90vh] flex flex-col">
+        <DialogHeader className="flex-row items-center justify-between pr-6">
+          <DialogTitle>재생성 결과 비교</DialogTitle>
+          <div className="flex items-center gap-4">
+            <Button variant="outline" onClick={() => setShowAnswers(!showAnswers)}>
+              {showAnswers ? '문제 보기' : '정답/해설 보기'}
+            </Button>
+          </div>
+        </DialogHeader>
+        <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 overflow-y-auto p-1 border-t">
+          {renderContent("원본", original.passage, originalQuestions, true)}
+          {renderContent("재생성된 결과", regeneratedPassageToShow, regeneratedQuestions, false)}
+        </div>
+        <DialogFooter className="pt-4 border-t">
+          <Button variant="outline" onClick={onClose}>취소</Button>
+          <Button onClick={onApply} className="bg-green-600 hover:bg-green-700">적용하기</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 interface EnglishWorksheetDetailProps {
   selectedWorksheet: EnglishWorksheetData | null;
   worksheetProblems: EnglishWorksheetData;
@@ -89,6 +208,13 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
   const [selectedQuestionForRegeneration, setSelectedQuestionForRegeneration] = useState<EnglishQuestion | null>(null);
   const [regenerationFormData, setRegenerationFormData] = useState<Partial<EnglishRegenerationRequest>>({});
   const [isRegenerating, setIsRegenerating] = useState(false);
+
+  // 재생성 결과 비교를 위한 상태
+  const [previewData, setPreviewData] = useState<{
+    original: { question: EnglishQuestion; passage?: EnglishPassage | null; relatedQuestions?: EnglishQuestion[] };
+    regenerated: { question?: EnglishQuestion; passage?: EnglishPassage | null; relatedQuestions?: EnglishQuestion[] };
+  } | null>(null);
+  const [isRegenerationPreviewModalOpen, setIsRegenerationPreviewModalOpen] = useState(false);
 
   // 문제 편집 시작
   const handleStartEditQuestion = (question: any) => {
@@ -301,65 +427,70 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
 
     setIsRegenerating(true);
 
-    // 로딩 메시지 결정
-    const isMultipleRegeneration = regenerationFormData.regenerate_related_questions &&
-      regenerationInfo?.related_questions?.length && regenerationInfo?.related_questions?.length > 0;
-
     try {
-      if (mode === 'generation') {
-        // 생성 모드: 데이터 기반 재생성 API 사용
-        const currentPassage = selectedQuestionForRegeneration.question_passage_id ?
-          passages.find((p: EnglishPassage) => p.passage_id === selectedQuestionForRegeneration.question_passage_id) : null;
+      let response: EnglishRegenerationResponse | null = null;
 
-        const response = await EnglishService.regenerateEnglishQuestionFromData(
-          selectedQuestionForRegeneration,
-          currentPassage,
+      if (mode === 'generation') {
+        const currentPassage = selectedQuestionForRegeneration.question_passage_id
+          ? passages.find((p: EnglishPassage) => p.passage_id === selectedQuestionForRegeneration.question_passage_id)
+          : null;
+
+        let questionsToSend = [selectedQuestionForRegeneration];
+        // '지문 유지'가 해제되었을 때만 연관 문제들을 포함
+        if (regenerationFormData.keep_passage === false) {
+          const relatedQuestions = currentPassage
+            ? questions.filter(q => q.question_passage_id === currentPassage.passage_id && q.question_id !== selectedQuestionForRegeneration.question_id)
+            : [];
+          questionsToSend.push(...relatedQuestions);
+        }
+
+        const sanitizedQuestions = questionsToSend.map(q => sanitizeQuestionData(q));
+        const sanitizedPassage = currentPassage ? sanitizePassageData(currentPassage) : null;
+
+        response = await EnglishService.regenerateEnglishQuestionFromData(
+          sanitizedQuestions,
+          sanitizedPassage,
           regenerationFormData as EnglishRegenerationRequest
         );
-
-        if (response.status === 'success') {
-          // 성공 메시지 개선
-          if (response.regenerated_related_questions && response.regenerated_related_questions.length > 0) {
-            alert(`지문과 ${response.regenerated_related_questions.length + 1}개 문제가 함께 재생성되었습니다!`);
-          } else {
-            alert('문제가 성공적으로 재생성되었습니다!');
-          }
-
-          // 생성 모드에서는 로컬 상태를 업데이트
-          if (onUpdateQuestion) {
-            onUpdateQuestion(
-              selectedQuestionForRegeneration.question_id,
-              response.regenerated_question,
-              response.regenerated_passage,
-              response.regenerated_related_questions
-            );
-          }
-
-          setIsRegenerateModalOpen(false);
-        } else {
-          alert(`재생성 실패: ${response.message}`);
-        }
-      } else {
-        // 뱅크 모드: 기존 DB 기반 재생성 API 사용
-        const response = await EnglishService.regenerateEnglishQuestion(
+      } else { // bank mode
+        response = await EnglishService.regenerateEnglishQuestion(
           selectedWorksheet.worksheet_id as number,
           selectedQuestionForRegeneration.question_id,
           regenerationFormData as EnglishRegenerationRequest
         );
+      }
 
-        if (response.status === 'success') {
-          // 성공 메시지 개선
-          if (response.regenerated_related_questions && response.regenerated_related_questions.length > 0) {
-            alert(`지문과 ${response.regenerated_related_questions.length + 1}개 문제가 함께 재생성되었습니다!`);
-          } else {
-            alert('문제가 성공적으로 재생성되었습니다!');
+      if (response && response.status === 'success') {
+        const originalQuestion = selectedQuestionForRegeneration;
+        const originalPassage = originalQuestion.question_passage_id
+          ? passages.find(p => p.passage_id === originalQuestion.question_passage_id)
+          : null;
+        const originalRelatedQuestions = originalPassage
+          ? questions.filter(q => q.question_passage_id === originalPassage.passage_id && q.question_id !== originalQuestion.question_id)
+          : [];
+
+        // regenerated_questions 배열에서 메인 문제와 연관 문제 분리
+        const regeneratedQuestions = response.regenerated_questions || [];
+        const mainRegeneratedQuestion = regeneratedQuestions.find((q: EnglishQuestion) => q.question_id === originalQuestion.question_id) || regeneratedQuestions[0];
+        const relatedRegeneratedQuestions = regeneratedQuestions.filter((q: EnglishQuestion) => q.question_id !== originalQuestion.question_id);
+
+        setPreviewData({
+          original: {
+            question: originalQuestion,
+            passage: originalPassage,
+            relatedQuestions: originalRelatedQuestions
+          },
+          regenerated: {
+            question: mainRegeneratedQuestion,
+            passage: response.regenerated_passage,
+            relatedQuestions: relatedRegeneratedQuestions
           }
+        });
 
-          setIsRegenerateModalOpen(false);
-          onRefresh(); // 데이터 새로고침
-        } else {
-          alert(`재생성 실패: ${response.message}`);
-        }
+        setIsRegenerationPreviewModalOpen(true);
+        setIsRegenerateModalOpen(false); // Close the options modal
+      } else {
+        alert(`재생성 실패: ${response?.message || '알 수 없는 오류'}`);
       }
     } catch (error: any) {
       alert(`재생성 실패: ${error.message}`);
@@ -595,7 +726,7 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
 
       {/* 재생성 모달 */}
       <Dialog open={isRegenerateModalOpen} onOpenChange={setIsRegenerateModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <RotateCcw className="w-5 h-5 text-green-600" />
@@ -604,24 +735,16 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
           </DialogHeader>
 
           {regenerationInfo && (
-            <div className="space-y-6">
+            <div className="space-y-6 pt-4">
               {/* 지문 연계 경고 */}
               {regenerationInfo.has_passage && regenerationInfo.related_questions?.length && regenerationInfo.related_questions.length > 0 && (
                 <div className="border border-blue-200 bg-blue-50 rounded-lg p-4">
                   <div className="flex items-start gap-3">
                     <AlertTriangle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
                     <div className="text-blue-800">
-                      <div className="font-semibold mb-2 text-blue-900">📝 지문 연계 문제 안내</div>
+                      <div className="font-semibold mb-1 text-blue-900">📝 지문 연계 문제 안내</div>
                       <div className="text-sm">
-                        이 문제는 지문에 연결된 다른 문제들이 있습니다:
-                        <ul className="mt-1 ml-4 list-disc">
-                          {regenerationInfo.related_questions.map(q => (
-                            <li key={q.id}>문제 {q.id}: {q.text.substring(0, 30)}...</li>
-                          ))}
-                        </ul>
-                        <div className="mt-2 font-medium">
-                          💡 지문을 변경하려면 "지문과 모든 연계 문제 함께 재생성" 옵션을 선택하세요.
-                        </div>
+                        이 문제는 지문에 연결된 다른 문제들이 있습니다. '지문 유지'를 체크 해제하면 지문과 모든 연관 문제가 함께 변경될 수 있습니다.
                       </div>
                     </div>
                   </div>
@@ -631,7 +754,7 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
               {/* 피드백 입력 */}
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700">
-                  어떻게 수정하고 싶으신가요? *
+                  어떻게 수정하고 싶으신가요? (필수)
                 </label>
                 <Textarea
                   value={regenerationFormData.feedback || ''}
@@ -645,146 +768,41 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
                 />
               </div>
 
-              {/* 유지/변경 옵션 */}
-              <div className="space-y-4">
-                <div className="text-sm font-medium text-gray-700">유지할 조건들</div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="keep_difficulty"
-                      checked={regenerationFormData.keep_difficulty || false}
-                      onCheckedChange={(checked) => setRegenerationFormData({
-                        ...regenerationFormData,
-                        keep_difficulty: checked as boolean
-                      })}
-                    />
-                    <label htmlFor="keep_difficulty" className="text-sm">
-                      난이도 유지 (현재: {regenerationInfo.question.question_difficulty})
-                    </label>
-                  </div>
-
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="keep_subject"
-                      checked={regenerationFormData.keep_subject || false}
-                      onCheckedChange={(checked) => setRegenerationFormData({
-                        ...regenerationFormData,
-                        keep_subject: checked as boolean
-                      })}
-                    />
-                    <label htmlFor="keep_subject" className="text-sm">
-                      영역 유지 (현재: {regenerationInfo.question.question_subject})
-                    </label>
-                  </div>
-
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="keep_question_type"
-                      checked={regenerationFormData.keep_question_type || false}
-                      onCheckedChange={(checked) => setRegenerationFormData({
-                        ...regenerationFormData,
-                        keep_question_type: checked as boolean
-                      })}
-                    />
-                    <label htmlFor="keep_question_type" className="text-sm">
-                      문제 유형 유지 (현재: {regenerationInfo.question.question_type})
-                    </label>
-                  </div>
-
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="keep_detail_type"
-                      checked={regenerationFormData.keep_detail_type || false}
-                      onCheckedChange={(checked) => setRegenerationFormData({
-                        ...regenerationFormData,
-                        keep_detail_type: checked as boolean
-                      })}
-                    />
-                    <label htmlFor="keep_detail_type" className="text-sm">
-                      세부 영역 유지 (현재: {regenerationInfo.question.question_detail_type})
-                    </label>
-                  </div>
-
-                  {regenerationInfo.has_passage && (
-                    <div className="flex items-center space-x-2 col-span-2">
+              {/* 지문 옵션 */}
+              <div className="space-y-2">
+                <div className="text-sm font-medium text-gray-700">지문 옵션</div>
+                {regenerationInfo.has_passage ? (
+                  <div className="p-3 rounded-md border bg-gray-50">
+                    <div className="flex items-center space-x-2">
                       <Checkbox
                         id="keep_passage"
-                        checked={regenerationFormData.keep_passage || false}
+                        checked={regenerationFormData.keep_passage !== false}
                         onCheckedChange={(checked) => setRegenerationFormData({
                           ...regenerationFormData,
-                          keep_passage: checked as boolean
+                          keep_passage: checked as boolean,
                         })}
                       />
-                      <label htmlFor="keep_passage" className="text-sm">
-                        지문 유지 (현재 지문을 그대로 사용)
+                      <label htmlFor="keep_passage" className="text-sm font-medium">
+                        지문 유지
                       </label>
                     </div>
-                  )}
-
-                  {/* 연계 문제 재생성 옵션 (지문이 있고 연계 문제가 있을 때만 표시) */}
-                  {regenerationInfo.has_passage && regenerationInfo.related_questions?.length && regenerationInfo.related_questions.length > 0 && !regenerationFormData.keep_passage && (
-                    <div className="flex items-center space-x-2 col-span-2">
-                      <Checkbox
-                        id="regenerate_related_questions"
-                        checked={regenerationFormData.regenerate_related_questions || false}
-                        onCheckedChange={(checked) => setRegenerationFormData({
-                          ...regenerationFormData,
-                          regenerate_related_questions: checked as boolean
-                        })}
-                      />
-                      <label htmlFor="regenerate_related_questions" className="text-sm">
-                        지문과 모든 연계 문제 함께 재생성 ({regenerationInfo.related_questions?.length && regenerationInfo.related_questions.length + 1}개 문제)
-                      </label>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* 변경할 값들 (조건부 표시) */}
-              <div className="space-y-4">
-                {!regenerationFormData.keep_difficulty && (
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">변경할 난이도</label>
-                    <Select
-                      value={regenerationFormData.target_difficulty || ''}
-                      onValueChange={(value) => setRegenerationFormData({
-                        ...regenerationFormData,
-                        target_difficulty: value
-                      })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="난이도 선택" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="하">하</SelectItem>
-                        <SelectItem value="중">중</SelectItem>
-                        <SelectItem value="상">상</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    {/* '지문 유지' 해제 시 경고 메시지 */}
+                    {!regenerationFormData.keep_passage && regenerationInfo.related_questions && regenerationInfo.related_questions.length > 0 && (
+                      <div className="border border-yellow-300 bg-yellow-50 rounded-lg p-3 mt-3">
+                        <div className="flex items-start gap-3">
+                          <AlertTriangle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                          <div className="text-yellow-800">
+                            <div className="font-semibold text-yellow-900">주의!</div>
+                            <p className="text-sm mt-1">
+                              지문이 변경되므로, 이 지문과 연결된 다른 모든 문제({regenerationInfo.related_questions.length}개)도 함께 재생성됩니다.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )}
-
-                {!regenerationFormData.keep_subject && (
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">변경할 영역</label>
-                    <Select
-                      value={regenerationFormData.target_subject || ''}
-                      onValueChange={(value) => setRegenerationFormData({
-                        ...regenerationFormData,
-                        target_subject: value
-                      })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="영역 선택" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="독해">독해</SelectItem>
-                        <SelectItem value="문법">문법</SelectItem>
-                        <SelectItem value="어휘">어휘</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                ) : (
+                  <p className="text-sm text-gray-500 p-3 rounded-md border bg-gray-50">이 문제는 지문이 없습니다.</p>
                 )}
               </div>
 
@@ -804,10 +822,14 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
                   className="w-full"
                 />
               </div>
+
+              <div className="text-xs text-gray-500 bg-slate-50 p-3 rounded-md border">
+                <strong>참고:</strong> 문제의 난이도, 영역, 유형 등은 변경되지 않고 현재 값으로 유지됩니다.
+              </div>
             </div>
           )}
 
-          <DialogFooter>
+          <DialogFooter className="mt-6">
             <Button
               variant="outline"
               onClick={handleCloseRegenerateModal}
@@ -820,19 +842,35 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
               disabled={isRegenerating || !regenerationFormData.feedback}
               className="bg-green-600 hover:bg-green-700"
             >
-              {isRegenerating ? (
-                regenerationFormData.regenerate_related_questions && regenerationInfo?.related_questions?.length && regenerationInfo?.related_questions?.length > 0
-                  ? '지문과 연계 문제들을 함께 생성 중...'
-                  : '문제를 재생성 중...'
-              ) : (
-                regenerationFormData.regenerate_related_questions && regenerationInfo?.related_questions?.length && regenerationInfo?.related_questions?.length > 0
-                  ? `지문과 ${regenerationInfo?.related_questions?.length + 1}개 문제 재생성`
-                  : '문제 재생성'
-              )}
+              {isRegenerating ? '문제를 재생성 중...' : '문제 재생성'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* 재생성 결과 비교 모달 */}
+      <RegenerationPreviewModal
+        isOpen={isRegenerationPreviewModalOpen}
+        onClose={() => setIsRegenerationPreviewModalOpen(false)}
+        onApply={() => {
+          if (!previewData) return;
+
+          if (mode === 'generation' && onUpdateQuestion) {
+            onUpdateQuestion(
+              previewData.original.question.question_id,
+              previewData.regenerated.question,
+              previewData.regenerated.passage,
+              previewData.regenerated.relatedQuestions
+            );
+          } else if (mode === 'bank') {
+            onRefresh();
+          }
+
+          setIsRegenerationPreviewModalOpen(false);
+          setPreviewData(null);
+          alert('재생성된 내용이 적용되었습니다.');
+        }}
+        previewData={previewData}
+      />
     </ContentWrapper>
   );
 };

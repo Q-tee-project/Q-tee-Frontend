@@ -64,7 +64,7 @@ export const PassageRenderer: React.FC<PassageRendererProps> = ({
       <CardContent className="p-6">
         <div className="flex justify-between items-center mb-3">
           <div className="text-sm font-semibold text-blue-800">
-            [문제 {passage.related_questions && passage.related_questions.length > 1 ? `${passage.related_questions[0]}-${passage.related_questions[passage.related_questions.length - 1]}` : passage.related_questions[0] || ''}]
+            [문제 {passage.related_questions && passage.related_questions.length > 1 ? `${passage.related_questions[0]}-${passage.related_questions[passage.related_questions.length - 1]}` : passage.related_questions?.[0] || ''}]
           </div>
           <div className="flex gap-2">
             {editingPassageId === passage.passage_id ? (

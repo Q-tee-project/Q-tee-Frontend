@@ -366,12 +366,14 @@ export class EnglishService {
       throw new Error(errorMessage);
     }
 
-    return response.json();
+    const result = await response.json();
+    console.log('영어 문제 재생성 응답 (ID 기반):', result);
+    return result;
   }
 
   // 영어 문제 재생성 (데이터 기반) - v2.0 API
   static async regenerateEnglishQuestionFromData(
-    questionData: any,
+    questionsData: EnglishQuestion[],
     passageData: any | null,
     regenerationRequest: EnglishRegenerationRequest,
   ): Promise<EnglishRegenerationResponse> {
@@ -383,7 +385,7 @@ export class EnglishService {
     }
 
     const requestBody: EnglishDataRegenerationRequest = {
-      question_data: questionData,
+      questions_data: questionsData,
       passage_data: passageData,
       regeneration_request: regenerationRequest,
     };
@@ -410,7 +412,9 @@ export class EnglishService {
       throw new Error(errorMessage);
     }
 
-    return response.json();
+    const result = await response.json();
+    console.log('영어 지문/문제 재생성 응답 (데이터 기반):', result);
+    return result;
   }
 
   // 영어 서비스 헬스체크
