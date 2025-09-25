@@ -115,10 +115,22 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
   // 지문 편집 시작
   const handleStartEditPassage = (passage: any) => {
     setEditingPassageId(passage.passage_id);
+
+    // 깊은 복사로 데이터 준비
+    const deepCopy = (obj: any) => obj ? JSON.parse(JSON.stringify(obj)) : {};
+
     setEditFormData({
-      passage_content: JSON.parse(JSON.stringify(passage.passage_content)),
-      original_content: JSON.parse(JSON.stringify(passage.original_content)),
-      korean_translation: JSON.parse(JSON.stringify(passage.korean_translation)),
+      passage_content: deepCopy(passage.passage_content),
+      original_content: deepCopy(passage.original_content),
+      korean_translation: deepCopy(passage.korean_translation),
+    });
+
+    console.log('📝 지문 편집 시작:', {
+      passageId: passage.passage_id,
+      passageContent: passage.passage_content,
+      hasTitle: !!passage.passage_content?.title,
+      hasParagraphs: !!passage.passage_content?.paragraphs,
+      hasContent: !!passage.passage_content?.content,
     });
   };
 
@@ -377,9 +389,36 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
   const questions = (worksheetProblems?.questions || []).sort((a: EnglishQuestion, b: EnglishQuestion) => a.question_id - b.question_id);
   const passages: EnglishPassage[] = worksheetProblems?.passages || [];
 
+  // 디버깅: 지문 데이터 확인
+  console.log('📚 지문 데이터 확인:', {
+    worksheetProblems: worksheetProblems,
+    passagesCount: passages.length,
+    passages: passages,
+    questionsWithPassage: questions.filter(q => q.question_passage_id).length,
+  });
+
+  // 각 문제별 지문 연결 상태 확인
+  questions.forEach((question, index) => {
+    const passage = question.question_passage_id ?
+      passages.find((p: EnglishPassage) => p.passage_id === question.question_passage_id) : null;
+    console.log(`📝 문제 ${index + 1} (ID: ${question.question_id}):`, {
+      question_passage_id: question.question_passage_id,
+      passageFound: !!passage,
+      passageId: passage?.passage_id,
+    });
+  });
+
+  const ContentWrapper = mode === 'generation' ? 'div' : Card;
+  const HeaderWrapper = mode === 'generation' ? 'div' : CardHeader;
+  const BodyWrapper = mode === 'generation' ? 'div' : CardContent;
+
   return (
-    <Card className="w-2/3 flex flex-col shadow-sm h-[calc(100vh-200px)]">
-      <CardHeader className="flex flex-row items-center py-6 px-6 border-b border-gray-100">
+    <ContentWrapper className={mode === 'generation'
+      ? "flex-1 flex flex-col overflow-hidden"
+      : "flex-1 flex flex-col shadow-sm h-[calc(100vh-200px)]"}>
+      <HeaderWrapper className={mode === 'generation'
+        ? "flex flex-row items-center py-4 px-6 border-b border-gray-100 flex-shrink-0"
+        : "flex flex-row items-center py-6 px-6 border-b border-gray-100 flex-shrink-0"}>
         <div className="flex-1"></div>
         <div className="flex items-center justify-center gap-3">
           {isEditingTitle ? (
@@ -481,16 +520,20 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
             </>
           )}
         </div>
-      </CardHeader>
+      </HeaderWrapper>
 
-      <CardContent className="flex-1 p-0 overflow-hidden">
-        <ScrollArea style={{ height: 'calc(100vh - 350px)' }} className="w-full">
+      <BodyWrapper className="flex-1 flex flex-col p-0 overflow-hidden">
+        <ScrollArea style={{
+          height: mode === 'generation'
+            ? 'calc(100vh - 360px)'
+            : 'calc(100vh - 280px)'
+        }} className="w-full">
           {questions.length === 0 ? (
             <div className="text-center py-20 text-gray-400">
               영어 문제 데이터를 불러오는 중입니다...
             </div>
           ) : (
-            <div className="p-6 space-y-8">
+            <div className="p-6 space-y-6">
               {questions.map((question: EnglishQuestion, questionIndex: number) => {
                 // 연관된 지문 찾기
                 const passage = question.question_passage_id ?
@@ -500,6 +543,15 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
                 const prevQuestion = questionIndex > 0 ? questions[questionIndex - 1] : null;
                 const shouldShowPassage = passage &&
                   (!prevQuestion || prevQuestion.question_passage_id !== question.question_passage_id);
+
+                // 지문 렌더링 디버깅
+                console.log(`🎯 문제 ${questionIndex + 1} 지문 렌더링 조건:`, {
+                  hasPassage: !!passage,
+                  shouldShowPassage: shouldShowPassage,
+                  passageId: passage?.passage_id,
+                  prevQuestionPassageId: prevQuestion?.question_passage_id,
+                  currentQuestionPassageId: question.question_passage_id,
+                });
 
                 return (
                   <div key={question.question_id}>
@@ -539,7 +591,7 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
             </div>
           )}
         </ScrollArea>
-      </CardContent>
+      </BodyWrapper>
 
       {/* 재생성 모달 */}
       <Dialog open={isRegenerateModalOpen} onOpenChange={setIsRegenerateModalOpen}>
@@ -781,6 +833,6 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Card>
+    </ContentWrapper>
   );
 };

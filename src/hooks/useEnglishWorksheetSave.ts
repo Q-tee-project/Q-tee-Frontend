@@ -29,6 +29,8 @@ export const useEnglishWorksheetSave = () => {
       example_original_content: question.example_original_content || '',
       example_korean_translation: question.example_korean_translation || '',
       correct_answer: String(question.correct_answer), // 모든 답안을 문자열로 변환
+      // difficulty 필드가 있으면 question_difficulty로 변환 (백엔드 스키마와 맞춤)
+      question_difficulty: (question as any).difficulty || question.question_difficulty || '중',
     })) || [];
 
     return {
@@ -68,6 +70,17 @@ export const useEnglishWorksheetSave = () => {
       console.log('💾 원본 워크시트 데이터:', worksheetData);
       console.log('💾 변환된 저장 데이터:', saveData);
       console.log('💾 첫 번째 문제 데이터:', saveData.questions?.[0]);
+
+      // 각 문제의 필드 검증
+      saveData.questions?.forEach((question, index) => {
+        console.log(`💾 문제 ${index + 1} 필드 검증:`, {
+          question_id: question.question_id,
+          question_difficulty: question.question_difficulty,
+          difficulty: (question as any).difficulty,
+          question_type: question.question_type,
+          question_subject: question.question_subject,
+        });
+      });
 
       // 영어 워크시트 저장 API 호출
       const result = await EnglishService.saveEnglishWorksheet(saveData);

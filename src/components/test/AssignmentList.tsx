@@ -120,10 +120,28 @@ export function AssignmentList({
 
               {/* 과제 진행 상태 표시 */}
               <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                  <span className="text-sm font-medium text-green-700">과제 진행 중</span>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <span className="text-sm font-medium text-green-700">과제 진행 중</span>
+                  </div>
+                  <div className="text-sm font-medium text-green-700">
+                    {Object.keys(answers).length}/{worksheetProblems.length}
+                  </div>
                 </div>
+                <div className="mt-2">
+                  <div className="w-full bg-green-200 rounded-full h-2">
+                    <div
+                      className="bg-green-500 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${(Object.keys(answers).length / worksheetProblems.length) * 100}%` }}
+                    ></div>
+                  </div>
+                </div>
+                {Object.keys(answers).length < worksheetProblems.length && (
+                  <div className="mt-2 text-xs text-green-600">
+                    모든 문제를 풀어야 제출할 수 있습니다
+                  </div>
+                )}
               </div>
 
               {/* 문제 목록 테이블 */}

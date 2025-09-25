@@ -151,14 +151,21 @@ export default function BankPage() {
                 onOpenDistributeDialog={() => setIsDistributeDialogOpen(true)}
                 onOpenEditDialog={() => setIsEditDialogOpen(true)}
                 onEditProblem={handleEditProblem}
-                onStartEditTitle={() =>
-                  handleStartEditTitle(currentBank.selectedWorksheet?.title || '')
-                }
+                onStartEditTitle={() => {
+                  const currentTitle = selectedSubject === '영어'
+                    ? (currentBank.selectedWorksheet as any)?.worksheet_name || ''
+                    : currentBank.selectedWorksheet?.title || '';
+                  handleStartEditTitle(currentTitle);
+                }}
                 onCancelEditTitle={handleCancelEditTitle}
-                onSaveTitle={() =>
-                  currentBank.selectedWorksheet &&
-                  handleSaveTitle(currentBank.selectedWorksheet.id, currentBank.loadWorksheets)
-                }
+                onSaveTitle={() => {
+                  if (currentBank.selectedWorksheet) {
+                    const worksheetId = selectedSubject === '영어'
+                      ? (currentBank.selectedWorksheet as any).worksheet_id
+                      : currentBank.selectedWorksheet.id;
+                    handleSaveTitle(worksheetId, currentBank.loadWorksheets);
+                  }
+                }}
                 onEditedTitleChange={handleEditedTitleChange}
                 onRefresh={() => {
                   if (currentBank.selectedWorksheet) {
