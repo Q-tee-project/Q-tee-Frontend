@@ -77,10 +77,10 @@ export function TestInterface({
         {/* 제출하기 버튼 */}
         <Button
           onClick={onSubmitTest}
-          disabled={isSubmitting}
-          className="bg-[#0072CE] hover:bg-[#0056A3] text-white"
+          disabled={isSubmitting || Object.keys(answers).length < worksheetProblems.length}
+          className="bg-[#0072CE] hover:bg-[#0056A3] text-white disabled:bg-gray-400"
         >
-          {isSubmitting ? '제출 중...' : '제출하기'}
+          {isSubmitting ? '제출 중...' : Object.keys(answers).length < worksheetProblems.length ? `제출하기 (${Object.keys(answers).length}/${worksheetProblems.length})` : '제출하기'}
         </Button>
       </CardHeader>
 

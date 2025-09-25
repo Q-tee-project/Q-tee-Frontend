@@ -454,14 +454,12 @@ export default function TestPage() {
     const answeredCount = Object.keys(answers).length;
     const totalProblems = worksheetProblems.length;
 
+    // 모든 문제를 풀어야만 제출 가능하도록 변경
     if (answeredCount < totalProblems) {
-      if (
-        !confirm(
-          `${totalProblems - answeredCount}개 문제에 답하지 않았습니다. 그래도 제출하시겠습니까?`,
-        )
-      ) {
-        return;
-      }
+      alert(
+        `모든 문제를 풀어야 제출할 수 있습니다.\n현재 ${answeredCount}/${totalProblems}개 문제를 풀었습니다.\n남은 문제: ${totalProblems - answeredCount}개`
+      );
+      return;
     }
 
     try {
@@ -472,6 +470,9 @@ export default function TestPage() {
         const result = await mathService.submitTest(testSession.session_id, answers);
         setTestResult(result);
         setShowResultModal(true);
+
+        // 과제 목록 새로 불러오기 (상태 업데이트 반영)
+        await loadWorksheets();
       } else if (selectedSubject === '국어') {
         // 국어 과제 제출
         if (!selectedWorksheet || !userProfile) return;
@@ -483,6 +484,9 @@ export default function TestPage() {
         setTestResult(result);
         setShowResultModal(true);
         console.log('국어 과제 제출 완료:', result);
+
+        // 과제 목록 새로 불러오기 (상태 업데이트 반영)
+        await loadWorksheets();
       } else if (selectedSubject === '영어') {
         // 영어 과제 제출
         if (!selectedWorksheet || !userProfile) return;
@@ -496,6 +500,9 @@ export default function TestPage() {
           setTestResult(result);
           setShowResultModal(true);
           console.log('영어 과제 제출 완료:', result);
+
+          // 과제 목록 새로 불러오기 (상태 업데이트 반영)
+          await loadWorksheets();
         } catch (error) {
           console.error('영어 과제 제출 실패:', error);
           alert('영어 과제 제출에 실패했습니다. 다시 시도해주세요.');
@@ -504,17 +511,6 @@ export default function TestPage() {
       }
 
       setIsTestStarted(false);
-
-      // 과제 상태를 "응시"로 업데이트
-      if (selectedWorksheet) {
-        setWorksheets((prev) =>
-          prev.map((worksheet) =>
-            worksheet.id === selectedWorksheet.id
-              ? { ...worksheet, status: 'completed' }
-              : worksheet,
-          ),
-        );
-      }
     } catch (error: any) {
       console.error('과제 제출 실패:', error);
       setError('과제 제출에 실패했습니다: ' + error.message);
