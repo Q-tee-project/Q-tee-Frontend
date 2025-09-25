@@ -69,6 +69,8 @@ export function AssignmentResultView({
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingProblems, setEditingProblems] = useState<Set<string>>(new Set());
   const [problemCorrectness, setProblemCorrectness] = useState<{ [key: string]: boolean }>({});
+  const [updatedAnswers, setUpdatedAnswers] = useState<{ [key: string]: string }>({});
+  const [originalAnswers, setOriginalAnswers] = useState<{ [key: string]: string }>({});
   const [hasChanges, setHasChanges] = useState(false);
 
   useEffect(() => {
@@ -174,7 +176,6 @@ export function AssignmentResultView({
     }
   };
 
-
   const handleEditModeToggle = () => {
     setIsEditMode(!isEditMode);
     if (!isEditMode && sessionDetails) {
@@ -186,7 +187,8 @@ export function AssignmentResultView({
   const initializeEditState = () => {
     if (!sessionDetails) return;
 
-    const correctness: {[key: string]: boolean} = {};
+    const correctness: { [key: string]: boolean } = {};
+    const originalCorrectAnswers: { [key: string]: string } = {};
 
     if (isKorean) {
       // 국어의 경우 problems 기반으로 정답/오답 상태 계산
@@ -199,8 +201,8 @@ export function AssignmentResultView({
         // problem_results에서도 확인 (국어도 problem_results가 있을 수 있음)
         let isCorrect = answerStatus?.isCorrect || false;
         if (sessionDetails.problem_results) {
-          const problemResult = sessionDetails.problem_results.find((pr: any) =>
-            pr.problem_id?.toString() === problemId || pr.id?.toString() === problemId
+          const problemResult = sessionDetails.problem_results.find(
+            (pr: any) => pr.problem_id?.toString() === problemId || pr.id?.toString() === problemId,
           );
           if (problemResult) {
             isCorrect = problemResult.is_correct || false;
@@ -208,6 +210,8 @@ export function AssignmentResultView({
         }
 
         correctness[problemId] = isCorrect;
+        // 원래 정답 저장
+        originalCorrectAnswers[problemId] = problem.correct_answer || '';
       });
     } else if (isEnglish) {
       // 영어의 경우 problems 기반으로 정답/오답 상태 계산 (영어 백엔드 구조에 맞춤)
@@ -216,6 +220,9 @@ export function AssignmentResultView({
         if (problemId) {
           const answerStatus = getAnswerStatus(problemId);
           correctness[problemId] = answerStatus?.isCorrect || false;
+          // 원래 정답 저장
+          originalCorrectAnswers[problemId] =
+            problem.correct_answer || answerStatus?.correctAnswer || '';
         }
       });
     } else {
@@ -227,25 +234,51 @@ export function AssignmentResultView({
 
         // problem_results에서 실제 결과 찾기
         if (sessionDetails.problem_results) {
-          const problemResult = sessionDetails.problem_results.find((pr: any) =>
-            pr.problem_id.toString() === problemId
+          const problemResult = sessionDetails.problem_results.find(
+            (pr: any) => pr.problem_id.toString() === problemId,
           );
           if (problemResult) {
             correctness[problemId] = problemResult.is_correct || false;
           }
         }
+
+        // 원래 정답 저장
+        originalCorrectAnswers[problemId] = problem.correct_answer || '';
       });
     }
 
     setProblemCorrectness(correctness);
+    setOriginalAnswers(originalCorrectAnswers);
+    setUpdatedAnswers({});
     setHasChanges(false);
   };
 
   const toggleProblemCorrectness = (problemId: string) => {
     const newCorrectness = !problemCorrectness[problemId];
-    setProblemCorrectness(prev => ({
+
+    if (newCorrectness) {
+      // 정답 처리: 학생 답안을 correct_answer로 업데이트
+      const answerStatus = getAnswerStatus(problemId);
+      if (answerStatus && answerStatus.studentAnswer) {
+        setUpdatedAnswers((prev) => ({
+          ...prev,
+          [problemId]: answerStatus.studentAnswer,
+        }));
+      }
+    } else {
+      // 오답 처리: 원래 정답으로 되돌리기
+      const originalAnswer = originalAnswers[problemId];
+      if (originalAnswer) {
+        setUpdatedAnswers((prev) => ({
+          ...prev,
+          [problemId]: originalAnswer,
+        }));
+      }
+    }
+
+    setProblemCorrectness((prev) => ({
       ...prev,
-      [problemId]: newCorrectness
+      [problemId]: newCorrectness,
     }));
     setHasChanges(true);
   };
@@ -265,41 +298,46 @@ export function AssignmentResultView({
       totalProblems = Object.keys(problemCorrectness).length;
     }
 
-    const correctCount = Object.values(problemCorrectness).filter(correct => correct).length;
+    const correctCount = Object.values(problemCorrectness).filter((correct) => correct).length;
 
     if (totalProblems === 0 || correctCount === 0) return 0;
 
     // 기존 세션의 points_per_problem 값 사용, 없으면 계산
-    const scorePerProblem = sessionDetails?.points_per_problem != null
-      ? sessionDetails.points_per_problem
-      : (totalProblems <= 10 ? 10 : 5);
+    const scorePerProblem =
+      sessionDetails?.points_per_problem != null
+        ? sessionDetails.points_per_problem
+        : totalProblems <= 10
+        ? 10
+        : 5;
     return correctCount * scorePerProblem;
   };
 
   const saveGradingChanges = async () => {
     if (!sessionDetails || !hasChanges) return;
 
-
     try {
       const totalScore = calculateScoreFromCorrectness();
-      const correctCount = Object.values(problemCorrectness).filter(correct => correct).length;
+      const correctCount = Object.values(problemCorrectness).filter((correct) => correct).length;
 
       if (isKorean) {
         // 국어 채점 저장
-        const updatedAnswers: {[key: string]: boolean} = {};
-        Object.keys(problemCorrectness).forEach(problemId => {
-          updatedAnswers[problemId] = problemCorrectness[problemId];
+        const problemCorrections: { [key: string]: boolean } = {};
+        Object.keys(problemCorrectness).forEach((problemId) => {
+          problemCorrections[problemId] = problemCorrectness[problemId];
         });
 
         const payload = {
-          problem_corrections: updatedAnswers,
+          problem_corrections: problemCorrections,
           total_score: totalScore,
           correct_count: correctCount,
-          status: 'final'
+          status: 'final',
+          // 업데이트된 정답들을 별도로도 전송
+          updated_correct_answers: updatedAnswers,
         };
 
         // 국어 세션 ID 찾기
-        const koreanSessionId = sessionDetails.id || selectedSession?.id || selectedSession?.grading_session_id;
+        const koreanSessionId =
+          sessionDetails.id || selectedSession?.id || selectedSession?.grading_session_id;
         if (!koreanSessionId) {
           throw new Error('국어 채점 세션 ID를 찾을 수 없습니다.');
         }
@@ -325,24 +363,29 @@ export function AssignmentResultView({
           totalProblems = Object.keys(problemCorrectness).length;
         }
 
-        const updatedAnswers = Object.keys(problemCorrectness).map(problemId => ({
+        const updatedAnswersData = Object.keys(problemCorrectness).map((problemId) => ({
           question_id: parseInt(problemId),
           is_correct: problemCorrectness[problemId],
-          score: problemCorrectness[problemId] ? (totalProblems <= 10 ? 10 : 5) : 0
+          score: problemCorrectness[problemId] ? (totalProblems <= 10 ? 10 : 5) : 0,
+          // 업데이트된 정답이 있으면 포함
+          ...(updatedAnswers[problemId] && { correct_answer: updatedAnswers[problemId] }),
         }));
 
         const payload = {
-          answers: updatedAnswers,
+          answers: updatedAnswersData,
           total_score: totalScore,
           correct_count: correctCount,
-          is_reviewed: true
+          is_reviewed: true,
+          // 업데이트된 정답들을 별도로도 전송
+          updated_correct_answers: updatedAnswers,
         };
 
         await EnglishService.updateEnglishGradingSession(resultId.toString(), payload);
         alert('채점 결과가 저장되었습니다.');
       } else {
         // 수학 채점 저장
-        const mathSessionId = sessionDetails.id || selectedSession?.id || selectedSession?.grading_session_id;
+        const mathSessionId =
+          sessionDetails.id || selectedSession?.id || selectedSession?.grading_session_id;
         if (!mathSessionId) {
           throw new Error('수학 채점 세션 ID를 찾을 수 없습니다.');
         }
@@ -360,20 +403,24 @@ export function AssignmentResultView({
         }
 
         // 기존 세션의 points_per_problem 값 사용, 없으면 계산
-        const pointsPerProblem = sessionDetails.points_per_problem ||
-          (totalProblems <= 10 ? 10 : 5);
+        const pointsPerProblem =
+          sessionDetails.points_per_problem || (totalProblems <= 10 ? 10 : 5);
 
-        const updatedResults = Object.keys(problemCorrectness).map(problemId => ({
+        const updatedResults = Object.keys(problemCorrectness).map((problemId) => ({
           problem_id: parseInt(problemId),
           is_correct: problemCorrectness[problemId],
-          score: problemCorrectness[problemId] ? pointsPerProblem : 0
+          score: problemCorrectness[problemId] ? pointsPerProblem : 0,
+          // 업데이트된 정답이 있으면 포함
+          ...(updatedAnswers[problemId] && { correct_answer: updatedAnswers[problemId] }),
         }));
 
         const payload = {
           problem_results: updatedResults,
           total_score: totalScore,
           correct_count: correctCount,
-          status: 'final'
+          status: 'final',
+          // 업데이트된 정답들을 별도로도 전송
+          updated_correct_answers: updatedAnswers,
         };
 
         await mathService.updateGradingSession(mathSessionId, payload);
@@ -405,7 +452,6 @@ export function AssignmentResultView({
         errorMessage = String(error);
       }
 
-
       alert(`저장에 실패했습니다:\n${errorMessage}`);
     }
   };
@@ -430,7 +476,7 @@ export function AssignmentResultView({
           setSessionDetails({
             ...session,
             multiple_choice_answers: session.multiple_choice_answers || {},
-            problem_results: session.problem_results || []
+            problem_results: session.problem_results || [],
           });
         }
       } else if (isEnglish) {
@@ -439,7 +485,9 @@ export function AssignmentResultView({
           const resultId = session.result_id || session.grading_session_id || session.id;
           if (resultId) {
             console.log('English resultId:', resultId, 'Type:', typeof resultId);
-            const details = await EnglishService.getEnglishAssignmentResultDetail(resultId.toString());
+            const details = await EnglishService.getEnglishAssignmentResultDetail(
+              resultId.toString(),
+            );
             console.log('English session details:', details);
 
             setSessionDetails(details);
@@ -456,18 +504,21 @@ export function AssignmentResultView({
               questions: session.questions || [],
               total_score: session.total_score || 0,
               correct_count: session.correct_count || 0,
-              total_problems: session.total_problems || session.max_possible_score || 10
+              total_problems: session.total_problems || session.max_possible_score || 10,
             });
           }
         } catch (error) {
-          console.warn('English assignment result details not available, using session data:', error);
+          console.warn(
+            'English assignment result details not available, using session data:',
+            error,
+          );
           setSessionDetails({
             ...session,
             answers: session.answers || [],
             questions: session.questions || [],
             total_score: session.total_score || 0,
             correct_count: session.correct_count || 0,
-            total_problems: session.total_problems || session.max_possible_score || 10
+            total_problems: session.total_problems || session.max_possible_score || 10,
           });
         }
       } else {
@@ -495,22 +546,12 @@ export function AssignmentResultView({
     if (!sessionDetails) return null;
 
     if (isKorean) {
-      // Korean 과제의 경우 기존 로직 사용
+      // Korean 과제의 경우 - problem_results에서만 찾기 (multiple_choice_answers 제거)
+      const problemResult = sessionDetails.problem_results?.find(
+        (pr: any) => pr.problem_id?.toString() === problemId || pr.id?.toString() === problemId,
+      );
 
-      // 다양한 방법으로 학생 답안 찾기
-      let studentAnswer = sessionDetails.multiple_choice_answers?.[problemId] ||
-                         sessionDetails.answers?.[problemId] ||
-                         sessionDetails.student_answers?.[problemId];
-
-      // problem_results에서 답안 찾기 시도
-      if (!studentAnswer && sessionDetails.problem_results) {
-        const problemResult = sessionDetails.problem_results.find((pr: any) =>
-          pr.problem_id?.toString() === problemId || pr.id?.toString() === problemId
-        );
-        if (problemResult) {
-          studentAnswer = problemResult.user_answer || problemResult.student_answer;
-        }
-      }
+      let studentAnswer = problemResult?.user_answer || problemResult?.student_answer;
 
       const problem = problems.find((p) => p.id.toString() === problemId);
 
@@ -530,9 +571,10 @@ export function AssignmentResultView({
       }
 
       // 편집 모드일 때 problemCorrectness 상태 우선 사용
-      const isCorrect = isEditMode && problemCorrectness.hasOwnProperty(problemId)
-        ? problemCorrectness[problemId]
-        : studentAnswer === problem.correct_answer;
+      const isCorrect =
+        isEditMode && problemCorrectness.hasOwnProperty(problemId)
+          ? problemCorrectness[problemId]
+          : studentAnswer === problem.correct_answer;
 
       // Extract choice number from answer text
       const extractChoiceNumber = (answerText: string) => {
@@ -566,14 +608,29 @@ export function AssignmentResultView({
         aiFeedback: null,
       };
     } else if (isEnglish) {
-      // 영어 과제의 경우 sessionDetails의 question_results에서 찾기 (영어 백엔드 구조에 맞춤)
-      const questionResult = sessionDetails.question_results?.find(
-        (qr: any) => qr.question_id.toString() === problemId
+      // 영어 과제의 경우 sessionDetails의 question_results에서 찾기
+      let questionResult = sessionDetails.question_results?.find(
+        (qr: any) => qr.question_id?.toString() === problemId || qr.id?.toString() === problemId,
       );
-      const question = problems.find((q) => q.question_id?.toString() === problemId);
+
+      // question_results에서 찾지 못했다면 answers 배열에서 찾기
+      if (!questionResult && sessionDetails.answers) {
+        questionResult = sessionDetails.answers.find(
+          (answer: any) =>
+            answer.question_id?.toString() === problemId || answer.id?.toString() === problemId,
+        );
+      }
+
+      const question = problems.find(
+        (q) => q.question_id?.toString() === problemId || q.id?.toString() === problemId,
+      );
 
       if (!questionResult) {
-        console.log(`No question result found for problem ${problemId}`, sessionDetails.question_results);
+        console.log(`영어 문제 ${problemId} 결과를 찾을 수 없음:`, {
+          question_results: sessionDetails.question_results,
+          answers: sessionDetails.answers,
+          sessionDetails: sessionDetails,
+        });
         return null;
       }
 
@@ -581,39 +638,51 @@ export function AssignmentResultView({
 
       return {
         isCorrect,
-        studentAnswer: questionResult.student_answer,
-        correctAnswer: questionResult.correct_answer || (question ? question.correct_answer : '(수동 채점 필요)'),
-        studentAnswerText: questionResult.student_answer,
-        correctAnswerText: questionResult.correct_answer || (question ? question.correct_answer : '(수동 채점 필요)'),
+        studentAnswer: questionResult.student_answer || questionResult.user_answer || '(답안 없음)',
+        correctAnswer:
+          questionResult.correct_answer ||
+          (question ? question.correct_answer : '(수동 채점 필요)'),
+        studentAnswerText:
+          questionResult.student_answer || questionResult.user_answer || '(답안 없음)',
+        correctAnswerText:
+          questionResult.correct_answer ||
+          (question ? question.correct_answer : '(수동 채점 필요)'),
         aiFeedback: questionResult.ai_feedback || null,
       };
     } else {
       // Math 과제의 경우: problem_results에서 찾고, 없으면 problems에서 기본 정보 가져오기
       const problemResult = sessionDetails.problem_results?.find(
-        (pr: any) => pr.problem_id.toString() === problemId,
+        (pr: any) => pr.problem_id?.toString() === problemId || pr.id?.toString() === problemId,
       );
 
       if (problemResult) {
         return {
-          isCorrect: problemResult.is_correct,
-          studentAnswer: problemResult.user_answer,
-          correctAnswer: problemResult.correct_answer,
-          studentAnswerText: problemResult.user_answer,
-          correctAnswerText: problemResult.correct_answer,
+          isCorrect: problemResult.is_correct || false,
+          studentAnswer: problemResult.user_answer || '(답안 없음)',
+          correctAnswer: problemResult.correct_answer || '정답 정보 없음',
+          studentAnswerText: problemResult.user_answer || '(답안 없음)',
+          correctAnswerText: problemResult.correct_answer || '정답 정보 없음',
           explanation: problemResult.explanation,
           aiFeedback: problemResult.ai_feedback || null,
         };
       } else {
         // problem_results에 없는 문제: problems 배열에서 기본 정보 가져오기
         const problem = problems.find((p) => p.id.toString() === problemId);
-        if (!problem) return null;
+        if (!problem) {
+          console.log(`수학 문제 ${problemId} 정보를 찾을 수 없음:`, {
+            problem_results: sessionDetails.problem_results,
+            problems: problems,
+            sessionDetails: sessionDetails,
+          });
+          return null;
+        }
 
         return {
           isCorrect: false, // 기본값: 오답
           studentAnswer: '(답안 없음)',
-          correctAnswer: problem.correct_answer || '',
+          correctAnswer: problem.correct_answer || '정답 정보 없음',
           studentAnswerText: '(답안 없음)',
-          correctAnswerText: problem.correct_answer || '',
+          correctAnswerText: problem.correct_answer || '정답 정보 없음',
           explanation: problem.explanation || '',
           aiFeedback: null,
         };
@@ -690,7 +759,9 @@ export function AssignmentResultView({
           // 태스크 상태 폴링 시작
           pollTaskStatus(result.task_id);
         } else {
-          alert(result.message || (isEnglish ? 'AI 채점이 완료되었습니다.' : '채점이 완료되었습니다.'));
+          alert(
+            result.message || (isEnglish ? 'AI 채점이 완료되었습니다.' : '채점이 완료되었습니다.'),
+          );
           setIsProcessingAI(false);
           loadResults(); // 결과 새로고침
         }
@@ -704,7 +775,11 @@ export function AssignmentResultView({
             loadResults();
           } catch (englishError) {
             console.error('Direct English AI grading failed:', englishError);
-            alert(`영어 AI 채점 실패: ${englishError instanceof Error ? englishError.message : '알 수 없는 오류'}`);
+            alert(
+              `영어 AI 채점 실패: ${
+                englishError instanceof Error ? englishError.message : '알 수 없는 오류'
+              }`,
+            );
             setIsProcessingAI(false);
           }
         } else {
@@ -763,70 +838,32 @@ export function AssignmentResultView({
               </>
             )}
             <Button
-              variant={isEditMode ? "secondary" : "outline"}
+              variant={isEditMode ? 'secondary' : 'outline'}
               onClick={handleEditModeToggle}
               className={`flex items-center gap-2 ${
                 isEditMode
-                  ? "bg-orange-100 border-orange-300 text-orange-800"
-                  : "text-green-600 border-green-600 hover:bg-green-50"
+                  ? 'bg-orange-100 border-orange-300 text-orange-800'
+                  : 'text-green-600 border-green-600 hover:bg-green-50'
               }`}
             >
               <FaEdit className="text-sm" />
-              {isEditMode ? "편집 중" : "편집"}
+              {isEditMode ? '편집 중' : '편집'}
             </Button>
           </div>
         </div>
 
         {sessionDetails ? (
           <>
-            {/* Summary Card */}
-            <Card className="mb-6">
-              <CardHeader>
-                <CardTitle>채점 결과 요약</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-4 gap-4">
-                  <div className="text-center bg-gray-100 rounded-lg p-4">
-                    <p className="text-sm text-gray-600 mb-2">점수</p>
-                    <p className="text-2xl font-bold text-gray-900">
-                      {isEditMode
-                        ? calculateScoreFromCorrectness()
-                        : (sessionDetails.total_score !== undefined && sessionDetails.total_score !== null
-                          ? sessionDetails.total_score
-                          : 0)} 점
-                    </p>
-                  </div>
-                  <div className="text-center bg-gray-100 rounded-lg p-4">
-                    <p className="text-sm text-gray-600 mb-2">풀이시간</p>
-                    <p className="text-2xl font-bold text-gray-900">00:00:00</p>
-                  </div>
-                  <div className="text-center bg-gray-100 rounded-lg p-4">
-                    <p className="text-sm text-gray-600 mb-2">맞춘 개수</p>
-                    <p className="text-2xl font-bold text-gray-900">
-                      {isEditMode
-                        ? Object.values(problemCorrectness).filter(correct => correct).length
-                        : (sessionDetails.correct_count || 0)} 개
-                    </p>
-                  </div>
-                  <div className="text-center bg-gray-100 rounded-lg p-4">
-                    <p className="text-sm text-gray-600 mb-2">틀린 개수</p>
-                    <p className="text-2xl font-bold text-gray-900">
-                      {isEditMode
-                        ? Object.values(problemCorrectness).filter(correct => !correct).length
-                        : ((sessionDetails.total_problems || 0) - (sessionDetails.correct_count || 0))} 개
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
             {/* Problems Results */}
             <div className="space-y-4">
               <h2 className="text-xl font-semibold mb-4">문제별 결과</h2>
 
               {(isEnglish
-                ? (sessionDetails.worksheet_data?.questions || [])
-                : (isKorean || problems.length > 0 ? problems : sessionDetails.problem_results || []))
+                ? sessionDetails.worksheet_data?.questions || []
+                : isKorean || problems.length > 0
+                ? problems
+                : sessionDetails.problem_results || []
+              )
                 .sort((a: any, b: any) => {
                   if (isKorean) return a.sequence_order - b.sequence_order;
                   if (isEnglish) return (a.question_id || 0) - (b.question_id || 0);
@@ -838,12 +875,20 @@ export function AssignmentResultView({
                   // 수학에서 problems 배열이 있으면 문제 정보 사용
                   let problemItem = item;
 
-                  const problemId = isKorean ? item.id :
-                    (isEnglish ? item.question_id :
-                    (problems.length > 0 ? item.id : item.problem_id));
-                  const problemNumber = isKorean ? item.sequence_order :
-                    (isEnglish ? item.question_id :
-                    (problems.length > 0 ? (item.sequence_order || index + 1) : index + 1));
+                  const problemId = isKorean
+                    ? item.id
+                    : isEnglish
+                    ? item.question_id
+                    : problems.length > 0
+                    ? item.id
+                    : item.problem_id;
+                  const problemNumber = isKorean
+                    ? item.sequence_order
+                    : isEnglish
+                    ? item.question_id
+                    : problems.length > 0
+                    ? item.sequence_order || index + 1
+                    : index + 1;
                   const answerStatus = getAnswerStatus(problemId.toString());
 
                   return (
@@ -893,13 +938,19 @@ export function AssignmentResultView({
                                     {item.question_text && <p>{item.question_text}</p>}
                                     {item.passage && (
                                       <div className="bg-gray-50 p-3 rounded mt-2 mb-2">
-                                        <p className="text-sm text-gray-700 whitespace-pre-wrap">{item.passage}</p>
+                                        <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                                          {item.passage}
+                                        </p>
                                       </div>
                                     )}
                                   </div>
                                 ) : (
                                   <LaTeXRenderer
-                                    content={problemItem.question || item.question || `문제 ${problemNumber}`}
+                                    content={
+                                      problemItem.question ||
+                                      item.question ||
+                                      `문제 ${problemNumber}`
+                                    }
                                   />
                                 )}
                               </div>
@@ -965,25 +1016,37 @@ export function AssignmentResultView({
                               <div className="bg-gray-50 p-4 rounded-lg mb-4">
                                 <div className="space-y-3">
                                   <div>
-                                    <span className="text-sm text-gray-600 font-medium">학생 답안:</span>
+                                    <span className="text-sm text-gray-600 font-medium">
+                                      학생 답안:
+                                    </span>
                                     <div className="mt-1 p-2 bg-white rounded border">
-                                      <p className="text-sm">{answerStatus.studentAnswer || '(답안 없음)'}</p>
+                                      <p className="text-sm">
+                                        {answerStatus.studentAnswer || '(답안 없음)'}
+                                      </p>
                                     </div>
                                   </div>
                                   {answerStatus.correctAnswer !== '(수동 채점 필요)' && (
                                     <div>
-                                      <span className="text-sm text-gray-600 font-medium">예시 답안:</span>
+                                      <span className="text-sm text-gray-600 font-medium">
+                                        예시 답안:
+                                      </span>
                                       <div className="mt-1 p-2 bg-green-50 rounded border border-green-200">
-                                        <p className="text-sm text-green-800">{answerStatus.correctAnswer}</p>
+                                        <p className="text-sm text-green-800">
+                                          {answerStatus.correctAnswer}
+                                        </p>
                                       </div>
                                     </div>
                                   )}
                                   {/* AI 피드백 표시 */}
                                   {answerStatus.aiFeedback && (
                                     <div>
-                                      <span className="text-sm text-gray-600 font-medium">AI 채점 피드백:</span>
+                                      <span className="text-sm text-gray-600 font-medium">
+                                        AI 채점 피드백:
+                                      </span>
                                       <div className="mt-1 p-3 bg-blue-50 rounded border border-blue-200">
-                                        <p className="text-sm text-blue-800 whitespace-pre-wrap">{answerStatus.aiFeedback}</p>
+                                        <p className="text-sm text-blue-800 whitespace-pre-wrap">
+                                          {answerStatus.aiFeedback}
+                                        </p>
                                       </div>
                                     </div>
                                   )}
@@ -1004,15 +1067,18 @@ export function AssignmentResultView({
                                           {isKorean
                                             ? `${answerStatus.studentAnswer}번`
                                             : isEnglish
-                                              ? (answerStatus.studentAnswer || '(답안 없음)')
-                                              : answerStatus.studentAnswer}
+                                            ? answerStatus.studentAnswer || '(답안 없음)'
+                                            : answerStatus.studentAnswer}
                                         </strong>
                                       </span>
                                     </div>
                                     <div className="flex items-center gap-2">
                                       <FaCheckCircle className="text-green-600" />
                                       <span className="text-sm">
-                                        {isEnglish && answerStatus.correctAnswer === '(수동 채점 필요)' ? '수동 채점:' : '정답:'}{' '}
+                                        {isEnglish &&
+                                        answerStatus.correctAnswer === '(수동 채점 필요)'
+                                          ? '수동 채점:'
+                                          : '정답:'}{' '}
                                         <strong>
                                           {isKorean
                                             ? `${answerStatus.correctAnswer}번`
@@ -1029,14 +1095,16 @@ export function AssignmentResultView({
                                       size="sm"
                                       onClick={() => toggleProblemCorrectness(problemId.toString())}
                                       className={`px-4 py-2 ${
-                                        (problemCorrectness[problemId.toString()] ?? answerStatus.isCorrect)
-                                          ? "bg-green-100 border-green-300 text-green-800 hover:bg-green-200"
-                                          : "bg-red-100 border-red-300 text-red-800 hover:bg-red-200"
+                                        problemCorrectness[problemId.toString()] ??
+                                        answerStatus.isCorrect
+                                          ? 'bg-green-100 border-green-300 text-green-800 hover:bg-green-200'
+                                          : 'bg-red-100 border-red-300 text-red-800 hover:bg-red-200'
                                       }`}
                                     >
-                                      {(problemCorrectness[problemId.toString()] ?? answerStatus.isCorrect)
-                                        ? "✓ 정답"
-                                        : "✗ 오답"}
+                                      {problemCorrectness[problemId.toString()] ??
+                                      answerStatus.isCorrect
+                                        ? '✓ 정답'
+                                        : '✗ 오답'}
                                     </Button>
                                   ) : (
                                     <Badge
@@ -1070,7 +1138,6 @@ export function AssignmentResultView({
                   );
                 })}
             </div>
-
           </>
         ) : (
           <div className="flex items-center justify-center py-8">
@@ -1106,8 +1173,8 @@ export function AssignmentResultView({
                   ? ` (${taskProgress.info.current}%)`
                   : '')
               : isEnglish
-                ? 'AI 채점 시작 (단답형/서술형)'
-                : 'OCR + AI 채점 시작'}
+              ? 'AI 채점 시작 (단답형/서술형)'
+              : 'OCR + AI 채점 시작'}
           </Button>
         )}
       </div>
@@ -1130,9 +1197,10 @@ export function AssignmentResultView({
             {results.map((result, index) => {
               const totalProblems = result.total_problems || 10;
               const scorePerProblem = 100 / totalProblems;
-              const finalScore = result.total_score !== undefined && result.total_score !== null
-                ? result.total_score
-                : 0;
+              const finalScore =
+                result.total_score !== undefined && result.total_score !== null
+                  ? result.total_score
+                  : 0;
 
               // 학생 ID로 실제 학생 정보 찾기 - 다양한 타입 변환 시도
               const studentId = result.student_id || result.graded_by;
