@@ -20,7 +20,7 @@ export default function Header() {
 
   const toggleProfileMenu = () => {
     if (!isAuthenticated) {
-      router.push('/login');
+      router.push('/');
       return;
     }
     setIsProfileOpen((prev) => !prev);
@@ -35,7 +35,7 @@ export default function Header() {
   const handleLogout = () => {
     logout();
     setIsProfileOpen(false);
-    router.push('/login');
+    router.push('/');
   };
 
   React.useEffect(() => {
