@@ -55,9 +55,8 @@ const Sidebar = () => {
         <div className="flex items-center">
           <motion.button
             onClick={() => setIsOpen(!isOpen)}
-            className="flex items-center justify-center rounded-md cursor-pointer hover:bg-gray-50 transition-colors"
+            className="flex items-center justify-center rounded-md cursor-pointer transition-colors"
             style={{ padding: '10px' }}
-            whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
             <motion.div
@@ -80,7 +79,7 @@ const Sidebar = () => {
         {menuItems.map((item, index) => (
           <React.Fragment key={index}>
             <motion.div
-              className="flex items-center gap-4 rounded-md cursor-pointer hover:bg-gray-50 transition-colors"
+              className="flex items-center gap-4 rounded-md cursor-pointer transition-colors"
               onClick={() => item.path && router.push(item.path)}
               style={{ padding: '10px' }}
               initial={{ opacity: 0, x: -20 }}
@@ -89,10 +88,6 @@ const Sidebar = () => {
                 duration: 0.3,
                 delay: index * 0.05,
                 ease: 'easeOut',
-              }}
-              whileHover={{
-                scale: 1.02,
-                transition: { duration: 0.2 },
               }}
               whileTap={{ scale: 0.98 }}
             >

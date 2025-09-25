@@ -63,12 +63,29 @@ export const AccountInfoForm: React.FC<AccountInfoFormProps> = ({
           <Button
             type="button"
             onClick={onUsernameCheck}
-            disabled={!formData.username || !!fieldErrors.username || isLoading}
+            disabled={!formData.username?.trim() || formData.username.trim().length < 4 || !!fieldErrors.username || isLoading || (isUsernameChecked && isUsernameAvailable)}
             className="h-12 px-6 bg-white border-2 border-blue-600 text-blue-600 disabled:border-gray-300 disabled:text-gray-400 rounded-xl font-semibold transition-all duration-300 ease-out"
           >
-            중복체크
+            {isLoading ? '확인중...' : (isUsernameChecked && isUsernameAvailable) ? '확인완료' : '중복체크'}
           </Button>
         </div>
+        
+        {/* 아이디 길이 힌트 */}
+        {formData.username && (
+          <div className="text-xs text-gray-500 flex items-center gap-1 transition-all duration-300 ease-out">
+            <span>글자 수: {formData.username.trim().length}/20</span>
+            {formData.username.trim().length < 4 && (
+              <span className="text-amber-600 font-medium">
+                (최소 4자 필요)
+              </span>
+            )}
+            {formData.username.trim().length >= 4 && formData.username.trim().length <= 20 && (
+              <span className="text-green-600 font-medium">
+                ✓ 적정 길이
+              </span>
+            )}
+          </div>
+        )}
         
         {/* 중복체크 결과 표시 */}
         {isUsernameChecked && (
@@ -107,7 +124,25 @@ export const AccountInfoForm: React.FC<AccountInfoFormProps> = ({
         hasError={!!fieldErrors.confirmPassword}
         errorMessage={fieldErrors.confirmPassword}
         isTouched={!!touchedFields.confirmPassword}
+        disablePaste={true}
       />
+      
+      {/* 비밀번호 일치 여부 표시 */}
+      {formData.password && formData.confirmPassword && (
+        <div className="transition-all duration-300 ease-out animate-in fade-in slide-in-from-top-2">
+          {formData.password === formData.confirmPassword ? (
+            <p className="text-green-600 text-sm font-medium flex items-center gap-2">
+              <span className="inline-block w-2 h-2 rounded-full bg-green-500"></span>
+              비밀번호가 일치합니다
+            </p>
+          ) : (
+            <p className="text-amber-600 text-sm font-medium flex items-center gap-2">
+              <span className="inline-block w-2 h-2 rounded-full bg-amber-500"></span>
+              비밀번호가 일치하지 않습니다
+            </p>
+          )}
+        </div>
+      )}
     </>
   );
 };

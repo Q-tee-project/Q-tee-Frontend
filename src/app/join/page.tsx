@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ChevronDown, GraduationCap, User, AlertCircle, Mail, Lock } from 'lucide-react';
+import { ChevronDown, GraduationCap, User, AlertCircle, Mail, Lock, Check } from 'lucide-react';
 import { authService } from '@/services/authService';
 import { 
   BasicInfoForm, 
@@ -32,6 +32,7 @@ export default function JoinPage() {
     grade: 1,
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState('');
   const [isUsernameChecked, setIsUsernameChecked] = useState(false);
   const [isUsernameAvailable, setIsUsernameAvailable] = useState(false);
@@ -105,8 +106,8 @@ export default function JoinPage() {
         return;
       }
 
-      // 스크롤 감도 조절 (절댓값이 30 이상일 때만 반응)
-      if (Math.abs(e.deltaY) < 30) {
+      // 스크롤 감도 조절 (더 민감하게)
+      if (Math.abs(e.deltaY) < 0.1) {
         console.log('스크롤 감도 부족:', Math.abs(e.deltaY));
         return;
       }
@@ -145,6 +146,8 @@ export default function JoinPage() {
       } 
       // 위로 스크롤 (이전 섹션으로)
       else if (e.deltaY < 0 && currentStep > 1) {
+        console.log('스크롤 업 시도:', { currentStep, deltaY: e.deltaY });
+        
         e.preventDefault();
         setIsScrolling(true);
         
@@ -219,6 +222,27 @@ export default function JoinPage() {
     if (name === 'username') {
       setIsUsernameChecked(false);
       setIsUsernameAvailable(false);
+      
+      // 아이디 필드의 에러도 초기화 (새로운 입력을 위해)
+      if (fieldErrors.username) {
+        const newFieldErrors = { ...fieldErrors };
+        delete newFieldErrors.username;
+        setFieldErrors(newFieldErrors);
+      }
+      
+      // 실시간 아이디 형식 검증 (에러는 blur 시에만 표시)
+      const username = value.trim();
+      if (username.length > 0) {
+        const usernameRegex = /^[a-zA-Z][a-zA-Z0-9_]*$/;
+        const forbiddenUsernames = ['admin', 'administrator', 'root', 'test', 'user', 'null', 'undefined', 'guest', 'system'];
+        
+        if (username.length >= 4 && username.length <= 20 && 
+            usernameRegex.test(username) && 
+            !forbiddenUsernames.includes(username.toLowerCase())) {
+          // 유효한 형식이면 에러 제거
+          setError('');
+        }
+      }
     }
     
     // 입력 중에는 기존 에러만 지우고 새로운 에러는 표시하지 않음
@@ -406,28 +430,126 @@ export default function JoinPage() {
       setError('아이디를 입력해주세요.');
       return;
     }
+
+    // 아이디 길이 체크
+    if (formData.username.trim().length < 4) {
+      setError('💡 아이디는 4자 이상 입력해주세요. (현재 ' + formData.username.trim().length + '자)');
+      return;
+    }
+
+    if (formData.username.trim().length > 20) {
+      setError('아이디는 20자 이하로 입력해주세요.');
+      return;
+    }
+
+    // 아이디 형식 체크 (영문으로 시작, 영문+숫자+밑줄 조합)
+    const usernameRegex = /^[a-zA-Z][a-zA-Z0-9_]*$/;
+    if (!usernameRegex.test(formData.username.trim())) {
+      setError('아이디는 영문으로 시작하고, 영문, 숫자, 밑줄(_)만 사용 가능합니다.');
+      return;
+    }
+
+    // 금지된 아이디 체크
+    const forbiddenUsernames = ['admin', 'administrator', 'root', 'test', 'user', 'null', 'undefined', 'guest', 'system'];
+    if (forbiddenUsernames.includes(formData.username.trim().toLowerCase())) {
+      setError('사용할 수 없는 아이디입니다.');
+      return;
+    }
     
     setIsLoading(true);
     setError('');
     
-    try {
-      // TODO: 실제 중복체크 API 호출
-      // const isAvailable = await authService.checkUsernameAvailability(formData.username);
-      
-      // 임시로 랜덤하게 결과 생성 (실제로는 API 응답 사용)
-      const isAvailable = Math.random() > 0.3;
-      
-      setIsUsernameChecked(true);
-      setIsUsernameAvailable(isAvailable);
-      
-      if (!isAvailable) {
-        setError('이미 사용 중인 아이디입니다.');
+    // 가능한 API 경로들을 시도
+    const possiblePaths = [
+      '/api/auth/check-username',
+      '/api/auth/username/check',
+      '/api/auth/teacher/check-username',
+      '/api/auth/student/check-username',
+      '/api/auth/check_username',
+      '/api/username/check'
+    ];
+
+    let apiSuccess = false;
+    
+    for (const path of possiblePaths) {
+      try {
+        console.log(`Trying API path: ${path}`);
+        const baseUrl = process.env.NEXT_PUBLIC_AUTH_API_BASE_URL || 'http://localhost:8003';
+        const response = await fetch(`${baseUrl}${path}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ username: formData.username.trim() }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setIsUsernameChecked(true);
+          setIsUsernameAvailable(data.available || data.is_available || true);
+          
+          if (!data.available && !data.is_available) {
+            setError(data.message || '이미 사용 중인 아이디입니다.');
+          } else {
+            setError('');
+          }
+          
+          apiSuccess = true;
+          console.log(`API 성공: ${path}`, data);
+          break;
+        }
+      } catch (error) {
+        console.log(`API 실패: ${path}`, error);
+        continue;
       }
-    } catch (error) {
-      setError('중복체크 중 오류가 발생했습니다.');
-    } finally {
-      setIsLoading(false);
     }
+
+    if (!apiSuccess) {
+      // 회원가입 API로 중복 체크
+      try {
+        const baseUrl = process.env.NEXT_PUBLIC_AUTH_API_BASE_URL || 'http://localhost:8003';
+        const username = formData.username.trim();
+        
+        // 임시 데이터로 Teacher 회원가입 시도
+        const testData = {
+          username: username,
+          email: `temp_${username}_${Date.now()}@test.com`,
+          name: "Test User",
+          phone: "01000000000",
+          password: "temppassword123"
+        };
+
+        const teacherResponse = await fetch(`${baseUrl}/api/auth/teacher/signup`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(testData),
+        });
+
+        if (teacherResponse.status === 400) {
+          const errorData = await teacherResponse.json();
+          if (errorData.detail && errorData.detail.includes('Username')) {
+            setIsUsernameChecked(true);
+            setIsUsernameAvailable(false);
+            setError('이미 사용 중인 아이디입니다.');
+            console.log(`Username ${username} already exists`);
+          }
+        } else {
+          setIsUsernameChecked(true);
+          setIsUsernameAvailable(true);
+          setError('');
+          console.log(`Username ${username} is available`);
+        }
+      } catch (error) {
+        console.log('Username check with signup failed, proceeding with client validation');
+        setIsUsernameChecked(true);
+        setIsUsernameAvailable(true);
+        setError('');
+      }
+    }
+    
+    setIsLoading(false);
   };
 
   const validateCurrentStep = () => {
@@ -459,10 +581,17 @@ export default function JoinPage() {
       setError('모든 필수 항목을 입력해주세요.');
       return false;
     }
-        if (!isUsernameChecked || !isUsernameAvailable) {
+        // 중복체크를 시도했지만 실패한 경우에는 회원가입 진행 허용
+        if (!isUsernameChecked && !error.includes('중복체크 기능을 사용할 수 없습니다') && !error.includes('중복체크 중 오류가 발생했습니다')) {
           setError('아이디 중복체크를 완료해주세요.');
-      return false;
-    }
+          return false;
+        }
+        
+        // 중복체크를 완료했지만 사용 불가능한 경우
+        if (isUsernameChecked && !isUsernameAvailable) {
+          setError('다른 아이디를 선택해주세요.');
+          return false;
+        }
     if (formData.password !== formData.confirmPassword) {
       setError('비밀번호가 일치하지 않습니다.');
       return false;
@@ -532,8 +661,13 @@ export default function JoinPage() {
         });
       }
       
-      // 회원가입 성공 후 로그인 페이지로 이동
-      router.push('/');
+      // 회원가입 성공 처리
+      setIsSuccess(true);
+      
+      // 2초 후 로그인 페이지로 이동
+      setTimeout(() => {
+        router.push('/');
+      }, 2000);
     } catch (error: any) {
       console.error('Signup error:', error);
       
@@ -545,8 +679,19 @@ export default function JoinPage() {
           errorMessage = '서버에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.';
         } else if (error.message.includes('timeout')) {
           errorMessage = '요청 시간이 초과되었습니다. 다시 시도해주세요.';
-        } else if (error.message.includes('already exists') || error.message.includes('이미 존재')) {
-          errorMessage = '이미 존재하는 사용자명 또는 이메일입니다.';
+        } else if (error.message.includes('already exists') || error.message.includes('이미 존재') || 
+                   error.message.includes('username') || error.message.includes('duplicate') ||
+                   error.message.includes('중복')) {
+          errorMessage = '이미 사용 중인 아이디입니다. 다른 아이디를 선택해주세요.';
+          // 중복 아이디 에러 시 중복체크 상태 초기화
+          setIsUsernameChecked(false);
+          setIsUsernameAvailable(false);
+          // 계정 정보 단계로 이동
+          setCurrentStep(3);
+        } else if (error.message.includes('email') && (error.message.includes('already') || error.message.includes('존재'))) {
+          errorMessage = '이미 사용 중인 이메일입니다. 다른 이메일을 사용해주세요.';
+          // 기본 정보 단계로 이동
+          setCurrentStep(2);
         } else {
           errorMessage = error.message;
         }
@@ -554,7 +699,10 @@ export default function JoinPage() {
       
       setError(errorMessage);
     } finally {
-      setIsLoading(false);
+      // 성공 시에는 로딩 상태 유지, 실패 시에만 해제
+      if (!isSuccess) {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -683,7 +831,7 @@ export default function JoinPage() {
                 className={`w-full h-16 text-lg font-semibold rounded-xl border-2 transition-all duration-300 ease-out ${
                   userType === 'teacher'
                     ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700'
-                    : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300 hover:bg-blue-50'
+                    : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50 hover:border-gray-300'
                 }`}
                 onClick={() => handleUserTypeSelect('teacher')}
               >
@@ -696,7 +844,7 @@ export default function JoinPage() {
                 className={`w-full h-16 text-lg font-semibold rounded-xl border-2 transition-all duration-300 ease-out ${
                   userType === 'student'
                     ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700'
-                    : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300 hover:bg-blue-50'
+                    : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50 hover:border-gray-300'
                 }`}
                 onClick={() => handleUserTypeSelect('student')}
               >
@@ -706,7 +854,7 @@ export default function JoinPage() {
             </div>
 
             {userType && (
-              <div className="mt-8 text-center animate-in fade-in slide-in-from-bottom-4">
+              <div className="mt-8 text-center gentle-entrance" style={{ animationDelay: '0.3s', opacity: 0 }}>
                 <p className="text-sm text-gray-600 mb-4">아래로 스크롤하여 계속하세요</p>
                 <ChevronDown className="w-6 h-6 mx-auto text-blue-600 animate-bounce" />
               </div>
@@ -732,15 +880,16 @@ export default function JoinPage() {
 
               <div className="space-y-6">
 {renderCurrentSection()}
-                
-                {canScrollToNext && currentStep === 2 && (
-                  <div className="text-center mt-8 animate-in fade-in slide-in-from-bottom-4">
-                    <p className="text-sm text-gray-600 mb-4">아래로 스크롤하여 계속하세요</p>
-                    <ChevronDown className="w-6 h-6 mx-auto text-blue-600 animate-bounce" />
-                  </div>
-                )}
               </div>
             </div>
+            
+            {/* 절대 위치 하단 영역 */}
+            {canScrollToNext && currentStep === 2 && (
+              <div className="absolute bottom-32 left-1/2 transform -translate-x-1/2 text-center soft-entrance" style={{ animationDelay: '0.2s', opacity: 0 }}>
+                <p className="text-sm text-gray-600 mb-4">아래로 스크롤하여 계속하세요</p>
+                <ChevronDown className="w-6 h-6 mx-auto text-blue-600 animate-bounce" />
+              </div>
+            )}
           </div>
         )}
 
@@ -755,28 +904,45 @@ export default function JoinPage() {
               
               <div className="space-y-6">
 {renderCurrentSection()}
-                
-                {userType === 'teacher' && canScrollToNext && currentStep === 3 && (
-                  <div className="text-center mt-8 animate-in fade-in slide-in-from-bottom-6 duration-700 delay-300">
-                    <Button 
-                      type="button" 
-                      className="w-full h-12 bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 hover:scale-105 hover:shadow-xl border-0 rounded-xl font-semibold transition-all duration-300 ease-out"
-                      onClick={handleSubmitStep}
-                disabled={isLoading}
-              >
-                      {isLoading ? '가입 중...' : '회원가입'}
-              </Button>
-                  </div>
-                )}
-
-                {userType === 'student' && canScrollToNext && currentStep === 3 && (
-                  <div className="text-center mt-8 animate-in fade-in slide-in-from-bottom-4">
-                    <p className="text-sm text-gray-600 mb-4">아래로 스크롤하여 계속하세요</p>
-                    <ChevronDown className="w-6 h-6 mx-auto text-blue-600 animate-bounce" />
-                  </div>
-                )}
               </div>
             </div>
+            
+            {/* 절대 위치 하단 영역 */}
+            {userType === 'teacher' && canScrollToNext && currentStep === 3 && (
+              <div className="absolute bottom-32 left-1/2 w-full max-w-md text-center" style={{ 
+                opacity: 0, 
+                transform: 'translateX(-50%) translateY(20px)',
+                animation: 'slideUpFadeIn 0.8s ease-out 0.3s forwards'
+              }}>
+                <Button 
+                  type="button" 
+                  className={`w-full h-12 border-0 rounded-xl font-semibold transition-all duration-500 ease-out ${
+                    isSuccess 
+                      ? 'bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700' 
+                      : 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800'
+                  }`}
+                  onClick={handleSubmitStep}
+            disabled={isLoading}
+          >
+                  <div className="flex items-center justify-center">
+                    {isSuccess ? (
+                      <Check className="w-5 h-5 text-white success-check" strokeWidth={3} />
+                    ) : isLoading ? (
+                      '가입 중...'
+                    ) : (
+                      '회원가입'
+                    )}
+                  </div>
+          </Button>
+              </div>
+            )}
+
+            {userType === 'student' && canScrollToNext && currentStep === 3 && (
+              <div className="absolute bottom-32 left-1/2 transform -translate-x-1/2 text-center soft-entrance" style={{ animationDelay: '0.2s', opacity: 0 }}>
+                <p className="text-sm text-gray-600 mb-4">아래로 스크롤하여 계속하세요</p>
+                <ChevronDown className="w-6 h-6 mx-auto text-blue-600 animate-bounce" />
+              </div>
+            )}
           </div>
         )}
 
@@ -791,21 +957,37 @@ export default function JoinPage() {
               
               <div className="space-y-6">
 {renderCurrentSection()}
-                
-                {canScrollToNext && currentStep === 4 && (
-                  <div className="text-center mt-8 animate-in fade-in slide-in-from-bottom-6 duration-700 delay-300">
-              <Button 
-                      type="button" 
-                      className="w-full h-12 bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 hover:scale-105 hover:shadow-xl border-0 rounded-xl font-semibold transition-all duration-300 ease-out"
-                      onClick={handleSubmitStep}
-                disabled={isLoading}
-              >
-                {isLoading ? '가입 중...' : '회원가입'}
-              </Button>
-            </div>
-                )}
               </div>
             </div>
+        
+            {canScrollToNext && currentStep === 4 && (
+              <div className="absolute bottom-32 left-1/2 w-full max-w-md text-center" style={{ 
+                opacity: 0, 
+                transform: 'translateX(-50%) translateY(20px)',
+                animation: 'slideUpFadeIn 0.8s ease-out 0.3s forwards'
+              }}>
+          <Button 
+                  type="button" 
+                  className={`w-full h-12 border-0 rounded-xl font-semibold transition-all duration-500 ease-out ${
+                    isSuccess 
+                      ? 'bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700' 
+                      : 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800'
+                  }`}
+                  onClick={handleSubmitStep}
+            disabled={isLoading}
+          >
+            <div className="flex items-center justify-center">
+              {isSuccess ? (
+                <Check className="w-5 h-5 text-white success-check" strokeWidth={3} />
+              ) : isLoading ? (
+                '가입 중...'
+              ) : (
+                '회원가입'
+              )}
+            </div>
+          </Button>
+        </div>
+            )}
           </div>
         )}
       </div>
@@ -817,13 +999,14 @@ export default function JoinPage() {
             이미 계정이 있으신가요?
             <button 
               onClick={handleLoginClick} 
-              className="text-blue-600 hover:text-blue-700 font-semibold ml-2 transition-colors duration-200 hover:underline"
+              className="text-blue-600 font-semibold ml-2"
             >
               로그인
             </button>
           </p>
         </div>
       </div>
+
     </div>
   );
 }

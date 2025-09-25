@@ -17,6 +17,7 @@ interface InputFieldProps {
   hasError: boolean;
   errorMessage?: string;
   isTouched: boolean;
+  disablePaste?: boolean;
 }
 
 export const InputField: React.FC<InputFieldProps> = ({
@@ -32,6 +33,7 @@ export const InputField: React.FC<InputFieldProps> = ({
   hasError,
   errorMessage,
   isTouched,
+  disablePaste = false,
 }) => {
   return (
     <div className="space-y-3">
@@ -47,10 +49,11 @@ export const InputField: React.FC<InputFieldProps> = ({
           onChange={onChange}
           onBlur={onBlur}
           onKeyDown={onKeyDown}
+          onPaste={disablePaste ? (e) => e.preventDefault() : undefined}
           name={name}
           placeholder={placeholder}
           inputMode={inputMode}
-          className={`w-full h-12 px-4 text-gray-900 bg-gray-50/50 border-0 rounded-xl transition-all duration-300 ease-out focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:shadow-lg hover:bg-white ${
+          className={`w-full h-12 px-4 text-gray-900 bg-gray-50/50 border-0 rounded-xl transition-all duration-300 ease-out focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:shadow-lg ${
             isTouched && hasError ? 'border-red-500' : ''
           }`}
         />

@@ -27,7 +27,7 @@ export const StepNavigation: React.FC<StepNavigationProps> = ({
   if (!userType) return null;
 
   return (
-    <div className="fixed left-20 top-1/2 transform -translate-y-1/2 z-50 animate-in fade-in slide-in-from-left-4 duration-500">
+    <div className="fixed left-20 top-1/2 transform -translate-y-1/2 z-50 animate-in fade-in slide-in-from-left-2 duration-700 ease-out delay-300">
       <div className="flex flex-col items-center bg-transparent backdrop-blur-lg rounded-2xl p-4 shadow-xl border border-white/50">
         {Array.from({ length: maxStep }, (_, index) => (
           <React.Fragment key={index + 1}>
