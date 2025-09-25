@@ -81,8 +81,13 @@ export interface EnglishPassage {
   related_questions: number[];
 }
 
-// 영어 지문 콘텐츠 타입 정의
+// 영어 지문 콘텐츠 타입 정의 - 실제 백엔드 데이터 구조에 맞춤
 export interface EnglishPassageContent {
+  // 현재 백엔드에서 반환하는 구조 (우선순위)
+  title?: string;
+  paragraphs?: string[];
+
+  // 메타데이터 (편지, 리뷰 등에서 사용)
   metadata?: {
     sender?: string;
     recipient?: string;
@@ -93,7 +98,9 @@ export interface EnglishPassageContent {
     product_name?: string;
     reviewer?: string;
   };
-  content: EnglishContentItem[];
+
+  // 레거시 구조화된 형식 (하위 호환성)
+  content?: EnglishContentItem[];
 }
 
 // 영어 지문 콘텐츠 아이템 타입 정의
@@ -110,7 +117,7 @@ export interface EnglishContentItem {
 export interface EnglishQuestion {
   question_id: number;
   question_text: string;
-  question_type: '객관식' | '주관식';
+  question_type: '객관식' | '단답형' | '서술형';
   question_subject: string;
   question_difficulty: '상' | '중' | '하';
   question_detail_type: string;

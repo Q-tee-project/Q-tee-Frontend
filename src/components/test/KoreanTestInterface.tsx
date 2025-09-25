@@ -184,10 +184,10 @@ export function KoreanTestInterface({
             {currentProblemIndex === worksheetProblems.length - 1 ? (
               <Button
                 onClick={onSubmitTest}
-                disabled={isSubmitting}
-                className="bg-red-600 hover:bg-red-700 text-white"
+                disabled={isSubmitting || Object.keys(answers).length < worksheetProblems.length}
+                className="bg-red-600 hover:bg-red-700 text-white disabled:bg-gray-400"
               >
-                {isSubmitting ? '제출 중...' : '과제 제출'}
+                {isSubmitting ? '제출 중...' : Object.keys(answers).length < worksheetProblems.length ? `과제 제출 (${Object.keys(answers).length}/${worksheetProblems.length})` : '과제 제출'}
               </Button>
             ) : (
               <Button
