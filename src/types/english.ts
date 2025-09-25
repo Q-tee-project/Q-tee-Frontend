@@ -153,33 +153,13 @@ export interface EnglishRegenerationInfo {
   }[];
 }
 
+// 영어 문제 재생성 요청 데이터
 export interface EnglishRegenerationRequest {
-  feedback: string;
+  feedback: string; // 사용자 피드백 (필수)
   worksheet_context: {
-    school_level: string;
-    grade: number;
-    worksheet_type: string;
+    school_level: string; // 학교급
+    grade: number; // 학년
   };
-  current_question_type: string;
-  current_subject: string;
-  current_detail_type: string;
-  current_difficulty: string;
-
-  // 유지 옵션들
-  keep_passage?: boolean;
-  regenerate_related_questions?: boolean; // v2.0 새로 추가
-  keep_question_type?: boolean;
-  keep_difficulty?: boolean;
-  keep_subject?: boolean;
-  keep_detail_type?: boolean;
-
-  // 변경 목표값들
-  target_question_type?: string;
-  target_difficulty?: string;
-  target_subject?: string;
-  target_detail_type?: string;
-
-  additional_requirements?: string;
 }
 
 export interface EnglishRegenerationResponse {

@@ -57,6 +57,7 @@ const RegenerationPreviewModal: React.FC<RegenerationPreviewModalProps> = ({
   const { original, regenerated } = previewData;
 
   // "재생성된 결과" 컬럼에 표시할 콘텐츠 결정
+  // 지문이 실제로 재생성된 경우에만 재생성된 지문을 사용, 아니면 원본 유지
   const regeneratedPassageToShow = regenerated.passage || original.passage;
   const mainRegeneratedQuestion = regenerated.question;
   // 연관 문제가 재생성되었다면 해당 데이터를, 아니라면 원본 연관 문제 데이터를 사용
@@ -329,86 +330,42 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
       setIsLoading(true);
       setSelectedQuestionForRegeneration(question);
 
-      // 생성 모드일 때는 DB 조회 없이 현재 데이터로 구성
-      if (mode === 'generation') {
-        // 현재 메모리에 있는 데이터로 재생성 정보 구성
-        const currentPassage = question.question_passage_id ?
-          passages.find((p: EnglishPassage) => p.passage_id === question.question_passage_id) : null;
+      // 현재 메모리에 있는 데이터로 재생성 정보 구성 (생성/뱅크 모드 공통)
+      const currentPassage = question.question_passage_id ?
+        passages.find((p: EnglishPassage) => p.passage_id === question.question_passage_id) : null;
 
-        const relatedQuestions = currentPassage ?
-          questions.filter((q: EnglishQuestion) => q.question_passage_id === question.question_passage_id && q.question_id !== question.question_id)
-            .map((q: EnglishQuestion) => ({ id: q.question_id, text: q.question_text })) : [];
+      const relatedQuestions = currentPassage ?
+        questions.filter((q: EnglishQuestion) => q.question_passage_id === question.question_passage_id && q.question_id !== question.question_id)
+          .map((q: EnglishQuestion) => ({ id: q.question_id, text: q.question_text })) : [];
 
-        const info = {
-          question: {
-            id: question.question_id,
-            question_type: question.question_type,
-            question_subject: question.question_subject,
-            question_detail_type: question.question_detail_type,
-            question_difficulty: question.question_difficulty,
-            passage_id: question.question_passage_id,
-          },
-          worksheet: {
-            school_level: selectedWorksheet.worksheet_level,
-            grade: selectedWorksheet.worksheet_grade,
-            problem_type: selectedWorksheet.problem_type || '혼합형',
-          },
-          has_passage: !!question.question_passage_id,
-          related_questions: relatedQuestions,
-        };
+      const info = {
+        question: {
+          id: question.question_id,
+          question_type: question.question_type,
+          question_subject: question.question_subject,
+          question_detail_type: question.question_detail_type,
+          question_difficulty: question.question_difficulty,
+          passage_id: question.question_passage_id,
+        },
+        worksheet: {
+          school_level: selectedWorksheet.worksheet_level,
+          grade: selectedWorksheet.worksheet_grade,
+          problem_type: selectedWorksheet.problem_type || '혼합형',
+        },
+        has_passage: !!question.question_passage_id,
+        related_questions: relatedQuestions,
+      };
 
-        setRegenerationInfo(info as EnglishRegenerationInfo);
+      setRegenerationInfo(info as EnglishRegenerationInfo);
 
-        // 생성 모드 폼 초기값 설정
-        setRegenerationFormData({
-          feedback: '',
-          keep_passage: true,
-          regenerate_related_questions: false,
-          keep_question_type: true,
-          keep_difficulty: true,
-          keep_subject: true,
-          keep_detail_type: true,
-          worksheet_context: {
-            school_level: info.worksheet.school_level,
-            grade: info.worksheet.grade,
-            worksheet_type: info.worksheet.problem_type,
-          },
-          current_question_type: info.question.question_type,
-          current_subject: info.question.question_subject,
-          current_detail_type: info.question.question_detail_type,
-          current_difficulty: info.question.question_difficulty,
-          additional_requirements: '',
-        });
-      } else {
-        // 뱅크 모드일 때는 기존대로 API 조회
-        const info = await EnglishService.getEnglishQuestionRegenerationInfo(
-          selectedWorksheet.worksheet_id as number,
-          question.question_id
-        );
-
-        setRegenerationInfo(info);
-
-        // 뱅크 모드 폼 초기값 설정
-        setRegenerationFormData({
-          feedback: '',
-          keep_passage: true,
-          regenerate_related_questions: false,
-          keep_question_type: true,
-          keep_difficulty: true,
-          keep_subject: true,
-          keep_detail_type: true,
-          worksheet_context: {
-            school_level: info.worksheet.school_level,
-            grade: info.worksheet.grade,
-            worksheet_type: info.worksheet.problem_type,
-          },
-          current_question_type: info.question.question_type,
-          current_subject: info.question.question_subject,
-          current_detail_type: info.question.question_detail_type,
-          current_difficulty: info.question.question_difficulty,
-          additional_requirements: '',
-        });
-      }
+      // 폼 초기값 설정 (새 타입에 맞춤)
+      setRegenerationFormData({
+        feedback: '',
+        worksheet_context: {
+          school_level: info.worksheet.school_level,
+          grade: info.worksheet.grade,
+        },
+      });
 
       setIsRegenerateModalOpen(true);
     } catch (error: any) {
@@ -430,35 +387,37 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
     try {
       let response: EnglishRegenerationResponse | null = null;
 
-      if (mode === 'generation') {
-        const currentPassage = selectedQuestionForRegeneration.question_passage_id
-          ? passages.find((p: EnglishPassage) => p.passage_id === selectedQuestionForRegeneration.question_passage_id)
-          : null;
+      // 모드에 상관없이 같은 방식으로 재생성 요청
+      const currentPassage = selectedQuestionForRegeneration.question_passage_id
+        ? passages.find((p: EnglishPassage) => p.passage_id === selectedQuestionForRegeneration.question_passage_id)
+        : null;
 
-        let questionsToSend = [selectedQuestionForRegeneration];
-        // '지문 유지'가 해제되었을 때만 연관 문제들을 포함
-        if (regenerationFormData.keep_passage === false) {
-          const relatedQuestions = currentPassage
-            ? questions.filter(q => q.question_passage_id === currentPassage.passage_id && q.question_id !== selectedQuestionForRegeneration.question_id)
-            : [];
-          questionsToSend.push(...relatedQuestions);
-        }
-
-        const sanitizedQuestions = questionsToSend.map(q => sanitizeQuestionData(q));
-        const sanitizedPassage = currentPassage ? sanitizePassageData(currentPassage) : null;
-
-        response = await EnglishService.regenerateEnglishQuestionFromData(
-          sanitizedQuestions,
-          sanitizedPassage,
-          regenerationFormData as EnglishRegenerationRequest
+      // 선택된 문제와 관련 지문이 있다면 연관 문제들도 모두 포함
+      let questionsToSend = [selectedQuestionForRegeneration];
+      if (currentPassage) {
+        const relatedQuestions = questions.filter(q =>
+          q.question_passage_id === currentPassage.passage_id &&
+          q.question_id !== selectedQuestionForRegeneration.question_id
         );
-      } else { // bank mode
-        response = await EnglishService.regenerateEnglishQuestion(
-          selectedWorksheet.worksheet_id as number,
-          selectedQuestionForRegeneration.question_id,
-          regenerationFormData as EnglishRegenerationRequest
-        );
+        questionsToSend.push(...relatedQuestions);
       }
+
+      const sanitizedQuestions = questionsToSend.map(q => sanitizeQuestionData(q));
+      const sanitizedPassage = currentPassage ? sanitizePassageData(currentPassage) : null;
+
+      console.log('🚀 재생성 요청 보내는 데이터:', {
+        questions: sanitizedQuestions,
+        passage: sanitizedPassage,
+        passageId: sanitizedPassage?.passage_id,
+        passageType: sanitizedPassage?.passage_type,
+        formData: regenerationFormData
+      });
+
+      response = await EnglishService.regenerateEnglishQuestionFromData(
+        sanitizedQuestions,
+        sanitizedPassage,
+        regenerationFormData as EnglishRegenerationRequest
+      );
 
       if (response && response.status === 'success') {
         const originalQuestion = selectedQuestionForRegeneration;
@@ -474,6 +433,23 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
         const mainRegeneratedQuestion = regeneratedQuestions.find((q: EnglishQuestion) => q.question_id === originalQuestion.question_id) || regeneratedQuestions[0];
         const relatedRegeneratedQuestions = regeneratedQuestions.filter((q: EnglishQuestion) => q.question_id !== originalQuestion.question_id);
 
+        console.log('🔄 재생성 결과 미리보기 데이터 설정:', {
+          originalPassage: originalPassage,
+          regeneratedPassage: response.regenerated_passage,
+          hasRegeneratedPassage: !!response.regenerated_passage,
+          regeneratedPassageContent: response.regenerated_passage?.passage_content
+        });
+
+        // 재생성된 지문을 EnglishPassage 타입에 맞게 변환
+        const regeneratedPassage: EnglishPassage | null = response.regenerated_passage ? {
+          passage_id: originalPassage?.passage_id || 0,
+          passage_type: response.regenerated_passage.passage_type || originalPassage?.passage_type || 'article',
+          passage_content: response.regenerated_passage.passage_content,
+          original_content: response.regenerated_passage.original_content,
+          korean_translation: response.regenerated_passage.korean_translation,
+          related_questions: originalPassage?.related_questions || []
+        } : null;
+
         setPreviewData({
           original: {
             question: originalQuestion,
@@ -482,7 +458,7 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
           },
           regenerated: {
             question: mainRegeneratedQuestion,
-            passage: response.regenerated_passage,
+            passage: regeneratedPassage,
             relatedQuestions: relatedRegeneratedQuestions
           }
         });
@@ -493,6 +469,8 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
         alert(`재생성 실패: ${response?.message || '알 수 없는 오류'}`);
       }
     } catch (error: any) {
+      console.error('🚨 재생성 함수에서 에러 발생:', error);
+      console.error('🚨 에러 스택:', error.stack);
       alert(`재생성 실패: ${error.message}`);
     } finally {
       setIsRegenerating(false);
@@ -520,23 +498,10 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
   const questions = (worksheetProblems?.questions || []).sort((a: EnglishQuestion, b: EnglishQuestion) => a.question_id - b.question_id);
   const passages: EnglishPassage[] = worksheetProblems?.passages || [];
 
-  // 디버깅: 지문 데이터 확인
-  console.log('📚 지문 데이터 확인:', {
-    worksheetProblems: worksheetProblems,
-    passagesCount: passages.length,
-    passages: passages,
-    questionsWithPassage: questions.filter(q => q.question_passage_id).length,
-  });
-
   // 각 문제별 지문 연결 상태 확인
   questions.forEach((question, index) => {
     const passage = question.question_passage_id ?
       passages.find((p: EnglishPassage) => p.passage_id === question.question_passage_id) : null;
-    console.log(`📝 문제 ${index + 1} (ID: ${question.question_id}):`, {
-      question_passage_id: question.question_passage_id,
-      passageFound: !!passage,
-      passageId: passage?.passage_id,
-    });
   });
 
   const ContentWrapper = mode === 'generation' ? 'div' : Card;
@@ -675,15 +640,6 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
                 const shouldShowPassage = passage &&
                   (!prevQuestion || prevQuestion.question_passage_id !== question.question_passage_id);
 
-                // 지문 렌더링 디버깅
-                console.log(`🎯 문제 ${questionIndex + 1} 지문 렌더링 조건:`, {
-                  hasPassage: !!passage,
-                  shouldShowPassage: shouldShowPassage,
-                  passageId: passage?.passage_id,
-                  prevQuestionPassageId: prevQuestion?.question_passage_id,
-                  currentQuestionPassageId: question.question_passage_id,
-                });
-
                 return (
                   <div key={question.question_id}>
                     {/* 지문 렌더링 */}
@@ -744,7 +700,7 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
                     <div className="text-blue-800">
                       <div className="font-semibold mb-1 text-blue-900">📝 지문 연계 문제 안내</div>
                       <div className="text-sm">
-                        이 문제는 지문에 연결된 다른 문제들이 있습니다. '지문 유지'를 체크 해제하면 지문과 모든 연관 문제가 함께 변경될 수 있습니다.
+                        이 문제는 지문에 연결된 다른 문제들이 있습니다. 지문과 모든 연관 문제가 함께 변경될 수 있습니다.
                       </div>
                     </div>
                   </div>
@@ -768,63 +724,9 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
                 />
               </div>
 
-              {/* 지문 옵션 */}
-              <div className="space-y-2">
-                <div className="text-sm font-medium text-gray-700">지문 옵션</div>
-                {regenerationInfo.has_passage ? (
-                  <div className="p-3 rounded-md border bg-gray-50">
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="keep_passage"
-                        checked={regenerationFormData.keep_passage !== false}
-                        onCheckedChange={(checked) => setRegenerationFormData({
-                          ...regenerationFormData,
-                          keep_passage: checked as boolean,
-                        })}
-                      />
-                      <label htmlFor="keep_passage" className="text-sm font-medium">
-                        지문 유지
-                      </label>
-                    </div>
-                    {/* '지문 유지' 해제 시 경고 메시지 */}
-                    {!regenerationFormData.keep_passage && regenerationInfo.related_questions && regenerationInfo.related_questions.length > 0 && (
-                      <div className="border border-yellow-300 bg-yellow-50 rounded-lg p-3 mt-3">
-                        <div className="flex items-start gap-3">
-                          <AlertTriangle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-                          <div className="text-yellow-800">
-                            <div className="font-semibold text-yellow-900">주의!</div>
-                            <p className="text-sm mt-1">
-                              지문이 변경되므로, 이 지문과 연결된 다른 모든 문제({regenerationInfo.related_questions.length}개)도 함께 재생성됩니다.
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <p className="text-sm text-gray-500 p-3 rounded-md border bg-gray-50">이 문제는 지문이 없습니다.</p>
-                )}
-              </div>
-
-              {/* 추가 요구사항 */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">
-                  추가 요구사항 (선택)
-                </label>
-                <Textarea
-                  value={regenerationFormData.additional_requirements || ''}
-                  onChange={(e) => setRegenerationFormData({
-                    ...regenerationFormData,
-                    additional_requirements: e.target.value
-                  })}
-                  placeholder="예: 스포츠 관련 주제로 만들어주세요"
-                  rows={2}
-                  className="w-full"
-                />
-              </div>
 
               <div className="text-xs text-gray-500 bg-slate-50 p-3 rounded-md border">
-                <strong>참고:</strong> 문제의 난이도, 영역, 유형 등은 변경되지 않고 현재 값으로 유지됩니다.
+                <strong>참고:</strong> 입력하신 피드백에 따라 문제와 지문이 재생성됩니다.
               </div>
             </div>
           )}
@@ -853,6 +755,13 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
         onClose={() => setIsRegenerationPreviewModalOpen(false)}
         onApply={() => {
           if (!previewData) return;
+
+          console.log('🔄 재생성 결과 적용 중:', {
+            mode,
+            regeneratedQuestion: previewData.regenerated.question,
+            regeneratedPassage: previewData.regenerated.passage,
+            regeneratedRelatedQuestions: previewData.regenerated.relatedQuestions
+          });
 
           if (mode === 'generation' && onUpdateQuestion) {
             onUpdateQuestion(

@@ -48,16 +48,6 @@ export const PassageRenderer: React.FC<PassageRendererProps> = ({
   onCancelEdit,
   onEditFormDataChange,
 }) => {
-  // PassageRenderer 디버깅
-  console.log('📄 PassageRenderer 렌더링:', {
-    passageId: passage?.passage_id,
-    passageType: passage?.passage_type,
-    passageContent: passage?.passage_content,
-    originalContent: passage?.original_content,
-    koreanTranslation: passage?.korean_translation,
-    relatedQuestions: passage?.related_questions,
-    showAnswerSheet: showAnswerSheet,
-  });
 
   return (
     <Card className="mb-4 bg-blue-50 border-blue-200">
@@ -303,12 +293,6 @@ export const PassageRenderer: React.FC<PassageRendererProps> = ({
             {/* 지문 내용 렌더링 디버깅 */}
             {(() => {
               const contentToShow = showAnswerSheet ? passage.original_content : passage.passage_content;
-              console.log('📖 지문 내용 렌더링:', {
-                showAnswerSheet: showAnswerSheet,
-                contentToShow: contentToShow,
-                contentArray: contentToShow?.content,
-                contentLength: contentToShow?.content?.length || 0,
-              });
               return null;
             })()}
 
