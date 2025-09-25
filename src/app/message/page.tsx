@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import {
   FiSearch, FiStar, FiTrash2, FiMoreVertical,
   FiUser, FiUsers, FiPlus, FiX, FiCalendar
 } from 'react-icons/fi';
+import { useRouter } from 'next/navigation';
 import { IoMailOutline, IoMailOpenOutline } from 'react-icons/io5';
 import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -13,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { messageService, MessageResponse, MessageListResponse } from '@/services/messageService';
 import {
   Pagination,
   PaginationContent,
@@ -36,6 +38,7 @@ interface Message {
 }
 
 export default function MessagePage() {
+  const router = useRouter();
   const [activeFilter, setActiveFilter] = useState<'all' | 'read' | 'unread' | 'starred'>('all');
   const [showStarredOnly, setShowStarredOnly] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -283,7 +286,10 @@ export default function MessagePage() {
               >
                 <FiTrash2 className="w-5 h-5" />
               </button>
-              <Button className="bg-blue-600 hover:bg-blue-700 text-white px-4 h-10">
+              <Button
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 h-10"
+                onClick={() => router.push('/post')}
+              >
                 작성하기
               </Button>
             </div>
@@ -381,11 +387,14 @@ export default function MessagePage() {
                             <FiUser className="w-4 h-4" />
                             프로필
                           </button>
-                          <button className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-3">
-                            <FiUsers className="w-4 h-4" />
-                            소속 클래스
-                          </button>
-                          <button className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-3">
+                          <button
+                            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-3"
+                            onClick={() => {
+                              // 발신자에게 답장하기 위한 recipient 설정 (실제 구현시 발신자 ID 사용)
+                              router.push(`/post?recipient=sender_${message.id}`);
+                              setSelectedMessageId(null);
+                            }}
+                          >
                             <FiPlus className="w-4 h-4" />
                             쪽지 작성
                           </button>

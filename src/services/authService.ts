@@ -53,6 +53,12 @@ export interface StudentProfile {
   created_at: string;
 }
 
+export interface UserProfile {
+  userType: 'teacher' | 'student';
+  teacherProfile?: TeacherProfile & { classrooms?: Classroom[] };
+  studentProfile?: StudentProfile & { classrooms?: ClassroomWithTeacher[] };
+}
+
 export interface ClassroomCreateData {
   name: string;
   school_level: 'middle' | 'high';
@@ -244,6 +250,30 @@ export const authService = {
       type: tokenStorage.getUserType(),
       profile: tokenStorage.getUserProfile(),
     };
+  },
+
+  // 사용자 프로필 통합 조회
+  async getUserProfile(): Promise<UserProfile> {
+    const userType = tokenStorage.getUserType();
+    if (!userType) {
+      throw new Error('User not authenticated');
+    }
+
+    if (userType === 'teacher') {
+      const teacherProfile = await this.getTeacherProfile();
+      const classrooms = await classroomService.getMyClassrooms();
+      return {
+        userType: 'teacher',
+        teacherProfile: { ...teacherProfile, classrooms }
+      };
+    } else {
+      const studentProfile = await this.getStudentProfile();
+      const classrooms = await studentClassService.getMyClassesWithTeachers(studentProfile.id);
+      return {
+        userType: 'student',
+        studentProfile: { ...studentProfile, classrooms }
+      };
+    }
   },
 };
 
