@@ -147,10 +147,6 @@ const Sidebar = () => {
                 delay: index * 0.08,
                 ease: 'easeOut',
               }}
-              whileHover={{
-                scale: 1.02,
-                transition: { duration: 0.2 },
-              }}
               whileTap={{ scale: 0.98 }}
             >
               <button className="flex items-center justify-center flex-shrink-0">

@@ -71,7 +71,18 @@ async function apiRequest<T>(endpoint: string, options: RequestInit = {}, baseUr
 
 // 인증 API 호출 함수
 async function authApiRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  return apiRequest<T>(endpoint, options, AUTH_API_BASE_URL);
+  const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+
+  const authOptions: RequestInit = {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(options.headers || {}),
+    },
+  };
+
+  return apiRequest<T>(endpoint, authOptions, AUTH_API_BASE_URL);
 }
 
 // 수학 서비스 API 함수들
