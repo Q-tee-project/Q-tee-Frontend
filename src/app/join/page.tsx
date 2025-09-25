@@ -44,6 +44,7 @@ export default function JoinPage() {
   const sectionRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [canScrollToNext, setCanScrollToNext] = useState(false);
   const [isScrolling, setIsScrolling] = useState(false);
+  const [isTypingPhone, setIsTypingPhone] = useState(false);
 
   // 스크롤 함수들
   const scrollToSection = (sectionIndex: number) => {
@@ -114,8 +115,8 @@ export default function JoinPage() {
       if (e.deltaY > 0) {
         console.log('스크롤 다운 시도:', { currentStep, canScrollToNext, maxStep: getMaxStep() });
         
-        if (!canScrollToNext) {
-          console.log('스크롤 차단됨: canScrollToNext = false');
+        if (!canScrollToNext || isTypingPhone) {
+          console.log('스크롤 차단됨:', { canScrollToNext, isTypingPhone });
           e.preventDefault();
           return;
         }
@@ -177,7 +178,7 @@ export default function JoinPage() {
         }
       };
     }
-  }, [currentStep, canScrollToNext, isScrolling]);
+  }, [currentStep, canScrollToNext, isScrolling, isTypingPhone]);
 
   // 전화번호 포맷팅 함수
   const formatPhoneNumber = (value: string) => {
@@ -231,6 +232,11 @@ export default function JoinPage() {
   const handleInputBlur = (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     
+    // 전화번호 필드에서 블러가 발생하면 타이핑 상태 해제
+    if (name === 'phone' || name === 'parent_phone') {
+      setIsTypingPhone(false);
+    }
+    
     // 필드가 터치되었음을 표시
     setTouchedFields(prev => ({
       ...prev,
@@ -239,6 +245,20 @@ export default function JoinPage() {
     
     // 유효성 검사 수행
     validateField(name, value);
+  };
+
+  // 전화번호 필드 포커스 핸들러
+  const handlePhoneFocus = () => {
+    setIsTypingPhone(true);
+  };
+
+  // 전화번호 필드 키다운 핸들러
+  const handlePhoneKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // 엔터키를 누르면 타이핑 상태 해제
+    if (e.key === 'Enter') {
+      setIsTypingPhone(false);
+      e.currentTarget.blur(); // 포커스 해제
+    }
   };
 
   const validateField = (fieldName: string, value: string | number) => {
@@ -271,10 +291,12 @@ export default function JoinPage() {
         break;
         
       case 'phone':
-        // 하이픈이 포함된 전화번호 형식 검증 (010-1234-5678)
-        const phoneRegex = /^010-\d{4}-\d{4}$/;
-        if (!phoneRegex.test(trimmedValue)) {
-          newFieldErrors.phone = '올바른 연락처 형식이 아닙니다.';
+        // 숫자만 추출하여 10-11자리 검증
+        const phoneNumbers = trimmedValue.replace(/[^\d]/g, '');
+        if (phoneNumbers.length < 10) {
+          newFieldErrors.phone = '전화번호는 최소 10자리 이상 입력해주세요.';
+        } else if (phoneNumbers.length > 11) {
+          newFieldErrors.phone = '전화번호는 최대 11자리까지 입력 가능합니다.';
         } else {
           delete newFieldErrors.phone;
         }
@@ -306,10 +328,12 @@ export default function JoinPage() {
         
       case 'parent_phone':
         if (userType === 'student') {
-          // 하이픈이 포함된 전화번호 형식 검증 (010-1234-5678)
-          const parentPhoneRegex = /^010-\d{4}-\d{4}$/;
-          if (!parentPhoneRegex.test(trimmedValue)) {
-            newFieldErrors.parent_phone = '올바른 연락처 형식이 아닙니다.';
+          // 숫자만 추출하여 10-11자리 검증
+          const parentPhoneNumbers = trimmedValue.replace(/[^\d]/g, '');
+          if (parentPhoneNumbers.length < 10) {
+            newFieldErrors.parent_phone = '전화번호는 최소 10자리 이상 입력해주세요.';
+          } else if (parentPhoneNumbers.length > 11) {
+            newFieldErrors.parent_phone = '전화번호는 최대 11자리까지 입력 가능합니다.';
           } else {
             delete newFieldErrors.parent_phone;
           }
@@ -373,31 +397,8 @@ export default function JoinPage() {
     const prevCanScroll = canScrollToNext;
     setCanScrollToNext(canScroll);
     
-    // 마지막 단계가 아닌 경우에만 자동 스크롤
-    if (!prevCanScroll && canScroll && currentStep < getMaxStep() && !isScrolling) {
-      // 마지막 단계인 경우 스크롤하지 않고 버튼만 나타나게 함
-      const isLastStep = (userType === 'teacher' && currentStep === 3) || (userType === 'student' && currentStep === 4);
-      
-      if (!isLastStep) {
-        setTimeout(() => {
-          console.log('자동 스크롤 실행:', { currentStep, nextStep: currentStep + 1 });
-          setIsScrolling(true);
-          
-          const nextStep = currentStep + 1;
-          setCurrentStep(nextStep as Step);
-          setTimeout(() => {
-            scrollToSection(nextStep - 1);
-          }, 100);
-          
-          // 스크롤 완료 후 1초 뒤에 다시 스크롤 가능하도록
-          setTimeout(() => {
-            setIsScrolling(false);
-          }, 1000);
-        }, 800); // 입력 완료 후 약간의 지연
-      } else {
-        console.log('마지막 단계 완료 - 회원가입 버튼 표시');
-      }
-    }
+    // 자동 스크롤 기능을 제거하고 수동 스크롤만 허용
+    // 사용자가 직접 스크롤하거나 버튼을 클릭해야 다음 단계로 이동
   }, [isCurrentStepComplete, currentStep, canScrollToNext, isScrolling]);
 
   const handleUsernameCheck = async () => {
@@ -535,7 +536,23 @@ export default function JoinPage() {
       router.push('/');
     } catch (error: any) {
       console.error('Signup error:', error);
-      setError(error?.message || '회원가입에 실패했습니다. 다시 시도해주세요.');
+      
+      // API 오류 메시지를 더 사용자 친화적으로 변환
+      let errorMessage = '회원가입에 실패했습니다. 다시 시도해주세요.';
+      
+      if (error?.message) {
+        if (error.message.includes('Network connection failed')) {
+          errorMessage = '서버에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.';
+        } else if (error.message.includes('timeout')) {
+          errorMessage = '요청 시간이 초과되었습니다. 다시 시도해주세요.';
+        } else if (error.message.includes('already exists') || error.message.includes('이미 존재')) {
+          errorMessage = '이미 존재하는 사용자명 또는 이메일입니다.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -556,6 +573,8 @@ export default function JoinPage() {
             touchedFields={touchedFields}
             onInputChange={handleInputChange}
             onInputBlur={handleInputBlur}
+            onPhoneFocus={handlePhoneFocus}
+            onPhoneKeyDown={handlePhoneKeyDown}
           />
         );
       case 3: 
@@ -580,6 +599,8 @@ export default function JoinPage() {
             touchedFields={touchedFields}
             onInputChange={handleInputChange}
             onInputBlur={handleInputBlur}
+            onPhoneFocus={handlePhoneFocus}
+            onPhoneKeyDown={handlePhoneKeyDown}
           />
         );
       default: 

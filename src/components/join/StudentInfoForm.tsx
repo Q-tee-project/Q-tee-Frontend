@@ -22,6 +22,8 @@ interface StudentInfoFormProps {
   touchedFields: { [key: string]: boolean };
   onInputChange: (e: any) => void;
   onInputBlur: (e: React.FocusEvent<HTMLInputElement>) => void;
+  onPhoneFocus?: () => void;
+  onPhoneKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
 }
 
 export const StudentInfoForm: React.FC<StudentInfoFormProps> = ({
@@ -30,22 +32,27 @@ export const StudentInfoForm: React.FC<StudentInfoFormProps> = ({
   touchedFields,
   onInputChange,
   onInputBlur,
+  onPhoneFocus,
+  onPhoneKeyDown,
 }) => {
   return (
     <>
-      <InputField
-        name="parent_phone"
-        type="tel"
-        label="보호자 연락처"
-        placeholder="010-1234-5678"
-        value={formData.parent_phone}
-        onChange={onInputChange}
-        onBlur={onInputBlur}
-        inputMode="numeric"
-        hasError={!!fieldErrors.parent_phone}
-        errorMessage={fieldErrors.parent_phone}
-        isTouched={!!touchedFields.parent_phone}
-      />
+      <div onFocus={onPhoneFocus}>
+        <InputField
+          name="parent_phone"
+          type="tel"
+          label="보호자 연락처"
+          placeholder="010-1234-5678"
+          value={formData.parent_phone}
+          onChange={onInputChange}
+          onBlur={onInputBlur}
+          onKeyDown={onPhoneKeyDown}
+          inputMode="numeric"
+          hasError={!!fieldErrors.parent_phone}
+          errorMessage={fieldErrors.parent_phone}
+          isTouched={!!touchedFields.parent_phone}
+        />
+      </div>
       
       {/* 학급 */}
       <div className="space-y-3">

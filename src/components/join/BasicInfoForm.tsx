@@ -21,6 +21,8 @@ interface BasicInfoFormProps {
   touchedFields: { [key: string]: boolean };
   onInputChange: (e: any) => void;
   onInputBlur: (e: React.FocusEvent<HTMLInputElement>) => void;
+  onPhoneFocus?: () => void;
+  onPhoneKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
 }
 
 export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
@@ -29,6 +31,8 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
   touchedFields,
   onInputChange,
   onInputBlur,
+  onPhoneFocus,
+  onPhoneKeyDown,
 }) => {
   return (
     <>
@@ -58,19 +62,22 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
         isTouched={!!touchedFields.email}
       />
       
-      <InputField
-        name="phone"
-        type="tel"
-        label="연락처"
-        placeholder="010-1234-5678"
-        value={formData.phone}
-        onChange={onInputChange}
-        onBlur={onInputBlur}
-        inputMode="numeric"
-        hasError={!!fieldErrors.phone}
-        errorMessage={fieldErrors.phone}
-        isTouched={!!touchedFields.phone}
-      />
+      <div onFocus={onPhoneFocus}>
+        <InputField
+          name="phone"
+          type="tel"
+          label="연락처"
+          placeholder="010-1234-5678"
+          value={formData.phone}
+          onChange={onInputChange}
+          onBlur={onInputBlur}
+          onKeyDown={onPhoneKeyDown}
+          inputMode="numeric"
+          hasError={!!fieldErrors.phone}
+          errorMessage={fieldErrors.phone}
+          isTouched={!!touchedFields.phone}
+        />
+      </div>
     </>
   );
 };

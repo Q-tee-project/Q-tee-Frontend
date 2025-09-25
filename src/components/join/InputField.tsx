@@ -12,6 +12,7 @@ interface InputFieldProps {
   value: string;
   onChange: (e: any) => void;
   onBlur: (e: React.FocusEvent<HTMLInputElement>) => void;
+  onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   inputMode?: 'text' | 'email' | 'tel' | 'numeric';
   hasError: boolean;
   errorMessage?: string;
@@ -26,6 +27,7 @@ export const InputField: React.FC<InputFieldProps> = ({
   value,
   onChange,
   onBlur,
+  onKeyDown,
   inputMode,
   hasError,
   errorMessage,
@@ -44,6 +46,7 @@ export const InputField: React.FC<InputFieldProps> = ({
           value={value}
           onChange={onChange}
           onBlur={onBlur}
+          onKeyDown={onKeyDown}
           name={name}
           placeholder={placeholder}
           inputMode={inputMode}

@@ -53,7 +53,7 @@ export default function ClassCreatePage() {
   // 로그인 확인
   useEffect(() => {
     if (!isAuthenticated || userType !== 'teacher') {
-      router.push('/login');
+      router.push('/');
       return;
     }
 
