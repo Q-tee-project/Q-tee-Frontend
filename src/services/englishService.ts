@@ -366,12 +366,14 @@ export class EnglishService {
       throw new Error(errorMessage);
     }
 
-    return response.json();
+    const result = await response.json();
+    console.log('영어 문제 재생성 응답 (ID 기반):', result);
+    return result;
   }
 
   // 영어 문제 재생성 (데이터 기반) - v2.0 API
   static async regenerateEnglishQuestionFromData(
-    questionData: any,
+    questionsData: EnglishQuestion[],
     passageData: any | null,
     regenerationRequest: EnglishRegenerationRequest,
   ): Promise<EnglishRegenerationResponse> {
@@ -382,14 +384,14 @@ export class EnglishService {
       throw new Error('로그인이 필요합니다.');
     }
 
-    const requestBody: EnglishDataRegenerationRequest = {
-      question_data: questionData,
-      passage_data: passageData,
-      regeneration_request: regenerationRequest,
+    const requestBody = {
+      questions: questionsData,
+      passage: passageData,
+      formData: regenerationRequest,
     };
 
     const response = await fetch(
-      `${ENGLISH_API_BASE}/questions/regenerate-data?user_id=${userId}`,
+      `${ENGLISH_API_BASE}/questions/regenerate?user_id=${userId}`,
       {
         method: 'POST',
         headers: {
@@ -403,14 +405,23 @@ export class EnglishService {
       let errorMessage = `English API Error: ${response.status}`;
       try {
         const errorData = await response.text();
+        console.error('🚨 재생성 API 에러:', {
+          status: response.status,
+          statusText: response.statusText,
+          url: response.url,
+          requestBody: requestBody,
+          errorData: errorData
+        });
         errorMessage += ` - ${errorData}`;
       } catch (e) {
-        // JSON 파싱 실패 시 기본 메시지 사용
+        console.error('🚨 에러 데이터 파싱 실패:', e);
       }
       throw new Error(errorMessage);
     }
 
-    return response.json();
+    const result = await response.json();
+    console.log('✅ 영어 지문/문제 재생성 응답 성공:', result);
+    return result;
   }
 
   // 영어 서비스 헬스체크
