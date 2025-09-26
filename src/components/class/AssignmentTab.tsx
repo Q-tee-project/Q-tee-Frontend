@@ -1,343 +1,355 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { MathService } from '@/services/mathService';
+import React, { useState, useEffect, useCallback } from 'react';
+import { koreanService, Assignment, KoreanWorksheet, AssignmentDeployRequest } from '@/services/koreanService';
+import { mathService } from '@/services/mathService';
+import { EnglishAssignmentDeployRequest, EnglishService } from '@/services/englishService';
+import { classroomService } from '@/services/authService';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, Calendar, Users, BookOpen, Trash2 } from 'lucide-react';
+import { Plus, BookOpen } from 'lucide-react';
+import { IoSearch } from "react-icons/io5";
+import { AssignmentList } from './AssignmentList';
+import { AssignmentCreateModal } from './AssignmentCreateModal';
+import { AssignmentResultView } from './AssignmentResultView';
 import { StudentAssignmentModal } from './StudentAssignmentModal';
+import { Worksheet } from '@/services/koreanService'; // Re-using Worksheet interface from koreanService
+import { EnglishWorksheetData } from '@/types/english';
 
 interface AssignmentTabProps {
-  classId: string;
-}
-
-interface Worksheet {
-  id: number;
-  title: string;
-  school_level: string;
-  grade: number;
-  semester: number;
-  unit_name: string;
-  chapter_name: string;
-  problem_count: number;
-  created_at: string;
+  classId: number; // Changed to number
 }
 
 export function AssignmentTab({ classId }: AssignmentTabProps) {
-  const [worksheets, setWorksheets] = useState<Worksheet[]>([]);
-  const [assignments, setAssignments] = useState<any[]>([]);
+  const [activeSubject, setActiveSubject] = useState<'korean' | 'english' | 'math'>('korean');
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [filteredAssignments, setFilteredAssignments] = useState<Assignment[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedWorksheets, setSelectedWorksheets] = useState<number[]>([]);
-  const [selectAll, setSelectAll] = useState(false);
-  const [studentModalOpen, setStudentModalOpen] = useState(false);
-  const [selectedAssignment, setSelectedAssignment] = useState<any>(null);
+  const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [selectedAssignmentForDeploy, setSelectedAssignmentForDeploy] = useState<Assignment | null>(null);
+  const [isDeployModalOpen, setIsDeployModalOpen] = useState(false);
 
-  // 로컬 스토리지에서 과제 데이터 로드
-  useEffect(() => {
-    loadAssignmentsFromStorage();
-    loadWorksheets();
-  }, [classId]);
+  // State for AssignmentCreateModal
+  const [modalWorksheets, setModalWorksheets] = useState<Worksheet[] | EnglishWorksheetData[]>([]);
+  const [modalIsLoading, setModalIsLoading] = useState(false);
+  const [selectedWorksheetIds, setSelectedWorksheetIds] = useState<(string | number)[]>([]);
+  const [selectAllWorksheets, setSelectAllWorksheets] = useState(false);
 
-  // 로컬 스토리지에서 과제 데이터 로드
-  const loadAssignmentsFromStorage = () => {
-    try {
-      const storedAssignments = localStorage.getItem(`assignments_${classId}`);
-      if (storedAssignments) {
-        setAssignments(JSON.parse(storedAssignments));
-      }
-    } catch (error) {
-      console.error('과제 데이터 로드 실패:', error);
-    }
-  };
-
-  // 과제 데이터를 로컬 스토리지에 저장
-  const saveAssignmentsToStorage = (newAssignments: any[]) => {
-    try {
-      localStorage.setItem(`assignments_${classId}`, JSON.stringify(newAssignments));
-    } catch (error) {
-      console.error('과제 데이터 저장 실패:', error);
-    }
-  };
-
-  const loadWorksheets = async () => {
+  // Load assignments for the main list
+  const loadAssignments = useCallback(async () => {
     try {
       setIsLoading(true);
-      const data = await MathService.getMathWorksheets();
-      setWorksheets(data);
+      let data: Assignment[] = [];
+      if (activeSubject === 'korean') {
+        data = await koreanService.getDeployedAssignments(classId.toString());
+      } else if (activeSubject === 'math') {
+        data = await mathService.getDeployedAssignments(classId.toString()); // Convert to string for API call if needed
+        // Assuming mathService has a similar getDeployedAssignments method
+        // data = await mathService.getDeployedAssignments(classId.toString());
+        console.warn("MathService.getDeployedAssignments is not yet implemented.");
+      } else if (activeSubject === 'english') {
+        data = await EnglishService.getDeployedAssignments(classId.toString());
+      }
+      setAssignments(data);
     } catch (error) {
-      console.error('워크시트 로드 실패:', error);
+      console.error('Assignments load failed:', error);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [classId, activeSubject]);
 
-  // 전체 선택/해제
-  const handleSelectAll = (checked: boolean) => {
-    setSelectAll(checked);
-    if (checked) {
-      setSelectedWorksheets(worksheets.map((w) => w.id));
-    } else {
-      setSelectedWorksheets([]);
+  // Load worksheets for the creation modal
+  const loadWorksheetsForModal = useCallback(async () => {
+    setModalIsLoading(true);
+    try {
+      let fetchedWorksheets: Worksheet[] = [];
+      let fetchedEnglishWorksheets: EnglishWorksheetData[] = [];
+      if (activeSubject === 'korean') {
+        const response = await koreanService.getKoreanWorksheets();
+        fetchedWorksheets = response.worksheets;
+      } else if (activeSubject === 'math') {
+        // Assuming mathService has a similar getMathWorksheets method
+        const response = await mathService.getMathWorksheets();
+        fetchedWorksheets = response.worksheets;
+      } else if (activeSubject === 'english') {
+        console.log('📚 영어 워크시트 목록 로딩 시작...');
+        const response = await EnglishService.getEnglishWorksheets();
+        console.log('📚 영어 워크시트 API 응답:', response);
+        console.log('📚 영어 워크시트 개수:', response?.length);
+        fetchedEnglishWorksheets = response as EnglishWorksheetData[];
+      }
+      setModalWorksheets(fetchedEnglishWorksheets);
+      setSelectedWorksheetIds([]); // Reset selections when worksheets are reloaded
+      setSelectAllWorksheets(false);
+    } catch (error) {
+      console.error('Failed to load worksheets for modal:', error);
+      alert('워크시트 목록을 불러오는데 실패했습니다.');
     }
-  };
+  }, [activeSubject]);
 
-  // 개별 선택/해제
-  const handleSelectWorksheet = (worksheetId: number, checked: boolean) => {
-    if (checked) {
-      setSelectedWorksheets((prev) => [...prev, worksheetId]);
-    } else {
-      setSelectedWorksheets((prev) => prev.filter((id) => id !== worksheetId));
+  useEffect(() => {
+    loadAssignments();
+  }, [loadAssignments]);
+
+  useEffect(() => {
+    if (isCreateModalOpen) {
+      loadWorksheetsForModal();
     }
-  };
+  }, [isCreateModalOpen, loadWorksheetsForModal]);
 
-  // 과제 생성
-  const handleCreateAssignments = () => {
-    if (selectedWorksheets.length === 0) {
-      alert('과제를 선택해주세요.');
-      return;
+  useEffect(() => {
+    let filtered = assignments;
+    if (searchTerm.trim() !== '') {
+      filtered = filtered.filter(assignment =>
+        assignment.title.toLowerCase().includes(searchTerm.toLowerCase())
+      );
     }
+    setFilteredAssignments(filtered);
+  }, [assignments, searchTerm]);
 
-    const newAssignments = selectedWorksheets.map((worksheetId) => {
-      const worksheet = worksheets.find((w) => w.id === worksheetId);
-      return {
-        id: Date.now() + Math.random(),
-        worksheet_id: worksheetId,
-        title: worksheet?.title || '',
-        unit_name: worksheet?.unit_name || '',
-        chapter_name: worksheet?.chapter_name || '',
-        problem_count: worksheet?.problem_count || 0,
-        created_at: new Date().toISOString(),
-        students: [], // 학생 목록은 나중에 추가
-      };
-    });
-
-    const updatedAssignments = [...assignments, ...newAssignments];
-    setAssignments(updatedAssignments);
-    saveAssignmentsToStorage(updatedAssignments);
-
-    setIsModalOpen(false);
-    setSelectedWorksheets([]);
-    setSelectAll(false);
-  };
-
-  // 과제 삭제
-  const handleDeleteAssignment = (assignmentId: number) => {
-    if (confirm('정말로 이 과제를 삭제하시겠습니까?')) {
-      const updatedAssignments = assignments.filter((a) => a.id !== assignmentId);
-      setAssignments(updatedAssignments);
-      saveAssignmentsToStorage(updatedAssignments);
-    }
-  };
-
-  // 학생 배정 모달 열기
-  const handleOpenStudentModal = (assignment: any) => {
+  const handleSelectAssignment = (assignment: Assignment) => {
     setSelectedAssignment(assignment);
-    setStudentModalOpen(true);
   };
 
-  // 학생 배정 모달 닫기
-  const handleCloseStudentModal = () => {
-    setStudentModalOpen(false);
+  const handleBackToAssignmentList = () => {
     setSelectedAssignment(null);
   };
 
+  const handleDeployAssignment = (assignment: Assignment) => {
+    setSelectedAssignmentForDeploy(assignment);
+    setIsDeployModalOpen(true);
+  };
+
+  const handleAssignmentCreated = () => {
+    setIsCreateModalOpen(false);
+    loadAssignments(); // Refresh the list of assignments
+  };
+
+  const handleSelectAllWorksheets = (checked: boolean) => {
+    setSelectAllWorksheets(checked);
+    if (checked) {
+      setSelectedWorksheetIds(modalWorksheets.map(ws => activeSubject === 'english' ? (ws as EnglishWorksheetData).worksheet_id : (ws as any).id));
+    } else {
+      setSelectedWorksheetIds([]);
+    }
+  };
+
+  const handleSelectWorksheet = (worksheetId: string | number, checked: boolean) => {
+    setSelectedWorksheetIds(prev =>
+      checked ? [...prev, worksheetId] : prev.filter(id => id !== worksheetId)
+    );
+  };
+
+  const handleDeployWorksheets = async (worksheetIds: number[]) => {
+    if (worksheetIds.length > 1) {
+      alert('현재 한 번에 하나의 워크시트만 과제로 배포할 수 있습니다.');
+      return;
+    }
+
+
+    try {
+      // 클래스의 학생 목록 조회
+      const students = await classroomService.getClassroomStudents(classId);
+      const studentIds = students.map(student => student.id);
+
+      if (studentIds.length === 0) {
+        alert('클래스에 등록된 학생이 없습니다. 먼저 학생을 등록해주세요.');
+        return;
+      } 
+
+      for (const worksheetId of selectedWorksheetIds) {
+        if (activeSubject === 'korean') {
+          const deployRequest: AssignmentDeployRequest = {
+            assignment_id: worksheetId as number,
+            classroom_id: classId,
+            student_ids: studentIds,
+          };
+          await koreanService.deployAssignment(deployRequest);
+        } else if (activeSubject === 'math') {
+          const deployRequest: AssignmentDeployRequest = {
+            assignment_id: worksheetId as number,
+            classroom_id: classId,
+            student_ids: studentIds,
+          };
+          await mathService.deployAssignment(deployRequest);
+          console.warn("MathService.deployAssignment is not yet implemented.");
+        } else if (activeSubject === 'english') {
+          const englishDeployRequest: EnglishAssignmentDeployRequest = {
+            assignment_id: worksheetId as number,
+            classroom_id: classId,
+            student_ids: studentIds,
+          };
+          await EnglishService.deployAssignment(englishDeployRequest);
+        }
+      }
+      alert(`${selectedWorksheetIds.length}개의 과제가 성공적으로 생성되었습니다.`);
+      handleAssignmentCreated();
+      handleAssignmentCreated();
+    } catch (error) {
+      console.error('Failed to create assignments:', error);
+      alert(`과제 생성에 실패했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
+
+    }
+
+    // Close the creation modal
+    setIsCreateModalOpen(false);
+
+    // 첫 번째 선택된 워크시트로 배포 모달 열기 (선택사항)
+    if (selectedWorksheetIds.length > 0) {
+      const firstSelectedId = selectedWorksheetIds[0];
+
+      // Worksheet인지 EnglishWorksheetData인지 구분하여 처리
+      const selectedWorksheet = modalWorksheets.find(ws => {
+        if ('id' in ws) {
+          return ws.id === firstSelectedId;
+        } else if ('worksheet_id' in ws) {
+          return ws.worksheet_id === firstSelectedId;
+        }
+        return false;
+      });
+
+      if (selectedWorksheet) {
+        // Assignment 타입에 맞는 속성들만 사용
+        const assignmentData: Assignment = {
+          id: ('id' in selectedWorksheet) ? selectedWorksheet.id : (selectedWorksheet as EnglishWorksheetData).worksheet_id || 0,
+          worksheet_id: ('id' in selectedWorksheet) ? selectedWorksheet.id : (selectedWorksheet as EnglishWorksheetData).worksheet_id || 0,
+          title: ('title' in selectedWorksheet) ? selectedWorksheet.title : (selectedWorksheet as EnglishWorksheetData).worksheet_name || 'Unknown',
+          classroom_id: classId,
+          teacher_id: 0, // Will be set by backend
+          korean_type: '',
+          question_type: '',
+          problem_count: ('problem_count' in selectedWorksheet) ? selectedWorksheet.problem_count || 0 : 0,
+          is_deployed: 'pending',
+          created_at: new Date().toISOString(),
+        };
+
+        handleDeployAssignment(assignmentData);
+      }
+    }
+  };
+
+  const subjectTabs = [
+    { id: 'korean' as const, label: '국어', count: activeSubject === 'korean' ? assignments.length : 0 },
+    { id: 'english' as const, label: '영어', count: activeSubject === 'english' ? assignments.length : 0 },
+    { id: 'math' as const, label: '수학', count: activeSubject === 'math' ? assignments.length : 0 },
+  ];
+
   return (
-    <div className="space-y-6" style={{ padding: '10px' }}>
-      {/* 과제 목록 헤더 */}
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-gray-800" style={{ padding: '0 10px' }}>
-          과제 목록
-        </h3>
-        <Button
-          onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
-        >
-          과제 생성
-        </Button>
-      </div>
-
-      {/* 과제 목록 */}
-      {assignments.length === 0 ? (
-        <Card>
-          <CardContent className="text-center py-12">
-            <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">생성된 과제가 없습니다</h3>
-            <p className="text-gray-500 mb-4">과제를 생성하여 학생들에게 배포해보세요!</p>
-          </CardContent>
-        </Card>
+    <div className="flex flex-col gap-4">
+      {selectedAssignment ? (
+        <AssignmentResultView assignment={selectedAssignment} onBack={handleBackToAssignmentList} />
       ) : (
-        <div className="space-y-4">
-          {assignments.map((assignment) => (
-            <Card key={assignment.id}>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <h4 className="text-lg font-semibold text-gray-900 mb-2">{assignment.title}</h4>
-                    <div className="flex items-center gap-4 text-sm text-gray-600">
-                      <div className="flex items-center gap-1">
-                        <Calendar className="w-4 h-4" />
-                        {new Date(assignment.created_at).toLocaleDateString('ko-KR')}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Users className="w-4 h-4" />
-                        {assignment.students.length}명 배정
-                      </div>
-                      <Badge variant="outline">{assignment.problem_count}문제</Badge>
-                    </div>
-                    <div className="mt-2 text-sm text-gray-500">
-                      {assignment.unit_name} &gt; {assignment.chapter_name}
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleOpenStudentModal(assignment)}
-                    >
-                      학생 배정
-                    </Button>
-                    <Button variant="outline" size="sm">
-                      상세보기
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDeleteAssignment(assignment.id)}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
-
-      {/* 과제 선택 모달 */}
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Plus className="w-5 h-5" />
-              과제 생성
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <p className="text-sm text-gray-600">
-              생성된 워크시트 중에서 과제로 사용할 항목을 선택하세요.
-            </p>
-
-            {isLoading ? (
-              <div className="text-center py-8">
-                <div className="text-gray-500">워크시트 목록을 불러오는 중...</div>
-              </div>
-            ) : worksheets.length === 0 ? (
-              <div className="text-center py-8">
-                <div className="text-gray-500 mb-2">생성된 워크시트가 없습니다.</div>
-                <div className="text-sm text-gray-400">
-                  문제 생성 페이지에서 먼저 워크시트를 생성해주세요.
-                </div>
-              </div>
-            ) : (
-              <Card>
-                <CardContent className="p-0">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-12">
-                          <Checkbox checked={selectAll} onCheckedChange={handleSelectAll} />
-                        </TableHead>
-                        <TableHead>제목</TableHead>
-                        <TableHead>학교급/학년</TableHead>
-                        <TableHead>단원</TableHead>
-                        <TableHead>문제수</TableHead>
-                        <TableHead>생성일</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {worksheets.map((worksheet) => (
-                        <TableRow key={worksheet.id}>
-                          <TableCell>
-                            <Checkbox
-                              checked={selectedWorksheets.includes(worksheet.id)}
-                              onCheckedChange={(checked) =>
-                                handleSelectWorksheet(worksheet.id, checked as boolean)
-                              }
-                            />
-                          </TableCell>
-                          <TableCell className="font-medium">{worksheet.title}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline">
-                              {worksheet.school_level === 'middle' ? '중등' : '고등'}{' '}
-                              {worksheet.grade}학년
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div className="text-sm">
-                              <div className="font-medium">{worksheet.unit_name}</div>
-                              <div className="text-gray-500">{worksheet.chapter_name}</div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="secondary">{worksheet.problem_count}문제</Badge>
-                          </TableCell>
-                          <TableCell className="text-sm text-gray-600">
-                            {new Date(worksheet.created_at).toLocaleDateString('ko-KR')}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            )}
+        <>
+          {/* 과목별 탭 */}
+          <div className="border-b border-gray-200">
+            <div className="flex">
+              {subjectTabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveSubject(tab.id)}
+                  className={`border-b-2 font-medium text-sm ${
+                    activeSubject === tab.id
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                  className="px-5 py-2.5"
+                >
+                  {tab.label}
+                  {tab.count > 0 && (
+                    <span className="ml-2 bg-gray-100 text-gray-900 py-0.5 px-2.5 rounded-full text-xs">
+                      {tab.count}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
           </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsModalOpen(false)}>
-              취소
-            </Button>
-            <Button
-              onClick={handleCreateAssignments}
-              disabled={selectedWorksheets.length === 0}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              과제 생성 ({selectedWorksheets.length}개 선택됨)
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          {/* 과제 목록 헤더 */}
+          <div>
+            <h3 className="text-lg font-semibold text-gray-800">
+              {subjectTabs.find(tab => tab.id === activeSubject)?.label} 과제 목록 ({filteredAssignments.length})
+            </h3>
+          </div>
 
-      {/* 학생 배정 모달 */}
-      {selectedAssignment && (
+          {/* 검색창과 과제 생성 버튼 */}
+          <div className="flex justify-between items-center">
+            <div className="max-w-sm relative">
+              <Input
+                placeholder="과제명 검색"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pr-10"
+              />
+              <IoSearch className="absolute right-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            </div>
+            <Button onClick={() => setIsCreateModalOpen(true)} className="flex items-center gap-2">
+              <Plus className="w-4 h-4" /> 과제 생성
+            </Button>
+          </div>
+
+          {/* 과제 목록 */}
+          {isLoading ? (
+            <p>Loading assignments...</p>
+          ) : filteredAssignments.length === 0 ? (
+            <div className="px-5">
+              <Card>
+                <CardContent className="text-center py-12">
+                  <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  {searchTerm ? (
+                    <>
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">'{searchTerm}'에 해당하는 과제를 찾을 수 없습니다</h3>
+                      <p className="text-gray-500 mb-4">다른 검색어를 시도해보세요.</p>
+                    </>
+                  ) : (
+                    <>
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">배포된 과제가 없습니다</h3>
+                      <p className="text-gray-500 mb-4">문제은행에서 과제를 생성하고 배포해보세요!</p>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          ) : (
+            <AssignmentList
+              assignments={filteredAssignments}
+              onSelectAssignment={handleSelectAssignment}
+              onDeployAssignment={handleDeployAssignment}
+              classId={classId.toString()}
+              onRefresh={loadAssignments}
+              subject={activeSubject}
+            />
+          )}
+        </>
+      )}
+      <AssignmentCreateModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onAssignmentCreated={handleAssignmentCreated}
+        classId={classId.toString()}
+        onDeploy={handleDeployWorksheets}
+      />
+
+      {selectedAssignmentForDeploy && (
         <StudentAssignmentModal
-          isOpen={studentModalOpen}
-          onClose={handleCloseStudentModal}
-          assignmentId={selectedAssignment.id}
-          worksheetId={selectedAssignment.worksheet_id}
-          assignmentTitle={selectedAssignment.title}
-          classId={classId}
+          isOpen={isDeployModalOpen}
+          onClose={() => {
+            setIsDeployModalOpen(false);
+            setSelectedAssignmentForDeploy(null);
+          }}
+          assignmentId={selectedAssignmentForDeploy.id}
+          worksheetId={selectedAssignmentForDeploy.worksheet_id}
+          assignmentTitle={selectedAssignmentForDeploy.title}
+          classId={classId.toString()}
+          subject={activeSubject}
+          onAssignmentComplete={() => {
+            setIsDeployModalOpen(false);
+            setSelectedAssignmentForDeploy(null);
+            loadAssignments(); // Refresh assignments list
+          }}
         />
       )}
     </div>

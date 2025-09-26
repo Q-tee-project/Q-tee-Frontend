@@ -16,7 +16,7 @@ const SCHOOL_OPTIONS = ['중학교', '고등학교'];
 const GRADE_OPTIONS = ['1학년', '2학년', '3학년'];
 const SEMESTER_OPTIONS = ['1학기', '2학기'];
 const DIFFICULTY = ['전체', 'A', 'B', 'C'];
-const MATH_TYPES = ['전체', '객관식', '서술형', '단답형'];
+const MATH_TYPES = ['전체', '객관식', '단답형'];
 const QUESTION_COUNTS = [10, 20];
 
 interface MathGeneratorProps {
@@ -57,7 +57,7 @@ export default function MathGenerator({ onGenerate, isGenerating }: MathGenerato
     try {
       console.log('🔍 교육과정 로딩 시작:', { school, grade, semester });
       const response = await fetch(
-        `http://localhost:8001/api/math-generation/curriculum/structure?school_level=${encodeURIComponent(
+        `http://localhost:8001/api/curriculum/structure?school_level=${encodeURIComponent(
           school,
         )}`,
       );
@@ -182,14 +182,11 @@ export default function MathGenerator({ onGenerate, isGenerating }: MathGenerato
         type === '전체'
           ? {
               multiple_choice: typeRatios['객관식'] || 0,
-              essay: typeRatios['서술형'] || 0,
               short_answer: typeRatios['단답형'] || 0,
             }
           : type === '객관식'
-          ? { multiple_choice: 100, essay: 0, short_answer: 0 }
-          : type === '서술형'
-          ? { multiple_choice: 0, essay: 100, short_answer: 0 }
-          : { multiple_choice: 0, essay: 0, short_answer: 100 },
+          ? { multiple_choice: 100, short_answer: 0 }
+          : { multiple_choice: 0, short_answer: 100 },
     };
 
     onGenerate(requestData as any);
@@ -295,7 +292,7 @@ export default function MathGenerator({ onGenerate, isGenerating }: MathGenerato
               <div className="max-w-xs">
                 <p className="font-medium mb-1">문제 유형 설정 팁</p>
                 <p className="text-xs">
-                  • <strong>전체</strong>를 선택하면 객관식, 서술형, 단답형의 비율을 설정할 수
+                  • <strong>전체</strong>를 선택하면 객관식, 단답형의 비율을 설정할 수
                   있습니다
                   <br />
                   • 각 유형별로 10% 단위로 비율을 조정할 수 있습니다

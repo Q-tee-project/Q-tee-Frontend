@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { MathService } from '@/services/mathService';
+import { mathService } from '@/services/mathService';
 import { Worksheet, MathProblem } from '@/types/math';
 import { useBankState } from './useBankState';
 
@@ -27,7 +27,8 @@ export const useMathBank = () => {
     console.log('수학 워크시트 로드 시작...');
     updateState({ isLoading: true });
     try {
-      const worksheetData = await MathService.getMathWorksheets();
+      const worksheetResponse = await mathService.getMathWorksheets();
+      const worksheetData = worksheetResponse.worksheets;
       console.log('수학 워크시트 데이터:', worksheetData);
 
       updateState({ worksheets: worksheetData });
@@ -49,7 +50,7 @@ export const useMathBank = () => {
   const loadWorksheetProblems = async (worksheetId: number) => {
     console.log('🔍 수학 워크시트 문제 로드 시작, ID:', worksheetId);
     try {
-      const worksheetDetail = await MathService.getMathWorksheetDetail(worksheetId);
+      const worksheetDetail = await mathService.getMathWorksheetProblems(worksheetId);
       console.log('✅ 수학 워크시트 상세 데이터:', worksheetDetail);
       console.log('📝 수학 문제 개수:', worksheetDetail.problems?.length || 0);
       updateState({ worksheetProblems: worksheetDetail.problems || [] });
@@ -76,7 +77,7 @@ export const useMathBank = () => {
 
     try {
       updateState({ isLoading: true });
-      await MathService.deleteMathWorksheet(worksheet.id);
+      await mathService.deleteMathWorksheet(worksheet.id);
 
       if (selectedWorksheet?.id === worksheet.id) {
         updateState({
@@ -102,7 +103,7 @@ export const useMathBank = () => {
 
       // 각 워크시트를 순차적으로 삭제
       for (const worksheet of worksheets) {
-        await MathService.deleteMathWorksheet(worksheet.id);
+        await mathService.deleteMathWorksheet(worksheet.id);
       }
 
       // 현재 선택된 워크시트가 삭제된 워크시트 중에 있다면 초기화

@@ -3,11 +3,11 @@
 import { useParams, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { FiShoppingCart, FiArrowLeft, FiEdit, FiSave, FiX, FiTrash2, FiUpload, FiMove, FiPlus, FiEye } from 'react-icons/fi';
+import { FiShoppingCart, FiArrowLeft, FiEdit, FiTrash2 } from 'react-icons/fi';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
-import ProductEditModal from '@/components/market/ProductEditModal';
-import { 
+import { getProduct, updateProduct, deleteProduct, MarketProductDetail, MarketProductUpdate } from '@/services/marketApi';
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -15,58 +15,57 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 
+
+
 export default function ProductDetailPage() {
   const { productId } = useParams();
   const router = useRouter();
   const { userProfile } = useAuth();
 
-  // 임시 상품 데이터
-  const [product, setProduct] = useState({
-    id: Array.isArray(productId) ? productId[0] : productId || '',
-    title: '중학생 1학년 국어 1단원, 2단원',
-    price: 20000,
-    author: 'userName',
-    authorId: 'user123',
-    description:
-      '상세 설명 텍스트 상세 설명 텍스트 상세 설명 텍스트 상세 설명 텍스트 상세 설명 텍스트 상세 설명 텍스트 상세 설명 텍스트 상세 설명',
-    tags: ['중학교', '1학년', '국어', '기출 문제', '2단원'],
-  });
+  const [product, setProduct] = useState<MarketProductDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // 편집 상태 관리
   const [isEditing, setIsEditing] = useState(false);
-  const [editData, setEditData] = useState({
-    title: product.title,
-    price: product.price,
-    description: product.description,
-    tags: product.tags.join(', '),
+  const [editData, setEditData] = useState<MarketProductUpdate>({
+    title: '',
+    description: '',
   });
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
+  const [updating, setUpdating] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // 등록자와 로그인 사용자 비교
-  const isOwner = userProfile?.id?.toString() === product.authorId;
+  const isOwner = userProfile?.id === product?.seller_id;
 
-  // 이미지 관리 상태
-  const [images, setImages] = useState([
-    { id: 'main', label: '메인 이미지', url: '', isMain: true },
-    { id: 'sub1', label: '이미지 1', url: '', isMain: false },
-    { id: 'sub2', label: '이미지 2', url: '', isMain: false },
-    { id: 'sub3', label: '이미지 3', url: '', isMain: false },
-    { id: 'sub4', label: '이미지 4', url: '', isMain: false },
-    { id: 'sub5', label: '이미지 5', url: '', isMain: false },
-    { id: 'sub6', label: '이미지 6', url: '', isMain: false },
-  ]);
+  // 상품 데이터 로드
+  useEffect(() => {
+    const loadProduct = async () => {
+      try {
+        setLoading(true);
+        const data = await getProduct(Number(productId));
+        setProduct(data);
+      } catch (error) {
+        console.error('상품 로드 실패:', error);
+        setError('상품을 불러오는데 실패했습니다.');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const [selectedIndex, setSelectedIndex] = useState(0);
-  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+    if (productId) {
+      loadProduct();
+    }
+  }, [productId]);
+
 
   // 편집 모드 시작
   const handleStartEdit = () => {
+    if (!product) return;
     setEditData({
       title: product.title,
-      price: product.price,
-      description: product.description,
-      tags: product.tags.join(', '),
+      description: product.description || '',
     });
     setIsEditing(true);
   };
@@ -75,36 +74,27 @@ export default function ProductDetailPage() {
   const handleCancelEdit = () => {
     setIsEditing(false);
     setEditData({
-      title: product.title,
-      price: product.price,
-      description: product.description,
-      tags: product.tags.join(', '),
+      title: '',
+      description: '',
     });
   };
 
   // 편집 저장
-  const handleSaveEdit = () => {
-    // 실제로는 API 호출
-    setProduct(prev => ({
-      ...prev,
-      title: editData.title,
-      price: editData.price,
-      description: editData.description,
-      tags: editData.tags.split(', ').filter(tag => tag.trim()),
-    }));
-    setIsEditing(false);
-    alert('상품이 성공적으로 수정되었습니다.');
-  };
+  const handleSaveEdit = async () => {
+    if (!product) return;
 
-  // 모달에서 상품 수정 저장
-  const handleModalSave = (updatedProduct: any) => {
-    setProduct(prev => ({
-      ...prev,
-      ...updatedProduct,
-      id: prev.id, // 기존 id 유지
-      authorId: prev.authorId, // 기존 authorId 유지
-    }));
-    alert('상품이 성공적으로 수정되었습니다.');
+    setUpdating(true);
+    try {
+      const updatedProduct = await updateProduct(product.id, editData);
+      setProduct(updatedProduct);
+      setIsEditing(false);
+      alert('상품이 성공적으로 수정되었습니다.');
+    } catch (error) {
+      console.error('상품 수정 실패:', error);
+      alert('상품 수정에 실패했습니다.');
+    } finally {
+      setUpdating(false);
+    }
   };
 
   // 입력값 변경
@@ -112,98 +102,86 @@ export default function ProductDetailPage() {
     const { name, value } = e.target;
     setEditData(prev => ({
       ...prev,
-      [name]: name === 'price' ? parseInt(value) || 0 : value
+      [name]: value
     }));
   };
 
   // 삭제 확인
-  const handleDelete = () => {
-    // 실제로는 API 호출
-    console.log('상품 삭제:', productId);
-    alert('상품이 삭제되었습니다.');
-    router.push('/market');
-  };
+  const handleDelete = async () => {
+    if (!product) return;
 
-  // 이미지 업로드
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files) {
-      Array.from(files).forEach(file => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          if (e.target?.result) {
-            // 빈 슬롯 찾기
-            const emptyIndex = images.findIndex(img => !img.url);
-            if (emptyIndex !== -1) {
-              setImages(prev => prev.map((img, idx) => 
-                idx === emptyIndex 
-                  ? { ...img, url: e.target!.result as string }
-                  : img
-              ));
-            }
-          }
-        };
-        reader.readAsDataURL(file);
-      });
+    setDeleting(true);
+    try {
+      await deleteProduct(product.id);
+      alert('상품이 삭제되었습니다.');
+      router.push('/market');
+    } catch (error) {
+      console.error('상품 삭제 실패:', error);
+      alert('상품 삭제에 실패했습니다.');
+    } finally {
+      setDeleting(false);
     }
   };
 
-  // 이미지 삭제
-  const handleImageDelete = (index: number) => {
-    setImages(prev => prev.map((img, idx) => 
-      idx === index 
-        ? { ...img, url: '' }
-        : img
-    ));
-    if (selectedIndex === index) {
-      setSelectedIndex(0);
-    }
-  };
+  if (loading) {
+    return (
+      <div className="flex flex-col" style={{ padding: '20px', display: 'flex', gap: '20px' }}>
+        <PageHeader
+          icon={<FiShoppingCart />}
+          title="마켓플레이스"
+          variant="market"
+          description="상품의 상세 이미지를 확인하고 구매할 수 있습니다"
+        />
+        <Card className="flex-1 flex flex-col shadow-sm">
+          <CardContent className="p-6 flex justify-center items-center min-h-[400px]">
+            <div className="text-gray-500">로딩 중...</div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
-  // 메인 이미지 설정
-  const handleSetMainImage = (index: number) => {
-    setImages(prev => prev.map((img, idx) => ({
-      ...img,
-      isMain: idx === index
-    })));
-    setSelectedIndex(index);
-  };
+  if (error || !product) {
+    return (
+      <div className="flex flex-col" style={{ padding: '20px', display: 'flex', gap: '20px' }}>
+        <PageHeader
+          icon={<FiShoppingCart />}
+          title="마켓플레이스"
+          variant="market"
+          description="상품의 상세 이미지를 확인하고 구매할 수 있습니다"
+        />
+        <Card className="flex-1 flex flex-col shadow-sm">
+          <CardContent className="p-6 flex justify-center items-center min-h-[400px]">
+            <div className="text-center">
+              <div className="text-gray-500 mb-4">{error || '상품을 찾을 수 없습니다.'}</div>
+              <button
+                onClick={() => router.push('/market')}
+                className="px-4 py-2 bg-[#0072CE] text-white rounded-md hover:bg-[#005fa3] transition-colors"
+              >
+                마켓으로 돌아가기
+              </button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
-  // 이미지 순서 변경 (드래그 앤 드롭)
-  const handleDragStart = (e: React.DragEvent, index: number) => {
-    setDraggedIndex(index);
-  };
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-  };
-
-  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
-    e.preventDefault();
-    if (draggedIndex === null || draggedIndex === dropIndex) return;
-
-    const newImages = [...images];
-    const draggedImage = newImages[draggedIndex];
-    newImages.splice(draggedIndex, 1);
-    newImages.splice(dropIndex, 0, draggedImage);
-    
-    setImages(newImages);
-    setDraggedIndex(null);
-  };
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col" style={{ padding: '20px', display: 'flex', gap: '20px' }}>
       <PageHeader
         icon={<FiShoppingCart />}
         title="마켓플레이스"
         variant="market"
-        description="상품의 상세 이미를 확인하고 구매 할 수 있습니다"
+        description="상품의 상세 이미지를 확인하고 구매할 수 있습니다"
       />
-      <Card className="mx-8 mb-8 shadow-sm">
+      <Card className="flex-1 flex flex-col shadow-sm">
       <CardHeader className="py-3 px-6 border-b border-gray-100 flex items-center justify-between">
         <button
             onClick={() => router.back()}
-            className="w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-700 flex items-center justify-center shadow-sm"
+            className="w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-800 flex items-center justify-center shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0072CE] focus-visible:ring-offset-2 focus-visible:ring-offset-white"
             aria-label="뒤로가기"
           >
             <FiArrowLeft className="w-5 h-5" />
@@ -216,38 +194,31 @@ export default function ProductDetailPage() {
               <>
                 <button
                   onClick={handleSaveEdit}
-                  className="flex items-center gap-2 px-4 py-2 bg-[#0072CE] text-white rounded-md hover:bg-[#005fa3] transition-colors"
+                  disabled={updating}
+                  className="flex items-center gap-2 px-4 py-2 bg-[#0072CE] text-white rounded-md hover:bg-[#005fa3] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0072CE] focus-visible:ring-offset-2 disabled:opacity-50"
                 >
-                  <FiSave className="w-4 h-4" />
-                  저장
+                  {updating ? '저장 중...' : '저장'}
                 </button>
                 <button
                   onClick={handleCancelEdit}
-                  className="flex items-center gap-2 px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors"
+                  disabled={updating}
+                  className="flex items-center gap-2 px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0072CE] focus-visible:ring-offset-2 disabled:opacity-50"
                 >
-                  <FiX className="w-4 h-4" />
                   취소
                 </button>
               </>
             ) : (
               <>
                 <button
-                  onClick={() => setShowEditModal(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-[#0072CE] text-white rounded-md hover:bg-[#005fa3] transition-colors"
-                >
-                  <FiEye className="w-4 h-4" />
-                  상세보기
-                </button>
-                <button
                   onClick={handleStartEdit}
-                  className="flex items-center gap-2 px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors"
+                  className="flex items-center gap-2 px-4 py-2 bg-[#0072CE] text-white rounded-md hover:bg-[#005fa3] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0072CE] focus-visible:ring-offset-2"
                 >
                   <FiEdit className="w-4 h-4" />
                   편집
                 </button>
                 <button
                   onClick={() => setShowDeleteModal(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
+                  className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-2"
                 >
                   <FiTrash2 className="w-4 h-4" />
                   삭제
@@ -257,126 +228,36 @@ export default function ProductDetailPage() {
           </div>
         )}
         </CardHeader>
-        <CardContent className="p-6">         
+        <CardContent className="p-6">
           <div className="flex flex-col lg:flex-row gap-6">
-            
-            {/* 메인 이미지 */}
+
+            {/* 상품 이미지 - 텍스트 렌더링 */}
             <div className="flex-1">
-              <div className="w-full h-[500px] bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 select-none relative">
-                {images[selectedIndex]?.url ? (
-                  <img 
-                    src={images[selectedIndex].url} 
-                    alt={images[selectedIndex].label}
-                    className="w-full h-full object-cover rounded-lg"
-                  />
-                ) : (
-                  <span>{selectedIndex === 0 ? '메인 이미지' : images[selectedIndex]?.label}</span>
-                )}
-                
-                {/* 편집 모드에서 이미지 액션 버튼들 */}
-                {isEditing && images[selectedIndex]?.url && (
-                  <div className="absolute top-2 right-2 flex gap-2">
-                    <button
-                      onClick={() => handleSetMainImage(selectedIndex)}
-                      className="w-8 h-8 bg-[#0072CE] text-white rounded-full flex items-center justify-center hover:bg-[#005fa3] transition-colors"
-                      title="메인 이미지로 설정"
-                    >
-                      <FiMove className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleImageDelete(selectedIndex)}
-                      className="w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
-                      title="이미지 삭제"
-                    >
-                      <FiX className="w-4 h-4" />
-                    </button>
+              <div className="w-full h-[500px] bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg flex items-center justify-center text-gray-700 select-none border border-gray-200 p-6">
+                <div className="text-center space-y-6">
+                  <div className="text-4xl font-bold text-[#0072CE]">{product.subject_type}</div>
+                  <div className="text-2xl font-semibold">{product.school_level} {product.grade}학년</div>
+                  <div className="text-lg text-gray-600 mt-6 line-clamp-3 leading-relaxed px-6">
+                    {product.title}
                   </div>
-                )}
-              </div>
-              
-              <div className="mt-4 grid grid-cols-3 sm:grid-cols-7 gap-3">
-                {images.map((img, idx) => (
-                  <div
-                    key={img.id}
-                    className={`relative h-20 rounded-md flex items-center justify-center text-gray-400 select-none bg-gray-100 border ${
-                      selectedIndex === idx ? 'border-[#0072CE]' : 'border-transparent'
-                    } ${isEditing ? 'cursor-move' : 'cursor-pointer'}`}
-                    onClick={() => !isEditing && setSelectedIndex(idx)}
-                    draggable={isEditing}
-                    onDragStart={(e) => isEditing && handleDragStart(e, idx)}
-                    onDragOver={isEditing ? handleDragOver : undefined}
-                    onDrop={isEditing ? (e) => handleDrop(e, idx) : undefined}
-                  >
-                    {img.url ? (
-                      <img 
-                        src={img.url} 
-                        alt={img.label}
-                        className="w-full h-full object-cover rounded-md"
-                      />
-                    ) : (
-                      <span>{idx === 0 ? '메인' : idx}</span>
-                    )}
-                    
-                    {/* 편집 모드에서 이미지 액션 버튼들 */}
-                    {isEditing && img.url && (
-                      <div className="absolute inset-0 bg-black bg-opacity-50 rounded-md flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                        <div className="flex gap-1">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleSetMainImage(idx);
-                            }}
-                            className="w-6 h-6 bg-[#0072CE] text-white rounded-full flex items-center justify-center hover:bg-[#005fa3] transition-colors"
-                            title="메인으로 설정"
-                          >
-                            <FiMove className="w-3 h-3" />
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleImageDelete(idx);
-                            }}
-                            className="w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
-                            title="삭제"
-                          >
-                            <FiX className="w-3 h-3" />
-                          </button>
-                        </div>
-                      </div>
-                    )}
+                  <div className="text-sm text-gray-500 mt-4">
+                    문제 {product.problem_count}개
                   </div>
-                ))}
-              </div>
-              
-              {/* 편집 모드에서 이미지 업로드 버튼 */}
-              {isEditing && (
-                <div className="mt-4">
-                  <input
-                    type="file"
-                    id="image-upload"
-                    multiple
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    className="hidden"
-                  />
-                  <label
-                    htmlFor="image-upload"
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-[#0072CE] text-white rounded-md hover:bg-[#005fa3] transition-colors cursor-pointer"
-                  >
-                    <FiUpload className="w-4 h-4" />
-                    이미지 업로드
-                  </label>
                 </div>
-              )}
+              </div>
             </div>
 
             {/* 상품 정보 */}
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-2">
-                {/* <div className="w-12 h-12 rounded-full bg-gray-200" /> */}
-                <p className="font-semibold text-gray-700">{product.author}</p>
+                <button
+                  onClick={() => router.push(`/market/author/${product.seller_name}`)}
+                  className="font-semibold text-gray-700 hover:text-[#0072CE] transition-colors"
+                >
+                  {product.seller_name}
+                </button>
               </div>
-              
+
               {/* 상품 제목 */}
               {isEditing ? (
                 <input
@@ -398,68 +279,53 @@ export default function ProductDetailPage() {
                   onChange={handleInputChange}
                   rows={4}
                   className="w-full text-sm text-gray-600 leading-6 mb-4 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#0072CE] focus:border-transparent"
+                  placeholder="상품 설명을 입력하세요"
                 />
               ) : (
                 <p className="text-sm text-gray-600 leading-6 mb-4">
-                  {product.description}
+                  {product.description || '설명이 없습니다.'}
                 </p>
               )}
 
-              {/* 태그 */}
-              {isEditing ? (
-                <div className="mb-4">
-                  <input
-                    type="text"
-                    name="tags"
-                    value={editData.tags}
-                    onChange={handleInputChange}
-                    placeholder="태그를 쉼표로 구분하여 입력하세요"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#0072CE] focus:border-transparent"
-                  />
-                </div>
-              ) : (
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {product.tags.map((tag, idx) => (
-                    <span key={idx} className="text-[#9E9E9E] text-xs select-none">
-                      #{tag}
-                    </span>
-                  ))}
-                </div>
-              )}
+              {/* 상품 정보 */}
+              <div className="flex flex-wrap gap-2 mb-4">
+                <span className="text-[#9E9E9E] text-xs select-none">#{product.subject_type}</span>
+                <span className="text-[#9E9E9E] text-xs select-none">#{product.school_level}</span>
+                <span className="text-[#9E9E9E] text-xs select-none">#{product.grade}학년</span>
+                <span className="text-[#9E9E9E] text-xs select-none">#{product.problem_count}문제</span>
+                {product.tags.map((tag, idx) => (
+                  <span key={idx} className="text-[#9E9E9E] text-xs select-none">
+                    #{tag}
+                  </span>
+                ))}
+              </div>
 
-              {/* 가격 */}
-              {isEditing ? (
-                <div className="mb-4">
-                  <input
-                    type="number"
-                    name="price"
-                    value={editData.price}
-                    onChange={handleInputChange}
-                    className="px-4 py-2 border border-gray-300 rounded-full text-[#0072CE] text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#0072CE] focus:border-transparent"
-                    placeholder="가격을 입력하세요"
-                  />
-                  <span className="ml-2 text-[#0072CE] text-sm font-semibold">원</span>
+              {/* 기본 정보 */}
+              <div className="text-sm text-gray-500 mb-4">
+                <div>워크시트: {product.worksheet_title}</div>
+                <div>조회 {product.view_count}회 • 판매 {product.purchase_count}건</div>
+                <div>만족도 {product.satisfaction_rate}%</div>
+              </div>
+
+              {/* 가격 및 구매 버튼 */}
+              <div className="flex items-center gap-4">
+                <div className="text-2xl font-semibold text-[#0072CE]">
+                  {product.price.toLocaleString()}P
                 </div>
-              ) : (
-                <button
-                  onClick={() => router.push(`/market/${productId}/buy`)}
-                  className="px-4 py-2 rounded-full bg-[#EFEFEF] text-[#0072CE] text-sm font-semibold hover:bg-gray-200"
-                >
-                  ₩{product.price.toLocaleString()}
-                </button>
-              )}
+                {!isOwner && (
+                  <button
+                    onClick={() => router.push(`/market/${productId}/buy`)}
+                    className="px-6 py-2 bg-[#0072CE] text-white rounded-lg hover:bg-[#005fa3] transition-colors font-medium"
+                  >
+                    구매하기
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* 상품 수정 모달 */}
-      <ProductEditModal
-        isOpen={showEditModal}
-        onClose={() => setShowEditModal(false)}
-        product={product}
-        onSave={handleModalSave}
-      />
 
       {/* 삭제 확인 모달 */}
       <Dialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
@@ -480,22 +346,24 @@ export default function ProductDetailPage() {
             </p>
           </div>
 
-          <DialogFooter className="flex gap-2">
+          <DialogFooter className="flex flex-col items-center gap-4 mt-8">
             <button
               onClick={() => setShowDeleteModal(false)}
-              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
+              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0072CE] focus-visible:ring-offset-2"
             >
               취소
             </button>
             <button
               onClick={handleDelete}
-              className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
+              disabled={deleting}
+              className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-2 disabled:opacity-50"
             >
-              삭제
+              {deleting ? '삭제 중...' : '삭제'}
             </button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
     </div>
   );
 }

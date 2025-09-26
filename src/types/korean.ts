@@ -9,6 +9,10 @@ export interface KoreanWorksheet {
   problem_count: number;
   status: string;
   created_at: string;
+  deployed_at?: string;
+  unit_name: string;
+  chapter_name: string;
+  subject: string;
   user_prompt?: string;
   generation_id?: string;
 }
@@ -17,9 +21,10 @@ export interface KoreanProblem {
   id: number;
   sequence_order: number;
   korean_type: string;
+  question_type: string;  // 항상 '객관식'
   difficulty: string;
   question: string;
-  choices?: string[];
+  choices: string[] | null;  // 필수 - 모든 문제가 객관식
   correct_answer: string;
   explanation: string;
   source_text?: string;

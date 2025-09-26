@@ -14,6 +14,9 @@ export interface PreviewQuestion {
   source_text?: string;
   source_title?: string;
   source_author?: string;
+  // Validation related properties
+  validation_result?: any;
+  validation_status?: 'auto_approved' | 'manual_review_needed' | 'rejected';
 }
 
 export interface GenerationState {
@@ -25,6 +28,7 @@ export interface GenerationState {
   showRegenerationInput: number | null;
   lastGenerationData: any;
   errorMessage: string | null;
+  currentWorksheetId: number | null;
 }
 
 export const useProblemGeneration = () => {
@@ -37,6 +41,7 @@ export const useProblemGeneration = () => {
     showRegenerationInput: null,
     lastGenerationData: null,
     errorMessage: null,
+    currentWorksheetId: null,
   });
 
   const updateState = (updates: Partial<GenerationState>) => {

@@ -1,27 +1,28 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Sidebar from './Sidebar';
-import Header from './Header';
+import FixedNotificationIcon from './FixedNotificationIcon';
 
 interface MainLayoutProps {
   children: React.ReactNode;
 }
 
 export default function MainLayout({ children }: MainLayoutProps) {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* 헤더 */}
-      <Header />
+    <div className="min-h-screen bg-gray-50">
+      {/* 사이드바 */}
+      <Sidebar onToggle={setIsSidebarOpen} />
 
-      {/* 메인 컨텐츠 영역 (사이드바 + 페이지 컨텐츠) */}
-      <div className="flex-1 flex">
-        {/* 사이드바 */}
-        <Sidebar />
+      {/* 메인 컨텐츠 영역 */}
+      <main className={`transition-all duration-300 ease-in-out ${isSidebarOpen ? 'ml-[240px]' : 'ml-[60px]'}`}>
+        {children}
+      </main>
 
-        {/* 페이지 컨텐츠 */}
-        <main className="flex-1">{children}</main>
-      </div>
+      {/* 고정 알림 아이콘 */}
+      <FixedNotificationIcon isSidebarOpen={isSidebarOpen} />
     </div>
   );
 }

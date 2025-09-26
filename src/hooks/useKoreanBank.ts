@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
-import { KoreanService } from '@/services/koreanService';
-import { KoreanWorksheet, KoreanProblem } from '@/types/korean';
+import { koreanService } from '@/services/koreanService';
+import { KoreanWorksheet, Problem } from '@/services/koreanService'; // Import Problem interface
 import { useBankState } from './useBankState';
 
 export const useKoreanBank = () => {
@@ -14,7 +14,7 @@ export const useKoreanBank = () => {
     updateState,
     resetBank,
     clearError,
-  } = useBankState<KoreanWorksheet, KoreanProblem>();
+  } = useBankState<KoreanWorksheet, Problem>();
 
   // 컴포넌트 마운트 시 자동으로 데이터 로드
   useEffect(() => {
@@ -27,14 +27,14 @@ export const useKoreanBank = () => {
     console.log('국어 워크시트 로드 시작...');
     updateState({ isLoading: true });
     try {
-      const worksheetData = await KoreanService.getKoreanWorksheets();
+      const worksheetData = await koreanService.getKoreanWorksheets();
       console.log('국어 워크시트 데이터:', worksheetData);
 
-      updateState({ worksheets: worksheetData });
+      updateState({ worksheets: worksheetData.worksheets }); // Access .worksheets property
 
-      if (worksheetData.length > 0) {
-        updateState({ selectedWorksheet: worksheetData[0] });
-        await loadWorksheetProblems(worksheetData[0].id);
+      if (worksheetData.worksheets.length > 0) {
+        updateState({ selectedWorksheet: worksheetData.worksheets[0] });
+        await loadWorksheetProblems(worksheetData.worksheets[0].id);
       }
     } catch (error: any) {
       console.error('국어 워크시트 로드 실패:', error);
@@ -48,7 +48,7 @@ export const useKoreanBank = () => {
 
   const loadWorksheetProblems = async (worksheetId: number) => {
     try {
-      const worksheetDetail = await KoreanService.getKoreanWorksheetDetail(worksheetId);
+      const worksheetDetail = await koreanService.getKoreanWorksheetProblems(worksheetId); // Changed to getKoreanWorksheetProblems
       updateState({ worksheetProblems: worksheetDetail.problems || [] });
     } catch (error: any) {
       console.error('국어 워크시트 문제 로드 실패:', error);
@@ -72,8 +72,7 @@ export const useKoreanBank = () => {
 
     try {
       updateState({ isLoading: true });
-      // Korean delete not implemented yet
-      throw new Error('국어 워크시트 삭제 기능은 아직 구현되지 않았습니다.');
+      await koreanService.deleteKoreanWorksheet(worksheet.id);
 
       if (selectedWorksheet?.id === worksheet.id) {
         updateState({
@@ -95,9 +94,15 @@ export const useKoreanBank = () => {
   const handleBatchDeleteWorksheets = async (worksheets: KoreanWorksheet[]) => {
     try {
       updateState({ isLoading: true });
-
-      // Korean batch delete not implemented yet
-      throw new Error('국어 워크시트 일괄 삭제 기능은 아직 구현되지 않았습니다.');
+      for (const worksheet of worksheets) {
+        await koreanService.deleteKoreanWorksheet(worksheet.id);
+      }
+      const deletedIds = worksheets.map((w) => w.id);
+      if (selectedWorksheet && deletedIds.includes(selectedWorksheet.id)) {
+        updateState({ selectedWorksheet: null, worksheetProblems: [] });
+      }
+      await loadWorksheets();
+      alert(`${worksheets.length}개의 국어 워크시트가 삭제되었습니다.`);
     } catch (error: any) {
       console.error('국어 워크시트 일괄 삭제 실패:', error);
       alert(`일괄 삭제 실패: ${error.message}`);

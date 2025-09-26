@@ -2,12 +2,12 @@
 
 import React, { useState, use, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { FaArrowLeft } from "react-icons/fa6";
-import { HiOutlinePencilSquare } from "react-icons/hi2";
+import { FaArrowLeft } from 'react-icons/fa6';
+import { HiOutlinePencilSquare } from 'react-icons/hi2';
 import { Users } from 'lucide-react';
 import { AssignmentTab } from '@/components/class/AssignmentTab';
 import { StudentManagementTab } from '@/components/class/StudentManagementTab';
-import { ApprovalTab } from '@/components/class/ApprovalTab';
+import { ApprovalTab as StudentApprovalTab } from '@/components/class/StudentApprovalTab';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { classroomService, Classroom } from '@/services/authService';
 import { Button } from '@/components/ui/button';
@@ -26,7 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { IoIosClose } from "react-icons/io";
+import { IoIosClose } from 'react-icons/io';
 
 interface ClassDetailPageProps {
   params: Promise<{
@@ -51,8 +51,8 @@ export default function ClassDetailPage({ params }: ClassDetailPageProps) {
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const tabParam = urlParams.get('tab');
-    
-    if (tabParam && ['assignment', 'student', 'approval'].includes(tabParam)) {
+
+    if (tabParam && ['assignment', 'student', 'approval', 'grading_approval'].includes(tabParam)) {
       setActiveTab(tabParam);
     }
   }, []);
@@ -117,19 +117,19 @@ export default function ClassDetailPage({ params }: ClassDetailPageProps) {
     }
 
     try {
-      // 백엔드 API가 구현되지 않았으므로 로컬 상태만 업데이트
-      const updatedClassroom = {
-        ...classroom!,
+      // 실제 API 호출로 클래스룸 정보 업데이트
+      const updatedClassroom = await classroomService.updateClassroom(classroom!.id, {
         name: editFormData.name,
         school_level: editFormData.school_level,
         grade: editFormData.grade,
-      };
+      });
+
       setClassroom(updatedClassroom);
       setIsEditModalOpen(false);
       setError('');
-      
-      // TODO: 백엔드 API 구현 후 실제 API 호출로 변경
-      console.log('클래스 정보가 로컬에서 수정되었습니다:', updatedClassroom);
+
+      // 성공 메시지 표시
+      alert('클래스 정보가 성공적으로 수정되었습니다!');
     } catch (error: any) {
       console.error('클래스 수정 실패:', error);
       setError(error?.message || '클래스 수정에 실패했습니다.');
@@ -138,13 +138,17 @@ export default function ClassDetailPage({ params }: ClassDetailPageProps) {
 
   // 클래스 삭제
   const handleDeleteClass = async () => {
+    if (!confirm('정말로 이 클래스를 삭제하시겠습니까? 삭제된 클래스는 복구할 수 없습니다.')) {
+      return;
+    }
+
     try {
-      // 백엔드 API가 구현되지 않았으므로 로컬에서만 처리
+      // 실제 API 호출로 클래스룸 삭제
+      await classroomService.deleteClassroom(classroom!.id);
+
       setIsDeleteModalOpen(false);
+      alert('클래스가 성공적으로 삭제되었습니다.');
       router.push('/class/create');
-      
-      // TODO: 백엔드 API 구현 후 실제 API 호출로 변경
-      console.log('클래스가 로컬에서 삭제되었습니다:', classId);
     } catch (error: any) {
       console.error('클래스 삭제 실패:', error);
       setError(error?.message || '클래스 삭제에 실패했습니다.');
@@ -153,7 +157,7 @@ export default function ClassDetailPage({ params }: ClassDetailPageProps) {
 
   // 학생 승인 후 콜백
   const handleStudentApproved = () => {
-    setStudentRefreshTrigger(prev => prev + 1);
+    setStudentRefreshTrigger((prev) => prev + 1);
   };
 
   const tabs = [
@@ -163,7 +167,7 @@ export default function ClassDetailPage({ params }: ClassDetailPageProps) {
   ];
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col p-5 gap-5">
       {/* 헤더 */}
       <PageHeader
         icon={<Users />}
@@ -173,16 +177,15 @@ export default function ClassDetailPage({ params }: ClassDetailPageProps) {
       />
 
       {/* 메인 컨텐츠 */}
-      <div className="flex-1 p-6">
+      <div className="flex-1">
         <div className="mx-auto">
           {/* 전체 콘텐츠 컨테이너 */}
-          <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-6" style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
+          <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-6 flex flex-col gap-6">
             {/* 이전으로 돌아가기 및 클래스명 */}
             <div className="flex items-center">
               <button
                 onClick={() => router.push('/class/create')}
-                className="mr-4 p-2 rounded-md text-gray-400 hover:text-gray-600 transition-colors duration-200"
-                style={{ backgroundColor: '#f5f5f5', borderRadius: '50%', cursor: 'pointer' }}
+                className="mr-4 p-2 rounded-md text-gray-400 hover:text-gray-600 transition-colors duration-200 bg-[#f5f5f5] rounded-full cursor-pointer"
               >
                 <FaArrowLeft className="h-5 w-5" />
               </button>
@@ -200,8 +203,7 @@ export default function ClassDetailPage({ params }: ClassDetailPageProps) {
               {/* 클래스 정보 수정 버튼 */}
               <button
                 onClick={handleEditModalOpen}
-                className="ml-3 p-2 rounded-md hover:text-gray-600 transition-colors duration-200"
-                style={{ color: '#666666', cursor: 'pointer' }}
+                className="ml-3 p-2 rounded-md hover:text-gray-600 transition-colors duration-200 text-[#666666] cursor-pointer"
               >
                 <HiOutlinePencilSquare className="h-5 w-5" />
               </button>
@@ -214,12 +216,11 @@ export default function ClassDetailPage({ params }: ClassDetailPageProps) {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`border-b-2 font-medium text-sm ${
+                    className={`border-b-2 font-medium text-sm px-5 py-2.5 ${
                       activeTab === tab.id
                         ? 'border-blue-500 text-blue-600'
                         : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                     }`}
-                    style={{ padding: '10px 20px' }}
                   >
                     {tab.label}
                     {tab.count > 0 && (
@@ -233,10 +234,14 @@ export default function ClassDetailPage({ params }: ClassDetailPageProps) {
             </div>
 
             {/* 탭 내용 */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              {activeTab === 'assignment' && <AssignmentTab classId={classId} />}
-              {activeTab === 'student' && <StudentManagementTab classId={classId} refreshTrigger={studentRefreshTrigger} />}
-              {activeTab === 'approval' && <ApprovalTab classId={classId} onStudentApproved={handleStudentApproved} />}
+            <div className="flex flex-col gap-5">
+              {activeTab === 'assignment' && <AssignmentTab classId={parseInt(classId)} />}
+              {activeTab === 'student' && (
+                <StudentManagementTab classId={classId.toString()} refreshTrigger={studentRefreshTrigger} />
+              )}
+              {activeTab === 'approval' && (
+                <StudentApprovalTab classId={classId.toString()} onStudentApproved={handleStudentApproved} />
+              )}
             </div>
           </div>
         </div>
@@ -246,14 +251,11 @@ export default function ClassDetailPage({ params }: ClassDetailPageProps) {
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
         <DialogContent className="max-w-md" showCloseButton={false}>
           <DialogHeader>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <DialogTitle>
-                클래스 정보 수정
-              </DialogTitle>
+            <div className="flex justify-between items-center">
+              <DialogTitle>클래스 정보 수정</DialogTitle>
               <button
                 onClick={() => setIsEditModalOpen(false)}
-                className="text-gray-400 hover:text-gray-600"
-                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                className="text-gray-400 hover:text-gray-600 bg-none border-none cursor-pointer p-0 w-6 h-6 flex items-center justify-center"
               >
                 <IoIosClose />
               </button>
@@ -268,10 +270,10 @@ export default function ClassDetailPage({ params }: ClassDetailPageProps) {
               </div>
             )}
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+            <div className="flex flex-col gap-4">
               <div>
                 <label htmlFor="className" className="block text-sm font-medium text-gray-700 mb-2">
-                  수업명 <span style={{ color: '#FF0000' }}>*</span>
+                  수업명 <span className="text-red-500">*</span>
                 </label>
                 <Input
                   id="className"
@@ -281,10 +283,10 @@ export default function ClassDetailPage({ params }: ClassDetailPageProps) {
                 />
               </div>
 
-              <div className="flex gap-[15px]">
+              <div className="flex gap-4">
                 <div className="flex-1">
                   <label htmlFor="school" className="block text-sm font-medium text-gray-700 mb-2">
-                    학교 <span style={{ color: '#FF0000' }}>*</span>
+                    학교 <span className="text-red-500">*</span>
                   </label>
                   <Select
                     value={editFormData.school_level}
@@ -304,7 +306,7 @@ export default function ClassDetailPage({ params }: ClassDetailPageProps) {
 
                 <div className="flex-1">
                   <label htmlFor="grade" className="block text-sm font-medium text-gray-700 mb-2">
-                    학년 <span style={{ color: '#FF0000' }}>*</span>
+                    학년 <span className="text-red-500">*</span>
                   </label>
                   <Select
                     value={editFormData.grade.toString()}
@@ -323,22 +325,13 @@ export default function ClassDetailPage({ params }: ClassDetailPageProps) {
               </div>
 
               {/* 삭제하기 버튼 */}
-              <div style={{ borderBottom: '1px solid #D1D1D1', paddingBottom: '15px' }}>
+              <div className="border-b border-[#D1D1D1] pb-4">
                 <button
                   onClick={() => {
                     setIsEditModalOpen(false);
                     setIsDeleteModalOpen(true);
                   }}
-                  style={{
-                    backgroundColor: '#EAEAEA',
-                    color: '#0072CE',
-                    borderRadius: '5px',
-                    padding: '7px 14px',
-                    border: 'none',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: '500'
-                  }}
+                  className="bg-[#EAEAEA] text-[#0072CE] rounded px-3.5 py-1.5 border-none cursor-pointer text-sm font-medium"
                 >
                   삭제하기
                 </button>
@@ -346,22 +339,16 @@ export default function ClassDetailPage({ params }: ClassDetailPageProps) {
             </div>
           </div>
 
-          <DialogFooter style={{ display: 'flex', gap: '15px' }}>
+          <DialogFooter className="flex gap-4">
             <button
               onClick={() => setIsEditModalOpen(false)}
-              className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
-              style={{ flex: 1 }}
+              className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 flex-1"
             >
               취소
             </button>
             <button
               onClick={handleUpdateClass}
-              className="px-4 py-2 rounded-md transition-colors"
-              style={{ 
-                flex: 1,
-                backgroundColor: '#0072CE',
-                color: '#ffffff'
-              }}
+              className="px-4 py-2 rounded-md transition-colors flex-1 bg-[#0072CE] text-white"
             >
               수정하기
             </button>
@@ -373,14 +360,11 @@ export default function ClassDetailPage({ params }: ClassDetailPageProps) {
       <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
         <DialogContent className="max-w-md" showCloseButton={false}>
           <DialogHeader>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <DialogTitle>
-                클래스 삭제
-              </DialogTitle>
+            <div className="flex justify-between items-center">
+              <DialogTitle>클래스 삭제</DialogTitle>
               <button
                 onClick={() => setIsDeleteModalOpen(false)}
-                className="text-gray-400 hover:text-gray-600"
-                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                className="text-gray-400 hover:text-gray-600 bg-none border-none cursor-pointer p-0 w-6 h-6 flex items-center justify-center"
               >
                 <IoIosClose />
               </button>
@@ -388,34 +372,25 @@ export default function ClassDetailPage({ params }: ClassDetailPageProps) {
           </DialogHeader>
 
           <div className="space-y-4">
-            <p className="text-gray-600">
-              정말로 이 클래스를 삭제하시겠습니까?
-            </p>
+            <p className="text-gray-600">정말로 이 클래스를 삭제하시겠습니까?</p>
             <p className="text-sm text-gray-500">
               • 삭제된 클래스는 복구할 수 없습니다.
               <br />
               • 클래스에 속한 모든 학생들이 자동으로 제거됩니다.
-              <br />
-              • 클래스와 관련된 모든 데이터가 삭제됩니다.
+              <br />• 클래스와 관련된 모든 데이터가 삭제됩니다.
             </p>
           </div>
 
-          <DialogFooter style={{ display: 'flex', gap: '15px' }}>
+          <DialogFooter className="flex gap-4">
             <button
               onClick={() => setIsDeleteModalOpen(false)}
-              className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
-              style={{ flex: 1 }}
+              className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 flex-1"
             >
               취소
             </button>
             <button
               onClick={handleDeleteClass}
-              className="px-4 py-2 rounded-md transition-colors"
-              style={{ 
-                flex: 1,
-                backgroundColor: '#dc2626',
-                color: '#ffffff'
-              }}
+              className="px-4 py-2 rounded-md transition-colors flex-1 bg-red-600 text-white"
             >
               삭제하기
             </button>

@@ -1,0 +1,86 @@
+[
+    {
+        "id": 1,
+        "type_name": "article",
+        "display_name": "일반 글",
+        "description": "설명문, 논설문, 기사, 연구 보고서, 블로그 포스트, 책의 한 부분 등",
+        "json_format": {
+            "content": [
+                {"type": "title", "value": "글의 제목"},
+                {"type": "paragraph", "value": "첫 번째 문단 내용"},
+                {"type": "paragraph", "value": "두 번째 문단 내용"}
+            ]
+        },
+        "created_at": null
+    },
+    {
+        "id": 2,
+        "type_name": "correspondence",
+        "display_name": "서신/소통",
+        "description": "이메일, 편지, 메모, 사내 공지 등",
+        "json_format": {
+            "metadata": {
+                "sender": "발신자",
+                "recipient": "수신자",
+                "subject": "제목",
+                "date": "2025-01-01"
+            },
+            "content": [
+                {"type": "paragraph", "value": "서신 내용"}
+            ]
+        },
+        "created_at": null
+    },
+    {
+        "id": 3,
+        "type_name": "dialogue",
+        "display_name": "대화문",
+        "description": "문자 메시지, 채팅, 인터뷰, 연극 대본 등",
+        "json_format": {
+            "metadata": {
+                "participants": ["참여자1", "참여자2"]
+            },
+            "content": [
+                {"speaker": "참여자1", "line": "첫 번째 대사"},
+                {"speaker": "참여자2", "line": "두 번째 대사"}
+            ]
+        },
+        "created_at": null
+    },
+    {
+        "id": 4,
+        "type_name": "informational",
+        "display_name": "정보성 양식",
+        "description": "광고, 안내문, 포스터, 일정표, 메뉴판, 영수증 등",
+        "json_format": {
+            "content": [
+                {"type": "title", "value": "안내문 제목"},
+                {"type": "paragraph", "value": "설명 내용"},
+                {"type": "list", "items": ["항목1", "항목2", "항목3"]},
+                {"type": "key_value", "pairs": [
+                    {"key": "장소", "value": "시청 앞"},
+                    {"key": "시간", "value": "오후 2시"}
+                ]}
+            ]
+        },
+        "created_at": null
+    },
+    {
+        "id": 5,
+        "type_name": "review",
+        "display_name": "리뷰/후기",
+        "description": "상품 후기, 영화 평점, 식당 리뷰 등",
+        "json_format": {
+            "metadata": {
+                "rating": 4.5,
+                "product_name": "상품명",
+                "reviewer": "리뷰어명",
+                "date": "2025-01-01"
+            },
+            "content": [
+                {"type": "paragraph", "value": "리뷰 내용"}
+            ]
+        },
+        "created_at": null
+    }
+]

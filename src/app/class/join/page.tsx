@@ -21,7 +21,7 @@ export default function ClassJoinPage() {
   // 로그인 확인
   useEffect(() => {
     if (!isAuthenticated || userType !== 'student') {
-      router.push('/login');
+      router.push('/');
       return;
     }
   }, [isAuthenticated, userType, router]);
@@ -54,7 +54,7 @@ export default function ClassJoinPage() {
   };
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col p-5 gap-5">
       {/* 헤더 영역 */}
       <PageHeader
         icon={<Users />}
@@ -64,12 +64,11 @@ export default function ClassJoinPage() {
       />
 
       {/* 메인 컨텐츠 영역 */}
-      <div className="flex-1 p-6">
-        <div className="max-w-md mx-auto">
+      <div className="flex-1">
+        <div className="w-full">
           <Card>
             <CardHeader>
-              <CardTitle className="text-center flex items-center justify-center gap-2">
-                <Plus className="w-5 h-5" />
+              <CardTitle className="text-center flex items-center text-lg font-semibold text-gray-900">
                 클래스 가입하기
               </CardTitle>
             </CardHeader>
@@ -105,25 +104,25 @@ export default function ClassJoinPage() {
                       setClassCode(e.target.value.toUpperCase());
                       setError('');
                     }}
-                    className="w-full text-center text-lg font-mono tracking-wider"
+                    className="w-full text-lg font-mono tracking-wider"
                     maxLength={8}
                     disabled={isLoading}
                   />
-                  <p className="text-xs text-gray-500 mt-1 text-center">
+                  <p className="text-xs text-gray-500 mt-3">
                     선생님으로부터 받은 8자리 클래스 코드를 입력하세요
                   </p>
                 </div>
 
                 <Button
                   type="submit"
-                  className="w-full bg-blue-600 hover:bg-blue-700"
+                  className="w-full bg-blue-600 hover:bg-blue-700 cursor-pointer"
                   disabled={isLoading || !classCode.trim()}
                 >
                   {isLoading ? '가입 요청 중...' : '클래스 가입 요청'}
                 </Button>
               </form>
 
-              <div className="text-center pt-4 border-t">
+              <div className="pt-4 border-t">
                 <p className="text-sm text-gray-600 mb-2">클래스 코드가 없으신가요?</p>
                 <p className="text-xs text-gray-500">
                   선생님께 클래스 코드를 요청하거나, 선생님이 직접 등록해주실 수 있습니다.
@@ -135,7 +134,7 @@ export default function ClassJoinPage() {
           {/* 안내사항 */}
           <Card className="mt-6">
             <CardHeader>
-              <CardTitle className="text-sm">📋 가입 안내</CardTitle>
+              <CardTitle className="text-sm">가입 안내</CardTitle>
             </CardHeader>
             <CardContent className="text-sm text-gray-600 space-y-2">
               <div className="flex items-start gap-2">

@@ -11,6 +11,9 @@ interface HandwritingCanvasProps {
   className?: string;
   value?: string;
   onChange?: (value: string) => void;
+  onImageCapture?: (imageBlob: Blob) => void;
+  enableOCR?: boolean;
+  problemType?: string;
 }
 
 export const HandwritingCanvas: React.FC<HandwritingCanvasProps> = ({
@@ -20,24 +23,41 @@ export const HandwritingCanvas: React.FC<HandwritingCanvasProps> = ({
   className = '',
   value,
   onChange,
+  onImageCapture,
+  enableOCR = false,
+  problemType = 'multiple_choice',
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentTool, setCurrentTool] = useState<'pen' | 'eraser'>('pen');
   const [strokes, setStrokes] = useState<string[]>([]);
+  const [isProcessingOCR, setIsProcessingOCR] = useState(false);
 
   useEffect(() => {
-    if (value && canvasRef.current) {
-      const canvas = canvasRef.current;
-      const ctx = canvas.getContext('2d');
-      if (ctx && value !== canvas.toDataURL()) {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    if (value && value.trim() !== '') {
+      // value가 있으면 이미지를 로드
+      if (value !== canvas.toDataURL()) {
         const img = new Image();
         img.onload = () => {
           ctx.clearRect(0, 0, canvas.width, canvas.height);
           ctx.drawImage(img, 0, 0);
         };
+        img.onerror = () => {
+          // 이미지 로드 실패 시 캔버스 클리어
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+        };
         img.src = value;
       }
+    } else {
+      // value가 없으면 캔버스 클리어
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      setStrokes([]);
     }
   }, [value]);
 
@@ -112,6 +132,28 @@ export const HandwritingCanvas: React.FC<HandwritingCanvasProps> = ({
     onStrokeChange?.(false);
   };
 
+  const captureForOCR = async () => {
+    if (!canvasRef.current || !enableOCR) return;
+
+    setIsProcessingOCR(true);
+
+    try {
+      const canvas = canvasRef.current;
+
+      // Convert canvas to blob
+      canvas.toBlob((blob) => {
+        if (blob && onImageCapture) {
+          onImageCapture(blob);
+        }
+      }, 'image/png');
+
+    } catch (error) {
+      console.error('OCR 처리 중 오류:', error);
+    } finally {
+      setIsProcessingOCR(false);
+    }
+  };
+
   return (
     <div className={`border border-gray-300 rounded-lg p-4 bg-white ${className}`}>
       {/* 도구 모음 */}
@@ -143,6 +185,26 @@ export const HandwritingCanvas: React.FC<HandwritingCanvasProps> = ({
           <Trash2 className="w-4 h-4" />
           전체 지우기
         </Button>
+        {enableOCR && (problemType === 'short_answer' || problemType === 'essay') && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={captureForOCR}
+            disabled={isProcessingOCR || strokes.length === 0}
+            className="flex items-center gap-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+          >
+            {isProcessingOCR ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                텍스트 변환 중...
+              </>
+            ) : (
+              <>
+                📝 텍스트로 변환
+              </>
+            )}
+          </Button>
+        )}
       </div>
 
       {/* 캔버스 */}
