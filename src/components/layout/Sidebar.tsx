@@ -34,11 +34,13 @@ const Sidebar = () => {
 
   // Teacher 메뉴
   const teacherMenuItems = [
+
     { icon: <RxDashboard />, text: '대시보드', path: '/' },
     { icon: <MdOutlineEmail />, text: '메일', path: '/message' },
     { icon: <FiClipboard />, text: '문제함', path: '/question/bank' },
     { icon: <FiEdit />, text: '문제 생성', path: '/question/create' },
     { icon: <FiUsers />, text: '클래스 관리', path: '/class/create' },
+
     { icon: <FiShoppingCart />, text: '마켓플레이스', path: '/market' },
   ];
 
