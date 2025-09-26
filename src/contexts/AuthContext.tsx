@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useRouter } from 'next/navigation';
 import { authService, TeacherProfile, StudentProfile } from '@/services/authService';
 import { setTokenExpiredCallback } from '@/lib/api';
 
@@ -29,6 +30,7 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider = ({ children }: AuthProviderProps) => {
+  const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userType, setUserType] = useState<'teacher' | 'student' | null>(null);
   const [userProfile, setUserProfile] = useState<TeacherProfile | StudentProfile | null>(null);
@@ -42,10 +44,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     setTokenExpiredCallback(() => {
       console.log('토큰이 만료되어 자동 로그아웃됩니다.');
       logout();
-      // 선택적으로 사용자에게 알림 표시
-      alert('로그인이 만료되었습니다. 다시 로그인해주세요.');
-      // 로그인 페이지로 리디렉션
-      window.location.href = '/login';
+      // Next.js router를 사용하여 페이지 새로고침 없이 이동
+      router.push('/');
     });
   }, []);
 
@@ -59,8 +59,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           setIsAuthenticated(true);
           setUserType(currentUser.type);
           setUserProfile(currentUser.profile);
-          
-          // 프로필 정보가 없거나 오래된 경우 새로 가져오기
           if (!currentUser.profile) {
             try {
               let freshProfile;

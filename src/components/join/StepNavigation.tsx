@@ -16,18 +16,18 @@ export const StepNavigation: React.FC<StepNavigationProps> = ({
 }) => {
   const getStepIcon = (step: number) => {
     switch (step) {
-      case 1: return <User className="w-3 h-3" />;
-      case 2: return <Mail className="w-3 h-3" />;
-      case 3: return <Lock className="w-3 h-3" />;
-      case 4: return <GraduationCap className="w-3 h-3" />;
-      default: return <User className="w-3 h-3" />;
+      case 1: return <User className="w-4 h-4" />;
+      case 2: return <Mail className="w-4 h-4" />;
+      case 3: return <Lock className="w-4 h-4" />;
+      case 4: return <GraduationCap className="w-4 h-4" />;
+      default: return <User className="w-4 h-4" />;
     }
   };
 
   if (!userType) return null;
 
   return (
-    <div className="fixed left-20 top-1/2 transform -translate-y-1/2 z-50 animate-in fade-in slide-in-from-left-2 duration-700 ease-out delay-300">
+    <div className="fixed left-1/2 top-1/2 transform -translate-x-[420px] -translate-y-1/2 z-50 animate-in fade-in slide-in-from-left-2 duration-700 ease-out delay-300">
       <div className="flex flex-col items-center bg-transparent backdrop-blur-lg rounded-2xl p-4 shadow-xl border border-white/50">
         {Array.from({ length: maxStep }, (_, index) => (
           <React.Fragment key={index + 1}>
@@ -68,7 +68,7 @@ export const StepNavigation: React.FC<StepNavigationProps> = ({
             </div>
             
             {index < maxStep - 1 && (
-              <div className="h-8 w-0.5 bg-gray-200 relative overflow-hidden my-3">
+              <div className="h-6 w-0.5 bg-gray-200 relative overflow-hidden my-2">
                 <div
                   className={`w-full bg-gradient-to-b from-blue-500 to-blue-600 transition-all duration-600 ease-in-out ${
                     currentStep > index + 1 
