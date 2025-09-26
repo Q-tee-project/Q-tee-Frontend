@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
-import { createProduct, getUserWorksheets, Worksheet, MarketProductCreate } from '@/services/marketApi';
+import { createProduct, getUserWorksheets, NormalizedWorksheet, MarketProductCreate } from '@/services/marketApi';
 
 export default function CreateMarketPage() {
   const router = useRouter();
@@ -23,7 +23,7 @@ export default function CreateMarketPage() {
     original_worksheet_id: null as number | null,
   });
 
-  const [worksheets, setWorksheets] = useState<Worksheet[]>([]);
+  const [worksheets, setWorksheets] = useState<NormalizedWorksheet[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -39,7 +39,7 @@ export default function CreateMarketPage() {
 
     setLoading(true);
     try {
-      const data = await getUserWorksheets(form.original_service);
+      const data = await getUserWorksheets(form.original_service, userProfile?.id);
       setWorksheets(data);
     } catch (error) {
       console.error('워크시트 로드 실패:', error);
@@ -160,7 +160,7 @@ export default function CreateMarketPage() {
                 <SelectContent>
                   {worksheets.map((worksheet) => (
                     <SelectItem key={worksheet.id} value={worksheet.id.toString()}>
-                      {worksheet.title} ({worksheet.problem_count}문제)
+                      {worksheet.title} ({worksheet.problem_count}문제) - {worksheet.school_level} {worksheet.grade}학년
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -171,9 +171,10 @@ export default function CreateMarketPage() {
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <h4 className="font-medium text-blue-800 mb-2">상품 등록 안내</h4>
               <ul className="text-sm text-blue-600 space-y-1">
-                <li>• 상품 가격은 문제 수에 따라 자동으로 결정됩니다 (10문제: 1,500P, 20문제: 3,000P)</li>
-                <li>• 상품 이미지는 과목, 학년, 제목을 기반으로 자동 생성됩니다</li>
-                <li>• 등록된 상품은 마이마켓에서 관리할 수 있습니다</li>
+                <li>• <strong>상품명</strong>: 마켓에서 판매될 제목 (원본 워크시트 제목과 다름)</li>
+                <li>• <strong>가격</strong>: 문제 수에 따라 자동 결정 (10문제: 1,500P, 20문제: 3,000P)</li>
+                <li>• <strong>이미지</strong>: 과목, 학년, 상품명으로 자동 생성</li>
+                <li>• 등록 후 마이마켓에서 수정/삭제 가능</li>
               </ul>
             </div>
 

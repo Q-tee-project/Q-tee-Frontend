@@ -3,8 +3,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import {
-  FiSearch, FiStar, FiTrash2, FiMoreVertical,
-  FiUser, FiUsers, FiPlus, FiX, FiCalendar
+  FiSearch,
+  FiStar,
+  FiTrash2,
+  FiMoreVertical,
+  FiUser,
+  FiUsers,
+  FiPlus,
+  FiX,
+  FiCalendar,
 } from 'react-icons/fi';
 import { useRouter } from 'next/navigation';
 import { IoMailOutline, IoMailOpenOutline } from 'react-icons/io5';
@@ -12,8 +19,20 @@ import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { messageService, MessageResponse, MessageRecipient } from '@/services/messageService';
 import {
   Pagination,
@@ -24,8 +43,8 @@ import {
   PaginationPrevious,
 } from '@/components/ui/pagination';
 import { Phone, Mail, User } from 'lucide-react';
-import { IoBookOutline } from "react-icons/io5";
-import { IoIosClose } from "react-icons/io";
+import { IoBookOutline } from 'react-icons/io5';
+import { IoIosClose } from 'react-icons/io';
 
 interface Message {
   id: string;
@@ -61,10 +80,9 @@ export default function MessagePage() {
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState<MessageRecipient | null>(null);
-
 
   const fetchMessages = useCallback(async () => {
     setLoading(true);
@@ -75,9 +93,9 @@ export default function MessagePage() {
         itemsPerPage,
         activeFilter,
         searchPerformed ? searchQuery : '',
-        searchType
+        searchType,
       );
-      
+
       const formattedMessages = response.messages.map((msg) => ({
         id: msg.id.toString(),
         isRead: msg.is_read,
@@ -103,32 +121,26 @@ export default function MessagePage() {
     fetchMessages();
   }, [fetchMessages]);
 
-  const effectiveMessages = isCheckboxMode
-    ? messages.filter((m) => !m.isStarred)
-    : messages;
+  const effectiveMessages = isCheckboxMode ? messages.filter((m) => !m.isStarred) : messages;
 
   const displayedMessages = effectiveMessages;
 
   const handleCheckboxChange = (messageId: string) => {
     setMessages((prev) =>
-      prev.map((msg) =>
-        msg.id === messageId ? { ...msg, isChecked: !msg.isChecked } : msg
-      )
+      prev.map((msg) => (msg.id === messageId ? { ...msg, isChecked: !msg.isChecked } : msg)),
     );
   };
 
   const handleStarToggle = async (e: React.MouseEvent, messageId: string) => {
     e.stopPropagation();
-    const message = messages.find(m => m.id === messageId);
+    const message = messages.find((m) => m.id === messageId);
     if (!message) return;
 
     const newStarredState = !message.isStarred;
 
     // Optimistic update
-    setMessages(prev =>
-      prev.map(msg =>
-        msg.id === messageId ? { ...msg, isStarred: newStarredState } : msg
-      )
+    setMessages((prev) =>
+      prev.map((msg) => (msg.id === messageId ? { ...msg, isStarred: newStarredState } : msg)),
     );
 
     try {
@@ -136,10 +148,8 @@ export default function MessagePage() {
     } catch (error) {
       console.error('Failed to toggle star:', error);
       // Revert on error
-      setMessages(prev =>
-        prev.map(msg =>
-          msg.id === messageId ? { ...msg, isStarred: !newStarredState } : msg
-        )
+      setMessages((prev) =>
+        prev.map((msg) => (msg.id === messageId ? { ...msg, isStarred: !newStarredState } : msg)),
       );
       alert('즐겨찾기 상태 변경에 실패했습니다.');
     }
@@ -195,17 +205,15 @@ export default function MessagePage() {
     setSelectAll(newSelectAll);
     setMessages((prev) =>
       prev.map((msg) =>
-        displayedMessages.some((d) => d.id === msg.id)
-          ? { ...msg, isChecked: newSelectAll }
-          : msg
-      )
+        displayedMessages.some((d) => d.id === msg.id) ? { ...msg, isChecked: newSelectAll } : msg,
+      ),
     );
   };
 
   const handleDeleteConfirm = async () => {
     const idsToDelete = messageToDelete
       ? [messageToDelete]
-      : messages.filter(m => m.isChecked).map(m => m.id);
+      : messages.filter((m) => m.isChecked).map((m) => m.id);
 
     if (idsToDelete.length === 0) {
       setIsDeleteModalOpen(false);
@@ -213,12 +221,12 @@ export default function MessagePage() {
     }
 
     const originalMessages = [...messages];
-    setMessages(prev => prev.filter(m => !idsToDelete.includes(m.id)));
+    setMessages((prev) => prev.filter((m) => !idsToDelete.includes(m.id)));
     setIsDeleteModalOpen(false);
     setMessageToDelete(null);
 
     try {
-      await Promise.all(idsToDelete.map(id => messageService.deleteMessage(parseInt(id))));
+      await Promise.all(idsToDelete.map((id) => messageService.deleteMessage(parseInt(id))));
       fetchMessages();
     } catch (error) {
       console.error('Failed to delete messages:', error);
@@ -243,28 +251,30 @@ export default function MessagePage() {
     setIsDeleteModalOpen(true);
     setSelectedMessageId(null);
   };
-  
+
   const handleProfileClick = async (e: React.MouseEvent, senderId: number) => {
     e.stopPropagation();
     try {
       // This is a simplified approach. In a real app, you might fetch
       // the full profile from a dedicated endpoint.
-      const message = messages.find(m => m.sender.id === senderId);
+      const message = messages.find((m) => m.sender.id === senderId);
       if (message) {
-        const recipient = await messageService.getMessageRecipients().then(rs => rs.find(r => r.id === senderId));
-        if(recipient) {
+        const recipient = await messageService
+          .getMessageRecipients()
+          .then((rs) => rs.find((r) => r.id === senderId));
+        if (recipient) {
           setSelectedProfile(recipient);
           setIsProfileModalOpen(true);
         }
       }
     } catch (error) {
-      console.error("Failed to get profile:", error);
-      alert("프로필 정보를 불러오는데 실패했습니다.");
+      console.error('Failed to get profile:', error);
+      alert('프로필 정보를 불러오는데 실패했습니다.');
     }
   };
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col" style={{ padding: '20px', display: 'flex', gap: '20px' }}>
       <PageHeader
         icon={<IoMailOutline />}
         title="쪽지함"
@@ -336,7 +346,9 @@ export default function MessagePage() {
                       : 'text-gray-600 hover:bg-gray-100'
                   }`}
                 >
-                  <FiStar className={`w-5 h-5 ${activeFilter === 'starred' ? 'fill-current' : ''}`} />
+                  <FiStar
+                    className={`w-5 h-5 ${activeFilter === 'starred' ? 'fill-current' : ''}`}
+                  />
                 </button>
               )}
               <button
@@ -401,7 +413,7 @@ export default function MessagePage() {
                             </button>
                           )}
                         </div>
-                        
+
                         <div className="flex-shrink-0">
                           {message.isRead ? (
                             <IoMailOpenOutline className="w-5 h-5 text-gray-500" title="읽음" />
@@ -409,19 +421,19 @@ export default function MessagePage() {
                             <IoMailOutline className="w-5 h-5 text-blue-600" title="안읽음" />
                           )}
                         </div>
-                        
+
                         <div className="text-sm text-gray-600 flex items-center gap-2 min-w-0">
                           <FiUser className="w-4 h-4 text-gray-400 flex-shrink-0" />
                           <span className="truncate">{message.sender.name}</span>
                         </div>
                       </div>
-                      
+
                       <div className="flex-1 mx-30 min-w-0">
                         <div className="text-sm font-bold text-gray-800 truncate">
                           {message.subject}
                         </div>
                       </div>
-                      
+
                       <div className="flex items-center gap-80 flex-shrink-0">
                         <div className="text-xs text-gray-500 mr-4 flex items-center gap-1">
                           <FiCalendar className="w-3 h-3" />
@@ -442,7 +454,7 @@ export default function MessagePage() {
                           <div className="px-4 py-2 text-sm text-gray-900 border-b border-gray-100">
                             {message.sender.name}
                           </div>
-                          <button 
+                          <button
                             onClick={(e) => handleProfileClick(e, message.sender.id)}
                             className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-3"
                           >
@@ -460,7 +472,7 @@ export default function MessagePage() {
                             <FiPlus className="w-4 h-4" />
                             쪽지 작성
                           </button>
-                          <button 
+                          <button
                             onClick={(e) => handleIndividualDelete(e, message.id)}
                             className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-3"
                           >
@@ -481,8 +493,8 @@ export default function MessagePage() {
               <Pagination>
                 <PaginationContent>
                   <PaginationItem>
-                    <PaginationPrevious 
-                      href="#" 
+                    <PaginationPrevious
+                      href="#"
                       onClick={(e) => {
                         e.preventDefault();
                         if (currentPage > 1) setCurrentPage(currentPage - 1);
@@ -490,7 +502,7 @@ export default function MessagePage() {
                       className={`${currentPage === 1 ? 'pointer-events-none opacity-50' : ''}`}
                     />
                   </PaginationItem>
-                  
+
                   {Array.from({ length: totalPages }).map((_, idx) => (
                     <PaginationItem key={idx}>
                       <PaginationLink
@@ -505,15 +517,17 @@ export default function MessagePage() {
                       </PaginationLink>
                     </PaginationItem>
                   ))}
-                  
+
                   <PaginationItem>
-                    <PaginationNext 
-                      href="#" 
+                    <PaginationNext
+                      href="#"
                       onClick={(e) => {
                         e.preventDefault();
                         if (currentPage < totalPages) setCurrentPage(currentPage + 1);
                       }}
-                      className={`${currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}`}
+                      className={`${
+                        currentPage === totalPages ? 'pointer-events-none opacity-50' : ''
+                      }`}
                     />
                   </PaginationItem>
                 </PaginationContent>
@@ -534,10 +548,11 @@ export default function MessagePage() {
 
           <div className="py-4">
             <p className="text-gray-700 mb-2">
-              {messageToDelete 
-                ? '정말로 이 메시지를 삭제하시겠습니까?' 
-                : `정말로 선택된 ${messages.filter(m => m.isChecked).length}개의 메시지를 삭제하시겠습니까?`
-              }
+              {messageToDelete
+                ? '정말로 이 메시지를 삭제하시겠습니까?'
+                : `정말로 선택된 ${
+                    messages.filter((m) => m.isChecked).length
+                  }개의 메시지를 삭제하시겠습니까?`}
             </p>
             <p className="text-sm text-gray-500">삭제된 메시지는 복구할 수 없습니다.</p>
           </div>
@@ -558,7 +573,7 @@ export default function MessagePage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      
+
       <Dialog open={isProfileModalOpen} onOpenChange={setIsProfileModalOpen}>
         <DialogContent className="max-w-md" showCloseButton={false}>
           <DialogHeader>
@@ -569,7 +584,17 @@ export default function MessagePage() {
               <button
                 onClick={() => setIsProfileModalOpen(false)}
                 className="text-gray-400 hover:text-gray-600"
-                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '0',
+                  width: '24px',
+                  height: '24px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
               >
                 <IoIosClose />
               </button>
@@ -599,9 +624,7 @@ export default function MessagePage() {
                   <Phone className="w-5 h-5 text-purple-600" />
                 </div>
                 <div>
-                  <div className="font-medium text-gray-900">
-                    {selectedProfile.phone}
-                  </div>
+                  <div className="font-medium text-gray-900">{selectedProfile.phone}</div>
                 </div>
               </div>
             </div>

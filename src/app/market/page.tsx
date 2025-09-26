@@ -6,23 +6,21 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
+import { getProducts, MarketProduct } from '@/services/marketApi';
 import TrendyPopularProducts from '@/components/market/TrendyPopularProducts';
 
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 
-interface Product {
-  id: string;
-  title: string;
-  description: string;
-  price: number;
-  author: string;
-  authorId: string;
-  tags: string[];
-}
-
-type MarketProduct = Product;
+// getPopularProducts 함수 (임시)
+const getPopularProducts = async (limit: number): Promise<MarketProduct[]> => {
+  return await getProducts({
+    limit,
+    sort_by: 'satisfaction_rate',
+    sort_order: 'desc'
+  });
+};
 
 
 const TABS = ['전체', '국어', '영어', '수학'];
@@ -135,6 +133,12 @@ export default function MarketPage() {
 
         <div className="flex space-x-4">
           <button
+            onClick={() => router.push('/market/points')}
+            className="text-sm px-4 py-2 rounded-md bg-[#0072CE] text-white hover:bg-[#005fa3] transition-colors"
+          >
+            포인트
+          </button>
+          <button
             onClick={() => router.push('/market/myMarket')}
             className="text-sm px-4 py-2 rounded-md bg-[#0072CE] text-white hover:bg-[#005fa3] transition-colors"
           >
@@ -237,8 +241,14 @@ export default function MarketPage() {
                   className="cursor-pointer rounded-lg border border-gray-200 bg-white p-4 shadow-sm hover:shadow-md transition-transform hover:scale-[1.02]"
                 >
 
-                  <div className="bg-gray-100 rounded-md h-48 mb-4 flex items-center justify-center text-gray-400 select-none">
-                    이미지
+                  <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-md h-48 mb-4 flex flex-col items-center justify-center text-gray-700 select-none border border-gray-200 p-4">
+                    <div className="text-center space-y-2">
+                      <div className="text-lg font-bold text-[#0072CE]">{product.subject_type}</div>
+                      <div className="text-md font-semibold">{product.school_level} {product.grade}학년</div>
+                      <div className="text-sm text-gray-600 mt-3 line-clamp-2 leading-tight px-2">
+                        {product.title}
+                      </div>
+                    </div>
                   </div>
                   <p className="text-gray-400 font-semibold text-sm mb-1 truncate">
                     {product.seller_name}
