@@ -217,11 +217,16 @@ export default function NotificationPanel({ isOpen, onClose, bellMenuRef }: Noti
 
   // 알림 클릭 시 페이지 이동 함수
   const handleNotificationClick = React.useCallback((notification: Notification) => {
-    // 알림을 읽음 처리
-    setNotifications(prev => 
+    // 알림을 읽음 처리 (로컬 UI 상태)
+    setNotifications(prev =>
       prev.map(n => n.id === notification.id ? { ...n, isRead: true } : n)
     );
-    
+
+    // SSE 메시지 알림인 경우 SSE Context에서도 읽음 처리
+    if (notification.type === 'message' && notification.id.startsWith('msg_')) {
+      sseMarkAsRead(notification.id);
+    }
+
     // 알림 패널 닫기
     onClose();
     

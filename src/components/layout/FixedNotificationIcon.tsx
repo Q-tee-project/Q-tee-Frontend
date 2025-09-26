@@ -3,20 +3,19 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { FaBell } from 'react-icons/fa6';
 import Notification from './Notification';
+import { useNotification } from '@/contexts/NotificationContext';
 
 type CornerPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
 
 const FixedNotificationIcon = () => {
+  const { unreadCount } = useNotification();
   const [isBellOpen, setIsBellOpen] = useState(false);
-  const [hasNewNotification, setHasNewNotification] = useState(true); // 새 알림 여부 (테스트용으로 true로 설정)
   const bellMenuRef = useRef<HTMLDivElement | null>(null);
+
+  const hasNewNotification = unreadCount > 0;
 
   const toggleBellMenu = () => {
     setIsBellOpen((prev) => !prev);
-    // 알림창을 열면 새 알림 표시 제거
-    if (!isBellOpen) {
-      setHasNewNotification(false);
-    }
   };
 
   React.useEffect(() => {
