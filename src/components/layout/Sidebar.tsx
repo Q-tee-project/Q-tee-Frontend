@@ -25,11 +25,11 @@ const Sidebar = () => {
   const teacherMenuItems = [
     { icon: <FiCalendar />, text: '캘린더' },
     { icon: <FiList />, text: '리스트' },
-    { icon: <FiMail />, text: '메일' },
+    { icon: <FiMail />, text: '메일', path: '/message' },
     { icon: <FiClipboard />, text: '문제 관리', path: '/question/bank' },
     { icon: <FiEdit />, text: '문제 생성', path: '/question/create' },
     { icon: <FiUsers />, text: '학생 관리', path: '/class/create' },
-    { icon: <FiShoppingCart />, text: '마켓플레이스', path: '/market'},
+    { icon: <FiShoppingCart />, text: '마켓플레이스', path: '/market' },
   ];
 
   // Student 메뉴
