@@ -9,7 +9,7 @@ export default function ProfilePage() {
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-white">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-900 mb-4">로그인이 필요합니다</h1>
           <p className="text-gray-600">마이페이지를 보려면 로그인해주세요.</p>
@@ -21,7 +21,7 @@ export default function ProfilePage() {
   const isTeacher = userType === 'teacher';
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-white py-8">
       <div className="max-w-4xl mx-auto px-4">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">마이페이지</h1>
