@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { Subject } from '@/types/math';
 import { FileText } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { useMathBank } from '@/hooks/useMathBank';
@@ -35,6 +34,8 @@ interface WorksheetDetailProps<T = any, P = any> {
   onCancelEditTitle: () => void;
   onSaveTitle: () => void;
   onEditedTitleChange: (value: string) => void;
+  onRefresh?: () => void;
+  worksheetPassages?: any[];
 }
 
 type WorksheetDetailComponent = React.ComponentType<WorksheetDetailProps>;
@@ -64,9 +65,9 @@ export default function BankPage() {
   // 과목별 컴포넌트 매핑
   const WorksheetDetailComponents: Record<string, WorksheetDetailComponent> = useMemo(
     () => ({
-      수학: MathWorksheetDetail,
-      국어: KoreanWorksheetDetail,
-      영어: EnglishWorksheetDetail,
+      수학: MathWorksheetDetail as unknown as WorksheetDetailComponent,
+      국어: KoreanWorksheetDetail as unknown as WorksheetDetailComponent,
+      영어: EnglishWorksheetDetail as unknown as WorksheetDetailComponent,
     }),
     [],
   );
@@ -118,8 +119,8 @@ export default function BankPage() {
       <div className="flex-1 min-h-0">
         <div className="flex gap-6 h-full">
           <WorksheetList
-            worksheets={currentBank.worksheets}
-            selectedWorksheet={currentBank.selectedWorksheet}
+            worksheets={currentBank.worksheets as any[]}
+            selectedWorksheet={currentBank.selectedWorksheet as any}
             selectedSubject={selectedSubject}
             isLoading={currentBank.isLoading}
             error={currentBank.error}
@@ -140,8 +141,8 @@ export default function BankPage() {
 
             return (
               <WorksheetDetailComponent
-                selectedWorksheet={currentBank.selectedWorksheet}
-                worksheetProblems={currentBank.worksheetProblems}
+                selectedWorksheet={currentBank.selectedWorksheet as any}
+                worksheetProblems={currentBank.worksheetProblems as any[]}
                 showAnswerSheet={currentBank.showAnswerSheet}
                 isEditingTitle={isEditingTitle}
                 editedTitle={editedTitle}
@@ -154,7 +155,7 @@ export default function BankPage() {
                 onStartEditTitle={() => {
                   const currentTitle = selectedSubject === '영어'
                     ? (currentBank.selectedWorksheet as any)?.worksheet_name || ''
-                    : currentBank.selectedWorksheet?.title || '';
+                    : (currentBank.selectedWorksheet as any)?.title || '';
                   handleStartEditTitle(currentTitle);
                 }}
                 onCancelEditTitle={handleCancelEditTitle}
@@ -162,19 +163,20 @@ export default function BankPage() {
                   if (currentBank.selectedWorksheet) {
                     const worksheetId = selectedSubject === '영어'
                       ? (currentBank.selectedWorksheet as any).worksheet_id
-                      : currentBank.selectedWorksheet.id;
+                      : (currentBank.selectedWorksheet as any).id;
                     handleSaveTitle(worksheetId, currentBank.loadWorksheets);
                   }
                 }}
                 onEditedTitleChange={handleEditedTitleChange}
                 onRefresh={() => {
                   if (currentBank.selectedWorksheet) {
-                    const worksheetId = currentBank.selectedWorksheet.worksheet_id;
+                    const worksheetId = (currentBank.selectedWorksheet as any).worksheet_id || (currentBank.selectedWorksheet as any).id;
                     if (worksheetId) {
-                      currentBank.handleWorksheetSelect(currentBank.selectedWorksheet);
+                      currentBank.handleWorksheetSelect(currentBank.selectedWorksheet as any);
                     }
                   }
                 }}
+                worksheetPassages={(currentBank as any).worksheetPassages}
               />
             );
           })()}
