@@ -117,7 +117,7 @@ export default function RegisterPage({ params }: RegisterPageProps) {
   };
 
   return (
-    <div className="flex flex-col" style={{ padding: '20px', display: 'flex', gap: '20px' }}>
+    <div className="flex flex-col p-5 gap-5">
       {/* 헤더 */}
       <PageHeader
         icon={<UserPlus />}
@@ -135,12 +135,7 @@ export default function RegisterPage({ params }: RegisterPageProps) {
             <div className="flex items-center mb-6">
               <button
                 onClick={() => router.push(`/class/${classId}`)}
-                className="mr-4 p-2 rounded-md text-gray-400 hover:text-gray-600 transition-colors duration-200"
-                style={{
-                  backgroundColor: '#f5f5f5',
-                  borderRadius: '50%',
-                  cursor: 'pointer',
-                }}
+                className="mr-4 p-2 rounded-md text-gray-400 hover:text-gray-600 transition-colors duration-200 bg-[#f5f5f5] rounded-full cursor-pointer"
               >
                 <FaArrowLeft className="h-5 w-5" />
               </button>
@@ -162,7 +157,7 @@ export default function RegisterPage({ params }: RegisterPageProps) {
               {/* 학생 이름 */}
               <div>
                 <label htmlFor="studentName" className="block text-sm font-medium text-gray-700 mb-2">
-                  학생 이름 <span style={{ color: '#FF0000' }}>*</span>
+                  학생 이름 <span className="text-red-500">*</span>
                 </label>
                 <Input
                   id="studentName"
@@ -176,7 +171,7 @@ export default function RegisterPage({ params }: RegisterPageProps) {
               {/* 이메일 */}
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                  이메일 <span style={{ color: '#FF0000' }}>*</span>
+                  이메일 <span className="text-red-500">*</span>
                 </label>
                 <Input
                   id="email"
@@ -190,7 +185,7 @@ export default function RegisterPage({ params }: RegisterPageProps) {
               {/* 학생 연락처 */}
               <div>
                 <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
-                  학생 연락처 <span style={{ color: '#FF0000' }}>*</span>
+                  학생 연락처 <span className="text-red-500">*</span>
                 </label>
                 <Input
                   id="phone"
@@ -204,7 +199,7 @@ export default function RegisterPage({ params }: RegisterPageProps) {
               {/* 학부모 연락처 */}
               <div>
                 <label htmlFor="parentPhone" className="block text-sm font-medium text-gray-700 mb-2">
-                  학부모 연락처 <span style={{ color: '#FF0000' }}>*</span>
+                  학부모 연락처 <span className="text-red-500">*</span>
                 </label>
                 <Input
                   id="parentPhone"
@@ -216,10 +211,10 @@ export default function RegisterPage({ params }: RegisterPageProps) {
               </div>
 
               {/* 학교/학년 */}
-              <div className="flex gap-[15px] pb-4" style={{ borderBottom: '1px solid #D1D1D1' }}>
+              <div className="flex gap-4 pb-4 border-b border-[#D1D1D1]">
                 <div className="flex-1">
                   <label htmlFor="school" className="block text-sm font-medium text-gray-700 mb-2">
-                    학교 <span style={{ color: '#FF0000' }}>*</span>
+                    학교 <span className="text-red-500">*</span>
                   </label>
                   <Select
                     value={formData.school_level}
@@ -239,7 +234,7 @@ export default function RegisterPage({ params }: RegisterPageProps) {
 
                 <div className="flex-1">
                   <label htmlFor="grade" className="block text-sm font-medium text-gray-700 mb-2">
-                    학년 <span style={{ color: '#FF0000' }}>*</span>
+                    학년 <span className="text-red-500">*</span>
                   </label>
                   <Select
                     value={formData.grade.toString()}
@@ -258,25 +253,19 @@ export default function RegisterPage({ params }: RegisterPageProps) {
               </div>
 
               {/* 버튼 영역 */}
-              <div style={{ display: 'flex', gap: '15px' }}>
+              <div className="flex gap-4">
                 <button
                   type="button"
                   onClick={handleCancel}
-                  className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
-                  style={{ flex: 1 }}
+                  className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 flex-1"
                 >
                   취소
                 </button>
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="px-4 py-2 rounded-md transition-colors"
-                  style={{ 
-                    flex: 1,
-                    backgroundColor: '#0072CE',
-                    color: '#ffffff',
-                    opacity: isLoading ? 0.7 : 1
-                  }}
+                  className="px-4 py-2 rounded-md transition-colors flex-1 bg-[#0072CE] text-white"
+                  style={{ opacity: isLoading ? 0.7 : 1 }}
                 >
                   {isLoading ? '등록 중...' : '등록하기'}
                 </button>

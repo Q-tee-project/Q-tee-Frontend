@@ -7,7 +7,11 @@ import { useNotification } from '@/contexts/NotificationContext';
 
 type CornerPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
 
-const FixedNotificationIcon = () => {
+interface FixedNotificationIconProps {
+  isSidebarOpen?: boolean;
+}
+
+const FixedNotificationIcon = ({ isSidebarOpen = false }: FixedNotificationIconProps) => {
   const { unreadCount, markAllAsRead } = useNotification();
   const [isBellOpen, setIsBellOpen] = useState(false);
   const [position, setPosition] = useState<CornerPosition>('top-right');
@@ -60,15 +64,19 @@ const FixedNotificationIcon = () => {
     const centerY = windowHeight / 2;
 
     // 마우스가 화면 중앙 기준으로 어느 사분면에 있는지 확인
+    let result: CornerPosition;
     if (mouseX < centerX && mouseY < centerY) {
-      return 'top-left';
+      result = 'top-left';
     } else if (mouseX >= centerX && mouseY < centerY) {
-      return 'top-right';
+      result = 'top-right';
     } else if (mouseX < centerX && mouseY >= centerY) {
-      return 'bottom-left';
+      result = 'bottom-left';
     } else {
-      return 'bottom-right';
+      result = 'bottom-right';
     }
+    
+    console.log(`Mouse: (${mouseX}, ${mouseY}), Center: (${centerX}, ${centerY}), Result: ${result}`);
+    return result;
   }, []);
 
   // 드래그 중
@@ -104,7 +112,6 @@ const FixedNotificationIcon = () => {
     if (isDragging) {
       setIsDragging(false);
       setDragStartPos(null);
-
       // 드래그 종료 시 마우스 위치에서 가장 가까운 모서리로 스냅
       if (hasDragged) {
         // 마우스 위치에서 해당 모서리로 부드럽게 이동하는 애니메이션
@@ -124,6 +131,7 @@ const FixedNotificationIcon = () => {
         // 잠시 후 모서리 위치로 이동
         setTimeout(() => {
           const newPosition = getClosestCorner(event.clientX, event.clientY);
+          console.log(`Setting position to: ${newPosition}`);
           setPosition(newPosition);
           setCustomPosition(null);
         }, 50);
@@ -170,13 +178,15 @@ const FixedNotificationIcon = () => {
 
   // 위치에 따른 스타일 클래스 반환
   const getPositionClasses = (pos: CornerPosition): string => {
+    const leftOffset = isSidebarOpen ? 'left-[250px]' : 'left-[70px]';
+    
     switch (pos) {
       case 'top-left':
-        return 'top-5 left-5';
+        return `top-5 ${leftOffset}`;
       case 'top-right':
         return 'top-5 right-5';
       case 'bottom-left':
-        return 'bottom-5 left-5';
+        return `bottom-5 ${leftOffset}`;
       case 'bottom-right':
         return 'bottom-5 right-5';
       default:
@@ -201,7 +211,7 @@ const FixedNotificationIcon = () => {
   return (
     <div
       ref={bellMenuRef}
-      className={`fixed ${!customPosition ? getPositionClasses(position) : ''} z-[1000] transition-all duration-300 ease-in-out`}
+      className={`fixed ${!customPosition ? getPositionClasses(position) : ''} z-[1000] transition-all duration-200 ease-out`}
       style={getDragStyles()}
     >
       {/* 알림 아이콘 */}
