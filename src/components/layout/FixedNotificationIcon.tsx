@@ -8,7 +8,7 @@ import { useNotification } from '@/contexts/NotificationContext';
 type CornerPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
 
 const FixedNotificationIcon = () => {
-  const { unreadCount } = useNotification();
+  const { unreadCount, markAllAsRead } = useNotification();
   const [isBellOpen, setIsBellOpen] = useState(false);
   const [position, setPosition] = useState<CornerPosition>('top-right');
   const [isDragging, setIsDragging] = useState(false);
@@ -26,6 +26,13 @@ const FixedNotificationIcon = () => {
       setIsBellOpen((prev) => !prev);
     }
   };
+
+  // 벨 메뉴가 열릴 때 읽지 않은 알림을 읽음 처리
+  useEffect(() => {
+    if (isBellOpen && unreadCount > 0) {
+      markAllAsRead();
+    }
+  }, [isBellOpen, unreadCount, markAllAsRead]);
 
   // 드래그 시작
   const handleMouseDown = (e: React.MouseEvent) => {

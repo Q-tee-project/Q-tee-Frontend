@@ -10,6 +10,7 @@ interface NotificationContextType {
   isConnected: boolean;
   addNotification: (notification: SSENotification) => void;
   markAsRead: (id: string) => void;
+  markAllAsRead: () => void;
   removeNotification: (id: string) => void;
   clearAll: () => void;
   sendTestNotification: () => Promise<void>;
@@ -108,6 +109,13 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
     );
   };
 
+  // 모든 알림 읽음 처리
+  const markAllAsRead = () => {
+    setNotifications(prev =>
+      prev.map(notification => ({ ...notification, read: true }))
+    );
+  };
+
   // 개별 알림 삭제
   const removeNotification = (id: string) => {
     setNotifications(prev => prev.filter(n => n.id !== id));
@@ -147,6 +155,7 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
     isConnected,
     addNotification,
     markAsRead,
+    markAllAsRead,
     removeNotification,
     clearAll,
     sendTestNotification,
