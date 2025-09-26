@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BsLayoutSidebar } from 'react-icons/bs';
+import { IoIosArrowDropright } from 'react-icons/io';
 import { RxDashboard } from 'react-icons/rx';
 import { MdOutlineEmail } from 'react-icons/md';
 import { FiClipboard } from 'react-icons/fi';
@@ -17,38 +17,37 @@ import { FiCalendar } from 'react-icons/fi';
 import { FiList } from 'react-icons/fi';
 import { FiBook } from 'react-icons/fi';
 import { FiHome } from 'react-icons/fi';
+import { FiLogOut } from 'react-icons/fi';
 import { useAuth } from '@/contexts/AuthContext';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import path from 'path';
 
-const Sidebar = () => {
+interface SidebarProps {
+  onToggle?: (isOpen: boolean) => void;
+}
+
+const Sidebar = ({ onToggle }: SidebarProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
-  const { userType, isAuthenticated, userProfile, logout } = useAuth();
-
-
+  const { userType, logout } = useAuth();
 
   // Teacher 메뉴
   const teacherMenuItems = [
-
-    { icon: <RxDashboard />, text: '대시보드', path: '/' },
-    { icon: <MdOutlineEmail />, text: '메일', path: '/message' },
+    { icon: <RxDashboard />, text: '대시보드', path: '/dashboard/teacher' },
+    { icon: <MdOutlineEmail />, text: '메일', path: '/message/[id]' },
     { icon: <FiClipboard />, text: '문제함', path: '/question/bank' },
     { icon: <FiEdit />, text: '문제 생성', path: '/question/create' },
     { icon: <FiUsers />, text: '클래스 관리', path: '/class/create' },
-
     { icon: <FiShoppingCart />, text: '마켓플레이스', path: '/market' },
   ];
 
   // Student 메뉴
   const studentMenuItems = [
-    { icon: <FiCalendar />, text: '캘린더' },
-    { icon: <FiList />, text: '리스트' },
-    { icon: <MdOutlineEmail />, text: '메일' },
+    { icon: <RxDashboard />, text: '대시보드', path: '/dashboard/student' },
+    { icon: <MdOutlineEmail />, text: '메일', path: '/message/[id]' },
     { icon: <FiBook />, text: '과제 풀이', path: '/test' },
     { icon: <FiHome />, text: '내 클래스', path: '/class' },
   ];
@@ -61,6 +60,7 @@ const Sidebar = () => {
       isToggle: true 
     },
     { icon: <FaUserCircle />, text: '프로필', isProfile: true },
+    { icon: <FiLogOut />, text: '로그아웃', isLogout: true },
   ];
 
   const menuItems = userType === 'teacher' ? teacherMenuItems : studentMenuItems;
@@ -75,7 +75,7 @@ const Sidebar = () => {
 
   return (
     <motion.div
-      className="bg-gray-900 flex flex-col border-r border-gray-700 flex-shrink-0"
+      className="bg-gray-900 flex flex-col border-r border-gray-700 flex-shrink-0 fixed left-0 top-0 z-40"
       animate={{ width: isOpen ? '240px' : '60px' }}
       transition={{ duration: 0.3, ease: 'easeInOut' }}
       style={{ height: '100vh', justifyContent: 'space-between', minWidth: isOpen ? '240px' : '60px' }}
@@ -91,19 +91,25 @@ const Sidebar = () => {
                 <Image src="/logo.svg" alt="Q-Tee 로고" width={20} height={20} priority />
               </Link>
               <motion.button
-                onClick={() => setIsOpen(false)}
+                onClick={() => {
+                  setIsOpen(false);
+                  onToggle?.(false);
+                }}
                 className="flex items-center justify-center rounded-md cursor-pointer hover:bg-gray-800 transition-colors p-0"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
-                <BsLayoutSidebar className="text-white w-5 h-5" />
+                <IoIosArrowDropright className="text-white w-5 h-5 rotate-180" />
               </motion.button>
             </>
           ) : (
             /* 닫힌 상태: 호버 시 토글 아이콘 */
             <div 
               className="cursor-pointer"
-              onClick={() => setIsOpen(true)}
+              onClick={() => {
+                setIsOpen(true);
+                onToggle?.(true);
+              }}
             >
               <div className="group relative">
                 <Link href="/" aria-label="홈으로 이동">
@@ -117,7 +123,7 @@ const Sidebar = () => {
                   />
                 </Link>
                 <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                  <BsLayoutSidebar className="w-5 h-5 text-white" />
+                  <IoIosArrowDropright className="w-5 h-5 text-white" />
                 </div>
               </div>
             </div>
@@ -151,13 +157,13 @@ const Sidebar = () => {
               }}
               whileTap={{ scale: 0.98 }}
             >
-              <button className="flex items-center justify-center flex-shrink-0">
+              <div className="flex items-center justify-center flex-shrink-0">
                 <span className="text-white text-6 flex items-center justify-center">
                   {React.cloneElement(item.icon, {
                     className: "w-5 h-5 text-white"
                   })}
                 </span>
-              </button>
+              </div>
               <AnimatePresence>
                 {isOpen && (
                   <motion.span
@@ -171,8 +177,6 @@ const Sidebar = () => {
                   </motion.span>
                 )}
               </AnimatePresence>
-
-
             </motion.div>
 
             {/* 구분선들 */}
@@ -216,6 +220,9 @@ const Sidebar = () => {
                 router.push('/profile');
               } else if (item.isToggle) {
                 setIsDarkMode(!isDarkMode);
+              } else if (item.isLogout) {
+                logout();
+                router.push('/');
               }
             }}
             initial={{ opacity: 0, x: -20 }}
@@ -231,7 +238,7 @@ const Sidebar = () => {
             }}
             whileTap={{ scale: 0.98 }}
           >
-            <button className="flex items-center justify-center flex-shrink-0">
+            <div className="flex items-center justify-center flex-shrink-0">
               <span className="text-white text-6 flex items-center justify-center">
                 {React.cloneElement(item.icon, {
                   className: item.isToggle && !isDarkMode 
@@ -239,7 +246,7 @@ const Sidebar = () => {
                     : "w-5 h-5 text-white"
                 })}
               </span>
-            </button>
+            </div>
             <AnimatePresence>
               {isOpen && (
                 <motion.span
@@ -253,7 +260,6 @@ const Sidebar = () => {
                 </motion.span>
               )}
             </AnimatePresence>
-
           </motion.div>
           );
         })}
