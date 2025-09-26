@@ -113,7 +113,7 @@ const RegenerationPreviewModal: React.FC<RegenerationPreviewModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-7xl w-full max-h-[90vh] flex flex-col">
+      <DialogContent className="max-w-[95vw] w-full max-h-[90vh] flex flex-col">
         <DialogHeader className="flex-row items-center justify-between pr-6">
           <DialogTitle>재생성 결과 비교</DialogTitle>
           <div className="flex items-center gap-4">
@@ -419,7 +419,7 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
         regenerationFormData as EnglishRegenerationRequest
       );
 
-      if (response && response.status === 'success') {
+      if (response && (response as any).success === true) {
         const originalQuestion = selectedQuestionForRegeneration;
         const originalPassage = originalQuestion.question_passage_id
           ? passages.find(p => p.passage_id === originalQuestion.question_passage_id)
@@ -753,8 +753,8 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
       <RegenerationPreviewModal
         isOpen={isRegenerationPreviewModalOpen}
         onClose={() => setIsRegenerationPreviewModalOpen(false)}
-        onApply={() => {
-          if (!previewData) return;
+        onApply={async () => {
+          if (!previewData || !selectedWorksheet) return;
 
           console.log('🔄 재생성 결과 적용 중:', {
             mode,
@@ -763,20 +763,58 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
             regeneratedRelatedQuestions: previewData.regenerated.relatedQuestions
           });
 
-          if (mode === 'generation' && onUpdateQuestion) {
-            onUpdateQuestion(
-              previewData.original.question.question_id,
-              previewData.regenerated.question,
-              previewData.regenerated.passage,
-              previewData.regenerated.relatedQuestions
-            );
-          } else if (mode === 'bank') {
-            onRefresh();
-          }
+          try {
+            if (mode === 'generation' && onUpdateQuestion) {
+              // 생성 모드: 메모리에서만 업데이트
+              onUpdateQuestion(
+                previewData.original.question.question_id,
+                previewData.regenerated.question,
+                previewData.regenerated.passage,
+                previewData.regenerated.relatedQuestions
+              );
+            } else if (mode === 'bank') {
+              // 뱅크 모드: DB에 저장
+              const worksheetId = selectedWorksheet.worksheet_id as number;
 
-          setIsRegenerationPreviewModalOpen(false);
-          setPreviewData(null);
-          alert('재생성된 내용이 적용되었습니다.');
+              // 메인 문제 업데이트
+              if (previewData.regenerated.question) {
+                await EnglishService.updateEnglishQuestion(
+                  worksheetId,
+                  previewData.regenerated.question.question_id,
+                  previewData.regenerated.question
+                );
+              }
+
+              // 지문이 재생성되었다면 업데이트
+              if (previewData.regenerated.passage && previewData.original.passage) {
+                await EnglishService.updateEnglishPassage(
+                  worksheetId,
+                  previewData.original.passage.passage_id,
+                  previewData.regenerated.passage
+                );
+              }
+
+              // 연관 문제들 업데이트
+              if (previewData.regenerated.relatedQuestions) {
+                for (const relatedQuestion of previewData.regenerated.relatedQuestions) {
+                  await EnglishService.updateEnglishQuestion(
+                    worksheetId,
+                    relatedQuestion.question_id,
+                    relatedQuestion
+                  );
+                }
+              }
+
+              // 데이터 새로고침
+              onRefresh();
+            }
+
+            setIsRegenerationPreviewModalOpen(false);
+            setPreviewData(null);
+            alert('재생성된 내용이 적용되었습니다.');
+          } catch (error: any) {
+            alert(`적용 실패: ${error.message}`);
+          }
         }}
         previewData={previewData}
       />
