@@ -137,10 +137,10 @@ export default function PointsPage() {
                   {userPoints?.available_points.toLocaleString() || '0'}P
                 </div>
                 <div className="text-sm text-gray-500">
-                  적립 포인트: {userPoints?.earned_points.toLocaleString() || '0'}P
+                  적립 포인트: {userPoints?.earned_points?.toLocaleString() || '0'}P
                 </div>
                 <div className="text-sm text-gray-500">
-                  사용 포인트: {userPoints?.used_points.toLocaleString() || '0'}P
+                  사용 포인트: {userPoints?.used_points?.toLocaleString() || '0'}P
                 </div>
               </div>
             </CardContent>
