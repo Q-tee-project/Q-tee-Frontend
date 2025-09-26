@@ -17,7 +17,7 @@ export const mathService = {
     }
 
     // Try multiple endpoint variations
-    let response = await fetch(`${API_BASE_URL}/worksheets?skip=${skip}&limit=${limit}`, {
+    let response = await fetch(`${API_BASE_URL}/api/worksheets/?skip=${skip}&limit=${limit}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -27,7 +27,7 @@ export const mathService = {
 
     // Try alternative Korean service-style endpoint
     if (!response.ok) {
-      response = await fetch(`${API_BASE_URL}/math-generation/worksheets?skip=${skip}&limit=${limit}`, {
+      response = await fetch(`${API_BASE_URL}/api/math-generation/worksheets?skip=${skip}&limit=${limit}`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -38,7 +38,7 @@ export const mathService = {
 
     // Try simple worksheets endpoint
     if (!response.ok) {
-      response = await fetch(`${API_BASE_URL}/worksheets`, {
+      response = await fetch(`${API_BASE_URL}/api/worksheets/`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -78,7 +78,7 @@ export const mathService = {
     }
 
     // Try multiple endpoint variations
-    let response = await fetch(`${API_BASE_URL}/worksheets/${worksheetId}`, {
+    let response = await fetch(`${API_BASE_URL}/api/worksheets/${worksheetId}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -88,7 +88,7 @@ export const mathService = {
 
     // Try Korean service-style endpoint
     if (!response.ok) {
-      response = await fetch(`${API_BASE_URL}/math-generation/worksheets/${worksheetId}`, {
+      response = await fetch(`${API_BASE_URL}/api/math-generation/worksheets/${worksheetId}`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -123,7 +123,7 @@ export const mathService = {
       throw new Error("Authentication token not found. Please log in.");
     }
 
-    const response = await fetch(`${API_BASE_URL}/worksheets/${worksheetId}`, {
+    const response = await fetch(`${API_BASE_URL}/api/worksheets/${worksheetId}`, {
       method: "DELETE",
       headers: {
         "Content-Type": "application/json",
@@ -145,7 +145,7 @@ export const mathService = {
     }
 
     // Try Korean service-style endpoint first (most likely to work)
-    let response = await fetch(`${API_BASE_URL}/assignments/classrooms/${classId}/assignments`, {
+    let response = await fetch(`${API_BASE_URL}/api/assignments/classrooms/${classId}/assignments`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -155,7 +155,7 @@ export const mathService = {
 
     // If that fails, try math-specific endpoints
     if (!response.ok) {
-      response = await fetch(`${API_BASE_URL}/assignments?classroom_id=${classId}`, {
+      response = await fetch(`${API_BASE_URL}/api/assignments?classroom_id=${classId}`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -165,7 +165,7 @@ export const mathService = {
     }
 
     if (!response.ok) {
-      response = await fetch(`${API_BASE_URL}/classrooms/${classId}/assignments`, {
+      response = await fetch(`${API_BASE_URL}/api/classrooms/${classId}/assignments`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -192,7 +192,7 @@ export const mathService = {
     }
 
     // Try Korean service-style endpoint first
-    let response = await fetch(`${API_BASE_URL}/assignments/deploy`, {
+    let response = await fetch(`${API_BASE_URL}/api/assignments/deploy`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -209,7 +209,7 @@ export const mathService = {
         student_ids: deployRequest.student_ids,
       };
 
-      response = await fetch(`${API_BASE_URL}/assignments/deploy`, {
+      response = await fetch(`${API_BASE_URL}/api/assignments/deploy`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -221,7 +221,7 @@ export const mathService = {
 
     // Try alternative endpoint structure
     if (!response.ok) {
-      response = await fetch(`${API_BASE_URL}/worksheets/${deployRequest.assignment_id}/deploy`, {
+      response = await fetch(`${API_BASE_URL}/api/worksheets/${deployRequest.assignment_id}/deploy`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -261,7 +261,7 @@ export const mathService = {
     }
 
     // Try Korean service-style endpoint first
-    let response = await fetch(`${API_BASE_URL}/assignments/student/${studentId}`, {
+    let response = await fetch(`${API_BASE_URL}/api/assignments/student/${studentId}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -271,7 +271,7 @@ export const mathService = {
 
     // Try alternative endpoints
     if (!response.ok) {
-      response = await fetch(`${API_BASE_URL}/students/${studentId}/assignments`, {
+      response = await fetch(`${API_BASE_URL}/api/students/${studentId}/assignments`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -281,7 +281,7 @@ export const mathService = {
     }
 
     if (!response.ok) {
-      response = await fetch(`${API_BASE_URL}/assignments?student_id=${studentId}`, {
+      response = await fetch(`${API_BASE_URL}/api/assignments?student_id=${studentId}`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -309,7 +309,7 @@ export const mathService = {
     }
 
     // Try multiple endpoints for getting assignment details
-    let response = await fetch(`${API_BASE_URL}/assignments/${assignmentId}/details?student_id=${studentId}`, {
+    let response = await fetch(`${API_BASE_URL}/api/assignments/${assignmentId}/details?student_id=${studentId}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -318,7 +318,7 @@ export const mathService = {
     });
 
     if (!response.ok) {
-      response = await fetch(`${API_BASE_URL}/assignments/${assignmentId}/student/${studentId}`, {
+      response = await fetch(`${API_BASE_URL}/api/assignments/${assignmentId}/student/${studentId}`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -328,7 +328,7 @@ export const mathService = {
     }
 
     if (!response.ok) {
-      response = await fetch(`${API_BASE_URL}/worksheets/${assignmentId}`, {
+      response = await fetch(`${API_BASE_URL}/api/worksheets/${assignmentId}`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -438,7 +438,7 @@ export const mathService = {
       throw new Error('No authentication token found');
     }
 
-    const response = await fetch(`${API_BASE_URL}/worksheets/${worksheetId}`, {
+    const response = await fetch(`${API_BASE_URL}/api/worksheets/${worksheetId}`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
@@ -463,7 +463,7 @@ export const mathService = {
       throw new Error('No authentication token found');
     }
 
-    const response = await fetch(`${API_BASE_URL}/problems/${problemId}`, {
+    const response = await fetch(`${API_BASE_URL}/api/problems/${problemId}`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
@@ -488,7 +488,7 @@ export const mathService = {
       throw new Error('No authentication token found');
     }
 
-    const response = await fetch(`${API_BASE_URL}/problems/regenerate-async`, {
+    const response = await fetch(`${API_BASE_URL}/api/problems/regenerate-async`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -513,7 +513,7 @@ export const mathService = {
       throw new Error('No authentication token found');
     }
 
-    const response = await fetch(`${API_BASE_URL}/tasks/${taskId}`, {
+    const response = await fetch(`${API_BASE_URL}/api/tasks/${taskId}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -538,7 +538,7 @@ export const mathService = {
       throw new Error('No authentication token found');
     }
 
-    const response = await fetch(`${API_BASE_URL}/grading/assignments/${assignmentId}/results`, {
+    const response = await fetch(`${API_BASE_URL}/api/grading/assignments/${assignmentId}/results`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -598,7 +598,7 @@ export const mathService = {
       formData.append('handwriting_image', handwritingImage);
     }
 
-    const response = await fetch(`${API_BASE_URL}/test-sessions/${sessionId}/answers/ocr`, {
+    const response = await fetch(`${API_BASE_URL}/api/test-sessions/test-sessions/${sessionId}/answers/ocr`, {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${token}`,
@@ -623,7 +623,7 @@ export const mathService = {
       throw new Error("Authentication token not found. Please log in.");
     }
 
-    const response = await fetch(`${API_BASE_URL}/grading/grading-sessions/pending`, {
+    const response = await fetch(`${API_BASE_URL}/api/grading/grading-sessions/pending`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -648,7 +648,7 @@ export const mathService = {
       throw new Error("Authentication token not found. Please log in.");
     }
 
-    const response = await fetch(`${API_BASE_URL}/grading/grading-sessions/${sessionId}/approve`, {
+    const response = await fetch(`${API_BASE_URL}/api/grading/grading-sessions/${sessionId}/approve`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

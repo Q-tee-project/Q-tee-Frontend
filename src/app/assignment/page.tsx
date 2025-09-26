@@ -29,7 +29,7 @@ export default function AssignmentPage() {
   // 학생만 접근 가능
   useEffect(() => {
     if (userType !== 'student') {
-      router.push('/login');
+      router.push('/');
       return;
     }
   }, [userType, router]);

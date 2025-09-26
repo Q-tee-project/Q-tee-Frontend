@@ -275,14 +275,6 @@ export const authService = {
       };
     }
   },
-
-  // 아이디 중복 체크
-  async checkUsernameAvailability(username: string): Promise<{ available: boolean; message?: string }> {
-    return authApiRequest<{ available: boolean; message?: string }>('/api/auth/check-username', {
-      method: 'POST',
-      body: JSON.stringify({ username }),
-    });
-  },
 };
 
 // 클래스룸 관리 API 서비스 (Teacher용)

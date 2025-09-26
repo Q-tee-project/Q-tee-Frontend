@@ -38,7 +38,7 @@ export default function StudentClassPage() {
   // 로그인 확인
   useEffect(() => {
     if (!isAuthenticated || userType !== 'student') {
-      router.push('/login');
+      router.push('/');
       return;
     }
 

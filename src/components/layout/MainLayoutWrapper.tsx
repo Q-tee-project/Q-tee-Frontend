@@ -12,7 +12,7 @@ export default function MainLayoutWrapper({ children }: MainLayoutWrapperProps) 
   const pathname = usePathname();
 
   // login, join, 홈페이지는 레이아웃을 적용하지 않음
-  const excludeLayoutPaths = ['/login', '/join', '/'];
+  const excludeLayoutPaths = ['/join', '/'];
   const shouldExcludeLayout = excludeLayoutPaths.includes(pathname);
 
   if (shouldExcludeLayout) {

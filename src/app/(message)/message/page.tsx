@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import {
   FiSearch, FiStar, FiTrash2, FiMoreVertical,
   FiUser, FiUsers, FiPlus, FiX, FiCalendar
 } from 'react-icons/fi';
+import { useRouter } from 'next/navigation';
 import { IoMailOutline, IoMailOpenOutline } from 'react-icons/io5';
 import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -13,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { messageService, MessageResponse, MessageRecipient } from '@/services/messageService';
 import {
   Pagination,
   PaginationContent,
@@ -21,6 +23,9 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/pagination';
+import { Phone, Mail, User } from 'lucide-react';
+import { IoBookOutline } from "react-icons/io5";
+import { IoIosClose } from "react-icons/io";
 
 interface Message {
   id: string;
@@ -28,6 +33,7 @@ interface Message {
   isStarred: boolean;
   isChecked: boolean;
   sender: {
+    id: number;
     name: string;
     avatar?: string;
   };
@@ -36,8 +42,8 @@ interface Message {
 }
 
 export default function MessagePage() {
+  const router = useRouter();
   const [activeFilter, setActiveFilter] = useState<'all' | 'read' | 'unread' | 'starred'>('all');
-  const [showStarredOnly, setShowStarredOnly] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchPerformed, setSearchPerformed] = useState(false);
   const [searchType, setSearchType] = useState<'sender' | 'subject'>('subject');
@@ -46,59 +52,63 @@ export default function MessagePage() {
   const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
 
-  // 새로 추가된 상태
   const [isCheckboxMode, setIsCheckboxMode] = useState(false);
   const [selectAll, setSelectAll] = useState(false);
 
   const itemsPerPage = 15;
-  const [messages, setMessages] = useState<Message[]>(
-    Array.from({ length: 45 }, (_, idx) => {
-      const now = new Date();
-      const messageDate = new Date(now.getTime() - idx * 2 * 60 * 60 * 1000);
-      const formattedDate = `${messageDate.getFullYear()}년 ${String(messageDate.getMonth() + 1).padStart(2, '0')}월 ${String(messageDate.getDate()).padStart(2, '0')}일 ${String(messageDate.getHours()).padStart(2, '0')}시 ${String(messageDate.getMinutes()).padStart(2, '0')}분`;
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [totalMessages, setTotalMessages] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [selectedProfile, setSelectedProfile] = useState<MessageRecipient | null>(null);
 
-      return {
-        id: (idx + 1).toString(),
-        isRead: idx % 3 === 0,
-        isStarred: idx % 4 === 0,
+
+  const fetchMessages = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await messageService.getMessages(
+        currentPage,
+        itemsPerPage,
+        activeFilter,
+        searchPerformed ? searchQuery : '',
+        searchType
+      );
+      
+      const formattedMessages = response.messages.map((msg) => ({
+        id: msg.id.toString(),
+        isRead: msg.is_read,
+        isStarred: msg.is_starred,
         isChecked: false,
-        sender: { name: `사용자${(idx % 5) + 1}` },
-        subject: `메시지 제목 ${idx + 1}`,
-        timestamp: formattedDate,
-      };
-    })
-  );
+        sender: { id: msg.sender.id, name: msg.sender.name },
+        subject: msg.subject,
+        timestamp: new Date(msg.sent_at).toLocaleString('ko-KR'),
+      }));
 
-  // 필터링
-  const filteredMessages = messages.filter((message) => {
-    if (searchPerformed && searchQuery.trim()) {
-      const query = searchQuery.toLowerCase().trim();
-      if (searchType === 'sender' && !message.sender.name.toLowerCase().includes(query)) {
-        return false;
-      }
-      if (searchType === 'subject' && !message.subject.toLowerCase().includes(query)) {
-        return false;
-      }
+      setMessages(formattedMessages);
+      setTotalMessages(response.total_count);
+      setTotalPages(response.total_pages);
+    } catch (error) {
+      setError('메시지를 불러오는데 실패했습니다.');
+      console.error(error);
+    } finally {
+      setLoading(false);
     }
-    if (showStarredOnly) return message.isStarred;
-    if (activeFilter === 'read') return message.isRead;
-    if (activeFilter === 'unread') return !message.isRead;
-    if (activeFilter === 'starred') return message.isStarred;
-    return true;
-  });
+  }, [currentPage, activeFilter, searchPerformed, searchQuery, searchType, itemsPerPage]);
 
-  // 체크박스 모드에서는 별 달린 메시지 숨김
+  useEffect(() => {
+    fetchMessages();
+  }, [fetchMessages]);
+
   const effectiveMessages = isCheckboxMode
-    ? filteredMessages.filter((m) => !m.isStarred)
-    : filteredMessages;
+    ? messages.filter((m) => !m.isStarred)
+    : messages;
 
-  // Pagination
-  const totalPages = Math.ceil(effectiveMessages.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const displayedMessages = effectiveMessages.slice(startIndex, endIndex);
+  const displayedMessages = effectiveMessages;
 
-  // 상태 핸들러
   const handleCheckboxChange = (messageId: string) => {
     setMessages((prev) =>
       prev.map((msg) =>
@@ -107,24 +117,52 @@ export default function MessagePage() {
     );
   };
 
-  const handleStarToggle = (messageId: string) => {
-    setMessages((prev) =>
-      prev.map((msg) =>
-        msg.id === messageId ? { ...msg, isStarred: !msg.isStarred } : msg
+  const handleStarToggle = async (e: React.MouseEvent, messageId: string) => {
+    e.stopPropagation();
+    const message = messages.find(m => m.id === messageId);
+    if (!message) return;
+
+    const newStarredState = !message.isStarred;
+
+    // Optimistic update
+    setMessages(prev =>
+      prev.map(msg =>
+        msg.id === messageId ? { ...msg, isStarred: newStarredState } : msg
       )
     );
+
+    try {
+      await messageService.toggleStar(parseInt(messageId), newStarredState);
+    } catch (error) {
+      console.error('Failed to toggle star:', error);
+      // Revert on error
+      setMessages(prev =>
+        prev.map(msg =>
+          msg.id === messageId ? { ...msg, isStarred: !newStarredState } : msg
+        )
+      );
+      alert('즐겨찾기 상태 변경에 실패했습니다.');
+    }
   };
 
-  const toggleDropdown = (messageId: string) => {
+  const toggleDropdown = (e: React.MouseEvent, messageId: string) => {
+    e.stopPropagation();
     setSelectedMessageId(selectedMessageId === messageId ? null : messageId);
   };
 
   const handleStarFilterToggle = () => {
-    setShowStarredOnly(!showStarredOnly);
-    if (!showStarredOnly) setActiveFilter('all');
+    if (activeFilter === 'starred') {
+      setActiveFilter('all');
+    } else {
+      setActiveFilter('starred');
+    }
+    setCurrentPage(1);
   };
 
-  const handleSearch = () => setSearchPerformed(true);
+  const handleSearch = () => {
+    setCurrentPage(1);
+    setSearchPerformed(true);
+  };
 
   const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
@@ -142,7 +180,6 @@ export default function MessagePage() {
 
   const hasSelectedMessages = messages.some((m) => m.isChecked);
 
-  // 쓰레기통 버튼 동작
   const handleTrashModeToggle = () => {
     if (isCheckboxMode && hasSelectedMessages) {
       setIsDeleteModalOpen(true);
@@ -153,7 +190,6 @@ export default function MessagePage() {
     }
   };
 
-  // 전체선택
   const handleSelectAll = () => {
     const newSelectAll = !selectAll;
     setSelectAll(newSelectAll);
@@ -166,19 +202,34 @@ export default function MessagePage() {
     );
   };
 
-  // 삭제
-  const handleDeleteConfirm = () => {
-    if (messageToDelete) {
-      // 개별 삭제
-      setMessages((prev) => prev.filter((m) => m.id !== messageToDelete));
-      setMessageToDelete(null);
-    } else {
-      // 선택된 메시지들 삭제
-      setMessages((prev) => prev.filter((m) => !m.isChecked));
-      setIsCheckboxMode(false);
-      setSelectAll(false);
+  const handleDeleteConfirm = async () => {
+    const idsToDelete = messageToDelete
+      ? [messageToDelete]
+      : messages.filter(m => m.isChecked).map(m => m.id);
+
+    if (idsToDelete.length === 0) {
+      setIsDeleteModalOpen(false);
+      return;
     }
+
+    const originalMessages = [...messages];
+    setMessages(prev => prev.filter(m => !idsToDelete.includes(m.id)));
     setIsDeleteModalOpen(false);
+    setMessageToDelete(null);
+
+    try {
+      await Promise.all(idsToDelete.map(id => messageService.deleteMessage(parseInt(id))));
+      fetchMessages();
+    } catch (error) {
+      console.error('Failed to delete messages:', error);
+      setMessages(originalMessages);
+      alert('메시지 삭제에 실패했습니다.');
+    } finally {
+      if (isCheckboxMode) {
+        setIsCheckboxMode(false);
+        setSelectAll(false);
+      }
+    }
   };
 
   const handleDeleteCancel = () => {
@@ -186,11 +237,30 @@ export default function MessagePage() {
     setMessageToDelete(null);
   };
 
-  // 개별 삭제 시작
-  const handleIndividualDelete = (messageId: string) => {
+  const handleIndividualDelete = (e: React.MouseEvent, messageId: string) => {
+    e.stopPropagation();
     setMessageToDelete(messageId);
     setIsDeleteModalOpen(true);
-    setSelectedMessageId(null); // 모달 닫기
+    setSelectedMessageId(null);
+  };
+  
+  const handleProfileClick = async (e: React.MouseEvent, senderId: number) => {
+    e.stopPropagation();
+    try {
+      // This is a simplified approach. In a real app, you might fetch
+      // the full profile from a dedicated endpoint.
+      const message = messages.find(m => m.sender.id === senderId);
+      if (message) {
+        const recipient = await messageService.getMessageRecipients().then(rs => rs.find(r => r.id === senderId));
+        if(recipient) {
+          setSelectedProfile(recipient);
+          setIsProfileModalOpen(true);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to get profile:", error);
+      alert("프로필 정보를 불러오는데 실패했습니다.");
+    }
   };
 
   return (
@@ -205,12 +275,11 @@ export default function MessagePage() {
       <Card className="flex-1 flex flex-col shadow-sm" style={{ margin: '2rem' }}>
         <CardHeader className="py-4 px-6 border-b border-gray-100">
           <div className="flex items-center justify-between min-h-[40px]">
-            {/* 왼쪽 - 필터 */}
             <Select
               value={activeFilter}
               onValueChange={(value) => {
                 setActiveFilter(value as 'all' | 'read' | 'unread' | 'starred');
-                setShowStarredOnly(false);
+                setCurrentPage(1);
               }}
             >
               <SelectTrigger className="w-32 h-10 text-sm flex items-center">
@@ -220,10 +289,10 @@ export default function MessagePage() {
                 <SelectItem value="all">전체</SelectItem>
                 <SelectItem value="read">읽음</SelectItem>
                 <SelectItem value="unread">안읽음</SelectItem>
+                <SelectItem value="starred">즐겨찾기</SelectItem>
               </SelectContent>
             </Select>
 
-            {/* 검색 */}
             <div className="flex items-center gap-2">
               <Select value={searchType} onValueChange={handleSearchTypeChange}>
                 <SelectTrigger className="w-32 h-10 text-sm flex items-center">
@@ -250,7 +319,6 @@ export default function MessagePage() {
               </button>
             </div>
 
-            {/* 오른쪽 - 액션 */}
             <div className="flex items-center gap-3">
               {isCheckboxMode ? (
                 <button
@@ -263,12 +331,12 @@ export default function MessagePage() {
                 <button
                   onClick={handleStarFilterToggle}
                   className={`h-10 px-3 hover:text-gray-900 border border-gray-300 rounded-md transition-colors shadow-sm flex items-center justify-center ${
-                    showStarredOnly
+                    activeFilter === 'starred'
                       ? 'text-yellow-500 bg-yellow-50 border-yellow-300'
                       : 'text-gray-600 hover:bg-gray-100'
                   }`}
                 >
-                  <FiStar className={`w-5 h-5 ${showStarredOnly ? 'fill-current' : ''}`} />
+                  <FiStar className={`w-5 h-5 ${activeFilter === 'starred' ? 'fill-current' : ''}`} />
                 </button>
               )}
               <button
@@ -283,7 +351,10 @@ export default function MessagePage() {
               >
                 <FiTrash2 className="w-5 h-5" />
               </button>
-              <Button className="bg-blue-600 hover:bg-blue-700 text-white px-4 h-10">
+              <Button
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 h-10"
+                onClick={() => router.push('/message/post')}
+              >
                 작성하기
               </Button>
             </div>
@@ -291,13 +362,11 @@ export default function MessagePage() {
         </CardHeader>
 
         <CardContent>
-
-          {/* 메시지 리스트 */}
           <div className="rounded-lg p-1">
-            {searchPerformed && searchQuery.trim() && effectiveMessages.length === 0 ? (
-              <div className="flex justify-center items-center text-gray-500 py-4">
-                검색 결과가 없습니다.
-              </div>
+            {loading ? (
+              <div className="flex justify-center items-center text-gray-500 py-4">로딩 중...</div>
+            ) : error ? (
+              <div className="flex justify-center items-center text-red-500 py-4">{error}</div>
             ) : displayedMessages.length === 0 ? (
               <div className="flex justify-center items-center text-gray-500 py-4">
                 메시지가 없습니다.
@@ -307,21 +376,21 @@ export default function MessagePage() {
                 {displayedMessages.map((message) => (
                   <div
                     key={message.id}
-                    className="bg-white rounded-md p-2 border border-gray-200 hover:bg-gray-50 hover:shadow-sm transition-all relative"
+                    onClick={() => router.push(`/message/${message.id}`)}
+                    className="bg-white rounded-md p-2 border border-gray-200 hover:bg-gray-50 hover:shadow-sm transition-all relative cursor-pointer"
                   >
                     <div className="flex items-center justify-between">
-                      {/* 왼쪽 영역: 체크박스/별표 + 읽음상태 + 보낸사람 */}
                       <div className="flex items-center gap-20">
-                        {/* 체크박스/즐겨찾기 */}
                         <div className="flex-shrink-0">
                           {isCheckboxMode ? (
                             <Checkbox
                               checked={message.isChecked}
                               onCheckedChange={() => handleCheckboxChange(message.id)}
+                              onClick={(e) => e.stopPropagation()}
                             />
                           ) : (
                             <button
-                              onClick={() => handleStarToggle(message.id)}
+                              onClick={(e) => handleStarToggle(e, message.id)}
                               className="text-gray-400 hover:text-yellow-500"
                             >
                               <FiStar
@@ -333,7 +402,6 @@ export default function MessagePage() {
                           )}
                         </div>
                         
-                        {/* 읽음 상태 */}
                         <div className="flex-shrink-0">
                           {message.isRead ? (
                             <IoMailOpenOutline className="w-5 h-5 text-gray-500" title="읽음" />
@@ -342,28 +410,25 @@ export default function MessagePage() {
                           )}
                         </div>
                         
-                        {/* 보낸 사람 */}
                         <div className="text-sm text-gray-600 flex items-center gap-2 min-w-0">
                           <FiUser className="w-4 h-4 text-gray-400 flex-shrink-0" />
                           <span className="truncate">{message.sender.name}</span>
                         </div>
                       </div>
                       
-                      {/* 중앙 영역: 제목 */}
                       <div className="flex-1 mx-30 min-w-0">
                         <div className="text-sm font-bold text-gray-800 truncate">
                           {message.subject}
                         </div>
                       </div>
                       
-                      {/* 오른쪽 영역: 날짜 + 더보기 */}
                       <div className="flex items-center gap-80 flex-shrink-0">
                         <div className="text-xs text-gray-500 mr-4 flex items-center gap-1">
                           <FiCalendar className="w-3 h-3" />
                           {message.timestamp}
                         </div>
                         <button
-                          onClick={() => toggleDropdown(message.id)}
+                          onClick={(e) => toggleDropdown(e, message.id)}
                           className="p-1 text-gray-400 hover:text-gray-600"
                         >
                           <FiMoreVertical className="w-4 h-4" />
@@ -377,20 +442,26 @@ export default function MessagePage() {
                           <div className="px-4 py-2 text-sm text-gray-900 border-b border-gray-100">
                             {message.sender.name}
                           </div>
-                          <button className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-3">
+                          <button 
+                            onClick={(e) => handleProfileClick(e, message.sender.id)}
+                            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-3"
+                          >
                             <FiUser className="w-4 h-4" />
                             프로필
                           </button>
-                          <button className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-3">
-                            <FiUsers className="w-4 h-4" />
-                            소속 클래스
-                          </button>
-                          <button className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-3">
+                          <button
+                            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-3"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              router.push(`/message/post?recipient=${message.sender.id}`);
+                              setSelectedMessageId(null);
+                            }}
+                          >
                             <FiPlus className="w-4 h-4" />
                             쪽지 작성
                           </button>
                           <button 
-                            onClick={() => handleIndividualDelete(message.id)}
+                            onClick={(e) => handleIndividualDelete(e, message.id)}
                             className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-3"
                           >
                             <FiTrash2 className="w-4 h-4" />
@@ -405,7 +476,6 @@ export default function MessagePage() {
             )}
           </div>
 
-          {/* 페이지네이션 */}
           {totalPages > 1 && (
             <div className="mt-4">
               <Pagination>
@@ -417,7 +487,7 @@ export default function MessagePage() {
                         e.preventDefault();
                         if (currentPage > 1) setCurrentPage(currentPage - 1);
                       }}
-                      className={`${currentPage === 1 ? 'pointer-events-none opacity-50' : ''} [&>span]:hidden`}
+                      className={`${currentPage === 1 ? 'pointer-events-none opacity-50' : ''}`}
                     />
                   </PaginationItem>
                   
@@ -443,7 +513,7 @@ export default function MessagePage() {
                         e.preventDefault();
                         if (currentPage < totalPages) setCurrentPage(currentPage + 1);
                       }}
-                      className={`${currentPage === totalPages ? 'pointer-events-none opacity-50' : ''} [&>span]:hidden`}
+                      className={`${currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}`}
                     />
                   </PaginationItem>
                 </PaginationContent>
@@ -453,7 +523,6 @@ export default function MessagePage() {
         </CardContent>
       </Card>
 
-      {/* 삭제 확인 모달 */}
       <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -467,7 +536,7 @@ export default function MessagePage() {
             <p className="text-gray-700 mb-2">
               {messageToDelete 
                 ? '정말로 이 메시지를 삭제하시겠습니까?' 
-                : '정말로 선택된 메시지를 삭제하시겠습니까?'
+                : `정말로 선택된 ${messages.filter(m => m.isChecked).length}개의 메시지를 삭제하시겠습니까?`
               }
             </p>
             <p className="text-sm text-gray-500">삭제된 메시지는 복구할 수 없습니다.</p>
@@ -487,6 +556,56 @@ export default function MessagePage() {
               삭제
             </button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      <Dialog open={isProfileModalOpen} onOpenChange={setIsProfileModalOpen}>
+        <DialogContent className="max-w-md" showCloseButton={false}>
+          <DialogHeader>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <DialogTitle className="flex items-center gap-2">
+                {selectedProfile?.type === 'teacher' ? '선생님 정보' : '학생 정보'}
+              </DialogTitle>
+              <button
+                onClick={() => setIsProfileModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600"
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                <IoIosClose />
+              </button>
+            </div>
+          </DialogHeader>
+
+          {selectedProfile && (
+            <div className="space-y-4 p-4">
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50">
+                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                  <User className="w-5 h-5 text-blue-600" />
+                </div>
+                <div>
+                  <div className="font-semibold text-gray-900">{selectedProfile.name}</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50">
+                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                  <Mail className="w-5 h-5 text-green-600" />
+                </div>
+                <div>
+                  <div className="font-medium text-gray-900">{selectedProfile.email}</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50">
+                <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                  <Phone className="w-5 h-5 text-purple-600" />
+                </div>
+                <div>
+                  <div className="font-medium text-gray-900">
+                    {selectedProfile.phone}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

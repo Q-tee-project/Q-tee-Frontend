@@ -195,7 +195,11 @@ export function StudentResultView({
         };
       }
 
-      const isCorrect = studentAnswer === problem.correct_answer;
+      // 선생님이 수정한 정답이 있다면 그것을 사용, 없다면 원본 정답 사용
+      const actualCorrectAnswer = problemResult?.correct_answer || problem.correct_answer;
+      const isCorrect = problemResult?.is_correct !== undefined
+        ? problemResult.is_correct
+        : studentAnswer === actualCorrectAnswer;
 
       // Extract choice number from answer text
       const extractChoiceNumber = (answerText: string) => {
@@ -215,14 +219,14 @@ export function StudentResultView({
       };
 
       const studentAnswerNumber = extractChoiceNumber(studentAnswer);
-      const correctAnswerNumber = extractChoiceNumber(problem.correct_answer);
+      const correctAnswerNumber = extractChoiceNumber(actualCorrectAnswer);
 
       return {
         isCorrect,
         studentAnswer: studentAnswerNumber,
         correctAnswer: correctAnswerNumber,
         studentAnswerText: studentAnswer,
-        correctAnswerText: problem.correct_answer,
+        correctAnswerText: actualCorrectAnswer,
       };
     } else if (isEnglish) {
       // English 과제의 경우

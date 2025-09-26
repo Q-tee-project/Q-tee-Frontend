@@ -475,7 +475,6 @@ export function AssignmentResultView({
           // API가 실패하면 session 데이터를 직접 사용
           setSessionDetails({
             ...session,
-            multiple_choice_answers: session.multiple_choice_answers || {},
             problem_results: session.problem_results || [],
           });
         }
@@ -571,10 +570,14 @@ export function AssignmentResultView({
       }
 
       // 편집 모드일 때 problemCorrectness 상태 우선 사용
+      // 선생님이 수정한 정답이 있다면 그것을 사용, 없다면 원본 정답 사용
+      const actualCorrectAnswer = problemResult?.correct_answer || problem.correct_answer;
       const isCorrect =
         isEditMode && problemCorrectness.hasOwnProperty(problemId)
           ? problemCorrectness[problemId]
-          : studentAnswer === problem.correct_answer;
+          : problemResult?.is_correct !== undefined
+          ? problemResult.is_correct
+          : studentAnswer === actualCorrectAnswer;
 
       // Extract choice number from answer text
       const extractChoiceNumber = (answerText: string) => {
@@ -597,14 +600,14 @@ export function AssignmentResultView({
       };
 
       const studentAnswerNumber = extractChoiceNumber(studentAnswer);
-      const correctAnswerNumber = extractChoiceNumber(problem.correct_answer);
+      const correctAnswerNumber = extractChoiceNumber(actualCorrectAnswer);
 
       return {
         isCorrect,
         studentAnswer: studentAnswerNumber,
         correctAnswer: correctAnswerNumber,
         studentAnswerText: studentAnswer,
-        correctAnswerText: problem.correct_answer,
+        correctAnswerText: actualCorrectAnswer,
         aiFeedback: null,
       };
     } else if (isEnglish) {
