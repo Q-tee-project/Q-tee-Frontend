@@ -25,7 +25,9 @@ interface KoreanProblem {
   correct_answer: string;
   choices?: string[];
   explanation?: string;
-  passage?: string;
+  source_text?: string;
+  source_title?: string;
+  source_author?: string;
 }
 
 interface PurchasedKoreanWorksheetDetailProps {
@@ -93,99 +95,190 @@ export const PurchasedKoreanWorksheetDetail: React.FC<PurchasedKoreanWorksheetDe
               </div>
             ) : (
               <div className="space-y-8">
-                {problems.map((problem, index) => (
-                  <div key={problem.id} className="border-b border-gray-100 pb-6 last:border-b-0 last:pb-0">
-                    {/* 문제 헤더 */}
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex items-center gap-3">
-                        <div className="bg-green-600 text-white text-sm font-medium px-3 py-1 rounded">
-                          {problem.sequence_order || index + 1}번
-                        </div>
-                        <Badge className={getDifficultyColor(problem.difficulty)}>
-                          {problem.difficulty}단계
-                        </Badge>
-                        <Badge variant="outline">
-                          {getProblemTypeInKorean(problem.problem_type)}
-                        </Badge>
-                      </div>
-                    </div>
-
-                    {/* 지문 (있는 경우) */}
-                    {problem.passage && (
-                      <div className="mb-6">
-                        <h3 className="font-medium text-gray-800 mb-3">지문</h3>
-                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                          <div className="text-gray-700 leading-relaxed whitespace-pre-line">
-                            {problem.passage}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* 문제 내용 */}
-                    <div className="mb-4">
-                      <h3 className="font-medium text-gray-800 mb-3">문제</h3>
-                      <div className="bg-gray-50 rounded-lg p-4">
-                        <div className="text-gray-700 leading-relaxed whitespace-pre-line">
-                          {problem.question}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* 객관식 선택지 */}
-                    {problem.problem_type === 'multiple_choice' && problem.choices && problem.choices.length > 0 && (
-                      <div className="mb-4">
-                        <h4 className="font-medium text-gray-800 mb-3">선택지</h4>
-                        <div className="space-y-2">
-                          {problem.choices.map((choice, choiceIndex) => (
-                            <div key={choiceIndex} className="flex items-start gap-3">
-                              <div className={`
-                                w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0 mt-0.5
-                                ${showAnswerSheet && problem.correct_answer === String.fromCharCode(65 + choiceIndex)
-                                  ? 'bg-green-100 text-green-700 border-2 border-green-300'
-                                  : 'bg-gray-100 text-gray-600'
-                                }
-                              `}>
-                                {String.fromCharCode(65 + choiceIndex)}
-                              </div>
-                              <div className={`
-                                flex-1 py-1 text-gray-700
-                                ${showAnswerSheet && problem.correct_answer === String.fromCharCode(65 + choiceIndex)
-                                  ? 'font-medium text-green-700'
-                                  : ''
-                                }
-                              `}>
-                                {choice}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* 정답 (정답지일 때만 표시) */}
-                    {showAnswerSheet && (
-                      <div className="mb-4">
-                        <h4 className="font-medium text-gray-800 mb-2">정답</h4>
-                        <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                          <span className="text-green-700 font-medium text-lg">
-                            {problem.correct_answer}
+                {(() => {
+                  // 작품별로 문제들을 그룹핑
+                  const workGroups = new Map();
+                  problems.forEach((problem: any) => {
+                    if (problem.source_text && problem.source_title && problem.source_author) {
+                      const key = `${problem.source_title}-${problem.source_author}`;
+                      if (!workGroups.has(key)) {
+                        workGroups.set(key, {
+                          title: problem.source_title,
+                          author: problem.source_author,
+                          text: problem.source_text,
+                          problems: [],
+                        });
+                      }
+                      workGroups.get(key).problems.push(problem);
+                    } else {
+                      // 지문이 없는 문제들은 개별 처리
+                      const key = `individual-${problem.id}`;
+                      workGroups.set(key, {
+                        title: null,
+                        author: null,
+                        text: null,
+                        problems: [problem],
+                      });
+                    }
+                  });
+                  return Array.from(workGroups.values());
+                })().map((work: any, workIndex: number) => (
+                  <div key={workIndex} className="space-y-6">
+                    {/* 지문 표시 (있는 경우) */}
+                    {work.text && (
+                      <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                        <div className="flex items-center gap-2 mb-3">
+                          <span className="text-sm font-semibold text-gray-700">
+                            📖 지문 {workIndex + 1}
+                          </span>
+                          <span className="text-sm text-gray-600">
+                            - {work.title} ({work.author})
                           </span>
                         </div>
-                      </div>
-                    )}
-
-                    {/* 해설 (정답지일 때만 표시) */}
-                    {showAnswerSheet && problem.explanation && (
-                      <div>
-                        <h4 className="font-medium text-gray-800 mb-2">해설</h4>
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                          <div className="text-blue-800 leading-relaxed whitespace-pre-line">
-                            {problem.explanation}
-                          </div>
+                        <div className="text-sm leading-relaxed text-gray-800 whitespace-pre-wrap">
+                          {work.text}
                         </div>
                       </div>
                     )}
+
+                    {/* 해당 지문의 문제들 */}
+                    <div className="space-y-8">
+                      {work.problems.map((problem: any, problemIndex: number) => (
+                        <Card
+                          key={problem.id}
+                          className="border border-gray-200 shadow-sm"
+                        >
+                          <CardContent className="p-6">
+                            {/* 문제 헤더 */}
+                            <div className="flex items-start gap-4 mb-4">
+                              <div className="flex-shrink-0">
+                                <span className="inline-flex items-center justify-center w-8 h-8 bg-green-600 text-white rounded-full text-sm font-bold">
+                                  {problem.sequence_order}
+                                </span>
+                              </div>
+                              <div className="flex-1">
+                                <div className="flex justify-between items-start mb-3">
+                                  <div className="flex items-center gap-3">
+                                    <Badge variant="outline">
+                                      {getProblemTypeInKorean(problem.problem_type || '객관식')}
+                                    </Badge>
+                                    <Badge className={`
+                                      ${problem.difficulty === '상'
+                                        ? 'bg-red-100 text-red-800'
+                                        : problem.difficulty === '중'
+                                        ? 'bg-green-100 text-green-800'
+                                        : 'bg-purple-100 text-purple-800'
+                                      }`}>
+                                      {problem.difficulty}
+                                    </Badge>
+                                  </div>
+                                </div>
+
+                                {/* 문제 내용 */}
+                                <div className="text-base leading-relaxed text-gray-900 mb-4">
+                                  {problem.question}
+                                </div>
+
+                                {/* 객관식 선택지 */}
+                                {problem.choices && problem.choices.length > 0 && (
+                                  <div className="ml-4 space-y-3">
+                                    {problem.choices.map((choice: string, choiceIndex: number) => {
+                                      const optionLabel = String.fromCharCode(65 + choiceIndex);
+                                      const isCorrect = problem.correct_answer === optionLabel;
+                                      return (
+                                        <div
+                                          key={choiceIndex}
+                                          className={`flex items-start gap-3 ${
+                                            showAnswerSheet && isCorrect
+                                              ? 'bg-green-100 border border-green-300 rounded-lg p-2'
+                                              : ''
+                                          }`}
+                                        >
+                                          <span
+                                            className={`flex-shrink-0 w-6 h-6 border-2 ${
+                                              showAnswerSheet && isCorrect
+                                                ? 'border-green-500 bg-green-500 text-white'
+                                                : 'border-gray-300 text-gray-600'
+                                            } rounded-full flex items-center justify-center text-sm font-medium`}
+                                          >
+                                            {showAnswerSheet && isCorrect ? '✓' : optionLabel}
+                                          </span>
+                                          <div className="flex-1 text-gray-900">
+                                            {choice}
+                                          </div>
+                                          {showAnswerSheet && isCorrect && (
+                                            <span className="text-xs font-medium text-green-700 bg-green-200 px-2 py-1 rounded">
+                                              정답
+                                            </span>
+                                          )}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+
+                                {/* 정답 및 해설 (정답지일 때만 표시) */}
+                                {showAnswerSheet && (
+                                  <div className="mt-4 ml-4">
+                                    {/* 객관식이 아닌 경우 정답 표시 */}
+                                    {(!problem.choices || problem.choices.length === 0) && (
+                                      <div className="mb-4">
+                                        <h4 className="font-medium text-gray-800 mb-2">정답</h4>
+                                        <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                                          <span className="text-green-700 font-medium">
+                                            {problem.correct_answer || '답안 정보가 없습니다'}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* 해설 */}
+                                    {problem.explanation && (
+                                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                        <div className="flex items-center gap-2 mb-2">
+                                          <span className="text-sm font-semibold text-blue-800">
+                                            해설:
+                                          </span>
+                                        </div>
+                                        <div className="text-sm text-blue-800">
+                                          {problem.explanation}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+
+                                {/* 단답형/서술형 답안 영역 (문제지일 때) */}
+                                {!showAnswerSheet && (!problem.choices || problem.choices.length === 0) && (
+                                  <div className="mt-4 ml-4">
+                                    {problem.problem_type === 'short_answer' ? (
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-gray-700">답:</span>
+                                        <div className="border-b-2 border-gray-300 flex-1 h-8"></div>
+                                      </div>
+                                    ) : (
+                                      <div className="border border-gray-300 rounded-lg p-4 min-h-[120px] bg-gray-50">
+                                        <div className="text-sm text-gray-500 mb-2">
+                                          풀이 과정을 자세히 써주세요.
+                                        </div>
+                                        <div className="space-y-3">
+                                          {[...Array(6)].map((_, lineIndex) => (
+                                            <div
+                                              key={lineIndex}
+                                              className="border-b border-gray-200 h-6"
+                                            ></div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
                   </div>
                 ))}
               </div>
