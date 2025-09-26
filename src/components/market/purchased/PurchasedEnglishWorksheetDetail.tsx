@@ -16,16 +16,23 @@ interface PurchasedWorksheet {
   access_granted: boolean;
 }
 
+// 영어 문제 타입 (API 응답에 맞춤)
 interface EnglishProblem {
   id: number;
   sequence_order: number;
   question: string;
   problem_type: string;
+  question_subject: string;
   difficulty: string;
   correct_answer: string;
   choices?: string[];
   explanation?: string;
-  passage?: string;
+  learning_point?: string;
+  example_content?: string;
+  passage?: string; // 기존 호환성
+  passage_content?: string; // 영어 서비스에서 반환하는 지문 필드
+  source_text?: string;
+  source_title?: string;
   audio_url?: string;
 }
 
@@ -37,11 +44,14 @@ interface PurchasedEnglishWorksheetDetailProps {
 }
 
 const getProblemTypeInKorean = (type: string): string => {
-  switch (type.toLowerCase()) {
+  switch (type) {
+    case '객관식':
     case 'multiple_choice':
       return '객관식';
+    case '서술형':
     case 'essay':
       return '서술형';
+    case '단답형':
     case 'short_answer':
       return '단답형';
     case 'listening':
@@ -71,6 +81,7 @@ export const PurchasedEnglishWorksheetDetail: React.FC<PurchasedEnglishWorksheet
   problems,
   showAnswerSheet,
 }) => {
+
   if (!worksheet) {
     return (
       <Card className="flex-1 shadow-sm">
@@ -107,11 +118,17 @@ export const PurchasedEnglishWorksheetDetail: React.FC<PurchasedEnglishWorksheet
                           {problem.sequence_order || index + 1}번
                         </div>
                         <Badge className={getDifficultyColor(problem.difficulty)}>
-                          {problem.difficulty}단계
+                          {problem.difficulty}
                         </Badge>
                         <Badge variant="outline">
                           {getProblemTypeInKorean(problem.problem_type)}
                         </Badge>
+                        {/* 문제 영역 표시 */}
+                        {problem.question_subject && (
+                          <Badge variant="secondary" className="bg-blue-100 text-blue-700">
+                            {problem.question_subject}
+                          </Badge>
+                        )}
                       </div>
                     </div>
 
@@ -129,12 +146,12 @@ export const PurchasedEnglishWorksheetDetail: React.FC<PurchasedEnglishWorksheet
                     )}
 
                     {/* 지문 (있는 경우) */}
-                    {problem.passage && (
+                    {(problem.passage || problem.passage_content) && (
                       <div className="mb-6">
                         <h3 className="font-medium text-gray-800 mb-3">지문</h3>
                         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                           <div className="text-gray-700 leading-relaxed whitespace-pre-line font-mono">
-                            {problem.passage}
+                            {problem.passage || problem.passage_content}
                           </div>
                         </div>
                       </div>
@@ -147,11 +164,24 @@ export const PurchasedEnglishWorksheetDetail: React.FC<PurchasedEnglishWorksheet
                         <div className="text-gray-700 leading-relaxed whitespace-pre-line">
                           {problem.question}
                         </div>
+                        {/* 예문 표시 */}
+                        {problem.example_content && (
+                          <div className="mt-4 pt-4 border-t border-gray-200">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="text-sm font-medium text-blue-600">📝 예문</span>
+                            </div>
+                            <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                              <div className="text-gray-800 font-mono leading-relaxed whitespace-pre-line">
+                                {problem.example_content}
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
 
                     {/* 객관식 선택지 */}
-                    {problem.problem_type === 'multiple_choice' && problem.choices && problem.choices.length > 0 && (
+                    {(problem.problem_type === 'multiple_choice' || problem.problem_type === '객관식') && problem.choices && problem.choices.length > 0 && (
                       <div className="mb-4">
                         <h4 className="font-medium text-gray-800 mb-3">선택지</h4>
                         <div className="space-y-2">
@@ -195,11 +225,23 @@ export const PurchasedEnglishWorksheetDetail: React.FC<PurchasedEnglishWorksheet
 
                     {/* 해설 (정답지일 때만 표시) */}
                     {showAnswerSheet && problem.explanation && (
-                      <div>
+                      <div className="mb-4">
                         <h4 className="font-medium text-gray-800 mb-2">해설</h4>
                         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                           <div className="text-blue-800 leading-relaxed whitespace-pre-line">
                             {problem.explanation}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 학습 포인트 (정답지일 때만 표시) */}
+                    {showAnswerSheet && problem.learning_point && (
+                      <div>
+                        <h4 className="font-medium text-gray-800 mb-2">학습 포인트</h4>
+                        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                          <div className="text-green-800 leading-relaxed whitespace-pre-line">
+                            {problem.learning_point}
                           </div>
                         </div>
                       </div>
