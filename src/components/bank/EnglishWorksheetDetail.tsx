@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { EnglishQuestion, EnglishWorksheetData, EnglishRegenerationInfo, EnglishRegenerationRequest, EnglishPassage } from '@/types/english';
+import { EnglishQuestion, EnglishWorksheetData, EnglishRegenerationInfo, EnglishRegenerationRequest, EnglishRegenerationResponse, EnglishPassage } from '@/types/english';
 import { Edit3, RotateCcw, AlertTriangle } from 'lucide-react';
 import { EnglishService } from '@/services/englishService';
 import { PassageRenderer } from './PassageRenderer';
@@ -41,6 +41,16 @@ const sanitizePassageData = (passage: EnglishPassage): EnglishPassage => ({
   korean_translation: passage.korean_translation,
   related_questions: passage.related_questions,
 });
+
+interface RegenerationPreviewModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onApply: () => void | Promise<void>;
+  previewData: {
+    original: { question: EnglishQuestion; passage?: EnglishPassage | null; relatedQuestions?: EnglishQuestion[] };
+    regenerated: { question?: EnglishQuestion; passage?: EnglishPassage | null; relatedQuestions?: EnglishQuestion[] };
+  } | null;
+}
 
 const RegenerationPreviewModal: React.FC<RegenerationPreviewModalProps> = ({
   isOpen,
