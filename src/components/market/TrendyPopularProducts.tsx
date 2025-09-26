@@ -3,19 +3,10 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
-
-interface Product {
-  id: string;
-  title: string;
-  description: string;
-  price: number;
-  author: string;
-  authorId: string;
-  tags: string[];
-}
+import { MarketProduct } from '@/services/marketApi';
 
 interface TrendyPopularProductsProps {
-  products: Product[];
+  products: MarketProduct[];
   className?: string;
 }
 
@@ -94,11 +85,11 @@ export default function TrendyPopularProducts({ products, className }: TrendyPop
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    router.push(`/market/author/${product.authorId}`);
+                    router.push(`/market/author/${product.seller_name}`);
                   }}
                   className="text-gray-400 text-sm mb-2 hover:text-[#0072CE] transition-colors font-semibold text-left"
                 >
-                  {product.author}
+                  {product.seller_name}
                 </button>
 
                 {/* 제목 */}
@@ -106,16 +97,16 @@ export default function TrendyPopularProducts({ products, className }: TrendyPop
                   {product.title}
                 </h3>
 
-                {/* 설명 */}
-                <p className="text-gray-500 text-sm mb-4 line-clamp-2">
-                  {product.description}
+                {/* 기본 정보 */}
+                <p className="text-gray-500 text-sm mb-4">
+                  {product.subject_type} | {product.school_level} {product.grade}학년 | {product.problem_count}문제
                 </p>
 
                 {/* 태그 */}
                 <div className="flex flex-wrap gap-2 mb-4">
                   {product.tags.slice(0, 3).map((tag, i) => (
-                    <span 
-                      key={i} 
+                    <span
+                      key={i}
                       className="text-[#9E9E9E] text-xs"
                     >
                       #{tag}
@@ -123,10 +114,15 @@ export default function TrendyPopularProducts({ products, className }: TrendyPop
                   ))}
                 </div>
 
+                {/* 판매 통계 */}
+                <div className="text-xs text-gray-400 mb-4">
+                  판매 {product.purchase_count}건 | 조회 {product.view_count}회
+                </div>
+
                 {/* 가격과 버튼 */}
                 <div className="flex items-center justify-between">
                   <div className="text-2xl font-semibold text-[#0072CE]">
-                    ₩{product.price.toLocaleString()}
+                    {product.price.toLocaleString()}P
                   </div>
                   <button
                     onClick={() => router.push(`/market/${product.id}`)}
