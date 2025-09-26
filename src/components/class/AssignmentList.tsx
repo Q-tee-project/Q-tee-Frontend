@@ -163,7 +163,7 @@ export function AssignmentList({
   }
 
   return (
-    <div className="flex flex-col gap-[15px]">
+    <div className="flex flex-col gap-4">
       <Accordion type="single" collapsible className="w-full">
         {assignments.map((assignment) => {
           const results = assignmentResults[assignment.id] || [];
@@ -219,8 +219,7 @@ export function AssignmentList({
                         onDeleteAssignment(assignment);
                       }
                     }}
-                    className="hover:bg-red-50 hover:border-red-200"
-                    style={{ padding: '10px' }}
+                    className="hover:bg-red-50 hover:border-red-200 p-2.5"
                   >
                     <FaRegTrashAlt className="w-4 h-4" />
                   </Button>
@@ -232,114 +231,33 @@ export function AssignmentList({
                     <Table>
                       <TableHeader>
                         <TableRow className="hover:bg-transparent">
-                          <TableHead
-                            className="font-semibold text-center border-b"
-                            style={{
-                              fontSize: '16px',
-                              color: '#666666',
-                              borderBottomColor: '#666666',
-                              padding: '10px 12px',
-                              width: '12%',
-                            }}
-                          >
+                          <TableHead className="font-semibold text-center border-b border-[#666666] text-base text-[#666666] p-3 w-[12%]">
                             이름
                           </TableHead>
-                          <TableHead
-                            className="font-semibold text-center border-b"
-                            style={{
-                              fontSize: '16px',
-                              color: '#666666',
-                              borderBottomColor: '#666666',
-                              padding: '10px 12px',
-                              width: '10%',
-                            }}
-                          >
+                          <TableHead className="font-semibold text-center border-b border-[#666666] text-base text-[#666666] p-3 w-[10%]">
                             학교
                           </TableHead>
-                          <TableHead
-                            className="font-semibold text-center border-b"
-                            style={{
-                              fontSize: '16px',
-                              color: '#666666',
-                              borderBottomColor: '#666666',
-                              padding: '10px 12px',
-                              width: '8%',
-                            }}
-                          >
+                          <TableHead className="font-semibold text-center border-b border-[#666666] text-base text-[#666666] p-3 w-[8%]">
                             학년
                           </TableHead>
-                          <TableHead
-                            className="font-semibold text-center border-b"
-                            style={{
-                              fontSize: '16px',
-                              color: '#666666',
-                              borderBottomColor: '#666666',
-                              padding: '10px 12px',
-                              width: '10%',
-                            }}
-                          >
+                          <TableHead className="font-semibold text-center border-b border-[#666666] text-base text-[#666666] p-3 w-[10%]">
                             응시 현황
                           </TableHead>
-                          <TableHead
-                            className="font-semibold text-center border-b"
-                            style={{
-                              fontSize: '16px',
-                              color: '#666666',
-                              borderBottomColor: '#666666',
-                              padding: '10px 12px',
-                              width: '8%',
-                            }}
-                          >
+                          <TableHead className="font-semibold text-center border-b border-[#666666] text-base text-[#666666] p-3 w-[8%]">
                             점수
                           </TableHead>
-                          <TableHead
-                            className="font-semibold text-center border-b"
-                            style={{
-                              fontSize: '16px',
-                              color: '#666666',
-                              borderBottomColor: '#666666',
-                              padding: '10px 12px',
-                              width: '10%',
-                            }}
-                          >
+                          <TableHead className="font-semibold text-center border-b border-[#666666] text-base text-[#666666] p-3 w-[10%]">
                             소요 시간
                           </TableHead>
-                          <TableHead
-                            className="font-semibold text-center border-b"
-                            style={{
-                              fontSize: '16px',
-                              color: '#666666',
-                              borderBottomColor: '#666666',
-                              padding: '10px 12px',
-                              width: '12%',
-                            }}
-                          >
+                          <TableHead className="font-semibold text-center border-b border-[#666666] text-base text-[#666666] p-3 w-[12%]">
                             완료일시
                           </TableHead>
                           {subject === 'math' && (
-                            <TableHead
-                              className="font-semibold text-center border-b"
-                              style={{
-                                fontSize: '16px',
-                                color: '#666666',
-                                borderBottomColor: '#666666',
-                                padding: '10px 12px',
-                                width: '10%',
-                              }}
-                            >
+                            <TableHead className="font-semibold text-center border-b border-[#666666] text-base text-[#666666] p-3 w-[10%]">
                               OCR 채점
                             </TableHead>
                           )}
-                          <TableHead
-                            className="font-semibold text-center border-b"
-                            style={{
-                              fontSize: '16px',
-                              color: '#666666',
-                              borderBottomColor: '#666666',
-                              padding: '10px 12px',
-                              width: '12%',
-                            }}
-                          >
+                          <TableHead className="font-semibold text-center border-b border-[#666666] text-base text-[#666666] p-3 w-[12%]">
                             채점 결과
                           </TableHead>
                         </TableRow>
@@ -348,7 +266,7 @@ export function AssignmentList({
                         {isLoadingStudents ? (
                           <TableRow>
                             <TableCell colSpan={9} className="text-center py-8">
-                              <span style={{ fontSize: '14px', color: '#666666' }}>
+                              <span className="text-sm text-[#666666]">
                                 학생 정보를 불러오는 중...
                               </span>
                             </TableCell>
@@ -356,7 +274,7 @@ export function AssignmentList({
                         ) : classStudents.length === 0 ? (
                           <TableRow>
                             <TableCell colSpan={9} className="text-center py-8">
-                              <span style={{ fontSize: '14px', color: '#666666' }}>
+                              <span className="text-sm text-[#666666]">
                                 등록된 학생이 없습니다.
                               </span>
                             </TableCell>
@@ -386,10 +304,10 @@ export function AssignmentList({
                               return (
                                 <TableRow>
                                   <TableCell colSpan={9} className="text-center py-8">
-                                    <span style={{ fontSize: '14px', color: '#666666' }}>
+                                    <span className="text-sm text-[#666666]">
                                       배포된 학생이 없습니다.
                                       <br />
-                                      <small style={{ color: '#999' }}>
+                                      <small className="text-[#999]">
                                         학생에게 과제를 배포하면 여기에 표시됩니다.
                                       </small>
                                     </span>
@@ -421,103 +339,51 @@ export function AssignmentList({
                               return (
                                 <TableRow
                                   key={studentResult.student_id}
-                                  className="hover:bg-gray-50 transition-colors"
-                                  style={{ borderBottom: '1px solid #e1e1e1' }}
+                                  className="hover:bg-gray-50 transition-colors border-b border-[#e1e1e1]"
                                 >
-                                  <TableCell
-                                    className="font-medium text-center"
-                                    style={{
-                                      fontSize: '14px',
-                                      color: '#666666',
-                                      padding: '10px 12px',
-                                    }}
-                                  >
+                                  <TableCell className="font-medium text-center text-sm text-[#666666] p-3">
                                     {studentResult.name || '이름 없음'}
                                   </TableCell>
-                                  <TableCell
-                                    className="text-center"
-                                    style={{ padding: '10px 12px' }}
-                                  >
+                                  <TableCell className="text-center p-3">
                                     <Badge
-                                      className="rounded-[4px]"
-                                      style={{
-                                        backgroundColor:
-                                          studentResult.school_level === 'middle'
-                                            ? '#E6F3FF'
-                                            : '#FFF5E9',
-                                        color:
-                                          studentResult.school_level === 'middle'
-                                            ? '#0085FF'
-                                            : '#FF9F2D',
-                                        padding: '5px 10px',
-                                        fontSize: '14px',
-                                      }}
+                                      className={`rounded px-2.5 py-1.5 text-sm ${
+                                        studentResult.school_level === 'middle'
+                                          ? 'bg-[#E6F3FF] text-[#0085FF]'
+                                          : 'bg-[#FFF5E9] text-[#FF9F2D]'
+                                      }`}
                                     >
                                       {studentResult.school_level === 'middle'
                                         ? '중학교'
                                         : '고등학교'}
                                     </Badge>
                                   </TableCell>
-                                  <TableCell
-                                    className="text-center"
-                                    style={{ padding: '10px 12px' }}
-                                  >
-                                    <Badge
-                                      className="rounded-[4px]"
-                                      style={{
-                                        backgroundColor: '#f5f5f5',
-                                        color: '#999999',
-                                        padding: '5px 10px',
-                                        fontSize: '14px',
-                                      }}
-                                    >
+                                  <TableCell className="text-center p-3">
+                                    <Badge className="rounded px-2.5 py-1.5 text-sm bg-[#f5f5f5] text-[#999999]">
                                       {studentResult.grade}학년
                                     </Badge>
                                   </TableCell>
-                                  <TableCell
-                                    className="text-center"
-                                    style={{ padding: '10px 12px' }}
-                                  >
+                                  <TableCell className="text-center p-3">
                                     <Badge
-                                      className="rounded-[4px]"
-                                      style={{
-                                        backgroundColor: hasSubmitted ? '#E6F3FF' : '#ffebeb',
-                                        color: hasSubmitted ? '#0085FF' : '#f00',
-                                        padding: '5px 10px',
-                                        fontSize: '14px',
-                                      }}
+                                      className={`rounded px-2.5 py-1.5 text-sm ${
+                                        hasSubmitted 
+                                          ? 'bg-[#E6F3FF] text-[#0085FF]' 
+                                          : 'bg-[#ffebeb] text-[#f00]'
+                                      }`}
                                     >
                                       {hasSubmitted ? '응시' : '미응시'}
                                     </Badge>
                                   </TableCell>
-                                  <TableCell
-                                    className="text-center"
-                                    style={{ padding: '10px 12px' }}
-                                  >
-                                    <span style={{ fontSize: '14px', color: '#666666' }}>
+                                  <TableCell className="text-center p-3">
+                                    <span className="text-sm text-[#666666]">
                                       {hasSubmitted && score !== null && score !== undefined
                                         ? `${score}점`
                                         : '0점'}
                                     </span>
                                   </TableCell>
-                                  <TableCell
-                                    className="text-center"
-                                    style={{
-                                      fontSize: '14px',
-                                      color: '#666666',
-                                      padding: '10px 12px',
-                                    }}
-                                  >
+                                  <TableCell className="text-center text-sm text-[#666666] p-3">
                                     {hasSubmitted && duration ? duration : '-'}
                                   </TableCell>
-                                  <TableCell
-                                    className="text-center"
-                                    style={{
-                                      fontSize: '14px',
-                                      color: '#666666',
-                                      padding: '10px 12px',
-                                    }}
-                                  >
+                                  <TableCell className="text-center text-sm text-[#666666] p-3">
                                     {hasSubmitted && completedAt ? completedAt : '-'}
                                   </TableCell>
                                   {subject === 'math' && (
@@ -577,10 +443,7 @@ export function AssignmentList({
                                       </Button>
                                     </TableCell>
                                   )}
-                                  <TableCell
-                                    className="text-center"
-                                    style={{ padding: '10px 12px' }}
-                                  >
+                                  <TableCell className="text-center p-3">
                                     {hasSubmitted ? (
                                       <Button
                                         variant="outline"
@@ -608,7 +471,7 @@ export function AssignmentList({
                                         편집
                                       </Button>
                                     ) : (
-                                      <span style={{ fontSize: '14px', color: '#999999' }}>-</span>
+                                      <span className="text-sm text-[#999999]">-</span>
                                     )}
                                   </TableCell>
                                 </TableRow>

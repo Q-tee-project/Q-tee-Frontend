@@ -96,7 +96,7 @@ export default function StudentClassPage() {
   });
 
   return (
-    <div className="flex flex-col" style={{ padding: '20px', display: 'flex', gap: '20px' }}>
+    <div className="flex flex-col p-5 gap-5">
       {/* 헤더 */}
       <PageHeader
         icon={<Users />}
@@ -123,8 +123,7 @@ export default function StudentClassPage() {
               </div>
               <Button
                 onClick={handleJoinClass}
-                style={{ backgroundColor: '#0072CE' }}
-                className="hover:opacity-90 ml-4"
+                className="bg-[#0072CE] hover:opacity-90 ml-4"
               >
                 클래스 가입하기
               </Button>
@@ -162,8 +161,7 @@ export default function StudentClassPage() {
                         <p className="text-gray-500 mb-4">클래스 코드를 입력하여 클래스에 가입해보세요!</p>
                         <Button
                           onClick={handleJoinClass}
-                          style={{ backgroundColor: '#0072CE' }}
-                          className="hover:opacity-90"
+                          className="bg-[#0072CE] hover:opacity-90"
                         >
                           클래스 가입하기
                         </Button>
@@ -176,64 +174,19 @@ export default function StudentClassPage() {
                 <Table>
                   <TableHeader>
                     <TableRow className="hover:bg-transparent">
-                      <TableHead 
-                        className="font-semibold text-center border-b"
-                        style={{ 
-                          fontSize: '16px', 
-                          color: '#666666',
-                          borderBottomColor: '#666666',
-                          padding: '10px 12px',
-                          width: '20%'
-                        }}
-                      >
+                      <TableHead className="font-semibold text-center border-b border-[#666666] text-base text-[#666666] p-3 w-1/5">
                         클래스명
                       </TableHead>
-                      <TableHead 
-                        className="font-semibold text-center border-b"
-                        style={{ 
-                          fontSize: '16px', 
-                          color: '#666666',
-                          borderBottomColor: '#666666',
-                          padding: '10px 12px',
-                          width: '15%'
-                        }}
-                      >
+                      <TableHead className="font-semibold text-center border-b border-[#666666] text-base text-[#666666] p-3 w-[15%]">
                         학교
                       </TableHead>
-                      <TableHead 
-                        className="font-semibold text-center border-b"
-                        style={{ 
-                          fontSize: '16px', 
-                          color: '#666666',
-                          borderBottomColor: '#666666',
-                          padding: '10px 12px',
-                          width: '10%'
-                        }}
-                      >
+                      <TableHead className="font-semibold text-center border-b border-[#666666] text-base text-[#666666] p-3 w-[10%]">
                         학년
                       </TableHead>
-                      <TableHead 
-                        className="font-semibold text-center border-b"
-                        style={{ 
-                          fontSize: '16px',
-                          color: '#666666',
-                          borderBottomColor: '#666666',
-                          padding: '10px 12px',
-                          width: '20%'
-                        }}
-                      >
+                      <TableHead className="font-semibold text-center border-b border-[#666666] text-base text-[#666666] p-3 w-1/5">
                         가입일
                       </TableHead>
-                      <TableHead 
-                        className="font-semibold text-center border-b"
-                        style={{ 
-                          fontSize: '16px',
-                          color: '#666666',
-                          borderBottomColor: '#666666',
-                          padding: '10px 12px',
-                          width: '20%'
-                        }}
-                      >
+                      <TableHead className="font-semibold text-center border-b border-[#666666] text-base text-[#666666] p-3 w-1/5">
                         담당선생님
                       </TableHead>
                     </TableRow>
@@ -242,70 +195,32 @@ export default function StudentClassPage() {
                     {filteredClasses.map((classroom) => (
                       <TableRow
                         key={classroom.id}
-                        className="cursor-pointer hover:bg-gray-50 transition-colors"
-                        style={{ borderBottom: '1px solid #e1e1e1' }}
+                        className="cursor-pointer hover:bg-gray-50 transition-colors border-b border-[#e1e1e1]"
                         onClick={() => handleClassClick(classroom)}
                       >
-                        <TableCell 
-                          className="font-medium text-center"
-                          style={{ 
-                            fontSize: '14px', 
-                            color: '#666666',
-                            padding: '10px 12px'
-                          }}
-                        >
+                        <TableCell className="font-medium text-center text-sm text-[#666666] p-3">
                           {classroom.name}
                         </TableCell>
-                        <TableCell 
-                          className="text-center"
-                          style={{ padding: '10px 12px' }}
-                        >
+                        <TableCell className="text-center p-3">
                           <Badge
-                            className="rounded-[4px]"
-                            style={{
-                              backgroundColor: classroom.school_level === 'middle' ? '#E6F3FF' : '#FFF5E9',
-                              color: classroom.school_level === 'middle' ? '#0085FF' : '#FF9F2D',
-                              padding: '5px 10px',
-                              fontSize: '14px',
-                            }}
+                            className={`rounded px-2.5 py-1.5 text-sm ${
+                              classroom.school_level === 'middle' 
+                                ? 'bg-[#E6F3FF] text-[#0085FF]' 
+                                : 'bg-[#FFF5E9] text-[#FF9F2D]'
+                            }`}
                           >
                             {classroom.school_level === 'middle' ? '중학교' : '고등학교'}
                           </Badge>
                         </TableCell>
-                        <TableCell 
-                          className="text-center"
-                          style={{ padding: '10px 12px' }}
-                        >
-                          <Badge
-                            className="rounded-[4px]"
-                            style={{
-                              backgroundColor: '#f5f5f5',
-                              color: '#999999',
-                              padding: '5px 10px',
-                              fontSize: '14px',
-                            }}
-                          >
+                        <TableCell className="text-center p-3">
+                          <Badge className="rounded px-2.5 py-1.5 text-sm bg-[#f5f5f5] text-[#999999]">
                             {classroom.grade}학년
                           </Badge>
                         </TableCell>
-                        <TableCell 
-                          className="text-center"
-                          style={{ 
-                            fontSize: '14px', 
-                            color: '#666666',
-                            padding: '10px 12px'
-                          }}
-                        >
+                        <TableCell className="text-center text-sm text-[#666666] p-3">
                           {new Date(classroom.created_at).toLocaleDateString('ko-KR')}
                         </TableCell>
-                        <TableCell 
-                          className="text-center"
-                          style={{ 
-                            fontSize: '14px', 
-                            color: '#666666',
-                            padding: '10px 12px'
-                          }}
-                        >
+                        <TableCell className="text-center text-sm text-[#666666] p-3">
                           <Button
                             variant="outline"
                             size="sm"
@@ -313,8 +228,7 @@ export default function StudentClassPage() {
                               e.stopPropagation();
                               handleClassClick(classroom);
                             }}
-                            className="hover:bg-blue-50 hover:border-blue-200"
-                            style={{ padding: '10px' }}
+                            className="hover:bg-blue-50 hover:border-blue-200 p-2.5"
                           >
                             {(() => {
                               const classroomWithTeacher = classesWithTeachers.find(c => c.id === classroom.id);

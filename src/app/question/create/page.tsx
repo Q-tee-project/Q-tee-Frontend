@@ -292,7 +292,7 @@ export default function CreatePage() {
   };
 
   return (
-    <div className="flex flex-col" style={{ padding: '20px', display: 'flex', gap: '20px' }}>
+    <div className="flex flex-col p-5 gap-5">
       {/* 헤더 영역 */}
       <PageHeader
         icon={<PlusCircle />}
