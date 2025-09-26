@@ -2,9 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { PageHeader } from '@/components/layout/PageHeader';
-import {
-  FiSend, FiUser, FiArrowLeft
-} from 'react-icons/fi';
+import { FiSend, FiUser, FiArrowLeft } from 'react-icons/fi';
 import { IoMailOutline } from 'react-icons/io5';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -15,16 +13,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { authService, UserProfile } from '@/services/authService';
 import { messageService, MessageRecipient } from '@/services/messageService';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Phone, Mail, User } from 'lucide-react';
-import { IoBookOutline } from "react-icons/io5";
-import { IoIosClose } from "react-icons/io";
-
+import { IoBookOutline } from 'react-icons/io5';
+import { IoIosClose } from 'react-icons/io';
 
 interface ClassroomInfo {
   id: number;
@@ -61,9 +53,10 @@ export default function MessagePostPage() {
         setUserType(profile.userType);
 
         const recipientsData = await messageService.getMessageRecipients();
-        const uniqueRecipients = Array.from(new Map(recipientsData.map(item => [item.id, item])).values());
+        const uniqueRecipients = Array.from(
+          new Map(recipientsData.map((item) => [item.id, item])).values(),
+        );
         setRecipients(uniqueRecipients);
-
       } catch (error) {
         console.error('초기 데이터 로드 실패:', error);
       }
@@ -77,14 +70,13 @@ export default function MessagePostPage() {
     if (recipientIdStr && recipients.length > 0) {
       const recipientIdNum = parseInt(recipientIdStr, 10);
       if (!isNaN(recipientIdNum)) {
-        const targetRecipient = recipients.find(r => r.id === recipientIdNum);
+        const targetRecipient = recipients.find((r) => r.id === recipientIdNum);
         if (targetRecipient) {
           setSelectedRecipients([recipientIdNum]);
         }
       }
     }
   }, [searchParams, recipients]);
-
 
   const handleRecipientSelect = (recipientId: number) => {
     if (userType === 'student') {
@@ -94,9 +86,9 @@ export default function MessagePostPage() {
     }
     // 선생님은 여러 명 선택 가능
     if (selectedRecipients.includes(recipientId)) {
-      setSelectedRecipients(prev => prev.filter(id => id !== recipientId));
+      setSelectedRecipients((prev) => prev.filter((id) => id !== recipientId));
     } else {
-      setSelectedRecipients(prev => [...prev, recipientId]);
+      setSelectedRecipients((prev) => [...prev, recipientId]);
     }
   };
 
@@ -104,7 +96,7 @@ export default function MessagePostPage() {
     if (selectedRecipients.length === recipients.length) {
       setSelectedRecipients([]);
     } else {
-      setSelectedRecipients(recipients.map(r => r.id));
+      setSelectedRecipients(recipients.map((r) => r.id));
     }
   };
 
@@ -127,7 +119,7 @@ export default function MessagePostPage() {
       await messageService.sendMessage({
         recipient_ids: selectedRecipients,
         subject: subject.trim(),
-        content: content.trim()
+        content: content.trim(),
       });
       alert(`${selectedRecipients.length}명에게 쪽지를 전송했습니다.`);
       router.push('/message');
@@ -144,11 +136,11 @@ export default function MessagePostPage() {
     setIsProfileModalOpen(true);
   };
 
-  const selectedRecipientData = recipients.filter(r => selectedRecipients.includes(r.id));
-  const profileData = selectedProfileId ? recipients.find(r => r.id === selectedProfileId) : null;
+  const selectedRecipientData = recipients.filter((r) => selectedRecipients.includes(r.id));
+  const profileData = selectedProfileId ? recipients.find((r) => r.id === selectedProfileId) : null;
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col" style={{ padding: '20px', display: 'flex', gap: '20px' }}>
       <PageHeader
         icon={<IoMailOutline />}
         title="쪽지 작성"
@@ -180,9 +172,7 @@ export default function MessagePostPage() {
 
         <CardContent className="p-6 space-y-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              받는 사람
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">받는 사람</label>
             <div className="space-y-3">
               <Button
                 variant="outline"
@@ -192,18 +182,23 @@ export default function MessagePostPage() {
                 <div className="flex flex-col items-start gap-2 w-full">
                   <div className="flex items-center gap-2">
                     <FiUser className="w-4 h-4" />
-                    <span>받는 사람 선택 ({selectedRecipients.length}/{recipients.length})</span>
+                    <span>
+                      받는 사람 선택 ({selectedRecipients.length}/{recipients.length})
+                    </span>
                   </div>
                   {selectedRecipientData.length > 0 && (
                     <div className="flex flex-wrap gap-2">
-                      {selectedRecipientData.map(recipient => (
+                      {selectedRecipientData.map((recipient) => (
                         <Badge key={recipient.id} variant="secondary" className="text-xs">
                           {recipient.name}
-                          {recipient.type === 'student' && recipient.school_level && recipient.grade && (
-                            <span className="ml-1">
-                              ({recipient.school_level === 'middle' ? '중' : '고'}{recipient.grade})
-                            </span>
-                          )}
+                          {recipient.type === 'student' &&
+                            recipient.school_level &&
+                            recipient.grade && (
+                              <span className="ml-1">
+                                ({recipient.school_level === 'middle' ? '중' : '고'}
+                                {recipient.grade})
+                              </span>
+                            )}
                         </Badge>
                       ))}
                     </div>
@@ -214,9 +209,7 @@ export default function MessagePostPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              제목
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">제목</label>
             <Input
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
@@ -226,9 +219,7 @@ export default function MessagePostPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              내용
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">내용</label>
             <Textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
@@ -280,11 +271,14 @@ export default function MessagePostPage() {
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <span className="font-medium">{recipient.name}</span>
-                        {recipient.type === 'student' && recipient.school_level && recipient.grade && (
-                          <Badge variant="outline" className="text-xs">
-                            {recipient.school_level === 'middle' ? '중학교' : '고등학교'} {recipient.grade}학년
-                          </Badge>
-                        )}
+                        {recipient.type === 'student' &&
+                          recipient.school_level &&
+                          recipient.grade && (
+                            <Badge variant="outline" className="text-xs">
+                              {recipient.school_level === 'middle' ? '중학교' : '고등학교'}{' '}
+                              {recipient.grade}학년
+                            </Badge>
+                          )}
                         {recipient.type === 'teacher' && (
                           <Badge variant="outline" className="text-xs">
                             선생님
@@ -326,7 +320,17 @@ export default function MessagePostPage() {
               <button
                 onClick={() => setIsProfileModalOpen(false)}
                 className="text-gray-400 hover:text-gray-600"
-                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '0',
+                  width: '24px',
+                  height: '24px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
               >
                 <IoIosClose />
               </button>
@@ -356,9 +360,7 @@ export default function MessagePostPage() {
                   <Phone className="w-5 h-5 text-purple-600" />
                 </div>
                 <div>
-                  <div className="font-medium text-gray-900">
-                    {profileData.phone}
-                  </div>
+                  <div className="font-medium text-gray-900">{profileData.phone}</div>
                 </div>
               </div>
             </div>
