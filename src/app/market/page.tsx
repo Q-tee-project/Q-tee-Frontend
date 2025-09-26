@@ -34,74 +34,52 @@ export default function MarketPage() {
   const itemsPerPage = 20;
   const [selectedTab, setSelectedTab] = useState('전체');
   const [loading, setLoading] = useState(true);
+  const [products, setProducts] = useState<MarketProduct[]>([]);
+  const [popularProducts, setPopularProducts] = useState<MarketProduct[]>([]);
 
   const [sortType, setSortType] = useState<'latest' | 'rating' | 'sales'>('latest');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchField, setSearchField] = useState<'title' | 'tags' | 'author'>('title');
 
-  // 상품 데이터
-  const products: Product[] = Array.from({ length: 22 }).map((_, idx) => ({
-    id: (idx + 1).toString(),
-    title: `상품 ${idx + 1}`,
-    description: '중학교 1학년 국어 기출문제 2단원',
-    price: 2000 + idx * 500,
-    author: idx < 5 ? (userProfile?.id?.toString() || 'user123') : `user${idx}`,
-    authorId: idx < 5 ? (userProfile?.id?.toString() || 'user123') : `user${idx}`,
-    tags: ['중학교', '1학년', idx % 2 === 0 ? '국어' : '영어', '기출문제'],
-  }));
-  // 인기상품 데이터 (상위 5개)
-  const featuredProducts = products.slice(0, 5);
-
-  // 필터링된 상품 (탭에 따른 필터링)
-  const filteredProducts = products.filter((product) => {
-    if (selectedTab === '전체') return true;
-    return product.tags.includes(selectedTab);
-  });
-
+  // Mock 데이터 제거됨 - API로 대체
 
   // 상품 로딩 함수
-  const loadProducts = () => {
+  const loadProducts = async () => {
     setLoading(true);
-    // 실제 API 호출이 필요한 경우 여기에 구현
-    // 현재는 정적 데이터를 사용하므로 로딩 상태만 관리
-    setTimeout(() => {
+    try {
+      // 인기상품 로드 (5개)
+      const popular = await getPopularProducts(5);
+      setPopularProducts(popular);
+
+      // 전체 상품 로드
+      const allProducts = await getProducts({
+        skip: (currentPage - 1) * itemsPerPage,
+        limit: itemsPerPage,
+        subject: selectedTab === '전체' ? undefined : selectedTab,
+        search: searchQuery || undefined,
+        sort_by: sortType === 'latest' ? 'created_at' :
+                sortType === 'sales' ? 'purchase_count' :
+                'satisfaction_rate',
+        sort_order: 'desc'
+      });
+      setProducts(allProducts);
+    } catch (error) {
+      console.error('상품 로드 실패:', error);
+    } finally {
       setLoading(false);
-    }, 500);
+    }
   };
 
   useEffect(() => {
     loadProducts();
-  }, [currentPage, selectedTab]);
+  }, [currentPage, selectedTab, sortType, searchQuery]);
 
+  // API에서 이미 필터링/정렬된 데이터를 받아오므로 추가 처리 불필요
+  const sortedAndFilteredProducts = products;
 
-  // 정렬 + 검색 적용
-  const sortedAndFilteredProducts = filteredProducts
-    .filter((p: Product) => {
-      const q = searchQuery.toLowerCase();
-      if (!q) return true;
-      if (searchField === 'title') {
-        return p.title.toLowerCase().includes(q);
-      }
-      if (searchField === 'tags') {
-        return p.tags.some((tag: string) => tag.toLowerCase().includes(q));
-      }
-      if (searchField === 'author') {
-        return p.author.toLowerCase().includes(q);
-      }
-      return true;
-    })
-    .sort((a: Product, b: Product) => {
-      if (sortType === 'latest') return Number(b.id) - Number(a.id);
-      if (sortType === 'rating') return (b.price % 5) - (a.price % 5); // 예시 별점
-      if (sortType === 'sales') return b.price - a.price; // 예시 구매 수
-      return 0;
-    });
-
-  const totalPages = Math.ceil(sortedAndFilteredProducts.length / itemsPerPage);
-  const displayedProducts = sortedAndFilteredProducts.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  // API에서 페이징 처리한 데이터를 받아오므로 추가 슬라이싱 불필요
+  const displayedProducts = sortedAndFilteredProducts;
+  const totalPages = Math.ceil(products.length / itemsPerPage); // 임시로 설정, 실제로는 API에서 total_count를 받아와야 함
 
 
   // 반응형 그리드
@@ -178,16 +156,16 @@ export default function MarketPage() {
 
           <CardTitle className="text-base font-medium">{selectedTab} 상품 목록</CardTitle>
           <span className="text-sm font-normal text-gray-400">
-            총 {filteredProducts.length}건
+            총 {products.length}건
           </span>
 
         </CardHeader>
         <CardContent>
 
           {/* 트렌디한 인기상품 */}
-          {selectedTab === '전체' && (
+          {selectedTab === '전체' && popularProducts.length > 0 && (
             <div className="mb-8">
-              <TrendyPopularProducts products={featuredProducts} />
+              <TrendyPopularProducts products={popularProducts} />
             </div>
           )}
 
@@ -252,7 +230,7 @@ export default function MarketPage() {
                 등록된 상품이 없습니다.
               </div>
             ) : (
-              displayedProducts.map((product: Product) => (
+              displayedProducts.map((product: MarketProduct) => (
                 <div
                   key={product.id}
                   onClick={() => router.push(`/market/${product.id}`)}
@@ -263,19 +241,22 @@ export default function MarketPage() {
                     이미지
                   </div>
                   <p className="text-gray-400 font-semibold text-sm mb-1 truncate">
-                    {product.author}
+                    {product.seller_name}
                   </p>
                   <p className="mb-2 font-semibold truncate">{product.title}</p>
                   <div className="flex flex-wrap gap-2 mb-3">
-                    {product.tags.map((tag: string, idx: number) => (
-                      <span key={idx} className="text-[#9E9E9E] text-xs select-none">
-
-                        #{tag}
-                      </span>
-                    ))}
+                    <span className="text-[#9E9E9E] text-xs select-none">#{product.subject_type}</span>
+                    <span className="text-[#9E9E9E] text-xs select-none">#{product.school_level}</span>
+                    <span className="text-[#9E9E9E] text-xs select-none">#{product.grade}학년</span>
+                    <span className="text-[#9E9E9E] text-xs select-none">#{product.problem_count}문제</span>
                   </div>
-                  <div className="w-fit px-3 py-1 rounded-full bg-[#EFEFEF] text-[#0072CE] text-sm font-semibold">
-                    ₩{Number(product.price).toLocaleString()}
+                  <div className="flex justify-between items-center">
+                    <div className="w-fit px-3 py-1 rounded-full bg-[#EFEFEF] text-[#0072CE] text-sm font-semibold">
+                      {product.price.toLocaleString()}P
+                    </div>
+                    <div className="text-xs text-gray-400">
+                      판매 {product.purchase_count}건
+                    </div>
                   </div>
                 </div>
               ))
