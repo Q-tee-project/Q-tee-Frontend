@@ -238,7 +238,7 @@ export function AssignmentTab({ classId }: AssignmentTabProps) {
   ];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+    <div className="flex flex-col gap-4">
       {selectedAssignment ? (
         <AssignmentResultView assignment={selectedAssignment} onBack={handleBackToAssignmentList} />
       ) : (
@@ -255,7 +255,7 @@ export function AssignmentTab({ classId }: AssignmentTabProps) {
                       ? 'border-blue-500 text-blue-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }`}
-                  style={{ padding: '10px 20px' }}
+                  className="px-5 py-2.5"
                 >
                   {tab.label}
                   {tab.count > 0 && (
@@ -295,7 +295,7 @@ export function AssignmentTab({ classId }: AssignmentTabProps) {
           {isLoading ? (
             <p>Loading assignments...</p>
           ) : filteredAssignments.length === 0 ? (
-            <div style={{ padding: '0 20px' }}>
+            <div className="px-5">
               <Card>
                 <CardContent className="text-center py-12">
                   <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />

@@ -182,8 +182,7 @@ export function AssignmentCreateModal({
             </DialogTitle>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600"
-              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              className="text-gray-400 hover:text-gray-600 bg-none border-none cursor-pointer p-0 w-6 h-6 flex items-center justify-center"
             >
               <IoIosClose />
             </button>
@@ -267,29 +266,15 @@ export function AssignmentCreateModal({
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <Badge
-                              className="text-sm"
-                              style={{
-                                backgroundColor: (worksheet as any).school_level === '중학교' ? '#E6F3FF' : '#FFF5E9',
-                                border: 'none',
-                                color: (worksheet as any).school_level === '중학교' ? '#0085FF' : '#FF9F2D',
-                                padding: '6px 12px',
-                                minWidth: '60px',
-                                textAlign: 'center',
-                              }}
+                              className={`text-sm border-none px-3 py-1.5 min-w-[60px] text-center ${
+                                (worksheet as any).school_level === '중학교' 
+                                  ? 'bg-[#E6F3FF] text-[#0085FF]' 
+                                  : 'bg-[#FFF5E9] text-[#FF9F2D]'
+                              }`}
                             >
                               {(worksheet as any).school_level || '중학교'}
                             </Badge>
-                            <Badge
-                              className="text-sm"
-                              style={{
-                                backgroundColor: '#f5f5f5',
-                                border: 'none',
-                                color: '#999999',
-                                padding: '6px 12px',
-                                minWidth: '60px',
-                                textAlign: 'center',
-                              }}
-                            >
+                            <Badge className="text-sm border-none px-3 py-1.5 min-w-[60px] text-center bg-[#f5f5f5] text-[#999999]">
                               {(worksheet as any).grade || 1}학년
                             </Badge>
                           </div>
@@ -307,17 +292,7 @@ export function AssignmentCreateModal({
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge
-                            className="text-sm"
-                            style={{
-                              backgroundColor: '#f5f5f5',
-                              border: 'none',
-                              color: '#999999',
-                              padding: '6px 12px',
-                              minWidth: '60px',
-                              textAlign: 'center',
-                            }}
-                          >
+                          <Badge className="text-sm border-none px-3 py-1.5 min-w-[60px] text-center bg-[#f5f5f5] text-[#999999]">
                             {activeSubject === 'english' ? (worksheet as EnglishWorksheet).total_questions : (worksheet as any).problem_count}문제
                           </Badge>
                         </TableCell>

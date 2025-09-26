@@ -22,7 +22,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
       </main>
 
       {/* 고정 알림 아이콘 */}
-      <FixedNotificationIcon />
+      <FixedNotificationIcon isSidebarOpen={isSidebarOpen} />
     </div>
   );
 }
