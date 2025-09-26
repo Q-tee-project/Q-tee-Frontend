@@ -11,7 +11,7 @@ export interface NotificationData {
 }
 
 export interface SSENotification {
-  type: 'new_message';
+  type: 'message';
   id: string;
   data: NotificationData;
   timestamp: string;
@@ -129,6 +129,58 @@ class NotificationService {
       return response.ok;
     } catch (error) {
       console.error('저장된 알림 삭제 실패:', error);
+      return false;
+    }
+  }
+
+  async markAsRead(userType: 'teacher' | 'student', userId: number, notificationId: string): Promise<boolean> {
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/api/notifications/stored/${userType}/${userId}/${notificationId}/read`,
+        { method: 'PATCH' }
+      );
+      return response.ok;
+    } catch (error) {
+      console.error(`Failed to mark notification ${notificationId} as read:`, error);
+      return false;
+    }
+  }
+
+  async markAllAsRead(userType: 'teacher' | 'student', userId: number): Promise<boolean> {
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/api/notifications/stored/${userType}/${userId}/read-all`,
+        { method: 'PATCH' }
+      );
+      return response.ok;
+    } catch (error) {
+      console.error('Failed to mark all notifications as read:', error);
+      return false;
+    }
+  }
+
+  async deleteNotificationsByType(userType: 'teacher' | 'student', userId: number, notificationType: string): Promise<boolean> {
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/api/notifications/stored/${userType}/${userId}/type/${notificationType}`,
+        { method: 'DELETE' }
+      );
+      return response.ok;
+    } catch (error) {
+      console.error(`Failed to delete ${notificationType} notifications:`, error);
+      return false;
+    }
+  }
+
+  async deleteNotification(userType: 'teacher' | 'student', userId: number, notificationType: string, notificationId: string): Promise<boolean> {
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/api/notifications/stored/${userType}/${userId}/${notificationType}/${notificationId}`,
+        { method: 'DELETE' }
+      );
+      return response.ok;
+    } catch (error) {
+      console.error(`Failed to delete notification ${notificationId}:`, error);
       return false;
     }
   }
