@@ -183,7 +183,7 @@ export default function PurchaseListPage() {
                   <div
                     key={item.id}
                     className="bg-white rounded-lg p-4 border border-gray-200 hover:shadow-sm transition-shadow cursor-pointer"
-                    onClick={() => router.push(`/market/${item.product_id}`)}
+                    onClick={() => router.push(`/market/purchased/${item.id}`)}
                   >
                     <div className="grid grid-cols-6 gap-4 items-center">
                       {/* 상태 */}
@@ -220,10 +220,10 @@ export default function PurchaseListPage() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            router.push(`/market/${item.product_id}`);
+                            router.push(`/market/purchased/${item.id}`);
                           }}
                           className="text-gray-400 hover:text-[#0072CE] transition-colors"
-                          title="상품 보기"
+                          title="워크시트 보기"
                         >
                           <FiEye className="w-4 h-4" />
                         </button>
