@@ -75,15 +75,72 @@ export interface MarketPurchaseCreate {
   product_id: number;
 }
 
+export interface UserPointResponse {
+  user_id: number;
+  available_points: number;
+  earned_points: number;
+  used_points: number;
+}
+
+export interface PointChargeRequest {
+  amount: number;
+}
+
+export interface PointTransactionResponse {
+  id: number;
+  user_id: number;
+  amount: number;
+  transaction_type: 'charge' | 'purchase' | 'refund';
+  balance_after: number;
+  created_at: string;
+  description?: string;
+}
+
 // Worksheet 관련 인터페이스
-export interface Worksheet {
+// 각 서비스별 워크시트 타입
+export interface KoreanWorksheet {
   id: number;
   title: string;
   school_level: string;
   grade: number;
-  korean_type?: string;
+  korean_type: string;
   problem_count: number;
   created_at: string;
+  status?: string;
+}
+
+export interface MathWorksheet {
+  id: number;
+  title: string;
+  school_level: string;
+  grade: number;
+  problem_count: number;
+  created_at: string;
+  status?: string;
+}
+
+export interface EnglishWorksheet {
+  worksheet_id: number;
+  worksheet_name: string;
+  school_level: string;
+  grade: string; // 영어는 문자열
+  total_questions: number;
+  created_at: string;
+  problem_type?: string;
+}
+
+// 통합 타입
+export type Worksheet = KoreanWorksheet | MathWorksheet | EnglishWorksheet;
+
+// 정규화된 워크시트 (프론트엔드에서 사용)
+export interface NormalizedWorksheet {
+  id: number;
+  title: string;
+  school_level: string;
+  grade: number;
+  problem_count: number;
+  created_at: string;
+  service: 'korean' | 'math' | 'english';
 }
 
 export interface Problem {
@@ -107,6 +164,7 @@ export const getProducts = async (params?: {
   limit?: number;
   subject?: string;
   search?: string;
+  search_field?: string;
   sort_by?: string;
   sort_order?: string;
 }): Promise<MarketProduct[]> => {
@@ -161,26 +219,26 @@ export const deleteProduct = async (productId: number): Promise<void> => {
 export const purchaseProduct = async (
   purchaseData: MarketPurchaseCreate,
 ): Promise<MarketPurchase> => {
-  const response = await marketApi.post('/market/purchases', purchaseData);
+  const response = await marketApi.post('/market/purchase', purchaseData);
   return response.data;
 };
 
 // 포인트 잔액 조회
-export const getUserPoints = async (): Promise<{ user_id: number; available_points: number; total_earned: number; total_spent: number; total_charged: number; }> => {
-  const response = await marketApi.get('/market/points');
+export const getUserPoints = async (): Promise<UserPointResponse> => {
+  const response = await marketApi.get('/market/points/balance');
   return response.data;
 };
 
 // 포인트 충전
-export const chargePoints = async (amount: number): Promise<void> => {
-  await marketApi.post('/market/points/charge', { amount });
+export const chargePoints = async (chargeData: PointChargeRequest): Promise<void> => {
+  await marketApi.post('/market/points/charge', chargeData);
 };
 
 // 포인트 거래 내역
 export const getPointTransactions = async (params?: {
   skip?: number;
   limit?: number;
-}): Promise<any[]> => {
+}): Promise<PointTransactionResponse[]> => {
   const response = await marketApi.get('/market/points/transactions', { params });
   return response.data;
 };
@@ -217,32 +275,81 @@ const KOREAN_API_BASE_URL = process.env.NEXT_PUBLIC_KOREAN_API_URL || 'http://lo
 const MATH_API_BASE_URL = process.env.NEXT_PUBLIC_MATH_API_URL || 'http://localhost:8001';
 const ENGLISH_API_BASE_URL = process.env.NEXT_PUBLIC_ENGLISH_API_URL || 'http://localhost:8002';
 
-// 사용자 worksheet 목록 조회 (상품 등록용)
-export const getUserWorksheets = async (service: 'korean' | 'math' | 'english'): Promise<Worksheet[]> => {
-  let baseUrl;
-  let endpoint;
-
+// 정규화 함수
+function normalizeWorksheet(worksheet: Worksheet, service: 'korean' | 'math' | 'english'): NormalizedWorksheet {
   switch (service) {
     case 'korean':
-      baseUrl = KOREAN_API_BASE_URL;
-      endpoint = '/api/korean/worksheets';
-      break;
     case 'math':
-      baseUrl = MATH_API_BASE_URL;
-      endpoint = '/api/worksheets';
-      break;
-    case 'english':
-      baseUrl = ENGLISH_API_BASE_URL;
-      endpoint = '/api/english/worksheets';
-      break;
-  }
+      const kmWorksheet = worksheet as KoreanWorksheet | MathWorksheet;
+      return {
+        id: kmWorksheet.id,
+        title: kmWorksheet.title,
+        school_level: kmWorksheet.school_level,
+        grade: kmWorksheet.grade,
+        problem_count: kmWorksheet.problem_count,
+        created_at: kmWorksheet.created_at,
+        service
+      };
 
-  const response = await axios.get(`${baseUrl}${endpoint}`, {
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem('access_token')}`,
-    },
-  });
-  return response.data;
+    case 'english':
+      const enWorksheet = worksheet as EnglishWorksheet;
+      return {
+        id: enWorksheet.worksheet_id,
+        title: enWorksheet.worksheet_name,
+        school_level: enWorksheet.school_level,
+        grade: parseInt(enWorksheet.grade) || 1,
+        problem_count: enWorksheet.total_questions,
+        created_at: enWorksheet.created_at,
+        service
+      };
+  }
+}
+
+// 사용자 worksheet 목록 조회 (상품 등록용)
+export const getUserWorksheets = async (service: 'korean' | 'math' | 'english', userId?: number): Promise<NormalizedWorksheet[]> => {
+  const token = localStorage.getItem('access_token');
+  const headers = { Authorization: `Bearer ${token}` };
+
+  try {
+    let response;
+    let rawWorksheets: Worksheet[];
+
+    switch (service) {
+      case 'korean':
+        response = await axios.get(`${KOREAN_API_BASE_URL}/api/korean-generation/worksheets`, { headers });
+        console.log('Korean worksheets response:', response.data);
+        rawWorksheets = response.data.worksheets || response.data || [];
+        break;
+
+      case 'math':
+        response = await axios.get(`${MATH_API_BASE_URL}/api/worksheets`, { headers });
+        console.log('Math worksheets response:', response.data);
+        rawWorksheets = response.data.worksheets || response.data || [];
+        break;
+
+      case 'english':
+        if (!userId) {
+          throw new Error('English service requires user_id parameter');
+        }
+        response = await axios.get(`${ENGLISH_API_BASE_URL}/api/english/worksheets`, {
+          headers,
+          params: { user_id: userId }
+        });
+        console.log('English worksheets response:', response.data);
+        rawWorksheets = response.data || [];
+        break;
+
+      default:
+        throw new Error(`Unknown service: ${service}`);
+    }
+
+    // 모든 워크시트를 정규화하여 반환
+    return rawWorksheets.map(worksheet => normalizeWorksheet(worksheet, service));
+
+  } catch (error: any) {
+    console.error(`Failed to fetch ${service} worksheets:`, error);
+    throw error;
+  }
 };
 
 // Worksheet 상세 정보 조회 (상품 등록 시 검증용)

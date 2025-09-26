@@ -47,11 +47,13 @@ export default function MessageDetailPage() {
   }
 
   if (!message) {
-    return <div className="flex justify-center items-center h-full">메시지를 찾을 수 없습니다.</div>;
+    return (
+      <div className="flex justify-center items-center h-full">메시지를 찾을 수 없습니다.</div>
+    );
   }
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col" style={{ padding: '20px', display: 'flex', gap: '20px' }}>
       <PageHeader
         icon={<IoMailOpenOutline />}
         title="쪽지 상세 보기"
@@ -78,7 +80,7 @@ export default function MessageDetailPage() {
             </Button>
           </div>
         </CardHeader>
-        
+
         <CardContent className="p-6 space-y-6">
           {/* 제목 */}
           <div className="pb-4 border-b">
@@ -90,7 +92,9 @@ export default function MessageDetailPage() {
             <div className="flex items-center gap-3">
               <FiUser className="w-4 h-4" />
               <span className="font-medium text-gray-700">{message.sender.name}</span>
-              <Badge variant="outline">{message.sender.type === 'teacher' ? '선생님' : '학생'}</Badge>
+              <Badge variant="outline">
+                {message.sender.type === 'teacher' ? '선생님' : '학생'}
+              </Badge>
             </div>
             <div className="flex items-center gap-3">
               <FiClock className="w-4 h-4" />
@@ -100,7 +104,7 @@ export default function MessageDetailPage() {
 
           {/* 내용 */}
           <div className="pt-6">
-            <div 
+            <div
               className="prose max-w-none text-gray-800"
               style={{ minHeight: '300px', whiteSpace: 'pre-wrap' }}
             >

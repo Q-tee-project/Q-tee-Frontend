@@ -2,12 +2,12 @@
 
 import { PageHeader } from '@/components/layout/PageHeader';
 import { FiShoppingCart, FiTrash2 } from 'react-icons/fi';
-import { FaPlus, FaEdit } from "react-icons/fa";
+import { FaPlus, FaEdit } from 'react-icons/fa';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
-import { getMyProducts, deleteProduct, updateProduct, getProduct, MarketProduct, MarketProductDetail } from '@/services/marketApi';
+import { getMyProducts, deleteProduct, updateProduct, MarketProductDetail, MarketProduct } from '@/services/marketApi';
 
 import {
   Dialog,
@@ -17,8 +17,13 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 
-// MarketProductDetail을 Product로 사용
-type Product = MarketProductDetail;
+// MarketProduct에 seller_id와 description 추가하기 위한 확장 타입
+interface MyMarketProduct extends MarketProduct {
+  seller_id: number;
+  description?: string;
+}
+
+type Product = MyMarketProduct;
 
 const TABS = ['전체', '국어', '영어', '수학'];
 
@@ -42,41 +47,26 @@ export default function MyMarketPage() {
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
 
-  // 상품 데이터 로드 (개발 환경에서는 mock 데이터 사용)
+  // 상품 데이터 로드
   const loadProducts = async () => {
     if (!userProfile?.id) return;
-    
+
     setLoading(true);
-    
-    // 개발 환경에서는 API 서버가 없을 가능성이 높으므로 mock 데이터 사용
-    console.log('개발 환경: mock 데이터 사용');
-    
-    // Mock 데이터 생성
-    const mockProducts: Product[] = Array.from({ length: 5 }).map((_, idx) => ({
-      id: idx + 1,
-      title: `중학생 ${idx + 1}학년 국어`,
-      description: `중학교 ${idx + 1}학년 국어 기출문제 모음집입니다. 각 단원별로 체계적으로 정리된 문제들로 구성되어 있어 효과적인 학습이 가능합니다.`,
-      price: 20000 + idx * 5000,
-      seller_name: userProfile?.name || '킹왕짱현범쿤',
-      seller_id: userProfile?.id || 1,
-      subject_type: '국어',
-      tags: ['중학교', `${idx + 1}학년`, '국어', '기출문제', '2단원'],
-      main_image: undefined,
-      view_count: 0,
-      purchase_count: 0,
-      created_at: new Date().toISOString(),
-      original_service: 'korean',
-      original_worksheet_id: idx + 1,
-      status: 'active',
-      images: [],
-      updated_at: new Date().toISOString(),
-    }));
-    
-    // 로딩 시뮬레이션
-    setTimeout(() => {
-      setAllProducts(mockProducts);
+    try {
+      const products = await getMyProducts();
+      // seller_id와 description을 수동으로 추가 (내 상품이므로 현재 사용자 ID)
+      const productsWithSellerId = products.map(product => ({
+        ...product,
+        seller_id: userProfile.id,
+        description: undefined as string | undefined
+      }));
+      setAllProducts(productsWithSellerId);
+    } catch (error) {
+      console.error('내 상품 로드 실패:', error);
+      setAllProducts([]);
+    } finally {
       setLoading(false);
-    }, 500);
+    }
   };
 
   useEffect(() => {
@@ -93,8 +83,6 @@ export default function MyMarketPage() {
 
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
   const displayedProducts = filteredProducts;
-
-
 
   useEffect(() => {
     function handleResize() {
@@ -124,14 +112,21 @@ export default function MyMarketPage() {
     setShowDeleteModal(true);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!deleteTarget) return;
-    
-    // 로컬에서 삭제
-    setAllProducts(prev => prev.filter(product => product.id.toString() !== deleteTarget));
-    
-    setDeleteTarget(null);
-    setShowDeleteModal(false);
+
+    try {
+      await deleteProduct(Number(deleteTarget));
+      // 로컬 상태에서 삭제
+      setAllProducts(prev => prev.filter(product => product.id.toString() !== deleteTarget));
+      alert('상품이 삭제되었습니다.');
+    } catch (error) {
+      console.error('상품 삭제 실패:', error);
+      alert('상품 삭제에 실패했습니다.');
+    } finally {
+      setDeleteTarget(null);
+      setShowDeleteModal(false);
+    }
   };
 
   const handleEditProduct = (product: Product) => {
@@ -141,20 +136,32 @@ export default function MyMarketPage() {
     setShowEditModal(true);
   };
 
-  const confirmEdit = () => {
+  const confirmEdit = async () => {
     if (!editTarget) return;
-    
-    // 로컬에서 수정
-    setAllProducts(prev => prev.map(product => 
-      product.id === editTarget.id 
-        ? { ...product, title: editTitle, description: editDescription }
-        : product
-    ));
-    
-    setEditTarget(null);
-    setShowEditModal(false);
-    setEditTitle('');
-    setEditDescription('');
+
+    try {
+      await updateProduct(editTarget.id, {
+        title: editTitle,
+        description: editDescription
+      });
+
+      // 로컬 상태 업데이트
+      setAllProducts(prev => prev.map(product =>
+        product.id === editTarget.id
+          ? { ...product, title: editTitle, description: editDescription }
+          : product
+      ));
+
+      alert('상품이 수정되었습니다.');
+    } catch (error) {
+      console.error('상품 수정 실패:', error);
+      alert('상품 수정에 실패했습니다.');
+    } finally {
+      setEditTarget(null);
+      setShowEditModal(false);
+      setEditTitle('');
+      setEditDescription('');
+    }
   };
 
   const cancelEdit = () => {
@@ -213,12 +220,10 @@ export default function MyMarketPage() {
       {/* 상품 카드 */}
       <Card className="flex-1 flex flex-col shadow-sm">
         <CardHeader className="py-2 px-6 border-b border-gray-100 flex items-center justify-between">
-
           <CardTitle className="text-base font-medium">
             <span style={{ color: '#0072CE' }}>{myProducts[0]?.seller_name}</span> 님의 {selectedTab} 상품 목록
           </CardTitle>
           <span className="text-sm font-normal" style={{ color: '#C8C8C8' }}>
-
             총 {filteredProducts.length}건
           </span>
         </CardHeader>
@@ -238,16 +243,19 @@ export default function MyMarketPage() {
                   key={product.id}
                   className="relative rounded-lg border border-gray-200 bg-white p-4 shadow-sm hover:shadow-md transition-shadow transform hover:scale-[1.02] cursor-pointer"
                 >
-
-
-                  {/* 이미지 */}
+                  {/* 상품 이미지 - 텍스트 렌더링 */}
                   <div
-                    className="bg-gray-100 rounded-md h-70 mb-4 flex items-center justify-center text-gray-400 select-none"
+                    className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-md h-48 mb-4 flex items-center justify-center text-gray-700 select-none border border-gray-200 p-4"
                     onClick={() => handleViewProduct(product.id.toString())}
                   >
-                    이미지
+                    <div className="text-center space-y-2">
+                      <div className="text-lg font-bold text-[#0072CE]">{product.subject_type}</div>
+                      <div className="text-md font-semibold">{product.school_level} {product.grade}학년</div>
+                      <div className="text-sm text-gray-600 mt-3 line-clamp-2 leading-tight px-2">
+                        {product.title}
+                      </div>
+                    </div>
                   </div>
-
 
                   {/* 정보 */}
                   <div onClick={() => handleViewProduct(product.id.toString())}>
@@ -264,8 +272,13 @@ export default function MyMarketPage() {
                         </span>
                       ))}
                     </div>
-                    <div className="w-fit px-3 py-1 rounded-full bg-[#EFEFEF] text-[#0072CE] text-sm font-semibold">
-                      ₩{Number(product.price).toLocaleString()}
+                    <div className="flex justify-between items-center mb-2">
+                      <div className="w-fit px-3 py-1 rounded-full bg-[#EFEFEF] text-[#0072CE] text-sm font-semibold">
+                        {product.price.toLocaleString()}P
+                      </div>
+                      <div className="text-xs text-gray-400">
+                        판매 {product.purchase_count}건
+                      </div>
                     </div>
                     {/* 하단 버튼 */}
                     <div className="mt-4 flex justify-end gap-2">
@@ -280,7 +293,7 @@ export default function MyMarketPage() {
                       >
                         <FaEdit className="w-4 h-4" />
                       </button>
-                      
+
                       {/* 삭제 버튼 */}
                       <button
                         onClick={(e) => {
@@ -395,9 +408,7 @@ export default function MyMarketPage() {
                 placeholder="상품 상세 설명을 입력하세요"
               />
             </div>
-
-
-            </div>
+          </div>
 
           <DialogFooter className="flex gap-2">
             <button

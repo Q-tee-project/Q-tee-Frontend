@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ChevronDown, GraduationCap, User, AlertCircle, Mail, Lock, Check } from 'lucide-react';
+import { FaChalkboardTeacher, FaUserGraduate } from 'react-icons/fa';
 import { authService } from '@/services/authService';
 import { 
   BasicInfoForm, 
@@ -46,6 +47,7 @@ export default function JoinPage() {
   const [canScrollToNext, setCanScrollToNext] = useState(false);
   const [isScrolling, setIsScrolling] = useState(false);
   const [isTypingPhone, setIsTypingPhone] = useState(false);
+  const [hoveredCard, setHoveredCard] = useState<string | null>(null);
 
   // 스크롤 함수들
   const scrollToSection = (sectionIndex: number) => {
@@ -800,7 +802,36 @@ export default function JoinPage() {
   };
 
   return (
-    <div ref={containerRef} className="h-screen overflow-hidden bg-gray-50 relative">
+    <div ref={containerRef} className="h-screen overflow-hidden bg-gradient-to-br from-blue-50 via-indigo-100/80 to-blue-200/60 relative">
+      {/* Geometric pattern background */}
+      <div className="absolute inset-0 bg-geometric-pattern opacity-20"></div>
+      
+      {/* Dynamic mesh gradient */}
+      <div className="absolute inset-0 bg-dynamic-mesh"></div>
+      
+      {/* Floating geometric shapes */}
+      <div className="absolute inset-0 pointer-events-none">
+        {/* Large floating shapes */}
+        <div className="absolute top-20 left-20 w-32 h-32 bg-blue-500/20 rotate-45 rounded-lg blur-sm animate-float-slow"></div>
+        <div className="absolute top-40 right-32 w-24 h-24 bg-indigo-500/25 rotate-12 rounded-full blur-sm animate-float-medium"></div>
+        <div className="absolute bottom-32 left-40 w-40 h-40 bg-blue-600/15 rotate-45 rounded-lg blur-sm animate-float-fast"></div>
+        
+        {/* Medium shapes */}
+        <div className="absolute top-1/3 right-20 w-20 h-20 bg-blue-400/30 rotate-45 rounded-lg blur-sm animate-float-slow"></div>
+        <div className="absolute bottom-1/4 right-1/3 w-16 h-16 bg-indigo-400/25 rotate-12 rounded-full blur-sm animate-float-medium"></div>
+        <div className="absolute top-1/2 left-20 w-28 h-28 bg-blue-500/20 rotate-45 rounded-lg blur-sm animate-float-fast"></div>
+        
+        {/* Small accent shapes */}
+        <div className="absolute top-16 right-1/4 w-12 h-12 bg-blue-300/35 rotate-45 rounded-lg blur-sm animate-float-medium"></div>
+        <div className="absolute bottom-20 left-1/4 w-14 h-14 bg-indigo-300/30 rotate-12 rounded-full blur-sm animate-float-slow"></div>
+        <div className="absolute top-2/3 right-10 w-18 h-18 bg-blue-400/25 rotate-45 rounded-lg blur-sm animate-float-fast"></div>
+      </div>
+      
+      {/* Animated gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-to-tr from-blue-200/15 via-transparent to-indigo-200/10 animate-gradient-shift"></div>
+      
+      {/* Subtle depth overlay */}
+      <div className="absolute inset-0 bg-gradient-to-t from-blue-300/8 via-transparent to-blue-100/5"></div>
       {/* 단계별 네비게이션 */}
       <StepNavigation 
         currentStep={currentStep}
@@ -809,48 +840,150 @@ export default function JoinPage() {
       />
 
       {/* 스크롤 섹션들 */}
-      <div ref={scrollContainerRef} className="snap-y snap-mandatory h-screen overflow-y-auto">
+      <div ref={scrollContainerRef} className="snap-y snap-mandatory h-screen overflow-y-auto relative z-10">
         {/* 섹션 1: 가입 유형 선택 */}
         <div 
           ref={(el) => { sectionRefs.current[0] = el; }}
-          className="snap-start h-screen flex items-center justify-center p-4 relative"
+          className="snap-start h-screen flex items-center justify-center p-4 pt-8 relative"
         >
           <div className="w-full max-w-md text-center">
-            <div className="mb-8">
-              <div className="flex items-center justify-center gap-2 mb-6">
+            <div className="mb-6">
+              <div className="flex items-center justify-center gap-2 mb-4">
                 <Image src="/logo.svg" alt="Q-Tee Logo" width={24} height={24} className="w-6 h-6" />
                 <h1 className="text-xl font-semibold">Q-Tee</h1>
               </div>
             </div>
 
-            <h2 className="text-xl font-bold text-gray-900 text-center mb-8 tracking-tight">가입 유형을 선택해주세요</h2>
+            <h2 className="text-xl font-bold text-gray-900 text-center mb-6 tracking-tight">가입 유형을 선택해주세요</h2>
             
-            <div className="space-y-4">
-              <Button 
-                type="button" 
-                className={`w-full h-16 text-lg font-semibold rounded-xl border-2 transition-all duration-300 ease-out ${
+            <div className="grid grid-cols-2 gap-6 w-full max-w-lg mx-auto">
+              {/* 선생님 카드 */}
+              <div
+                className={`relative overflow-hidden h-32 w-full rounded-xl cursor-pointer transition-all duration-500 ease-out transform-gpu border border-white/30 shadow-lg hover:shadow-xl ${
                   userType === 'teacher'
-                    ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700'
-                    : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50 hover:border-gray-300'
+                    ? 'scale-105 z-10 ring-2 ring-white/40 shadow-xl bg-white/80'
+                    : hoveredCard === 'teacher'
+                    ? 'scale-105 z-10 bg-white/70'
+                    : hoveredCard && hoveredCard !== 'teacher'
+                    ? 'scale-95 blur-sm opacity-70'
+                    : 'bg-white/25 hover:bg-white/35 backdrop-blur-xl'
                 }`}
+                onMouseEnter={() => setHoveredCard('teacher')}
+                onMouseLeave={() => setHoveredCard(null)}
                 onClick={() => handleUserTypeSelect('teacher')}
               >
+                {/* 글라스모피즘 배경 레이어 */}
+                <div className="absolute inset-0 rounded-xl overflow-hidden">
+                  {/* 메인 글라스 배경 */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-white/50 via-white/35 to-white/20"></div>
+                  
+                  {/* 컬러 그라데이션 오버레이 */}
+                  <div className={`absolute inset-0 bg-gradient-to-br opacity-25 transition-all duration-500 ${
+                    userType === 'teacher' || hoveredCard === 'teacher'
+                      ? 'from-blue-400/35 via-blue-300/25 to-cyan-200/15' 
+                      : 'from-blue-400/25 via-blue-300/15 to-transparent'
+                  }`} />
+                  
+                  {/* 하이라이트 효과 */}
+                  <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent"></div>
+                  <div className="absolute top-0 left-0 bottom-0 w-px bg-gradient-to-b from-white/20 via-transparent to-transparent"></div>
+                  
+                  {/* 블러 배경 원 */}
+                  {(userType === 'teacher' || hoveredCard === 'teacher') && (
+                    <>
+                      <div className="absolute -top-4 -right-4 w-16 h-16 rounded-full blur-xl bg-blue-400/30 transition-all duration-500"></div>
+                      <div className="absolute -bottom-4 -left-4 w-20 h-20 rounded-full blur-2xl bg-cyan-300/20 transition-all duration-500"></div>
+                    </>
+                  )}
+                </div>
                 
-                선생님
-              </Button>
-              
-              <Button
-                type="button"
-                className={`w-full h-16 text-lg font-semibold rounded-xl border-2 transition-all duration-300 ease-out ${
+                {/* Content */}
+                <div className="relative z-10 flex flex-col items-center justify-center h-full p-4">
+                  <div className={`mb-2 transition-all duration-500 drop-shadow-xl ${
+                    userType === 'teacher' || hoveredCard === 'teacher' ? 'text-blue-600 scale-110' : 'text-gray-500'
+                  }`}>
+                    <FaChalkboardTeacher className="w-10 h-10" />
+                  </div>
+                  
+                  <h3 className={`text-lg font-bold mb-1 text-center transition-all duration-300 drop-shadow-lg ${
+                    userType === 'teacher' || hoveredCard === 'teacher' ? 'text-gray-900' : 'text-gray-600'
+                  }`}>
+                    선생님
+                  </h3>
+                  
+                  <div className="h-4 flex items-center justify-center min-w-0 w-full">
+                    <span className={`text-xs text-center font-medium transition-all duration-300 drop-shadow-md ${
+                      userType === 'teacher' || hoveredCard === 'teacher' ? 'text-gray-900' : 'text-gray-500'
+                    }`}>
+                      문제 출제 및 학습 관리
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 학생 카드 */}
+              <div
+                className={`relative overflow-hidden h-32 w-full rounded-xl cursor-pointer transition-all duration-500 ease-out transform-gpu border border-white/30 shadow-lg hover:shadow-xl ${
                   userType === 'student'
-                    ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700'
-                    : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50 hover:border-gray-300'
+                    ? 'scale-105 z-10 ring-2 ring-white/40 shadow-xl bg-white/80'
+                    : hoveredCard === 'student'
+                    ? 'scale-105 z-10 bg-white/70'
+                    : hoveredCard && hoveredCard !== 'student'
+                    ? 'scale-95 blur-sm opacity-70'
+                    : 'bg-white/25 hover:bg-white/35 backdrop-blur-xl'
                 }`}
+                onMouseEnter={() => setHoveredCard('student')}
+                onMouseLeave={() => setHoveredCard(null)}
                 onClick={() => handleUserTypeSelect('student')}
               >
-
-                학생
-              </Button>
+                {/* 글라스모피즘 배경 레이어 */}
+                <div className="absolute inset-0 rounded-xl overflow-hidden">
+                  {/* 메인 글라스 배경 */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-white/50 via-white/35 to-white/20"></div>
+                  
+                  {/* 컬러 그라데이션 오버레이 */}
+                  <div className={`absolute inset-0 bg-gradient-to-br opacity-25 transition-all duration-500 ${
+                    userType === 'student' || hoveredCard === 'student'
+                      ? 'from-green-400/35 via-emerald-300/25 to-teal-200/15' 
+                      : 'from-green-400/25 via-emerald-300/15 to-transparent'
+                  }`} />
+                  
+                  {/* 하이라이트 효과 */}
+                  <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent"></div>
+                  <div className="absolute top-0 left-0 bottom-0 w-px bg-gradient-to-b from-white/20 via-transparent to-transparent"></div>
+                  
+                  {/* 블러 배경 원 */}
+                  {(userType === 'student' || hoveredCard === 'student') && (
+                    <>
+                      <div className="absolute -top-4 -right-4 w-16 h-16 rounded-full blur-xl bg-green-400/30 transition-all duration-500"></div>
+                      <div className="absolute -bottom-4 -left-4 w-20 h-20 rounded-full blur-2xl bg-emerald-300/20 transition-all duration-500"></div>
+                    </>
+                  )}
+                </div>
+                
+                {/* Content */}
+                <div className="relative z-10 flex flex-col items-center justify-center h-full p-4">
+                  <div className={`mb-2 transition-all duration-500 drop-shadow-xl ${
+                    userType === 'student' || hoveredCard === 'student' ? 'text-green-600 scale-110' : 'text-gray-500'
+                  }`}>
+                    <FaUserGraduate className="w-10 h-10" />
+                  </div>
+                  
+                  <h3 className={`text-lg font-bold mb-1 text-center transition-all duration-300 drop-shadow-lg ${
+                    userType === 'student' || hoveredCard === 'student' ? 'text-gray-900' : 'text-gray-600'
+                  }`}>
+                    학생
+                  </h3>
+                  
+                  <div className="h-4 flex items-center justify-center min-w-0 w-full">
+                    <span className={`text-xs text-center font-medium transition-all duration-300 drop-shadow-md ${
+                      userType === 'student' || hoveredCard === 'student' ? 'text-gray-900' : 'text-gray-500'
+                    }`}>
+                      문제 풀이 및 학습 참여
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {userType && (
@@ -866,10 +999,10 @@ export default function JoinPage() {
         {userType && (
           <div 
             ref={(el) => { sectionRefs.current[1] = el; }}
-            className="snap-start h-screen flex items-center justify-center p-4 relative"
+            className="snap-start h-screen flex items-center justify-center p-4 pt-8 relative"
           >
             <div className="w-full max-w-md">
-              <h2 className="text-xl font-bold text-gray-900 text-center mb-8 tracking-tight">기본 정보를 입력해주세요</h2>
+              <h2 className="text-xl font-bold text-gray-900 text-center mb-6 tracking-tight">기본 정보를 입력해주세요</h2>
               
               {/* 에러 메시지 */}
               {error && (
@@ -897,10 +1030,10 @@ export default function JoinPage() {
         {userType && (
           <div 
             ref={(el) => { sectionRefs.current[2] = el; }}
-            className="snap-start h-screen flex items-center justify-center p-4 relative"
+            className="snap-start h-screen flex items-center justify-center p-4 pt-8 relative"
           >
             <div className="w-full max-w-md">
-              <h2 className="text-xl font-bold text-gray-900 text-center mb-8 tracking-tight">계정 정보를 입력해주세요</h2>
+              <h2 className="text-xl font-bold text-gray-900 text-center mb-6 tracking-tight">계정 정보를 입력해주세요</h2>
               
               <div className="space-y-6">
 {renderCurrentSection()}
@@ -916,11 +1049,11 @@ export default function JoinPage() {
               }}>
                 <Button 
                   type="button" 
-                  className={`w-full h-12 border-0 rounded-xl font-semibold transition-all duration-500 ease-out ${
+                  className={`w-full h-12 glass-button font-semibold transition-all duration-300 ${
                     isSuccess 
-                      ? 'bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700' 
-                      : 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800'
-                  }`}
+                      ? 'bg-green-600/70 hover:bg-green-600/80 border border-green-400/60 hover:border-green-300/80 text-white shadow-lg hover:shadow-xl hover:shadow-green-500/30 focus:ring-2 focus:ring-green-400/60 focus:bg-green-600/85' 
+                      : 'bg-blue-600/70 hover:bg-blue-600/80 border border-blue-400/60 hover:border-blue-300/80 text-white shadow-lg hover:shadow-xl hover:shadow-blue-500/30 focus:ring-2 focus:ring-blue-400/60 focus:bg-blue-600/85'
+                  } disabled:opacity-50 disabled:cursor-not-allowed`}
                   onClick={handleSubmitStep}
             disabled={isLoading}
           >
@@ -950,10 +1083,10 @@ export default function JoinPage() {
         {userType === 'student' && (
           <div 
             ref={(el) => { sectionRefs.current[3] = el; }}
-            className="snap-start h-screen flex items-center justify-center p-4 relative"
+            className="snap-start h-screen flex items-center justify-center p-4 pt-8 relative"
           >
             <div className="w-full max-w-md">
-              <h2 className="text-xl font-bold text-gray-900 text-center mb-8 tracking-tight">학생 정보를 입력해주세요</h2>
+              <h2 className="text-xl font-bold text-gray-900 text-center mb-6 tracking-tight">학생 정보를 입력해주세요</h2>
               
               <div className="space-y-6">
 {renderCurrentSection()}
@@ -968,11 +1101,11 @@ export default function JoinPage() {
               }}>
           <Button 
                   type="button" 
-                  className={`w-full h-12 border-0 rounded-xl font-semibold transition-all duration-500 ease-out ${
+                  className={`w-full h-12 glass-button font-semibold transition-all duration-300 ${
                     isSuccess 
-                      ? 'bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700' 
-                      : 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800'
-                  }`}
+                      ? 'bg-green-600/70 hover:bg-green-600/80 border border-green-400/60 hover:border-green-300/80 text-white shadow-lg hover:shadow-xl hover:shadow-green-500/30 focus:ring-2 focus:ring-green-400/60 focus:bg-green-600/85' 
+                      : 'bg-blue-600/70 hover:bg-blue-600/80 border border-blue-400/60 hover:border-blue-300/80 text-white shadow-lg hover:shadow-xl hover:shadow-blue-500/30 focus:ring-2 focus:ring-blue-400/60 focus:bg-blue-600/85'
+                  } disabled:opacity-50 disabled:cursor-not-allowed`}
                   onClick={handleSubmitStep}
             disabled={isLoading}
           >
@@ -993,17 +1126,17 @@ export default function JoinPage() {
       </div>
 
       {/* 로그인 페이지 이동 - 고정 하단 */}
-      <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-40">
-        <div className="text-center bg-white/80 backdrop-blur-lg rounded-xl px-6 py-3 shadow-lg border border-white/50">
-          <p className="text-sm text-gray-600 font-medium">
-            이미 계정이 있으신가요?
-            <button 
-              onClick={handleLoginClick} 
-              className="text-blue-600 font-semibold ml-2"
-            >
-              로그인
-            </button>
-          </p>
+      <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-50">
+        <div className="text-center">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 hover:bg-white/30 transition-all duration-300 group cursor-pointer" onClick={handleLoginClick}>
+            <span className="text-sm text-gray-700 font-medium">이미 계정이 있으신가요?</span>
+            <div className="flex items-center gap-1">
+              <span className="text-sm text-blue-600 font-semibold group-hover:text-blue-700 transition-colors duration-200">로그인</span>
+              <svg className="w-4 h-4 text-blue-600 group-hover:text-blue-700 group-hover:translate-x-0.5 transition-all duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+              </svg>
+            </div>
+          </div>
         </div>
       </div>
 
