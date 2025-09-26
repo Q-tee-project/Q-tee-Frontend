@@ -75,6 +75,27 @@ export interface MarketPurchaseCreate {
   product_id: number;
 }
 
+export interface UserPointResponse {
+  user_id: number;
+  available_points: number;
+  earned_points: number;
+  used_points: number;
+}
+
+export interface PointChargeRequest {
+  amount: number;
+}
+
+export interface PointTransactionResponse {
+  id: number;
+  user_id: number;
+  amount: number;
+  transaction_type: 'charge' | 'purchase' | 'refund';
+  balance_after: number;
+  created_at: string;
+  description?: string;
+}
+
 // Worksheet 관련 인터페이스
 // 각 서비스별 워크시트 타입
 export interface KoreanWorksheet {
@@ -143,6 +164,7 @@ export const getProducts = async (params?: {
   limit?: number;
   subject?: string;
   search?: string;
+  search_field?: string;
   sort_by?: string;
   sort_order?: string;
 }): Promise<MarketProduct[]> => {
@@ -197,26 +219,26 @@ export const deleteProduct = async (productId: number): Promise<void> => {
 export const purchaseProduct = async (
   purchaseData: MarketPurchaseCreate,
 ): Promise<MarketPurchase> => {
-  const response = await marketApi.post('/market/purchases', purchaseData);
+  const response = await marketApi.post('/market/purchase', purchaseData);
   return response.data;
 };
 
 // 포인트 잔액 조회
-export const getUserPoints = async (): Promise<{ user_id: number; available_points: number; total_earned: number; total_spent: number; total_charged: number; }> => {
-  const response = await marketApi.get('/market/points');
+export const getUserPoints = async (): Promise<UserPointResponse> => {
+  const response = await marketApi.get('/market/points/balance');
   return response.data;
 };
 
 // 포인트 충전
-export const chargePoints = async (amount: number): Promise<void> => {
-  await marketApi.post('/market/points/charge', { amount });
+export const chargePoints = async (chargeData: PointChargeRequest): Promise<void> => {
+  await marketApi.post('/market/points/charge', chargeData);
 };
 
 // 포인트 거래 내역
 export const getPointTransactions = async (params?: {
   skip?: number;
   limit?: number;
-}): Promise<any[]> => {
+}): Promise<PointTransactionResponse[]> => {
   const response = await marketApi.get('/market/points/transactions', { params });
   return response.data;
 };

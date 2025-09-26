@@ -1,44 +1,122 @@
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { FiShoppingCart, FiArrowLeft } from 'react-icons/fi';
+import { FiShoppingCart, FiArrowLeft, FiCreditCard } from 'react-icons/fi';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { motion } from 'framer-motion';
+import { useAuth } from '@/contexts/AuthContext';
+import { getProduct, getUserPoints, purchaseProduct, MarketProductDetail } from '@/services/marketApi';
 
 export default function ProductBuyPage() {
   const { productId } = useParams();
   const router = useRouter();
+  const { } = useAuth();
 
-  const product = {
-    id: productId,
-    title: '중학생 1학년 국어 1단원, 2단원',
-    price: 20000,
-    author: 'userName',
-    tags: ['중학교', '1학년', '국어'],
-  };
+  const [product, setProduct] = useState<MarketProductDetail | null>(null);
+  const [userPoints, setUserPoints] = useState<number>(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [purchasing, setPurchasing] = useState(false);
 
   const methods = [
-    { id: '1', name: '카카오페이' },
-    { id: '2', name: 'Q-T Pay' },
-    { id: '3', name: '계좌이체' },
+    { id: 'points', name: 'Q-T 포인트' },
   ];
 
-  const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
+  const [selectedMethod, setSelectedMethod] = useState<string>('points');
   const [agreeTerms, setAgreeTerms] = useState(false);
 
+  // 상품 및 포인트 정보 로드
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        const [productData, pointsData] = await Promise.all([
+          getProduct(Number(productId)),
+          getUserPoints()
+        ]);
+        setProduct(productData);
+        setUserPoints(pointsData.available_points);
+      } catch (error) {
+        console.error('데이터 로드 실패:', error);
+        setError('데이터를 불러오는데 실패했습니다.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (productId) {
+      loadData();
+    }
+  }, [productId]);
+
   const formattedPrice = useMemo(
-    () => `₩${product.price.toLocaleString()}`,
-    [product.price]
+    () => product ? `${product.price.toLocaleString()}P` : '0P',
+    [product?.price]
   );
 
-  const canPay = agreeTerms && Boolean(selectedMethod);
+  const canPay = agreeTerms && Boolean(selectedMethod) && product && userPoints >= product.price;
+  const insufficientPoints = product && userPoints < product.price;
 
-  const handlePayment = () => {
-    if (!canPay) return;
-    router.push(`/market/${productId}/buy/checkout`);
+  const handlePayment = async () => {
+    if (!canPay || !product) return;
+
+    setPurchasing(true);
+    try {
+      await purchaseProduct({ product_id: product.id });
+      // 구매 성공 시 결과 페이지로 이동
+      router.push(`/market/checkout?success=true&productId=${product.id}&title=${encodeURIComponent(product.title)}&price=${product.price}`);
+    } catch (error: any) {
+      console.error('구매 실패:', error);
+      alert(error.message || '구매에 실패했습니다.');
+    } finally {
+      setPurchasing(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="flex flex-col" style={{ padding: '20px', display: 'flex', gap: '20px' }}>
+        <PageHeader
+          icon={<FiShoppingCart />}
+          title="마켓플레이스"
+          variant="market"
+          description="안전하고 간편한 결제"
+        />
+        <Card className="flex-1 flex flex-col shadow-sm">
+          <CardContent className="p-6 flex justify-center items-center min-h-[400px]">
+            <div className="text-gray-500">로딩 중...</div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (error || !product) {
+    return (
+      <div className="flex flex-col" style={{ padding: '20px', display: 'flex', gap: '20px' }}>
+        <PageHeader
+          icon={<FiShoppingCart />}
+          title="마켓플레이스"
+          variant="market"
+          description="안전하고 간편한 결제"
+        />
+        <Card className="flex-1 flex flex-col shadow-sm">
+          <CardContent className="p-6 flex justify-center items-center min-h-[400px]">
+            <div className="text-center">
+              <div className="text-gray-500 mb-4">{error || '상품을 찾을 수 없습니다.'}</div>
+              <button
+                onClick={() => router.push('/market')}
+                className="px-4 py-2 bg-[#0072CE] text-white rounded-md hover:bg-[#005fa3] transition-colors"
+              >
+                마켓으로 돌아가기
+              </button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col" style={{ padding: '20px', display: 'flex', gap: '20px' }}>
@@ -66,20 +144,47 @@ export default function ProductBuyPage() {
             </CardHeader>
 
             <CardContent className="p-6">
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                {methods.map((m) => (
-                  <button
-                    key={m.id}
-                    onClick={() => setSelectedMethod(m.id)}
-                    className={`w-full rounded-lg border px-4 py-3 text-sm font-medium transition ${
-                      selectedMethod === m.id
-                        ? 'border-[#0072CE] bg-[#F0F7FF] text-[#0072CE]'
-                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                    }`}
-                  >
-                    {m.name}
-                  </button>
-                ))}
+              <div className="space-y-4">
+                {/* 포인트 잔액 표시 */}
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <FiCreditCard className="w-5 h-5 text-[#0072CE]" />
+                      <span className="font-medium">보유 포인트</span>
+                    </div>
+                    <span className={`font-bold text-lg ${
+                      insufficientPoints ? 'text-red-500' : 'text-[#0072CE]'
+                    }`}>
+                      {userPoints.toLocaleString()}P
+                    </span>
+                  </div>
+                  {insufficientPoints && (
+                    <div className="mt-2 text-sm text-red-500">
+                      포인트가 부족합니다. ({(product.price - userPoints).toLocaleString()}P 부족)
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 gap-4">
+                  {methods.map((m) => (
+                    <button
+                      key={m.id}
+                      onClick={() => setSelectedMethod(m.id)}
+                      disabled={m.id === 'points' && !!insufficientPoints}
+                      className={`w-full rounded-lg border px-4 py-3 text-sm font-medium transition ${
+                        selectedMethod === m.id
+                          ? 'border-[#0072CE] bg-[#F0F7FF] text-[#0072CE]'
+                          : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                      } ${
+                        m.id === 'points' && insufficientPoints
+                          ? 'opacity-50 cursor-not-allowed'
+                          : ''
+                      }`}
+                    >
+                      {m.name}
+                    </button>
+                  ))}
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -90,17 +195,25 @@ export default function ProductBuyPage() {
               <CardTitle className="text-base font-semibold">약관 동의</CardTitle>
             </CardHeader>
             <CardContent className="p-6">
-              <label className="flex items-start gap-3 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  className="mt-1 h-4 w-4 text-blue-600"
-                  checked={agreeTerms}
-                  onChange={(e) => setAgreeTerms(e.target.checked)}
-                />
-                <span className="text-sm text-gray-700 leading-relaxed">
-                  주문 상품, 결제 대행 서비스 이용약관 및 개인정보 제3자 제공에 모두 동의합니다.
-                </span>
-              </label>
+              <div className="space-y-4">
+                <label className="flex items-start gap-3 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    className="mt-1 h-4 w-4 text-blue-600"
+                    checked={agreeTerms}
+                    onChange={(e) => setAgreeTerms(e.target.checked)}
+                  />
+                  <span className="text-sm text-gray-700 leading-relaxed">
+                    구매 약관 및 포인트 결제에 동의합니다.
+                  </span>
+                </label>
+
+                <div className="text-xs text-gray-500 space-y-1">
+                  <p>• 구매한 상품은 즉시 이용 가능합니다.</p>
+                  <p>• 디지털 상품 특성상 구매 후 환불이 불가합니다.</p>
+                  <p>• 구매 완료 후 마이마켓에서 확인할 수 있습니다.</p>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -112,13 +225,32 @@ export default function ProductBuyPage() {
               <CardTitle className="text-base font-semibold">주문 요약</CardTitle>
             </CardHeader>
             <CardContent className="p-6 space-y-4">
+              {/* 상품 이미지 - 텍스트 렌더링 */}
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg h-32 flex items-center justify-center text-gray-700 select-none border border-gray-200 p-4">
+                <div className="text-center space-y-2">
+                  <div className="text-lg font-bold text-[#0072CE]">{product.subject_type}</div>
+                  <div className="text-sm font-semibold">{product.school_level} {product.grade}학년</div>
+                  <div className="text-xs text-gray-600 line-clamp-2 leading-tight px-2">
+                    {product.title}
+                  </div>
+                </div>
+              </div>
+
               <div>
                 <p className="text-sm text-gray-500 mb-1">상품명</p>
                 <p className="font-semibold text-gray-800">{product.title}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-500 mb-1">판매자</p>
-                <p className="text-gray-700">{product.author}</p>
+                <p className="text-gray-700">{product.seller_name}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500 mb-1">워크시트</p>
+                <p className="text-gray-700">{product.worksheet_title}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500 mb-1">문제 수</p>
+                <p className="text-gray-700">{product.problem_count}문제</p>
               </div>
               <div className="flex items-center justify-between py-4 border-t border-gray-200">
                 <span className="text-sm text-gray-500">결제 금액</span>
@@ -126,15 +258,26 @@ export default function ProductBuyPage() {
               </div>
               <button
                 onClick={handlePayment}
-                disabled={!canPay}
+                disabled={!canPay || purchasing}
                 className={`w-full py-3 rounded-lg font-semibold transition ${
-                  canPay
+                  canPay && !purchasing
                     ? 'bg-[#0072CE] text-white hover:brightness-110'
                     : 'bg-gray-300 text-white cursor-not-allowed'
                 }`}
               >
-                {formattedPrice} 결제하기
+                {purchasing ? '구매 중...' :
+                 insufficientPoints ? '포인트 부족' :
+                 `${formattedPrice} 결제하기`}
               </button>
+
+              {insufficientPoints && (
+                <button
+                  onClick={() => router.push('/market/points')}
+                  className="w-full py-2 mt-2 rounded-lg border border-[#0072CE] text-[#0072CE] hover:bg-blue-50 transition-colors text-sm"
+                >
+                  포인트 충전하기
+                </button>
+              )}
             </CardContent>
           </Card>
         </div>
