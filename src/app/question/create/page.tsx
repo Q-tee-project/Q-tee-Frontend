@@ -464,18 +464,36 @@ export default function CreatePage() {
                             }
 
                             // 지문이 업데이트된 경우 passages 배열도 업데이트
-                            let updatedPassages = currentWorksheetData.passages || [];
+                            let updatedPassages = [...(currentWorksheetData.passages || [])];
                             if (updatedPassage) {
-                              updatedPassages = (currentWorksheetData.passages || []).map((p: any) => {
+                              console.log('🔄 지문 업데이트 중:', {
+                                updatedPassage,
+                                updatedPassageKeys: Object.keys(updatedPassage),
+                                currentPassages: currentWorksheetData.passages,
+                                passageId: updatedPassage.passage_id,
+                                currentPassageIds: currentWorksheetData.passages?.map(p => p.passage_id)
+                              });
+
+                              // 기존 지문을 찾아서 업데이트
+                              let passageUpdated = false;
+                              updatedPassages = updatedPassages.map((p: any) => {
                                 if (p.passage_id === updatedPassage.passage_id) {
+                                  console.log('✅ 지문 매칭됨 - 업데이트 중:', {
+                                    originalPassage: p,
+                                    updatedPassage
+                                  });
+                                  passageUpdated = true;
                                   return {
-                                    ...p,
-                                    ...updatedPassage,
-                                    id: p.id, // 기존 id 유지
+                                    ...updatedPassage, // 새 지문 데이터로 완전 교체
+                                    id: p.id, // 기존 id만 유지
                                   };
                                 }
                                 return p;
                               });
+
+                              if (!passageUpdated) {
+                                console.log('⚠️ 지문 매칭 실패 - ID가 일치하지 않음');
+                              }
                             }
 
                             // WorksheetData 업데이트
