@@ -49,7 +49,6 @@ export const mathService = {
 
     // If math backend doesn't exist yet, return empty worksheets
     if (!response.ok) {
-      console.warn(`Math worksheets API not available (${response.status}). This is expected if the math backend is not yet implemented.`);
       return { worksheets: [], total: 0 };
     }
 
@@ -65,7 +64,6 @@ export const mathService = {
       data = { worksheets: [], total: 0 };
     }
 
-    console.log(`Fetched Math worksheets:`, data);
     return data;
   },
 
@@ -99,7 +97,6 @@ export const mathService = {
 
     // If math backend doesn't exist yet, return mock data
     if (!response.ok) {
-      console.warn(`Math worksheet problems API not available (${response.status}). This is expected if the math backend is not yet implemented.`);
       // Return mock worksheet and empty problems with correct interface
       const mockWorksheet: Worksheet = {
         id: worksheetId,
@@ -113,7 +110,6 @@ export const mathService = {
     }
 
     const data: { worksheet: Worksheet; problems: Problem[] } = await response.json(); // Updated type
-    console.log(`Fetched Math worksheet problems:`, data);
     return data;
   },
 
@@ -135,7 +131,6 @@ export const mathService = {
       const errorData = await response.json();
       throw new Error(errorData.detail || "Failed to delete Math worksheet.");
     }
-    console.log(`Deleted Math worksheet: ${worksheetId}`);
   },
 
   getDeployedAssignments: async (classId: string): Promise<Assignment[]> => {
@@ -176,12 +171,10 @@ export const mathService = {
 
     // If math backend doesn't exist yet, return empty array with helpful message
     if (!response.ok) {
-      console.warn(`Math assignments API not available (${response.status}). This is expected if the math backend is not yet implemented.`);
       return []; // Return empty array instead of throwing error
     }
 
     const data: Assignment[] = await response.json();
-    console.log(`Fetched deployed assignments for class ${classId}:`, data);
     return data;
   },
 
@@ -236,7 +229,6 @@ export const mathService = {
 
     // If math backend doesn't exist yet, simulate success
     if (!response.ok) {
-      console.warn(`Math deployment API not available (${response.status}). This is expected if the math backend is not yet implemented.`);
       // Return mock successful deployment response
       return [{
         id: Date.now(),
@@ -249,7 +241,6 @@ export const mathService = {
     }
 
     const data: AssignmentDeploymentResponse[] = await response.json();
-    console.log(`Deployed assignment:`, data);
     return data;
   },
 
@@ -292,12 +283,10 @@ export const mathService = {
 
     // If math backend doesn't exist yet, return empty array
     if (!response.ok) {
-      console.warn(`Math student assignments API not available (${response.status}). This is expected if the math backend is not yet implemented.`);
       return []; // Return empty array instead of throwing error
     }
 
     const data: Assignment[] = await response.json();
-    console.log(`Student assignments:`, data);
     return data;
   },
 
@@ -343,7 +332,6 @@ export const mathService = {
     }
 
     const data = await response.json();
-    console.log(`Assignment detail:`, data);
     return data;
   },
 
@@ -371,7 +359,6 @@ export const mathService = {
     }
 
     const data = await response.json();
-    console.log(`Test submission result:`, data);
     return data;
   },
 
@@ -399,7 +386,6 @@ export const mathService = {
     }
 
     const data = await response.json();
-    console.log(`Test session started:`, data);
     return data;
   },
 
@@ -428,7 +414,6 @@ export const mathService = {
     }
 
     const data = await response.json();
-    console.log(`Answer saved:`, data);
     return data;
   },
 
@@ -453,7 +438,6 @@ export const mathService = {
     }
 
     const responseData = await response.json();
-    console.log(`Worksheet updated:`, responseData);
     return responseData;
   },
 
@@ -478,7 +462,6 @@ export const mathService = {
     }
 
     const responseData = await response.json();
-    console.log(`Problem updated:`, responseData);
     return responseData;
   },
 
@@ -503,7 +486,6 @@ export const mathService = {
     }
 
     const responseData = await response.json();
-    console.log(`Problem regeneration started:`, responseData);
     return responseData;
   },
 
@@ -527,7 +509,6 @@ export const mathService = {
     }
 
     const responseData = await response.json();
-    console.log(`Task status:`, responseData);
     return responseData;
   },
 
@@ -552,7 +533,6 @@ export const mathService = {
     }
 
     const data = await response.json();
-    console.log(`Assignment results:`, data);
     return data;
   },
 
@@ -579,7 +559,6 @@ export const mathService = {
     }
 
     const data = await response.json();
-    console.log(`Grading session details:`, data);
     return data;
   },
 
@@ -612,7 +591,6 @@ export const mathService = {
     }
 
     const data = await response.json();
-    console.log(`Answer submitted with OCR:`, data);
     return data;
   },
 
@@ -637,7 +615,6 @@ export const mathService = {
     }
 
     const data = await response.json();
-    console.log(`Fetched pending grading sessions:`, data);
     return data;
   },
 
@@ -662,7 +639,6 @@ export const mathService = {
     }
 
     const data = await response.json();
-    console.log(`Approved grading session:`, data);
     return data;
   },
 
@@ -689,7 +665,6 @@ export const mathService = {
     }
 
     const data = await response.json();
-    console.log(`Updated grading session:`, data);
     return data;
   },
 
@@ -715,7 +690,6 @@ export const mathService = {
     }
 
     const data = await response.json();
-    console.log(`Student grading result:`, data);
     return data;
   },
 };

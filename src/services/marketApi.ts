@@ -318,13 +318,11 @@ export const getUserWorksheets = async (service: 'korean' | 'math' | 'english', 
     switch (service) {
       case 'korean':
         response = await axios.get(`${KOREAN_API_BASE_URL}/api/korean-generation/worksheets`, { headers });
-        console.log('Korean worksheets response:', response.data);
         rawWorksheets = response.data.worksheets || response.data || [];
         break;
 
       case 'math':
         response = await axios.get(`${MATH_API_BASE_URL}/api/worksheets`, { headers });
-        console.log('Math worksheets response:', response.data);
         rawWorksheets = response.data.worksheets || response.data || [];
         break;
 
@@ -336,7 +334,6 @@ export const getUserWorksheets = async (service: 'korean' | 'math' | 'english', 
           headers,
           params: { user_id: userId }
         });
-        console.log('English worksheets response:', response.data);
         rawWorksheets = response.data || [];
         break;
 

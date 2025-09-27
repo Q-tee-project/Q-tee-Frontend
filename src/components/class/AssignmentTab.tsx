@@ -48,7 +48,6 @@ export function AssignmentTab({ classId }: AssignmentTabProps) {
       } else if (activeSubject === 'math') {
         data = await mathService.getDeployedAssignments(classId.toString()); // Convert to string for API call if needed
         // Assuming mathService has a similar getDeployedAssignments method
-        // data = await mathService.getDeployedAssignments(classId.toString());
         console.warn("MathService.getDeployedAssignments is not yet implemented.");
       } else if (activeSubject === 'english') {
         data = await EnglishService.getDeployedAssignments(classId.toString());
@@ -250,12 +249,11 @@ export function AssignmentTab({ classId }: AssignmentTabProps) {
                 <button
                   key={tab.id}
                   onClick={() => setActiveSubject(tab.id)}
-                  className={`border-b-2 font-medium text-sm ${
+                  className={`px-5 py-2.5 border-b-2 font-medium text-sm ${
                     activeSubject === tab.id
                       ? 'border-blue-500 text-blue-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }`}
-                  className="px-5 py-2.5"
                 >
                   {tab.label}
                   {tab.count > 0 && (

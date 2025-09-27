@@ -38,7 +38,6 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
   // SSE 연결 관리
   useEffect(() => {
     if (!isLoading && isAuthenticated && userType && userProfile) {
-      console.log(`SSE 연결 시작: ${userType} ${userProfile.id}`);
 
       // SSE 연결
       notificationService.connect(userType, userProfile.id);
@@ -59,7 +58,6 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
             20
           );
           if (storedNotifications.length > 0) {
-            console.log(`저장된 알림 ${storedNotifications.length}개 로드`);
             setNotifications(prev => [...storedNotifications, ...prev]);
           }
         } catch (error) {
@@ -71,7 +69,6 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
 
       // 알림 리스너 등록
       const handleNotification = (notification: SSENotification) => {
-        console.log('새 알림 수신:', notification);
         setNotifications(prev => [notification, ...prev]);
       };
 
@@ -82,7 +79,6 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
         notificationService.removeListener(handleNotification);
         notificationService.disconnect();
         setIsConnected(false);
-        console.log('SSE 연결 해제');
       };
     } else {
       // 로그아웃이나 인증 실패 시 연결 해제
@@ -139,9 +135,7 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
       try {
         const success = await notificationService.sendTestNotification(userType, userProfile.id);
         if (success) {
-          console.log('테스트 알림 전송 성공');
         } else {
-          console.error('테스트 알림 전송 실패');
         }
       } catch (error) {
         console.error('테스트 알림 전송 에러:', error);

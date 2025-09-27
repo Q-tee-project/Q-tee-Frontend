@@ -80,7 +80,6 @@ export default function JoinPage() {
       const currentSectionIndex = Math.round(scrollTop / sectionHeight);
       const newStep = (currentSectionIndex + 1) as Step;
       
-      console.log('스크롤 위치 감지:', { scrollTop, sectionHeight, currentSectionIndex, newStep });
       
       if (newStep !== currentStep && newStep >= 1 && newStep <= getMaxStep()) {
         setCurrentStep(newStep);
@@ -99,27 +98,22 @@ export default function JoinPage() {
     let scrollTimeout: NodeJS.Timeout;
     
     const handleScroll = (e: WheelEvent) => {
-      console.log('휠 이벤트 감지:', { deltaY: e.deltaY, isScrolling });
       
       // 이미 스크롤 중이면 무시
       if (isScrolling) {
-        console.log('스크롤 중이라 무시');
         e.preventDefault();
         return;
       }
 
       // 스크롤 감도 조절 (더 민감하게)
       if (Math.abs(e.deltaY) < 0.1) {
-        console.log('스크롤 감도 부족:', Math.abs(e.deltaY));
         return;
       }
 
       // 아래로 스크롤 (다음 섹션으로)
       if (e.deltaY > 0) {
-        console.log('스크롤 다운 시도:', { currentStep, canScrollToNext, maxStep: getMaxStep() });
         
         if (!canScrollToNext || isTypingPhone) {
-          console.log('스크롤 차단됨:', { canScrollToNext, isTypingPhone });
           e.preventDefault();
           return;
         }
@@ -130,7 +124,6 @@ export default function JoinPage() {
           
           const nextStep = currentStep + 1;
           const sectionIndex = nextStep - 1;
-          console.log('스크롤 실행:', { currentStep, nextStep, sectionIndex });
           
           // 먼저 아이콘 상태를 업데이트하고 스크롤
           setCurrentStep(nextStep as Step);
@@ -143,18 +136,15 @@ export default function JoinPage() {
             setIsScrolling(false);
           }, 1000);
         } else {
-          console.log('스크롤 차단됨: 마지막 단계임');
         }
       } 
       // 위로 스크롤 (이전 섹션으로)
       else if (e.deltaY < 0 && currentStep > 1) {
-        console.log('스크롤 업 시도:', { currentStep, deltaY: e.deltaY });
         
         e.preventDefault();
         setIsScrolling(true);
         
         const prevStep = currentStep - 1;
-        console.log('스크롤 업 실행:', { currentStep, prevStep });
         
         setCurrentStep(prevStep as Step);
         setTimeout(() => {
@@ -414,11 +404,6 @@ export default function JoinPage() {
   // 현재 단계 완료 상태 확인 시 스크롤 가능 여부 업데이트 및 자동 스크롤
   useEffect(() => {
     const canScroll = !!isCurrentStepComplete();
-    console.log(`Step ${currentStep}: canScroll = ${canScroll}`, { 
-      userType, 
-      formData: { name: formData.name, email: formData.email, phone: formData.phone },
-      fieldErrors 
-    });
     
     const prevCanScroll = canScrollToNext;
     setCanScrollToNext(canScroll);
@@ -475,7 +460,6 @@ export default function JoinPage() {
     
     for (const path of possiblePaths) {
       try {
-        console.log(`Trying API path: ${path}`);
         const baseUrl = process.env.NEXT_PUBLIC_AUTH_API_BASE_URL || 'http://localhost:8003';
         const response = await fetch(`${baseUrl}${path}`, {
           method: 'POST',
@@ -497,11 +481,9 @@ export default function JoinPage() {
           }
           
           apiSuccess = true;
-          console.log(`API 성공: ${path}`, data);
           break;
         }
       } catch (error) {
-        console.log(`API 실패: ${path}`, error);
         continue;
       }
     }
@@ -535,16 +517,13 @@ export default function JoinPage() {
             setIsUsernameChecked(true);
             setIsUsernameAvailable(false);
             setError('이미 사용 중인 아이디입니다.');
-            console.log(`Username ${username} already exists`);
           }
         } else {
           setIsUsernameChecked(true);
           setIsUsernameAvailable(true);
           setError('');
-          console.log(`Username ${username} is available`);
         }
       } catch (error) {
-        console.log('Username check with signup failed, proceeding with client validation');
         setIsUsernameChecked(true);
         setIsUsernameAvailable(true);
         setError('');

@@ -101,7 +101,6 @@ export default function RegisterPage({ params }: RegisterPageProps) {
       // 등록 성공 후 승인 대기 탭으로 이동
       router.push(`/class/${classId}?tab=approval`);
       
-      // TODO: 나중에 학생이 코드를 입력하면 실제 백엔드 API 호출
       console.log('학생이 초대 완료 상태로 등록되었습니다. 학생이 코드를 입력할 때까지 대기합니다.');
     } catch (error: any) {
       console.error('학생 등록 실패:', error);

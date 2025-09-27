@@ -36,19 +36,16 @@ class NotificationService {
     }
 
     const url = `${this.baseUrl}/api/notifications/stream/${userType}/${userId}`;
-    console.log('SSE 연결 시도:', url);
 
     this.eventSource = new EventSource(url);
 
     this.eventSource.onopen = () => {
-      console.log('SSE 연결 성공');
       this.reconnectAttempts = 0;
     };
 
     this.eventSource.onmessage = (event) => {
       try {
         const notification: SSENotification = JSON.parse(event.data);
-        console.log('새 알림 수신:', notification);
         this.notifyListeners(notification);
       } catch (error) {
         console.error('알림 파싱 에러:', error);
@@ -65,7 +62,6 @@ class NotificationService {
     if (this.eventSource) {
       this.eventSource.close();
       this.eventSource = null;
-      console.log('SSE 연결 해제');
     }
     this.reconnectAttempts = 0;
   }
@@ -75,13 +71,11 @@ class NotificationService {
       this.reconnectAttempts++;
       const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1);
 
-      console.log(`${delay}ms 후 재연결 시도 (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
 
       setTimeout(() => {
         this.connect(userType, userId);
       }, delay);
     } else {
-      console.error('최대 재연결 시도 횟수 초과');
     }
   }
 

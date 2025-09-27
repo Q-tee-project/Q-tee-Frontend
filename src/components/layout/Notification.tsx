@@ -173,15 +173,11 @@ export default function NotificationPanel({ isOpen, onClose, bellMenuRef }: Noti
   // ===== 백엔드 API 연결 시 수정할 부분 =====
   const handleRemoveNotification = React.useCallback((id: string) => {
     setNotifications((prev) => prev.filter((n) => n.id !== id));
-    // TODO: 백엔드 개발자 - API 호출 추가
-    // mockNotificationAPI.deleteNotification(id);
   }, []);
 
   const handleClearAll = React.useCallback(() => {
     setNotifications([]);
     setExpandedTypes(new Set());
-    // TODO: 백엔드 개발자 - API 호출 추가
-    // mockNotificationAPI.deleteAllNotifications();
   }, []);
 
   const handleExpandType = React.useCallback((type: NotificationType) => {
@@ -211,8 +207,6 @@ export default function NotificationPanel({ isOpen, onClose, bellMenuRef }: Noti
       newSet.delete(type);
       return newSet;
     });
-    // TODO: 백엔드 개발자 - API 호출 추가
-    // mockNotificationAPI.deleteNotificationsByType(type);
   }, []);
 
   // 알림 클릭 시 페이지 이동 함수

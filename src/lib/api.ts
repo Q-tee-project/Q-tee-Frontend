@@ -29,12 +29,6 @@ async function apiRequest<T>(endpoint: string, options: RequestInit = {}, baseUr
     ...options,
   };
 
-  console.log('🌐 DEBUG Request:', {
-    url,
-    method: config.method || 'GET',
-    headers: config.headers,
-    body: config.body,
-  });
 
   try {
     const response = await fetch(url, config);
@@ -42,7 +36,6 @@ async function apiRequest<T>(endpoint: string, options: RequestInit = {}, baseUr
     if (!response.ok) {
       // 401 에러 (토큰 만료)인 경우 자동 로그아웃 처리
       if (response.status === 401 && onTokenExpired) {
-        console.log('🚨 Token expired, logging out...');
         onTokenExpired();
       }
       

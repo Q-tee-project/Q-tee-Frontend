@@ -94,7 +94,6 @@ export default function TestPage() {
   }, []);
 
   const loadWorksheets = async () => {
-    console.log('배포된 과제 로드 시작... 과목:', selectedSubject);
     setIsLoading(true);
     try {
       // 학생용 과제 목록 가져오기
@@ -108,23 +107,17 @@ export default function TestPage() {
       if (selectedSubject === Subject.MATH) {
         try {
           assignmentData = await mathService.getStudentAssignments(userProfile.id);
-          console.log('수학 과제 데이터:', assignmentData);
         } catch (error) {
-          console.log('수학 과제 없음 또는 오류:', error);
         }
       } else if (selectedSubject === '국어') {
         try {
           assignmentData = await koreanService.getStudentAssignments(userProfile.id);
-          console.log('국어 과제 데이터:', assignmentData);
         } catch (error) {
-          console.log('국어 과제 없음 또는 오류:', error);
         }
       } else if (selectedSubject === '영어') {
         try {
           assignmentData = await EnglishService.getStudentAssignments(userProfile.id);
-          console.log('영어 과제 데이터:', assignmentData);
         } catch (error) {
-          console.log('영어 과제 없음 또는 오류:', error);
         }
       }
 
@@ -178,7 +171,6 @@ export default function TestPage() {
         }
       });
 
-      console.log('📋 변환된 워크시트 데이터:', worksheetData);
 
       setWorksheets(worksheetData);
       // 처음에는 아무것도 선택하지 않음
@@ -209,10 +201,8 @@ export default function TestPage() {
   // 워크시트의 문제들 로드
   const loadWorksheetProblems = async (worksheetId: number) => {
     try {
-      console.log('📚 과제 문제 로드 시작 - worksheetId:', worksheetId, '과목:', selectedSubject);
 
       // 학생용 과제 상세 정보 가져오기
-      console.log('📚 API 호출 시작...');
       if (!userProfile?.id) {
         console.error('사용자 정보가 없습니다');
         return;
@@ -233,30 +223,20 @@ export default function TestPage() {
         }
       }
       else {
-        console.log('📚 지원하지 않는 과목:', selectedSubject);
         setError('해당 과목은 아직 지원되지 않습니다.');
         return;
       }
-      console.log('📚 과제 상세 정보 전체:', assignmentDetail);
-      console.log('📚 과제 정보:', assignmentDetail?.assignment);
-      console.log('📚 배포 정보:', assignmentDetail?.deployment);
 
       // 과목별로 다른 필드명 사용
       let problems = [];
       if (selectedSubject === '영어') {
         problems = assignmentDetail?.questions || [];
-        console.log('📚 영어 문제 목록:', problems);
-        console.log('📚 영어 문제 개수:', problems.length);
 
         // 영어 지문 데이터 저장
         const passages = assignmentDetail?.passages || [];
         setEnglishPassages(passages);
-        console.log('📚 영어 지문 목록:', passages);
-        console.log('📚 영어 지문 개수:', passages.length);
       } else {
         problems = assignmentDetail?.problems || [];
-        console.log('📚 문제 목록:', problems);
-        console.log('📚 문제 개수:', problems.length);
 
         // 영어가 아닌 경우 지문 데이터 초기화
         setEnglishPassages([]);
@@ -264,14 +244,9 @@ export default function TestPage() {
 
       // 응답 구조 확인
       if (assignmentDetail) {
-        console.log('📚 응답 키들:', Object.keys(assignmentDetail));
-        if (problems.length > 0) {
-          console.log('📚 첫 번째 문제:', problems[0]);
-        }
       }
 
       if (!problems || problems.length === 0) {
-        console.warn('⚠️ 문제가 없습니다. 과제가 제대로 생성되었는지 확인하세요.');
         setError('과제에 문제가 없습니다. 선생님에게 문의하세요.');
       }
 
@@ -297,14 +272,10 @@ export default function TestPage() {
 
   // 문제지 선택 핸들러
   const handleWorksheetSelect = async (worksheet: Worksheet | KoreanWorksheet) => {
-    console.log('📝 과제 선택:', worksheet);
-    console.log('📝 과제 상태:', (worksheet as any).status);
-    console.log('📝 showStudentResult 현재값:', showStudentResult);
     setSelectedWorksheet(worksheet);
 
     // Check if this is a completed assignment (completed 또는 submitted 상태)
     const isCompleted = (worksheet as any).status === 'completed' || (worksheet as any).status === 'submitted';
-    console.log('📝 응시 완료 여부:', isCompleted);
 
     if (isCompleted && userProfile) {
       // Show result view for completed assignments - still need to load problems for display
@@ -340,11 +311,9 @@ export default function TestPage() {
       if (selectedSubject === '국어') {
         // 국어는 세션 없이 바로 시작
         setIsTestStarted(true);
-        console.log('국어 과제 시작');
       } else if (selectedSubject === '영어') {
         // 영어는 세션 없이 바로 시작 (국어와 동일)
         setIsTestStarted(true);
-        console.log('영어 과제 시작');
       } else {
         // 수학은 세션 기반으로 시작
         const session = await mathService.startTest(selectedWorksheet.id, userProfile.id);
@@ -361,7 +330,6 @@ export default function TestPage() {
 
         setTestSession(session);
         setIsTestStarted(true);
-        console.log('수학 과제 세션 시작:', session);
       }
     } catch (error: any) {
       console.error('과제 시작 실패:', error);
@@ -383,27 +351,19 @@ export default function TestPage() {
       try {
         // 모든 답안을 일반 저장으로 처리 (손글씨 이미지 포함)
         await mathService.saveAnswer(testSession.session_id, problemId, answer);
-        console.log('수학 답안 임시 저장 완료:', {
-          problemId,
-          answerType: answer.startsWith('data:image/') ? '손글씨 이미지' : '텍스트',
-          preview: answer.substring(0, 50),
-        });
       } catch (error) {
         console.error('답안 저장 실패:', error);
         // 실패해도 UI는 정상 작동하도록 함
       }
     } else if (selectedSubject === '국어') {
-      console.log('국어 답안 로컬 저장:', { problemId, answer });
       // 국어는 로컬에만 저장 (임시)
     }
   };
 
   // OCR 처리 핸들러
   const handleOCRCapture = async (problemId: number, imageBlob: Blob) => {
-    console.log('🔍 OCR 디버그: handleOCRCapture 호출됨', { problemId, blobSize: imageBlob.size });
 
     if (!testSession || selectedSubject !== Subject.MATH) {
-      console.warn('OCR은 수학 과제에서만 지원됩니다.');
       return;
     }
 
@@ -421,7 +381,6 @@ export default function TestPage() {
 
       // If OCR returns text, update the answer
       if (result.extracted_text) {
-        console.log('OCR 추출된 텍스트:', result.extracted_text);
         handleAnswerChange(problemId, result.extracted_text);
       }
     } catch (error) {
@@ -483,7 +442,6 @@ export default function TestPage() {
         );
         setTestResult(result);
         setShowResultModal(true);
-        console.log('국어 과제 제출 완료:', result);
 
         // 과제 목록 새로 불러오기 (상태 업데이트 반영)
         await loadWorksheets();
@@ -491,7 +449,6 @@ export default function TestPage() {
         // 영어 과제 제출
         if (!selectedWorksheet || !userProfile) return;
         try {
-          console.log('🎯 영어 과제 제출 전 answers 상태:', answers);
           const result = await EnglishService.submitTest(
             selectedWorksheet.id,
             userProfile.id,
@@ -499,7 +456,6 @@ export default function TestPage() {
           );
           setTestResult(result);
           setShowResultModal(true);
-          console.log('영어 과제 제출 완료:', result);
 
           // 과제 목록 새로 불러오기 (상태 업데이트 반영)
           await loadWorksheets();

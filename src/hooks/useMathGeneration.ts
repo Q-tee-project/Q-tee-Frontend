@@ -28,7 +28,6 @@ export const useMathGeneration = () => {
         previewQuestions: [],
       });
 
-      console.log('🚀 문제 생성 요청 데이터:', requestData);
 
       // 현재 로그인한 사용자 정보 가져오기
       const currentUser = JSON.parse(localStorage.getItem('user_profile') || '{}');
@@ -99,7 +98,6 @@ export const useMathGeneration = () => {
         target_question_id: questionId,
       };
 
-      console.log('🔄 문제 재생성 요청:', regenerationData);
 
       // 재생성 API 호출 (Bearer 토큰 포함)
       const token = localStorage.getItem('access_token');
@@ -199,14 +197,12 @@ export const useMathGeneration = () => {
         });
         const data = await response.json();
 
-        console.log('📊 태스크 상태:', data);
 
         if (data.status === 'PROGRESS') {
           updateState({
             generationProgress: Math.round((data.current / data.total) * 100),
           });
         } else if (data.status === 'SUCCESS') {
-          console.log('✅ 문제 생성 성공:', data.result);
           // 성공 시 워크시트 상세 조회
           if (data.result && data.result.worksheet_id) {
             await fetchWorksheetResult(data.result.worksheet_id, subject_type);
@@ -261,23 +257,9 @@ export const useMathGeneration = () => {
       });
       const data = await response.json();
 
-      console.log('🔍 워크시트 조회 결과:', data);
-      console.log(`📊 받은 문제 개수: ${data.problems?.length || 0}`);
 
       // 원본 문제 데이터 상세 출력
       if (data.problems && Array.isArray(data.problems)) {
-        console.log('📝 원본 문제 데이터 상세:');
-        data.problems.forEach((problem: any, index: number) => {
-          console.log(`문제 ${index + 1}:`, {
-            id: problem.id,
-            question: problem.question,
-            question_length: problem.question?.length || 0,
-            choices: problem.choices,
-            correct_answer: problem.correct_answer,
-            explanation: problem.explanation,
-            explanation_length: problem.explanation?.length || 0,
-          });
-        });
 
         // 백엔드 데이터를 프론트엔드 형식으로 변환 (연속 번호 사용)
         const convertedQuestions: PreviewQuestion[] = data.problems.map(
@@ -321,15 +303,9 @@ export const useMathGeneration = () => {
           },
         );
 
-        console.log('📈 변환된 문제 데이터:', convertedQuestions);
 
         // 문제 유효성 검증 (기준 완화 및 상세 분석)
         const validQuestions = convertedQuestions.filter((q, index) => {
-          console.log(
-            `
-🔍 문제 ${index + 1} 검증 중:`,
-            q.question || q.title,
-          );
 
           const hasQuestion =
             q.question && typeof q.question === 'string' && q.question.trim().length > 0;
@@ -361,17 +337,6 @@ export const useMathGeneration = () => {
             !isErrorQuestion &&
             !isTitlePattern;
 
-          console.log(`📊 검증 결과:`, {
-            hasQuestion: hasQuestion,
-            hasTitle: hasTitle,
-            hasExplanation: hasExplanation,
-            isEmptyQuestion: isEmptyQuestion,
-            isErrorQuestion: isErrorQuestion,
-            isTitlePattern: isTitlePattern,
-            isValid: isValid,
-            questionLength: q.question?.length || 0,
-            explanationLength: q.explanation?.length || 0,
-          });
 
           if (!isValid) {
             if (typeof console !== 'undefined' && console.error) {
@@ -396,7 +361,6 @@ export const useMathGeneration = () => {
           return isValid;
         });
 
-        console.log(`✅ 유효한 문제: ${validQuestions.length}/${convertedQuestions.length}`);
 
         if (validQuestions.length === 0) {
           console.error('❌ 모든 문제가 무효함');
@@ -411,7 +375,6 @@ export const useMathGeneration = () => {
             explanation: q.explanation || '[디버깅] 해설이 없는 문제입니다.',
           }));
 
-          console.log('🔧 강제 표시될 문제들:', forceShowInvalidQuestions);
 
           updateState({
             errorMessage:
@@ -423,7 +386,6 @@ export const useMathGeneration = () => {
 
         if (validQuestions.length < convertedQuestions.length) {
           const invalidCount = convertedQuestions.length - validQuestions.length;
-          console.warn(`⚠️ ${invalidCount}개 문제 제외됨`);
           updateState({
             errorMessage: `${invalidCount}개의 문제에 오류가 있어 제외되었습니다.\n유효한 ${validQuestions.length}개 문제만 표시됩니다.\n\n더 많은 유효 문제가 필요하면 다시 생성해주세요.`,
           });

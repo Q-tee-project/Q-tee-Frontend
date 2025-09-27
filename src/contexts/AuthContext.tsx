@@ -42,7 +42,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     
     // 토큰 만료 시 자동 로그아웃 콜백 설정
     setTokenExpiredCallback(() => {
-      console.log('토큰이 만료되어 자동 로그아웃됩니다.');
       logout();
       // Next.js router를 사용하여 페이지 새로고침 없이 이동
       router.push('/');
