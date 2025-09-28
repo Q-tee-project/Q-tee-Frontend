@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { studentId: string } }
+  { params }: { params: Promise<{ assignmentId: string; studentId: string }> }
 ) {
   try {
-    const { studentId } = await params;
+    const { assignmentId, studentId } = await params;
     const url = new URL(request.url);
     const subject = url.searchParams.get('subject') || 'math';
 
@@ -15,13 +15,13 @@ export async function GET(
 
     if (subject === 'math') {
       targetUrl = 'http://localhost:8001';
-      endpoint = `/api/assignments/student/${studentId}`;
+      endpoint = `/api/assignments/${assignmentId}/student/${studentId}`;
     } else if (subject === 'korean') {
       targetUrl = 'http://localhost:8004';
-      endpoint = `/api/assignments/student/${studentId}`;
+      endpoint = `/api/assignments/${assignmentId}/student/${studentId}`;
     } else if (subject === 'english') {
       targetUrl = 'http://localhost:8005';
-      endpoint = `/api/assignments/student/${studentId}`;
+      endpoint = `/api/assignments/${assignmentId}/student/${studentId}`;
     } else {
       return NextResponse.json(
         { error: 'Invalid subject' },
@@ -39,9 +39,10 @@ export async function GET(
       headers.Authorization = authHeader;
     }
 
-    console.log('📡 Student assignments request:', {
+    console.log('📡 Assignment detail request:', {
       url: `${targetUrl}${endpoint}`,
       subject,
+      assignmentId,
       studentId,
       headers
     });
@@ -82,7 +83,7 @@ export async function GET(
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Student assignments proxy error:', error);
+    console.error('Assignment detail proxy error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

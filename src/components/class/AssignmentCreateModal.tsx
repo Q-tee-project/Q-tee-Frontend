@@ -20,12 +20,11 @@ import {
 } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
 import { IoIosClose } from "react-icons/io";
-import { koreanService, KoreanWorksheet, AssignmentDeployRequest, Worksheet } from '@/services/koreanService';
+import { koreanService, KoreanWorksheet } from '@/services/koreanService';
 import { mathService } from '@/services/mathService';
 import { Worksheet as MathWorksheet } from '@/services/marketApi'; // Re-using Worksheet interface from marketApi for math
 import { useAuth } from '@/contexts/AuthContext';
-import { classroomService } from '@/services/authService';
-import { EnglishService, EnglishAssignmentDeployRequest } from '@/services/englishService';
+import { EnglishService } from '@/services/englishService';
 import { EnglishWorksheetData } from '@/types/english';
 
 // 타입 별칭
@@ -35,7 +34,6 @@ interface AssignmentCreateModalProps {
   onClose: () => void;
   onAssignmentCreated: () => void;
   classId: string;
-  onDeploy: (worksheetIds: number[]) => void;
 }
 
 export function AssignmentCreateModal({
@@ -43,7 +41,6 @@ export function AssignmentCreateModal({
   onClose,
   onAssignmentCreated,
   classId,
-  onDeploy,
 }: AssignmentCreateModalProps) {
   const { userProfile } = useAuth();
   const [activeSubject, setActiveSubject] = useState<'korean' | 'math' | 'english'>('korean');
@@ -108,53 +105,18 @@ export function AssignmentCreateModal({
 
     try {
       if (activeSubject === 'english') {
-        // 영어의 경우 학생 목록을 가져와서 바로 deploy
-        const students = await classroomService.getClassroomStudents(parseInt(classId));
-        const studentIds = students.map(student => student.id);
-
+        // 영어의 경우 국어/수학과 동일하게 draft 상태로 생성만 함
         for (const worksheetId of selectedWorksheetIds) {
-          const deployRequest = {
-            assignment_id: worksheetId as number,
-            student_ids: studentIds,
-            classroom_id: parseInt(classId)
-          };
-
-          const response = await fetch('/api/assignments/deploy', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-            },
-            body: JSON.stringify({ ...deployRequest, subject: activeSubject }),
-          });
-
-          if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.detail || '과제 배포에 실패했습니다.');
-          }
+          await EnglishService.createAssignment(worksheetId as number, parseInt(classId));
         }
-        alert(`${selectedWorksheetIds.length}개의 영어 과제가 성공적으로 배포되었습니다.`);
+        alert(`${selectedWorksheetIds.length}개의 영어 과제가 성공적으로 생성되었습니다.`);
       } else {
-        // 국어, 수학의 경우 기존 create 방식 사용
+        // 국어, 수학의 경우 직접 서비스 호출
         for (const worksheetId of selectedWorksheetIds) {
-          const createRequest = {
-            worksheet_id: worksheetId as number,
-            classroom_id: parseInt(classId),
-            subject: activeSubject
-          };
-
-          const response = await fetch('/api/assignments/create', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-            },
-            body: JSON.stringify(createRequest),
-          });
-
-          if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.detail || '과제 생성에 실패했습니다.');
+          if (activeSubject === 'korean') {
+            await koreanService.createAssignment(worksheetId as number, parseInt(classId));
+          } else if (activeSubject === 'math') {
+            await mathService.createAssignment(worksheetId as number, parseInt(classId));
           }
         }
         alert(`${selectedWorksheetIds.length}개의 과제가 성공적으로 생성되었습니다.`);
