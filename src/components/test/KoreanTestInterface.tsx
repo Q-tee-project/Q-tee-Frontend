@@ -159,7 +159,7 @@ export function KoreanTestInterface({
                       }`}>
                         {'①②③④⑤⑥⑦⑧⑨⑩'[index] || `${index + 1}.`}
                       </span>
-                      <span className="flex-1">{choice}</span>
+                      <span className="flex-1">{choice.replace(/^[①②③④⑤⑥⑦⑧⑨⑩]\s*/, '')}</span>
                     </div>
                   </button>
                 ))}

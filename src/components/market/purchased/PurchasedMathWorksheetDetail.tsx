@@ -129,28 +129,31 @@ export const PurchasedMathWorksheetDetail: React.FC<PurchasedMathWorksheetDetail
                       <div className="mb-4">
                         <h4 className="font-medium text-gray-800 mb-3">선택지</h4>
                         <div className="space-y-2">
-                          {problem.choices.map((choice, choiceIndex) => (
-                            <div key={choiceIndex} className="flex items-start gap-3">
-                              <div className={`
-                                w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0 mt-0.5
-                                ${showAnswerSheet && problem.correct_answer === String.fromCharCode(65 + choiceIndex)
-                                  ? 'bg-green-100 text-green-700 border-2 border-green-300'
-                                  : 'bg-gray-100 text-gray-600'
-                                }
-                              `}>
-                                {String.fromCharCode(65 + choiceIndex)}
+                          {problem.choices.map((choice, choiceIndex) => {
+                            const displayChoice = choice.replace(/^[A-E][\.\)]\s*/, '');
+                            return (
+                              <div key={choiceIndex} className="flex items-start gap-3">
+                                <div className={`
+                                  w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0 mt-0.5
+                                  ${showAnswerSheet && problem.correct_answer === String.fromCharCode(65 + choiceIndex)
+                                    ? 'bg-green-100 text-green-700 border-2 border-green-300'
+                                    : 'bg-gray-100 text-gray-600'
+                                  }
+                                `}>
+                                  {String.fromCharCode(65 + choiceIndex)}
+                                </div>
+                                <div className={`
+                                  flex-1 py-1 text-gray-700
+                                  ${showAnswerSheet && problem.correct_answer === String.fromCharCode(65 + choiceIndex)
+                                    ? 'font-medium text-green-700'
+                                    : ''
+                                  }
+                                `}>
+                                  <LaTeXRenderer content={displayChoice} />
+                                </div>
                               </div>
-                              <div className={`
-                                flex-1 py-1 text-gray-700
-                                ${showAnswerSheet && problem.correct_answer === String.fromCharCode(65 + choiceIndex)
-                                  ? 'font-medium text-green-700'
-                                  : ''
-                                }
-                              `}>
-                                <LaTeXRenderer content={choice} />
-                              </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       </div>
                     )}

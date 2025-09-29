@@ -204,7 +204,7 @@ export const PurchasedKoreanWorksheetDetail: React.FC<PurchasedKoreanWorksheetDe
                                             {showAnswerSheet && isCorrect ? '✓' : optionLabel}
                                           </span>
                                           <div className="flex-1 text-gray-900">
-                                            {choice}
+                                            {choice.replace(/^[①②③④⑤⑥⑦⑧⑨⑩]\s*/, '')}
                                           </div>
                                           {showAnswerSheet && isCorrect && (
                                             <span className="text-xs font-medium text-green-700 bg-green-200 px-2 py-1 rounded">

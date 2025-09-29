@@ -205,7 +205,7 @@ export const MathWorksheetDetail: React.FC<MathWorksheetDetailProps> = ({
                             {problem.choices.map((choice: string, choiceIndex: number) => {
                               const optionLabel = String.fromCharCode(65 + choiceIndex);
                               const isCorrect = problem.correct_answer === optionLabel;
-                              const displayChoice = choice.replace(/^[A-E]\)\s*/, '');
+                              const displayChoice = choice.replace(/^[A-E][\.\)]\s*/, '');
                               return (
                                 <div
                                   key={choiceIndex}
