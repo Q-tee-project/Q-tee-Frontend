@@ -70,7 +70,7 @@ export interface AssignmentDeployRequest {
   student_ids: number[];
 }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_KOREAN_SERVICE_URL || "http://localhost:8004/api"; // Adjust as per your backend setup
+const API_BASE_URL = process.env.NEXT_PUBLIC_KOREAN_SERVICE_URL || "http://localhost:8004"; // Adjust as per your backend setup
 
 const getToken = (): string | null => {
   if (typeof window !== 'undefined') {
@@ -88,7 +88,7 @@ export const koreanService = {
       throw new Error("Authentication token not found. Please log in.");
     }
 
-    const response = await fetch(`${API_BASE_URL}/korean-generation/worksheets?skip=${skip}&limit=${limit}`, {
+    const response = await fetch(`${API_BASE_URL}/api/korean-generation/worksheets?skip=${skip}&limit=${limit}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -115,7 +115,7 @@ export const koreanService = {
     }
 
     const response = await fetch(
-      `${API_BASE_URL}/korean-generation/worksheets/${worksheetId}`,
+      `${API_BASE_URL}/api/korean-generation/worksheets/${worksheetId}`,
       {
         method: "GET",
         headers: {
@@ -141,7 +141,7 @@ export const koreanService = {
       throw new Error("Authentication token not found. Please log in.");
     }
 
-    const response = await fetch(`${API_BASE_URL}/korean-generation/worksheets/${worksheetId}`, {
+    const response = await fetch(`${API_BASE_URL}/api/korean-generation/worksheets/${worksheetId}`, {
       method: "DELETE",
       headers: {
         "Content-Type": "application/json",
@@ -162,7 +162,7 @@ export const koreanService = {
       throw new Error("Authentication token not found. Please log in.");
     }
 
-    const response = await fetch(`${API_BASE_URL}/assignments/classrooms/${classId}/assignments`, {
+    const response = await fetch(`${API_BASE_URL}/api/assignments/classrooms/${classId}/assignments`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -180,13 +180,40 @@ export const koreanService = {
     return data;
   },
 
+  // 과제 생성 (배포하지 않고 생성만)
+  createAssignment: async (worksheetId: number, classroomId: number): Promise<any> => {
+    const token = getToken();
+    if (!token) {
+      throw new Error("Authentication token not found. Please log in.");
+    }
+
+    const response = await fetch(`${API_BASE_URL}/api/assignments/create`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        worksheet_id: worksheetId,
+        classroom_id: classroomId,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || "과제 생성에 실패했습니다.");
+    }
+
+    return response.json();
+  },
+
   deployAssignment: async (deployRequest: AssignmentDeployRequest): Promise<AssignmentDeploymentResponse[]> => {
     const token = getToken();
     if (!token) {
       throw new Error("Authentication token not found. Please log in.");
     }
 
-    const response = await fetch(`${API_BASE_URL}/assignments/deploy`, {
+    const response = await fetch(`${API_BASE_URL}/api/assignments/deploy`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -212,7 +239,7 @@ export const koreanService = {
       throw new Error('No authentication token found');
     }
 
-    const response = await fetch(`${API_BASE_URL}/assignments/student/${studentId}`, {
+    const response = await fetch(`${API_BASE_URL}/api/assignments/student/${studentId}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -237,7 +264,7 @@ export const koreanService = {
       throw new Error('No authentication token found');
     }
 
-    const response = await fetch(`${API_BASE_URL}/assignments/${assignmentId}/student/${studentId}`, {
+    const response = await fetch(`${API_BASE_URL}/api/assignments/${assignmentId}/student/${studentId}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -262,7 +289,7 @@ export const koreanService = {
       throw new Error('No authentication token found');
     }
 
-    const response = await fetch(`${API_BASE_URL}/assignments/${assignmentId}/submit`, {
+    const response = await fetch(`${API_BASE_URL}/api/assignments/${assignmentId}/submit`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -291,7 +318,7 @@ export const koreanService = {
       throw new Error('No authentication token found');
     }
 
-    const response = await fetch(`${API_BASE_URL}/grading/assignments/${assignmentId}/results`, {
+    const response = await fetch(`${API_BASE_URL}/api/grading/assignments/${assignmentId}/results`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -317,7 +344,7 @@ export const koreanService = {
       throw new Error('No authentication token found');
     }
 
-    const response = await fetch(`${API_BASE_URL}/grading/grading-sessions/${sessionId}`, {
+    const response = await fetch(`${API_BASE_URL}/api/grading/grading-sessions/${sessionId}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -363,7 +390,7 @@ export const koreanService = {
       throw new Error("Authentication token not found. Please log in.");
     }
 
-    const response = await fetch(`${API_BASE_URL}/grading/grading-sessions/${sessionId}/update`, {
+    const response = await fetch(`${API_BASE_URL}/api/grading/grading-sessions/${sessionId}/update`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -388,7 +415,7 @@ export const koreanService = {
       throw new Error('No authentication token found');
     }
 
-    const response = await fetch(`${API_BASE_URL}/korean-generation/worksheets/${worksheetId}`, {
+    const response = await fetch(`${API_BASE_URL}/api/korean-generation/worksheets/${worksheetId}`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
@@ -413,7 +440,7 @@ export const koreanService = {
       throw new Error('No authentication token found');
     }
 
-    const response = await fetch(`${API_BASE_URL}/korean-generation/problems/${problemId}`, {
+    const response = await fetch(`${API_BASE_URL}/api/korean-generation/problems/${problemId}`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
@@ -438,7 +465,7 @@ export const koreanService = {
       throw new Error('No authentication token found');
     }
 
-    const response = await fetch(`${API_BASE_URL}/korean-generation/problems/regenerate-async`, {
+    const response = await fetch(`${API_BASE_URL}/api/korean-generation/problems/regenerate-async`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -463,7 +490,7 @@ export const koreanService = {
       throw new Error('No authentication token found');
     }
 
-    const response = await fetch(`${API_BASE_URL}/korean-generation/tasks/${taskId}`, {
+    const response = await fetch(`${API_BASE_URL}/api/korean-generation/tasks/${taskId}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",

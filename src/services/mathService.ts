@@ -1,6 +1,6 @@
 import { Worksheet, Problem, Assignment, AssignmentDeployRequest, AssignmentDeploymentResponse } from "@/services/koreanService"; // Re-using interfaces from koreanService
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_MATH_API_URL || "http://localhost:8001/api"; // Adjust as per your backend setup
+const API_BASE_URL = process.env.NEXT_PUBLIC_MATH_API_URL || "http://localhost:8001"; // Adjust as per your backend setup
 
 const getToken = (): string | null => {
   if (typeof window !== 'undefined') {
@@ -185,14 +185,41 @@ export const mathService = {
     return data;
   },
 
+  // 과제 생성 (배포하지 않고 생성만)
+  createAssignment: async (worksheetId: number, classroomId: number): Promise<any> => {
+    const token = getToken();
+    if (!token) {
+      throw new Error("Authentication token not found. Please log in.");
+    }
+
+    const response = await fetch(`${API_BASE_URL}/api/assignments/create`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        worksheet_id: worksheetId,
+        classroom_id: classroomId,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || "과제 생성에 실패했습니다.");
+    }
+
+    return response.json();
+  },
+
   deployAssignment: async (deployRequest: AssignmentDeployRequest): Promise<AssignmentDeploymentResponse[]> => {
     const token = getToken();
     if (!token) {
       throw new Error("Authentication token not found. Please log in.");
     }
 
-    // Try Korean service-style endpoint first
-    let response = await fetch(`${API_BASE_URL}/api/assignments/deploy`, {
+    // Math service uses /api/assignments/deploy with assignment_id (like Korean service)
+    const response = await fetch(`${API_BASE_URL}/api/assignments/deploy`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -200,39 +227,6 @@ export const mathService = {
       },
       body: JSON.stringify(deployRequest),
     });
-
-    // If that fails, try math-specific format
-    if (!response.ok) {
-      const mathDeployRequest = {
-        worksheet_id: deployRequest.assignment_id, // In math service, this is worksheet_id
-        classroom_id: deployRequest.classroom_id,
-        student_ids: deployRequest.student_ids,
-      };
-
-      response = await fetch(`${API_BASE_URL}/api/assignments/deploy`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
-        },
-        body: JSON.stringify(mathDeployRequest),
-      });
-    }
-
-    // Try alternative endpoint structure
-    if (!response.ok) {
-      response = await fetch(`${API_BASE_URL}/api/worksheets/${deployRequest.assignment_id}/deploy`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          classroom_id: deployRequest.classroom_id,
-          student_ids: deployRequest.student_ids,
-        }),
-      });
-    }
 
     // If math backend doesn't exist yet, simulate success
     if (!response.ok) {
@@ -354,7 +348,7 @@ export const mathService = {
       throw new Error('No authentication token found');
     }
 
-    const response = await fetch(`/api/test-sessions/${sessionId}/submit`, {
+    const response = await fetch(`${API_BASE_URL}/api/test-sessions/test-sessions/${sessionId}/submit`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -382,7 +376,7 @@ export const mathService = {
       throw new Error('No authentication token found');
     }
 
-    const response = await fetch(`/api/assignments/${assignmentId}/start?subject=math`, {
+    const response = await fetch(`${API_BASE_URL}/api/assignments/${assignmentId}/start`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -410,7 +404,7 @@ export const mathService = {
       throw new Error('No authentication token found');
     }
 
-    const response = await fetch(`/api/test-sessions/${sessionId}/answers`, {
+    const response = await fetch(`${API_BASE_URL}/api/test-sessions/${sessionId}/answers`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -564,8 +558,8 @@ export const mathService = {
       throw new Error('No authentication token found');
     }
 
-    // Use Next.js API route to proxy the request
-    const response = await fetch(`/api/grading/grading-sessions/${sessionId}?subject=math`, {
+    // Direct backend call (like Korean service)
+    const response = await fetch(`${API_BASE_URL}/api/grading/grading-sessions/${sessionId}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -673,8 +667,8 @@ export const mathService = {
       throw new Error("Authentication token not found. Please log in.");
     }
 
-    // Use Next.js API route to proxy the request
-    const response = await fetch(`/api/grading/grading-sessions/${sessionId}?subject=math`, {
+    // Direct backend call (like Korean service)
+    const response = await fetch(`${API_BASE_URL}/api/grading/grading-sessions/${sessionId}/update`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -700,8 +694,8 @@ export const mathService = {
       throw new Error("Authentication token not found. Please log in.");
     }
 
-    // Use Next.js API route to proxy the request
-    const response = await fetch(`/api/grading/assignments/${assignmentId}/students/${studentId}/result?subject=math`, {
+    // Direct backend call (like Korean service)
+    const response = await fetch(`${API_BASE_URL}/api/grading/assignments/${assignmentId}/students/${studentId}/result`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",

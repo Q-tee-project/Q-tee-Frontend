@@ -448,6 +448,7 @@ export class EnglishService {
 
   static async deployAssignment(deployRequest: EnglishAssignmentDeployRequest): Promise<any> {
     console.log('📤 영어 과제 배포 요청:', deployRequest);
+    console.log('📤 API URL:', `${ENGLISH_API_BASE}/assignments/deploy`);
 
     const response = await fetch(`${ENGLISH_API_BASE}/assignments/deploy`, {
       method: 'POST',
@@ -457,19 +458,71 @@ export class EnglishService {
       body: JSON.stringify(deployRequest),
     });
 
+    console.log('📤 응답 상태:', response.status);
+
     if (!response.ok) {
       let errorMessage = `English API Error: ${response.status}`;
       try {
         const errorData = await response.text();
+        console.error('📤 영어 과제 배포 실패 응답:', errorData);
         errorMessage += ` - ${errorData}`;
-        console.error('📤 영어 과제 배포 실패:', errorData);
       } catch (e) {
-        // JSON 파싱 실패 시 기본 메시지 사용
+        console.error('📤 에러 응답 읽기 실패:', e);
+        errorMessage += ` - Failed to read error response`;
       }
       throw new Error(errorMessage);
     }
 
-    return response.json();
+    const responseText = await response.text();
+    console.log('📤 성공 응답 내용:', responseText);
+
+    try {
+      return JSON.parse(responseText);
+    } catch (e) {
+      console.error('📤 JSON 파싱 실패. 응답 내용:', responseText);
+      throw new Error(`Unexpected response format. Expected JSON but got: ${responseText.substring(0, 200)}...`);
+    }
+  }
+
+  // 영어 과제 생성 (배포하지 않고 생성만)
+  static async createAssignment(worksheetId: number, classroomId: number): Promise<any> {
+    console.log('📝 영어 과제 생성 요청:', { worksheetId, classroomId });
+
+    const response = await fetch(`${ENGLISH_API_BASE}/assignments/create`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        worksheet_id: worksheetId,
+        classroom_id: classroomId
+      }),
+    });
+
+    console.log('📝 과제 생성 응답 상태:', response.status);
+
+    if (!response.ok) {
+      let errorMessage = `English API Error: ${response.status}`;
+      try {
+        const errorData = await response.text();
+        console.error('📝 영어 과제 생성 실패:', errorData);
+        errorMessage += ` - ${errorData}`;
+      } catch (e) {
+        console.error('📝 에러 응답 읽기 실패:', e);
+        errorMessage += ` - Failed to read error response`;
+      }
+      throw new Error(errorMessage);
+    }
+
+    const responseText = await response.text();
+    console.log('📝 과제 생성 성공 응답:', responseText);
+
+    try {
+      return JSON.parse(responseText);
+    } catch (e) {
+      console.error('📝 JSON 파싱 실패. 응답 내용:', responseText);
+      throw new Error(`Unexpected response format. Expected JSON but got: ${responseText.substring(0, 200)}...`);
+    }
   }
 
   // 영어 배포된 과제 목록 조회
@@ -481,8 +534,11 @@ export class EnglishService {
       throw new Error('로그인이 필요합니다.');
     }
 
-    const response = await fetch(
-      `${ENGLISH_API_BASE}/assignments/deployed?classroom_id=${classId}&user_id=${userId}`
+    let response;
+
+    // 국어/수학과 동일한 방식: 클래스룸의 모든 과제 가져오기
+    response = await fetch(
+      `${ENGLISH_API_BASE}/assignments/classrooms/${classId}/assignments`
     );
 
     if (!response.ok) {
@@ -490,7 +546,7 @@ export class EnglishService {
     }
 
     const data = await response.json();
-    return data?.assignments || [];
+    return Array.isArray(data) ? data : [];
   }
 
   // 영어 과제 상세 정보 조회 (학생용)
@@ -607,8 +663,8 @@ export class EnglishService {
         throw new Error('No authentication token found');
       }
 
-      // Use Next.js proxy to avoid CORS and authentication issues
-      const response = await fetch(`/api/grading/grading-sessions/${resultId}?subject=english`, {
+      // Direct backend call (like Korean service)
+      const response = await fetch(`${ENGLISH_API_BASE}/grading-results/${resultId}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -716,8 +772,8 @@ export class EnglishService {
         throw new Error('No authentication token found');
       }
 
-      // Use Next.js proxy for the update as well
-      const response = await fetch(`/api/grading/grading-sessions/${resultId}?subject=english`, {
+      // Direct backend call (like Korean service)
+      const response = await fetch(`${ENGLISH_API_BASE}/grading-results/${resultId}/update`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

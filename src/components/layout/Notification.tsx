@@ -4,10 +4,12 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import { VscBellDot } from 'react-icons/vsc';
 import { LuX } from 'react-icons/lu';
-import { FiCheck, FiBookOpen, FiSend, FiShoppingCart } from "react-icons/fi";
+import { FiCheck, FiBookOpen, FiSend, FiShoppingCart, FiTrash2 } from "react-icons/fi";
 import { RiGroupLine } from "react-icons/ri";
 import { MdOutlineNotificationImportant } from "react-icons/md";
 import { useAuth } from '@/contexts/AuthContext';
+import { useNotification } from '@/contexts/NotificationContext';
+import { SSENotification } from '@/services/notificationService';
 
 // 알림 타입 정의
 type TeacherNotificationType = 'assignment_created' | 'assignment_submitted' | 'message' | 'market_sale' | 'class_approval_request';
@@ -132,43 +134,62 @@ export default function NotificationPanel({ isOpen, onClose, bellMenuRef }: Noti
 
   const [expandedTypes, setExpandedTypes] = React.useState<Set<NotificationType>>(new Set());
 
-  // ===== 백엔드 API 연결 시 수정할 부분 =====
-  React.useEffect(() => {
-    // TODO: 백엔드 개발자 - 실제 API 호출로 대체
-    const loadNotifications = async () => {
-      try {
-        // const data = await mockNotificationAPI.getNotifications(userType);
-        // setNotifications(data);
-        
-        // 임시 데이터 (백엔드 연결 전까지 사용)
-        if (userType === 'teacher') {
-          setNotifications(teacherNotifications);
-        } else if (userType === 'student') {
-          setNotifications(studentNotifications);
-        } else {
-          setNotifications([]);
-        }
-      } catch (error) {
-        console.error('알림 로드 실패:', error);
-        setNotifications([]);
-      }
+  // SSE 메시지 알림을 UI 형태로 변환하는 함수
+  const convertSSEMessageToUI = (sseNotification: SSENotification): Notification => {
+    return {
+      id: sseNotification.id,
+      type: sseNotification.type as NotificationType,
+      title: `${sseNotification.data.sender_name} ${sseNotification.data.sender_type === 'teacher' ? '선생님' : '학생'}`,
+      content: sseNotification.data.preview,
+      createdAt: sseNotification.timestamp,
+      isRead: sseNotification.read,
+      userId: sseNotification.data.sender_id.toString(),
+      relatedId: sseNotification.data.message_id.toString(),
+      priority: 'medium' as const
     };
-    loadNotifications();
-  }, [userType, teacherNotifications, studentNotifications]);
+  };
+
+  // SSE 알림 데이터 가져오기
+  const { notifications: sseNotifications, markAsRead: sseMarkAsRead, removeNotification, removeNotificationsByType, clearAll } = useNotification();
+
+  // SSE 알림을 UI 알림으로 변환
+  React.useEffect(() => {
+    // SSE에서 받은 메시지 알림들만 필터링하여 변환
+    const messageNotifications = sseNotifications
+      .filter(sse => sse.type === 'message')
+      .map(convertSSEMessageToUI);
+
+    // 기존 mock 데이터와 병합 (다른 알림 타입들은 유지)
+    const otherMockNotifications = userType === 'teacher'
+      ? teacherNotifications.filter(n => n.type !== 'message')
+      : userType === 'student'
+        ? studentNotifications.filter(n => n.type !== 'message')
+        : [];
+
+    const allNotifications = [...messageNotifications, ...otherMockNotifications];
+    setNotifications(allNotifications);
+  }, [sseNotifications, userType, teacherNotifications, studentNotifications]);
 
   // ===== 백엔드 API 연결 시 수정할 부분 =====
-  const handleRemoveNotification = React.useCallback((id: string) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
-    // TODO: 백엔드 개발자 - API 호출 추가
-    // mockNotificationAPI.deleteNotification(id);
-  }, []);
+  const handleRemoveNotification = React.useCallback((notification: Notification) => {
+    console.log('[DEBUG] handleRemoveNotification called in Notification.tsx with:', notification);
+    if (removeNotification) {
+      console.log('[DEBUG] Context\'s removeNotification function found, calling it.');
+      removeNotification(notification.id, notification.type);
+    } else {
+      console.log('[DEBUG] Context\'s removeNotification function NOT found.');
+    }
+  }, [removeNotification]);
 
   const handleClearAll = React.useCallback(() => {
     setNotifications([]);
     setExpandedTypes(new Set());
-    // TODO: 백엔드 개발자 - API 호출 추가
-    // mockNotificationAPI.deleteAllNotifications();
-  }, []);
+
+    // 백엔드 API 호출 - 전체 알림 삭제
+    if (clearAll) {
+      clearAll();
+    }
+  }, [clearAll]);
 
   const handleExpandType = React.useCallback((type: NotificationType) => {
     setExpandedTypes(prev => {
@@ -197,17 +218,15 @@ export default function NotificationPanel({ isOpen, onClose, bellMenuRef }: Noti
       newSet.delete(type);
       return newSet;
     });
-    // TODO: 백엔드 개발자 - API 호출 추가
-    // mockNotificationAPI.deleteNotificationsByType(type);
-  }, []);
+
+    // 백엔드 API 호출 - SSE 메시지 알림인 경우에만
+    if (type === 'message' && removeNotificationsByType) {
+      removeNotificationsByType(type);
+    }
+  }, [removeNotificationsByType]);
 
   // 알림 클릭 시 페이지 이동 함수
   const handleNotificationClick = React.useCallback((notification: Notification) => {
-    // 알림을 읽음 처리
-    setNotifications(prev => 
-      prev.map(n => n.id === notification.id ? { ...n, isRead: true } : n)
-    );
-    
     // 알림 패널 닫기
     onClose();
     
@@ -274,12 +293,12 @@ export default function NotificationPanel({ isOpen, onClose, bellMenuRef }: Noti
 
     const handleDelete = (e: React.MouseEvent) => {
       e.stopPropagation();
-      if (isMainItem && isExpanded) {
-        handleRemoveNotification(notification.id);
-      } else if (isMainItem && !isExpanded) {
+
+      // 메인 아이템인 경우 해당 타입의 모든 알림 삭제, 개별 아이템인 경우 개별 삭제
+      if (isMainItem) {
         handleRemoveType(notification.type);
       } else {
-        handleRemoveNotification(notification.id);
+        handleRemoveNotification(notification);
       }
     };
 
@@ -311,7 +330,7 @@ export default function NotificationPanel({ isOpen, onClose, bellMenuRef }: Noti
         
         {/* 우측 X 버튼 */}
         <button
-          aria-label={isMainItem && isExpanded ? `${notification.title} 개별 삭제` : `${notification.title} ${isMainItem ? '전체' : '개별'} 삭제`}
+          aria-label={isMainItem ? `${notification.type} 알림 전체 삭제` : `${notification.title} 개별 삭제`}
           className="inline-flex items-center justify-center w-8 h-8 cursor-pointer text-white rounded-full transition-all duration-200"
           onClick={handleDelete}
         >
@@ -340,11 +359,23 @@ export default function NotificationPanel({ isOpen, onClose, bellMenuRef }: Noti
         {/* 헤더와 리스트를 flex로 묶기 */}
         <div className="flex flex-col gap-4 h-full">
           {/* 헤더 */}
-          <div className="flex justify-end items-center">
+          <div className="flex justify-between items-center">
+            {/* 모든 알림 삭제 버튼 - 알림이 있을 때만 표시 */}
+            {notifications.length > 0 && (
+              <button
+                aria-label="모든 알림 삭제"
+                onClick={handleClearAll}
+                className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-br from-red-600/80 to-red-600/60 border border-white/20 text-white cursor-pointer hover:from-red-700/80 hover:to-red-700/60 transition-all duration-200"
+              >
+                <FiTrash2 size={16} />
+              </button>
+            )}
+
+            {/* 알림창 닫기 버튼 */}
             <button
-              aria-label={notifications.length === 0 ? "알림창 닫기" : "모든 알림 삭제"}
-              onClick={notifications.length === 0 ? onClose : handleClearAll}
-              className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-br from-gray-800/80 to-gray-800/60 border border-white/20 text-white cursor-pointer"
+              aria-label="알림창 닫기"
+              onClick={onClose}
+              className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-br from-gray-800/80 to-gray-800/60 border border-white/20 text-white cursor-pointer hover:from-gray-700/80 hover:to-gray-700/60 transition-all duration-200"
             >
               <LuX size={18} />
             </button>

@@ -1,17 +1,19 @@
 'use client';
 
+import { motion } from 'framer-motion';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { FiShoppingCart, FiSearch, FiX } from 'react-icons/fi';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
-import { getProducts, MarketProduct } from '@/services/marketApi';
+import { getProducts, MarketProduct, getUserPoints, UserPointResponse } from '@/services/marketApi';
 import TrendyPopularProducts from '@/components/market/TrendyPopularProducts';
 
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 
 // getPopularProducts 함수 (임시)
 const getPopularProducts = async (limit: number): Promise<MarketProduct[]> => {
@@ -34,6 +36,7 @@ export default function MarketPage() {
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState<MarketProduct[]>([]);
   const [popularProducts, setPopularProducts] = useState<MarketProduct[]>([]);
+  const [userPoints, setUserPoints] = useState<UserPointResponse | null>(null);
 
   const [sortType, setSortType] = useState<'latest' | 'rating' | 'sales'>('latest');
   const [searchQuery, setSearchQuery] = useState('');
@@ -68,9 +71,25 @@ export default function MarketPage() {
     }
   };
 
+  // 포인트 로딩 함수
+  const loadUserPoints = async () => {
+    try {
+      const points = await getUserPoints();
+      setUserPoints(points);
+    } catch (error) {
+      console.error('포인트 정보 로드 실패:', error);
+    }
+  };
+
   useEffect(() => {
     loadProducts();
   }, [currentPage, selectedTab, sortType, searchQuery]);
+
+  useEffect(() => {
+    if (userProfile) {
+      loadUserPoints();
+    }
+  }, [userProfile]);
 
   // API에서 이미 필터링/정렬된 데이터를 받아오므로 추가 처리 불필요
   const sortedAndFilteredProducts = products;
@@ -131,13 +150,20 @@ export default function MarketPage() {
           ))}
         </div>
 
-        <div className="flex space-x-4">
-          <button
-            onClick={() => router.push('/market/points')}
-            className="text-sm px-4 py-2 rounded-md bg-[#0072CE] text-white hover:bg-[#005fa3] transition-colors"
-          >
-            포인트
-          </button>
+        <div className="flex space-x-4 items-center">
+          <div className="flex items-center space-x-2">
+            {userPoints && (
+              <Badge variant="secondary" className="bg-orange-100 text-orange-800 border-orange-200">
+                {userPoints.available_points.toLocaleString()}P
+              </Badge>
+            )}
+            <button
+              onClick={() => router.push('/market/points')}
+              className="text-sm px-4 py-2 rounded-md bg-[#0072CE] text-white hover:bg-[#005fa3] transition-colors"
+            >
+              포인트
+            </button>
+          </div>
           <button
             onClick={() => router.push('/market/myMarket')}
             className="text-sm px-4 py-2 rounded-md bg-[#0072CE] text-white hover:bg-[#005fa3] transition-colors"
@@ -235,21 +261,48 @@ export default function MarketPage() {
               </div>
             ) : (
               displayedProducts.map((product: MarketProduct) => (
-                <div
+                <motion.div
                   key={product.id}
                   onClick={() => router.push(`/market/${product.id}`)}
-                  className="cursor-pointer rounded-lg border border-gray-200 bg-white p-4 shadow-sm hover:shadow-md transition-transform hover:scale-[1.02]"
+                  className="cursor-pointer rounded-lg border border-gray-200 bg-white p-4 shadow-sm overflow-hidden"
+                  whileHover={{ y: -5, boxShadow: "0 8px 20px rgba(0,0,0,0.08)" }}
+                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
                 >
-
-                  <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-md h-48 mb-4 flex flex-col items-center justify-center text-gray-700 select-none border border-gray-200 p-4">
+                  <motion.div
+                    className={`rounded-md h-48 mb-4 flex flex-col items-center justify-center text-gray-700 select-none border border-gray-200 p-4 ${
+                      product.subject_type === '국어' ? 'bg-gradient-to-br from-green-50 to-emerald-50' :
+                      product.subject_type === '영어' ? 'bg-gradient-to-br from-rose-50 to-pink-50' :
+                      product.subject_type === '수학' ? 'bg-gradient-to-br from-blue-50 to-indigo-50' :
+                      'bg-gradient-to-br from-gray-50 to-slate-50'
+                    }`}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 }}
+                  >
                     <div className="text-center space-y-2">
-                      <div className="text-lg font-bold text-[#0072CE]">{product.subject_type}</div>
-                      <div className="text-md font-semibold">{product.school_level} {product.grade}학년</div>
-                      <div className="text-sm text-gray-600 mt-3 line-clamp-2 leading-tight px-2">
+                      <motion.div 
+                        className="text-lg font-bold text-[#0072CE]"
+                        whileHover={{ scale: 1.05 }}
+                      >
+                        {product.subject_type}
+                      </motion.div>
+                      <motion.div 
+                        className="text-md font-semibold"
+                        whileHover={{ scale: 1.05 }}
+                      >
+                        {product.school_level} {product.grade}학년
+                      </motion.div>
+                      <div className="text-sm text-gray-600 mt-3 line-clamp-2 leading-tight px-2 h-10 flex items-center justify-center">
                         {product.title}
                       </div>
+                      <motion.div 
+                        className="text-xs text-orange-600 font-semibold mt-2 bg-orange-50 px-2 py-1 rounded"
+                        whileHover={{ scale: 1.1, backgroundColor: "#FFFBEB" }}
+                      >
+                        누적 {product.total_revenue.toLocaleString()}P
+                      </motion.div>
                     </div>
-                  </div>
+                  </motion.div>
                   <p className="text-gray-400 font-semibold text-sm mb-1 truncate">
                     {product.seller_name}
                   </p>
@@ -268,7 +321,7 @@ export default function MarketPage() {
                       판매 {product.purchase_count}건
                     </div>
                   </div>
-                </div>
+                </motion.div>
               ))
             )}
           </div>

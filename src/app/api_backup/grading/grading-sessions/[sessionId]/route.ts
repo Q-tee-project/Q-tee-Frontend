@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { sessionId: string } }
+  { params }: { params: Promise<{ sessionId: string }> }
 ) {
   try {
-    const sessionId = params.sessionId;
+    const { sessionId } = await params;
     const subject = request.nextUrl.searchParams.get('subject') || 'math';
 
     console.log(`[API] Getting grading session ${sessionId} for subject: ${subject}`);
@@ -79,10 +79,10 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { sessionId: string } }
+  { params }: { params: Promise<{ sessionId: string }> }
 ) {
   try {
-    const sessionId = params.sessionId;
+    const { sessionId } = await params;
     const subject = request.nextUrl.searchParams.get('subject') || 'math';
 
     // Get auth header from the request

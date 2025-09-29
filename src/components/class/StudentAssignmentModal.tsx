@@ -12,6 +12,9 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { classroomService, StudentProfile } from '@/services/authService';
+import { koreanService } from '@/services/koreanService';
+import { mathService } from '@/services/mathService';
+import { EnglishService } from '@/services/englishService';
 
 interface StudentAssignmentModalProps {
   isOpen: boolean;
@@ -92,41 +95,30 @@ export function StudentAssignmentModal({
         throw new Error('로그인이 필요합니다.');
       }
 
-      // 요청 데이터 준비 (subject 포함)
-      const requestData = {
-        subject: subject,
-        assignment_id: worksheetId, // worksheet_id를 assignment_id로 사용
-        student_ids: selectedStudents,
-        classroom_id: parseInt(classId),
-      };
-
-      console.log('🚀 Assignment Deploy Request:', {
-        subject,
-        data: requestData
-      });
-
-      // Next.js API Route 프록시를 통해 과제 배포 (상대 경로 사용)
-      const response = await fetch('/api/assignments/deploy', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(requestData),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        let errorMessage = `API 요청 실패: ${response.status}`;
-
-        // 워크시트 관련 에러 처리
-        if (errorText.includes('Worksheet not found')) {
-          errorMessage = '선택한 워크시트를 찾을 수 없습니다. 먼저 해당 과목의 워크시트를 생성해주세요.';
-        } else {
-          errorMessage += ` - ${errorText}`;
-        }
-
-        throw new Error(errorMessage);
+      // 과목별로 직접 서비스 호출
+      if (subject === 'korean') {
+        const deployRequest = {
+          assignment_id: assignmentId,
+          student_ids: selectedStudents,
+          classroom_id: parseInt(classId),
+        };
+        await koreanService.deployAssignment(deployRequest);
+      } else if (subject === 'math') {
+        const deployRequest = {
+          assignment_id: assignmentId,
+          student_ids: selectedStudents,
+          classroom_id: parseInt(classId),
+        };
+        await mathService.deployAssignment(deployRequest);
+      } else if (subject === 'english') {
+        const deployRequest = {
+          assignment_id: worksheetId, // 영어는 worksheet_id를 assignment_id로 사용
+          student_ids: selectedStudents,
+          classroom_id: parseInt(classId),
+        };
+        await EnglishService.deployAssignment(deployRequest);
+      } else {
+        throw new Error('지원하지 않는 과목입니다.');
       }
 
       // 배포된 학생 정보 가져오기
