@@ -46,13 +46,10 @@ export default function RootLayout({
 
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <AuthProvider>
-          <MainLayoutWrapper>{children}</MainLayoutWrapper>
-<<<<<<< HEAD
-        </ClientAuthProvider>
-
-=======
+          <NotificationProvider>
+            <MainLayoutWrapper>{children}</MainLayoutWrapper>
+          </NotificationProvider>
         </AuthProvider>
->>>>>>> parent of 20ced84 (AuthProvider  대신 ClientAuthProvider 사용 / useRouter 실행 시 클라이언트 사이드 체크)
       </body>
     </html>
   );

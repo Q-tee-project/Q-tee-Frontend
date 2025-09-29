@@ -457,100 +457,27 @@ export default function JoinPage() {
       setError('사용할 수 없는 아이디입니다.');
       return;
     }
-    
+
     setIsLoading(true);
     setError('');
-    
-    // 가능한 API 경로들을 시도
-    const possiblePaths = [
-      '/api/auth/check-username',
-      '/api/auth/username/check',
-      '/api/auth/teacher/check-username',
-      '/api/auth/student/check-username',
-      '/api/auth/check_username',
-      '/api/username/check'
-    ];
 
-    let apiSuccess = false;
-    
-    for (const path of possiblePaths) {
-      try {
-        console.log(`Trying API path: ${path}`);
-        const baseUrl = process.env.NEXT_PUBLIC_AUTH_API_BASE_URL || 'http://localhost:8003';
-        const response = await fetch(`${baseUrl}${path}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ username: formData.username.trim() }),
-        });
+    try {
+      const result = await authService.checkUsernameAvailability(formData.username.trim());
+      setIsUsernameChecked(true);
+      setIsUsernameAvailable(result.available);
 
-        if (response.ok) {
-          const data = await response.json();
-          setIsUsernameChecked(true);
-          setIsUsernameAvailable(data.available || data.is_available || true);
-          
-          if (!data.available && !data.is_available) {
-            setError(data.message || '이미 사용 중인 아이디입니다.');
-          } else {
-            setError('');
-          }
-          
-          apiSuccess = true;
-          console.log(`API 성공: ${path}`, data);
-          break;
-        }
-      } catch (error) {
-        console.log(`API 실패: ${path}`, error);
-        continue;
-      }
-    }
-
-    if (!apiSuccess) {
-      // 회원가입 API로 중복 체크
-      try {
-        const baseUrl = process.env.NEXT_PUBLIC_AUTH_API_BASE_URL || 'http://localhost:8003';
-        const username = formData.username.trim();
-        
-        // 임시 데이터로 Teacher 회원가입 시도
-        const testData = {
-          username: username,
-          email: `temp_${username}_${Date.now()}@test.com`,
-          name: "Test User",
-          phone: "01000000000",
-          password: "temppassword123"
-        };
-
-        const teacherResponse = await fetch(`${baseUrl}/api/auth/teacher/signup`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(testData),
-        });
-
-        if (teacherResponse.status === 400) {
-          const errorData = await teacherResponse.json();
-          if (errorData.detail && errorData.detail.includes('Username')) {
-            setIsUsernameChecked(true);
-            setIsUsernameAvailable(false);
-            setError('이미 사용 중인 아이디입니다.');
-            console.log(`Username ${username} already exists`);
-          }
-        } else {
-          setIsUsernameChecked(true);
-          setIsUsernameAvailable(true);
-          setError('');
-          console.log(`Username ${username} is available`);
-        }
-      } catch (error) {
-        console.log('Username check with signup failed, proceeding with client validation');
-        setIsUsernameChecked(true);
-        setIsUsernameAvailable(true);
+      if (!result.available) {
+        setError(result.message || '이미 사용 중인 아이디입니다.');
+      } else {
         setError('');
       }
+    } catch (error: any) {
+      console.error('Username check failed:', error);
+      setError('중복 체크 중 오류가 발생했습니다. 다시 시도해주세요.');
+      setIsUsernameChecked(false);
+      setIsUsernameAvailable(false);
     }
-    
+
     setIsLoading(false);
   };
 
