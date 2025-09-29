@@ -391,44 +391,27 @@ export function AssignmentList({
                                         onClick={async (e) => {
                                           e.stopPropagation();
                                           try {
-                                            const token = localStorage.getItem('access_token');
-                                            const response = await fetch(
-                                              `/api/grading/assignments/${assignment.id}/start-ai-grading?subject=math`,
-                                              {
-                                                method: 'POST',
-                                                headers: {
-                                                  Authorization: `Bearer ${token}`,
-                                                  'Content-Type': 'application/json',
-                                                },
-                                              },
-                                            );
-
-                                            if (response.ok) {
-                                              const result = await response.json();
-                                              if (result.task_id) {
-                                                alert(
-                                                  'OCR + AI 채점이 시작되었습니다. 완료 후 결과를 확인하세요.',
-                                                );
-                                                if (onRefresh) {
-                                                  onRefresh(); // Refresh assignment list
-                                                }
-                                              } else {
-                                                alert(
-                                                  result.message ||
-                                                    'OCR 채점을 시작할 수 없습니다.',
-                                                );
+                                            const result = await mathService.startAIGrading(assignment.id);
+                                            if (result.task_id) {
+                                              alert(
+                                                'OCR + AI 채점이 시작되었습니다. 완료 후 결과를 확인하세요.',
+                                              );
+                                              if (onRefresh) {
+                                                onRefresh(); // Refresh assignment list
                                               }
                                             } else {
-                                              const error = await response.json();
                                               alert(
-                                                `채점 처리 실패: ${
-                                                  error.detail || '알 수 없는 오류'
-                                                }`,
+                                                result.message ||
+                                                  'OCR 채점을 시작할 수 없습니다.',
                                               );
                                             }
                                           } catch (error) {
                                             console.error('OCR grading error:', error);
-                                            alert('채점 처리 중 오류가 발생했습니다.');
+                                            alert(
+                                              `채점 처리 실패: ${
+                                                error instanceof Error ? error.message : '알 수 없는 오류'
+                                              }`,
+                                            );
                                           }
                                         }}
                                       >
