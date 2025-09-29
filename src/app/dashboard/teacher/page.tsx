@@ -481,7 +481,7 @@ const TeacherDashboard = () => {
               <div className="text-2xl font-bold text-[#0072CE] mb-1">
                 <AnimatedCounter value={24} />
               </div>
-              <div className="text-sm text-[#0072CE]/80 font-medium">등록 상품</div>
+              <div className="text-sm text-[#0072CE]/80 font-medium">등록 상품 수</div>
             </div>
             <div className="text-center p-6 bg-gradient-to-br from-cyan-50/80 to-cyan-100/60 backdrop-blur-sm rounded-xl border border-cyan-200/50 shadow-lg">
               <div className="flex justify-center mb-3">
@@ -842,7 +842,7 @@ const TeacherDashboard = () => {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="relative h-[28rem] bg-white rounded-lg border-t border-l border-r border-gray-200 border-b-0 p-4 shadow-inner">
+            <div className="relative h-[28rem] bg-white rounded-lg p-4 shadow-inner">
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart
                   width={500}
@@ -851,7 +851,7 @@ const TeacherDashboard = () => {
                   margin={{
                     top: 20,
                     right: 80,
-                    bottom: 20,
+                    bottom: 40,
                     left: 20,
                   }}
                   style={{ backgroundColor: 'white' }}
@@ -874,19 +874,33 @@ const TeacherDashboard = () => {
                     </linearGradient>
                   </defs>
                   <CartesianGrid stroke="#f5f5f5" />
-                  <XAxis dataKey="name" label={{ value: '월', position: 'insideBottomRight', offset: 0 }} scale="band" />
+                  <XAxis 
+                    dataKey="name" 
+                    label={{ value: '월', position: 'insideBottomRight', offset: -10 }} 
+                    type="category"
+                    tick={{ fontSize: 12 }}
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={10}
+                    interval={0}
+                    angle={0}
+                    textAnchor="middle"
+                    domain={['dataMin', 'dataMax']}
+                  />
                   <YAxis />
                   <Tooltip />
                   <Area type="monotone" dataKey="과제수" fill="url(#areaGradient)" stroke="#4f46e5" strokeWidth={1} />
                   <Bar 
                     dataKey="학생평균" 
-                    barSize={40} 
+                    barSize={50} 
                     fill="url(#barGradient)" 
                     stroke="#93c5fd" 
                     strokeWidth={1}
                     style={{
                       filter: 'drop-shadow(0 4px 6px rgba(59, 130, 246, 0.1))'
                     }}
+                    radius={[2, 2, 0, 0]}
+                    maxBarSize={50}
                   />
                   {Object.keys(selectedStudentsData).map((studentName, index) => (
                     <Line 
