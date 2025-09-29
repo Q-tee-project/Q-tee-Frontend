@@ -501,29 +501,6 @@ export const mathService = {
     return responseData;
   },
 
-  async getTaskStatus(taskId: string): Promise<any> {
-    const token = getToken();
-    if (!token) {
-      throw new Error('No authentication token found');
-    }
-
-    const response = await fetch(`${API_BASE_URL}/api/tasks/${taskId}`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
-      },
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.detail || "Failed to get task status.");
-    }
-
-    const responseData = await response.json();
-    console.log(`Task status:`, responseData);
-    return responseData;
-  },
 
   // Get assignment results (grading sessions for an assignment)
   async getAssignmentResults(assignmentId: number): Promise<any[]> {
@@ -710,6 +687,55 @@ export const mathService = {
 
     const data = await response.json();
     console.log(`Student grading result:`, data);
+    return data;
+  },
+
+  // OCR + AI 채점 시작
+  startAIGrading: async (assignmentId: number): Promise<any> => {
+    const token = getToken();
+    if (!token) {
+      throw new Error("Authentication token not found. Please log in.");
+    }
+
+    const response = await fetch(`${API_BASE_URL}/api/grading/assignments/${assignmentId}/start-ai-grading`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ detail: "Failed to start AI grading" }));
+      throw new Error(errorData.detail || "Failed to start AI grading.");
+    }
+
+    const data = await response.json();
+    console.log(`AI grading started:`, data);
+    return data;
+  },
+
+  // 태스크 상태 조회
+  getTaskStatus: async (taskId: string): Promise<any> => {
+    const token = getToken();
+    if (!token) {
+      throw new Error("Authentication token not found. Please log in.");
+    }
+
+    const response = await fetch(`${API_BASE_URL}/api/grading/tasks/${taskId}/status`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ detail: "Failed to get task status" }));
+      throw new Error(errorData.detail || "Failed to get task status.");
+    }
+
+    const data = await response.json();
     return data;
   },
 };

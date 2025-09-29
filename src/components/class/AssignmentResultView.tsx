@@ -256,14 +256,31 @@ export function AssignmentResultView({
   const toggleProblemCorrectness = (problemId: string) => {
     const newCorrectness = !problemCorrectness[problemId];
 
+    // 문제 정보 가져오기
+    const problem = problems.find((p) =>
+      (isKorean && p.id.toString() === problemId) ||
+      (isEnglish && (p.question_id?.toString() === problemId || p.id?.toString() === problemId)) ||
+      (!isKorean && !isEnglish && p.id.toString() === problemId)
+    );
+
+    // 문제 유형 판단: 선택지가 있으면 객관식, 없으면 단답형
+    const isMultipleChoice = problem && (problem.choices || problem.question_choices);
+
     if (newCorrectness) {
-      // 정답 처리: 학생 답안을 correct_answer로 업데이트
-      const answerStatus = getAnswerStatus(problemId);
-      if (answerStatus && answerStatus.studentAnswer) {
-        setUpdatedAnswers((prev) => ({
-          ...prev,
-          [problemId]: answerStatus.studentAnswer,
-        }));
+      // 정답 처리
+      if (isMultipleChoice) {
+        // 객관식: 학생 답안을 correct_answer로 업데이트
+        const answerStatus = getAnswerStatus(problemId);
+        if (answerStatus && answerStatus.studentAnswer) {
+          setUpdatedAnswers((prev) => ({
+            ...prev,
+            [problemId]: answerStatus.studentAnswer,
+          }));
+        }
+      } else {
+        // 단답형: 원래 정답을 유지 (correct_answer는 변경하지 않음)
+        // 정답/오답 여부만 변경하고 정답 자체는 수정하지 않음
+        console.log(`단답형 문제 ${problemId}: 정답 처리 (원래 정답 유지)`);
       }
     } else {
       // 오답 처리: 원래 정답으로 되돌리기
@@ -694,39 +711,29 @@ export function AssignmentResultView({
   };
 
   const pollTaskStatus = async (taskId: string) => {
-    const token = localStorage.getItem('access_token');
-
     const poll = async () => {
       try {
-        const response = await fetch(`/api/grading/tasks/${taskId}/status?subject=math`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const status = await mathService.getTaskStatus(taskId);
+        setTaskProgress(status);
 
-        if (response.ok) {
-          const status = await response.json();
-          setTaskProgress(status);
-
-          if (status.status === 'SUCCESS') {
-            const result = status.result;
-            alert(
-              `OCR + AI 채점 완료!\n처리된 손글씨 답안: ${result.processed_count}개\n업데이트된 세션: ${result.updated_sessions}개\n새로 생성된 세션: ${result.newly_graded_sessions}개`,
-            );
-            setIsProcessingAI(false);
-            setTaskProgress(null);
-            loadResults();
-          } else if (status.status === 'FAILURE') {
-            alert(`채점 처리 실패: ${status.info?.error || '알 수 없는 오류'}`);
-            setIsProcessingAI(false);
-            setTaskProgress(null);
-          } else if (status.status === 'PROGRESS') {
-            // 진행중인 경우 2초 후 다시 폴링
-            setTimeout(poll, 2000);
-          } else {
-            // PENDING 상태인 경우 1초 후 다시 폴링
-            setTimeout(poll, 1000);
-          }
+        if (status.status === 'SUCCESS') {
+          const result = status.result;
+          alert(
+            `OCR + AI 채점 완료!\n처리된 손글씨 답안: ${result.processed_count}개\n업데이트된 세션: ${result.updated_sessions}개\n새로 생성된 세션: ${result.newly_graded_sessions}개`,
+          );
+          setIsProcessingAI(false);
+          setTaskProgress(null);
+          loadResults();
+        } else if (status.status === 'FAILURE') {
+          alert(`채점 처리 실패: ${status.info?.error || '알 수 없는 오류'}`);
+          setIsProcessingAI(false);
+          setTaskProgress(null);
+        } else if (status.status === 'PROGRESS') {
+          // 진행중인 경우 2초 후 다시 폴링
+          setTimeout(poll, 2000);
+        } else {
+          // PENDING 상태인 경우 1초 후 다시 폴링
+          setTimeout(poll, 1000);
         }
       } catch (error) {
         console.error('Task status polling error:', error);
@@ -740,54 +747,42 @@ export function AssignmentResultView({
   const handleStartAIGrading = async () => {
     try {
       setIsProcessingAI(true);
-      const token = localStorage.getItem('access_token');
-      const subject = isEnglish ? 'english' : 'math';
 
-      // 영어의 경우 worksheet_id를 사용
-      const assignmentId = isEnglish ? assignment.worksheet_id : assignment.id;
-      const response = await fetch(
-        `/api/grading/assignments/${assignmentId}/start-ai-grading?subject=${subject}`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        },
-      );
-
-      if (response.ok) {
-        const result = await response.json();
-        if (result.task_id) {
-          // 태스크 상태 폴링 시작
-          pollTaskStatus(result.task_id);
-        } else {
+      if (isEnglish) {
+        // 영어 AI 채점
+        try {
+          await EnglishService.startEnglishAIGrading(assignment.worksheet_id);
+          alert('영어 AI 채점이 시작되었습니다.');
+          setIsProcessingAI(false);
+          loadResults();
+        } catch (englishError) {
+          console.error('English AI grading failed:', englishError);
           alert(
-            result.message || (isEnglish ? 'AI 채점이 완료되었습니다.' : '채점이 완료되었습니다.'),
+            `영어 AI 채점 실패: ${
+              englishError instanceof Error ? englishError.message : '알 수 없는 오류'
+            }`,
           );
           setIsProcessingAI(false);
-          loadResults(); // 결과 새로고침
         }
       } else {
-        // 영어의 경우 프록시가 실패하면 직접 영어 서비스 호출
-        if (isEnglish) {
-          try {
-            await EnglishService.startEnglishAIGrading(assignment.worksheet_id);
-            alert('영어 AI 채점이 시작되었습니다.');
+        // 수학 OCR + AI 채점
+        try {
+          const result = await mathService.startAIGrading(assignment.id);
+          if (result.task_id) {
+            // 태스크 상태 폴링 시작
+            pollTaskStatus(result.task_id);
+          } else {
+            alert(result.message || 'OCR + AI 채점이 완료되었습니다.');
             setIsProcessingAI(false);
-            loadResults();
-          } catch (englishError) {
-            console.error('Direct English AI grading failed:', englishError);
-            alert(
-              `영어 AI 채점 실패: ${
-                englishError instanceof Error ? englishError.message : '알 수 없는 오류'
-              }`,
-            );
-            setIsProcessingAI(false);
+            loadResults(); // 결과 새로고침
           }
-        } else {
-          const error = await response.json();
-          alert(`채점 처리 실패: ${error.detail || error.error || '알 수 없는 오류'}`);
+        } catch (mathError) {
+          console.error('Math AI grading failed:', mathError);
+          alert(
+            `수학 OCR 채점 실패: ${
+              mathError instanceof Error ? mathError.message : '알 수 없는 오류'
+            }`,
+          );
           setIsProcessingAI(false);
         }
       }
@@ -1198,8 +1193,6 @@ export function AssignmentResultView({
           </TableHeader>
           <TableBody>
             {results.map((result, index) => {
-              const totalProblems = result.total_problems || 10;
-              const scorePerProblem = 100 / totalProblems;
               const finalScore =
                 result.total_score !== undefined && result.total_score !== null
                   ? result.total_score
