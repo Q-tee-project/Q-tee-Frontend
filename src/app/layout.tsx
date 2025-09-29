@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
-import { ClientAuthProvider } from '@/components/providers/ClientAuthProvider';
+import { AuthProvider } from '@/contexts/AuthContext';
 import MainLayoutWrapper from '@/components/layout/MainLayoutWrapper';
 import { NotificationProvider } from '@/contexts/NotificationContext';
 
@@ -45,10 +45,14 @@ export default function RootLayout({
       </head>
 
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <ClientAuthProvider>
+        <AuthProvider>
           <MainLayoutWrapper>{children}</MainLayoutWrapper>
+<<<<<<< HEAD
         </ClientAuthProvider>
 
+=======
+        </AuthProvider>
+>>>>>>> parent of 20ced84 (AuthProvider  대신 ClientAuthProvider 사용 / useRouter 실행 시 클라이언트 사이드 체크)
       </body>
     </html>
   );
