@@ -29,9 +29,11 @@ import { KoreanTestInterface } from '@/components/test/KoreanTestInterface';
 import { EnglishTestInterface } from '@/components/test/EnglishTestInterface';
 import { StudentResultView } from '@/components/test/StudentResultView';
 import { EnglishService } from '@/services/englishService';
+import { useSearchParams } from 'next/navigation';
 
 export default function TestPage() {
   const { userProfile } = useAuth();
+  const searchParams = useSearchParams();
   const [worksheets, setWorksheets] = useState<(Worksheet | KoreanWorksheet)[]>([]);
   const [selectedWorksheet, setSelectedWorksheet] = useState<Worksheet | KoreanWorksheet | null>(
     null,
@@ -76,6 +78,43 @@ export default function TestPage() {
       loadWorksheets();
     }
   }, [selectedSubject, userProfile]);
+
+  // URL 파라미터에서 과제 자동 선택
+  useEffect(() => {
+    const assignmentId = searchParams.get('assignmentId');
+    const assignmentTitle = searchParams.get('assignmentTitle');
+    const subject = searchParams.get('subject');
+    const viewResult = searchParams.get('viewResult');
+    
+    if (assignmentId && assignmentTitle && worksheets.length > 0) {
+      // 과목이 지정된 경우 해당 과목으로 변경
+      if (subject && subject !== selectedSubject) {
+        console.log('🎯 과목 변경:', selectedSubject, '→', subject);
+        setSelectedSubject(subject);
+        return; // 과목이 변경되면 loadWorksheets가 다시 호출됨
+      }
+      
+      // 해당 과제 찾기
+      const targetWorksheet = worksheets.find(w => 
+        w.id.toString() === assignmentId && w.title === assignmentTitle
+      );
+      
+      if (targetWorksheet) {
+        console.log('🎯 URL 파라미터로 과제 자동 선택:', targetWorksheet);
+        console.log('🎯 viewResult 파라미터:', viewResult);
+        
+        // 채점 완료된 과제인 경우 결과 보기 모드로 설정
+        if (viewResult === 'true') {
+          console.log('🎯 결과 보기 모드로 자동 설정');
+          setShowStudentResult(true);
+        }
+        
+        handleWorksheetSelect(targetWorksheet);
+      } else {
+        console.log('🎯 과제를 찾을 수 없음:', { assignmentId, assignmentTitle, availableWorksheets: worksheets.map(w => ({ id: w.id, title: w.title })) });
+      }
+    }
+  }, [worksheets, searchParams, selectedSubject]);
 
   // 타이머 효과
   useEffect(() => {
