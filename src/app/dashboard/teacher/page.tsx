@@ -8,7 +8,8 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Users, FileText, ClipboardList, BarChart3, BookOpen, Calendar, MessageSquare, Info, GraduationCap, BookOpen as BookIcon, CheckSquare, UserCheck, RefreshCw, ArrowRight, X, Package, ShoppingCart, Star, DollarSign } from 'lucide-react';
+import { Users, FileText, ClipboardList, BarChart3, BookOpen, Calendar, MessageSquare, Info, GraduationCap, BookOpen as BookIcon, CheckSquare, UserCheck, RefreshCw, ArrowRight, X, Package, ShoppingCart, Star, DollarSign, ChevronRight } from 'lucide-react';
+import { FaRegCircleCheck } from 'react-icons/fa6';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { RxDashboard } from 'react-icons/rx';
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -394,7 +395,7 @@ const TeacherDashboard = () => {
       const student = students[selectedClass as keyof typeof students]?.find(s => s.id === studentId);
       if (student) {
         // 각 학생별로 월별 성적 변동 시뮬레이션
-        studentsData[`${student.name}(${student.id})`] = baseChartData.map(month => {
+        studentsData[student.name] = baseChartData.map(month => {
           // 학생별로 월별 성적 변동 시뮬레이션 (기본 성적 ± 랜덤 변동)
           const variation = (Math.random() - 0.5) * 20; // ±10점 변동
           return Math.round(Math.max(0, Math.min(100, student.grade + variation)));
@@ -464,10 +465,10 @@ const TeacherDashboard = () => {
             <h2 className="text-base font-medium">마켓플레이스</h2>
           </div>
           <button 
-            onClick={handleRefresh}
+            onClick={() => router.push('/market/myMarket')}
             className="flex items-center gap-2 text-sm font-normal text-gray-400 hover:text-[#0072CE] transition-colors duration-200"
           >
-            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <ChevronRight className="h-4 w-4" />
           </button>
         </CardHeader>
         <CardContent>
@@ -842,7 +843,7 @@ const TeacherDashboard = () => {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="relative h-[28rem] bg-white rounded-lg p-4 shadow-inner">
+            <div className="relative h-[28rem] bg-white rounded-lg p-4">
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart
                   width={500}
@@ -996,7 +997,9 @@ const TeacherDashboard = () => {
           <CardHeader className="py-2 px-6 border-b border-gray-100 flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Users className="h-5 w-5 text-green-600 mr-2" />
-              <h2 className="text-base font-medium">학생 관리</h2>
+              <h2 className="text-base font-medium">
+                {selectedClass ? `${classes.find(c => c.id === selectedClass)?.name} 학생 관리` : '학생 관리'}
+              </h2>
               <div className="relative ml-2 inline-block">
                 <div className="group w-4 h-4">
                   <Info className="h-4 w-4 text-gray-400 cursor-help" />
@@ -1011,10 +1014,7 @@ const TeacherDashboard = () => {
             </div>
             {selectedClass && (
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-green-800">
-                  {classes.find(c => c.id === selectedClass)?.name} 학생 목록
-                </span>
-                <span className="text-xs text-gray-500">
+                <span className="text-sm text-gray-500">
                   총 {students[selectedClass as keyof typeof students]?.length || 0}명
                 </span>
               </div>
@@ -1139,24 +1139,52 @@ const TeacherDashboard = () => {
                       const isSelected = selectedStudents.includes(student.id);
                       const canSelect = !isSelected && selectedStudents.length < 3;
                       
+                      const studentColor = getStudentColor(student.id);
+                      
                       return (
                         <div 
                           key={student.id} 
                           onClick={() => canSelect ? handleStudentSelect(student.id) : undefined}
-                          className={`flex items-center justify-between p-2.5 rounded-lg border transition-colors ${
+                          className={`p-3 rounded-lg border transition-colors ${
                             isSelected 
-                              ? 'bg-gray-200 border-gray-300 text-gray-500 cursor-not-allowed' 
+                              ? 'text-gray-500 cursor-not-allowed' 
                               : canSelect
-                              ? 'bg-gray-50 border-gray-200 hover:bg-gray-100 cursor-pointer'
-                              : 'bg-gray-50 border-gray-200 opacity-50 cursor-not-allowed'
+                              ? 'bg-white border-gray-200 cursor-pointer'
+                              : 'bg-white border-gray-200 opacity-50 cursor-not-allowed'
                           }`}
+                          style={{
+                            backgroundColor: isSelected ? '#f9fafb' : 'white',
+                            borderColor: isSelected ? '#e5e7eb' : '#e5e7eb'
+                          }}
+                          onMouseEnter={(e) => {
+                            if (canSelect) {
+                              e.currentTarget.style.backgroundColor = '#f0fdf4';
+                              e.currentTarget.style.borderColor = '#bbf7d0';
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (canSelect) {
+                              e.currentTarget.style.backgroundColor = 'white';
+                              e.currentTarget.style.borderColor = '#e5e7eb';
+                            } else if (isSelected) {
+                              e.currentTarget.style.backgroundColor = '#f9fafb';
+                              e.currentTarget.style.borderColor = '#e5e7eb';
+                            }
+                          }}
                         >
-                          <div className="flex items-center">
-                            <div>
-                              <p className={`text-sm font-medium ${isSelected ? 'text-gray-500' : 'text-gray-900'}`}>
-                                {student.name} {isSelected ? '(선택됨)' : ''}
-                              </p>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center flex-1 min-w-0">
+                              <h4 className={`text-sm font-medium truncate ${
+                                isSelected ? 'text-gray-500' : 'text-gray-900'
+                              }`}>
+                                {student.name}
+                              </h4>
                             </div>
+                            {isSelected && (
+                              <div className="flex items-center text-green-600">
+                                <FaRegCircleCheck className="h-4 w-4" />
+                              </div>
+                            )}
                           </div>
                         </div>
                       );
