@@ -26,7 +26,7 @@ const SubjectAverage: React.FC<SubjectAverageProps> = ({
   return (
     <Card className="shadow-sm lg:col-span-2 h-full flex flex-col px-6 py-5">
       <CardHeader className="px-0 py-0">
-        <h3 className="text-xl font-bold text-gray-900">과목별 전체 평균과 내 평균</h3>
+        <h3 className="text-xl font-bold text-gray-900">과목별 내 점수</h3>
       </CardHeader>
       <div className="px-0">
         <div className="flex items-center gap-4">

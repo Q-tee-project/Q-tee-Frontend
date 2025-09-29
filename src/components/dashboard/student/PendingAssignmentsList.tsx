@@ -3,6 +3,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { ClipboardList, Clock } from 'lucide-react';
+import { RxExternalLink } from "react-icons/rx";
 
 interface Assignment {
   id: string;
@@ -25,12 +26,12 @@ const PendingAssignmentsList: React.FC<PendingAssignmentsListProps> = ({
   onAssignmentClick,
 }) => {
   return (
-    <Card className="shadow-sm h-full flex flex-col px-6 py-5">
+    <Card className="shadow-sm h-full flex flex-col px-6 py-5 gap-0">
       <CardHeader className="px-0 py-3">
         <h3 className="text-xl font-bold text-gray-900">과제 미제출</h3>
       </CardHeader>
       <CardContent className="flex-1 px-0">
-        <div className="h-full bg-white rounded-lg border border-gray-200 overflow-y-auto">
+        <div className="h-full bg-white overflow-y-auto">
           {isLoadingAssignments ? (
             <div className="h-full flex items-center justify-center">
               <div className="text-center">
@@ -46,32 +47,21 @@ const PendingAssignmentsList: React.FC<PendingAssignmentsListProps> = ({
               </div>
             </div>
           ) : (
-            <div className="space-y-2 p-5">
+            <div className="space-y-2">
               {unsubmittedAssignments.map((assignment, index) => (
                 <div
                   key={index}
                   onClick={() => onAssignmentClick(assignment)}
-                  className="p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 cursor-pointer transition-colors"
+                  className="p-3 bg-white rounded-lg border border-gray-200 hover:bg-red-50 hover:border-red-200 cursor-pointer transition-colors"
                 >
                   <div className="flex items-center justify-between">
-                    <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div className="w-3 h-3 bg-red-500 rounded-full flex-shrink-0"></div>
                       <h4 className="text-sm font-medium text-gray-900 truncate">
                         {assignment.title}
                       </h4>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-xs text-gray-500">
-                          {assignment.subject || '과목 미지정'}
-                        </span>
-                        <span className="text-xs text-gray-400">•</span>
-                        <span className="text-xs text-gray-500">
-                          {assignment.problem_count || 0}문제
-                        </span>
-                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-orange-500" />
-                      <span className="text-xs text-orange-500 font-medium">미응시</span>
-                    </div>
+                    <RxExternalLink className="h-4 w-4 text-gray-400 flex-shrink-0" />
                   </div>
                 </div>
               ))}
