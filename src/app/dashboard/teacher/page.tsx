@@ -438,7 +438,68 @@ const TeacherDashboard = () => {
         </div>
       </nav>
 
-      {/* 통합 섹션 */}
+      {/* 마켓플레이스 섹션 */}
+      <Card className="flex-1 flex flex-col shadow-sm">
+        <CardHeader className="py-2 px-6 border-b border-gray-100 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <h2 className="text-base font-medium">마켓플레이스</h2>
+          </div>
+          <button 
+            onClick={handleRefresh}
+            className="flex items-center gap-2 text-sm font-normal text-gray-400 hover:text-[#0072CE] transition-colors duration-200"
+          >
+            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+          </button>
+        </CardHeader>
+        <CardContent>
+          {/* 마켓플레이스 통계 */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div className="text-center p-6 bg-gradient-to-br from-blue-50/80 to-blue-100/60 backdrop-blur-sm rounded-xl border border-blue-200/50 shadow-lg">
+              <div className="flex justify-center mb-3">
+                <div className="p-2 bg-[#0072CE]/20 rounded-lg backdrop-blur-sm">
+                  <BookIcon className="h-6 w-6 text-[#0072CE]" />
+                </div>
+              </div>
+              <div className="text-2xl font-bold text-[#0072CE] mb-1">24</div>
+              <div className="text-sm text-[#0072CE]/80 font-medium">등록 상품</div>
+            </div>
+            <div className="text-center p-6 bg-gradient-to-br from-cyan-50/80 to-cyan-100/60 backdrop-blur-sm rounded-xl border border-cyan-200/50 shadow-lg">
+              <div className="flex justify-center mb-3">
+                <div className="p-2 bg-cyan-500/20 rounded-lg backdrop-blur-sm">
+                  <Users className="h-6 w-6 text-cyan-600" />
+                </div>
+              </div>
+              <div className="text-2xl font-bold text-cyan-700 mb-1">1,247</div>
+              <div className="text-sm text-cyan-600 font-medium">총 판매량</div>
+            </div>
+            <div className="text-center p-6 bg-gradient-to-br from-indigo-50/80 to-indigo-100/60 backdrop-blur-sm rounded-xl border border-indigo-200/50 shadow-lg">
+              <div className="flex justify-center mb-3">
+                <div className="p-2 bg-indigo-500/20 rounded-lg backdrop-blur-sm">
+                  <BarChart3 className="h-6 w-6 text-indigo-600" />
+                </div>
+              </div>
+              <div className="text-2xl font-bold text-indigo-700 mb-1">4.3</div>
+              <div className="text-sm text-indigo-600 font-medium">평균 평점</div>
+            </div>
+            <div className="text-center p-6 bg-gradient-to-br from-sky-50/80 to-sky-100/60 backdrop-blur-sm rounded-xl border border-sky-200/50 shadow-lg">
+              <div className="flex justify-center mb-3">
+                <div className="p-2 bg-sky-500/20 rounded-lg backdrop-blur-sm">
+                  <FileText className="h-6 w-6 text-sky-600" />
+                </div>
+              </div>
+              <div className="text-2xl font-bold text-sky-700 mb-1">₩5,240,000</div>
+              <div className="text-sm text-sky-600 font-medium">총 수익</div>
+            </div>
+          </div>
+
+          {/* 마켓플레이스 내용 */}
+          <div className="text-center py-12">
+            <div className="text-gray-500 text-lg">마켓플레이스 기능이 곧 추가될 예정입니다.</div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 클래스 관리 섹션 */}
       <Card className="bg-card text-card-foreground gap-6 rounded-xl border py-6 flex-1 flex flex-col shadow-sm">
         <CardHeader className="py-2 px-6 border-b border-gray-100 flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -453,45 +514,6 @@ const TeacherDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-8">
-            {/* Quick Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-              <div className="text-center p-6 bg-gradient-to-br from-blue-50/80 to-blue-100/60 backdrop-blur-sm rounded-xl border border-blue-200/50 shadow-lg">
-                <div className="flex justify-center mb-3">
-                  <div className="p-2 bg-[#0072CE]/20 rounded-lg backdrop-blur-sm">
-                    <BookIcon className="h-6 w-6 text-[#0072CE]" />
-                  </div>
-                </div>
-                <div className="text-2xl font-bold text-[#0072CE] mb-1">24</div>
-                <div className="text-sm text-[#0072CE]/80 font-medium">등록 상품</div>
-              </div>
-              <div className="text-center p-6 bg-gradient-to-br from-cyan-50/80 to-cyan-100/60 backdrop-blur-sm rounded-xl border border-cyan-200/50 shadow-lg">
-                <div className="flex justify-center mb-3">
-                  <div className="p-2 bg-cyan-500/20 rounded-lg backdrop-blur-sm">
-                    <Users className="h-6 w-6 text-cyan-600" />
-                  </div>
-                </div>
-                <div className="text-2xl font-bold text-cyan-700 mb-1">1,247</div>
-                <div className="text-sm text-cyan-600 font-medium">총 판매량</div>
-              </div>
-              <div className="text-center p-6 bg-gradient-to-br from-indigo-50/80 to-indigo-100/60 backdrop-blur-sm rounded-xl border border-indigo-200/50 shadow-lg">
-                <div className="flex justify-center mb-3">
-                  <div className="p-2 bg-indigo-500/20 rounded-lg backdrop-blur-sm">
-                    <BarChart3 className="h-6 w-6 text-indigo-600" />
-                  </div>
-                </div>
-                <div className="text-2xl font-bold text-indigo-700 mb-1">4.3</div>
-                <div className="text-sm text-indigo-600 font-medium">평균 평점</div>
-              </div>
-              <div className="text-center p-6 bg-gradient-to-br from-sky-50/80 to-sky-100/60 backdrop-blur-sm rounded-xl border border-sky-200/50 shadow-lg">
-                <div className="flex justify-center mb-3">
-                  <div className="p-2 bg-sky-500/20 rounded-lg backdrop-blur-sm">
-                    <FileText className="h-6 w-6 text-sky-600" />
-                  </div>
-                </div>
-                <div className="text-2xl font-bold text-sky-700 mb-1">₩5,240,000</div>
-                <div className="text-sm text-sky-600 font-medium">총 수익</div>
-              </div>
-            </div>
 
             {/* Class Selection and Chart Period */}
             <div className="mb-6">
@@ -993,66 +1015,6 @@ const TeacherDashboard = () => {
           </CardContent>
         </Card>
 
-        {/* 마켓플레이스 섹션 */}
-        <Card className="flex-1 flex flex-col shadow-sm">
-          <CardHeader className="py-2 px-6 border-b border-gray-100 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <h2 className="text-base font-medium">마켓플레이스</h2>
-            </div>
-            <button 
-              onClick={handleRefresh}
-              className="flex items-center gap-2 text-sm font-normal text-gray-400 hover:text-[#0072CE] transition-colors duration-200"
-            >
-              <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-            </button>
-          </CardHeader>
-          <CardContent>
-            {/* 마켓플레이스 통계 */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-              <div className="text-center p-6 bg-gradient-to-br from-blue-50/80 to-blue-100/60 backdrop-blur-sm rounded-xl border border-blue-200/50 shadow-lg">
-                <div className="flex justify-center mb-3">
-                  <div className="p-2 bg-[#0072CE]/20 rounded-lg backdrop-blur-sm">
-                    <BookIcon className="h-6 w-6 text-[#0072CE]" />
-                  </div>
-                </div>
-                <div className="text-2xl font-bold text-[#0072CE] mb-1">24</div>
-                <div className="text-sm text-[#0072CE]/80 font-medium">등록 상품</div>
-              </div>
-              <div className="text-center p-6 bg-gradient-to-br from-cyan-50/80 to-cyan-100/60 backdrop-blur-sm rounded-xl border border-cyan-200/50 shadow-lg">
-                <div className="flex justify-center mb-3">
-                  <div className="p-2 bg-cyan-500/20 rounded-lg backdrop-blur-sm">
-                    <Users className="h-6 w-6 text-cyan-600" />
-                  </div>
-                </div>
-                <div className="text-2xl font-bold text-cyan-700 mb-1">1,247</div>
-                <div className="text-sm text-cyan-600 font-medium">총 판매량</div>
-              </div>
-              <div className="text-center p-6 bg-gradient-to-br from-indigo-50/80 to-indigo-100/60 backdrop-blur-sm rounded-xl border border-indigo-200/50 shadow-lg">
-                <div className="flex justify-center mb-3">
-                  <div className="p-2 bg-indigo-500/20 rounded-lg backdrop-blur-sm">
-                    <BarChart3 className="h-6 w-6 text-indigo-600" />
-                  </div>
-                </div>
-                <div className="text-2xl font-bold text-indigo-700 mb-1">4.3</div>
-                <div className="text-sm text-indigo-600 font-medium">평균 평점</div>
-              </div>
-              <div className="text-center p-6 bg-gradient-to-br from-sky-50/80 to-sky-100/60 backdrop-blur-sm rounded-xl border border-sky-200/50 shadow-lg">
-                <div className="flex justify-center mb-3">
-                  <div className="p-2 bg-sky-500/20 rounded-lg backdrop-blur-sm">
-                    <FileText className="h-6 w-6 text-sky-600" />
-                  </div>
-                </div>
-                <div className="text-2xl font-bold text-sky-700 mb-1">₩5,240,000</div>
-                <div className="text-sm text-sky-600 font-medium">총 수익</div>
-              </div>
-            </div>
-
-            {/* 마켓플레이스 내용 */}
-            <div className="text-center py-12">
-              <div className="text-gray-500 text-lg">마켓플레이스 기능이 곧 추가될 예정입니다.</div>
-            </div>
-          </CardContent>
-        </Card>
 
     </div>
   );

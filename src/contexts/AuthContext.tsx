@@ -44,10 +44,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     setTokenExpiredCallback(() => {
       console.log('토큰이 만료되어 자동 로그아웃됩니다.');
       logout();
-      // Next.js router를 사용하여 페이지 새로고침 없이 이동
-      router.push('/');
+      // 클라이언트 사이드에서만 router 사용
+      if (typeof window !== 'undefined' && router) {
+        router.push('/');
+      }
     });
-  }, []);
+  }, [router]);
 
   const refreshAuth = async () => {
     setIsLoading(true);
