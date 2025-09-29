@@ -22,7 +22,7 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { Calendar, Users } from 'lucide-react';
-import { IoBookOutline } from 'react-icons/io5';
+
 import { FaRegTrashAlt } from 'react-icons/fa';
 
 interface AssignmentListProps {
@@ -90,9 +90,7 @@ export function AssignmentList({
         if (isKorean) {
           assignmentResultData = await koreanService.getAssignmentResults(assignment.id);
         } else if (isEnglish) {
-          assignmentResultData = await EnglishService.getEnglishAssignmentResults(
-            assignment.id,
-          );
+          assignmentResultData = await EnglishService.getEnglishAssignmentResults(assignment.id);
           // 영어는 네트워크에서 받은 원본 데이터 그대로 사용 (변환하지 않음)
         } else {
           assignmentResultData = await mathService.getAssignmentResults(assignment.id);
@@ -160,14 +158,6 @@ export function AssignmentList({
                       <div className="flex items-center gap-1">
                         <Users className="w-4 h-4" />
                         <span>{results.length}명 배포</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <IoBookOutline className="w-4 h-4" />
-                        <span>
-                          {assignment.problem_type
-                            ? assignment.problem_type
-                            : `${assignment.unit_name} ${assignment.chapter_name}`}
-                        </span>
                       </div>
                     </div>
                     <h4 className="text-lg font-semibold text-gray-900">{assignment.title}</h4>
@@ -314,11 +304,17 @@ export function AssignmentList({
 
                             return studentsWithInfo.map((studentResult) => {
                               // 상태에 따른 응시 여부 결정 (영어 과제 포함)
-                              const hasSubmitted = subject === 'english'
-                                ? !!(studentResult.completed_at || studentResult.submitted_at || studentResult.status === '완료' || studentResult.status === 'completed') // 영어는 completed_at 우선 확인
-                                : (studentResult.status === '완료' ||
-                                   studentResult.status === '제출완료' ||
-                                   studentResult.status === 'completed');
+                              const hasSubmitted =
+                                subject === 'english'
+                                  ? !!(
+                                      studentResult.completed_at ||
+                                      studentResult.submitted_at ||
+                                      studentResult.status === '완료' ||
+                                      studentResult.status === 'completed'
+                                    ) // 영어는 completed_at 우선 확인
+                                  : studentResult.status === '완료' ||
+                                    studentResult.status === '제출완료' ||
+                                    studentResult.status === 'completed';
                               const score = hasSubmitted
                                 ? studentResult.score || studentResult.total_score
                                 : null;
@@ -362,8 +358,8 @@ export function AssignmentList({
                                   <TableCell className="text-center p-3">
                                     <Badge
                                       className={`rounded px-2.5 py-1.5 text-sm ${
-                                        hasSubmitted 
-                                          ? 'bg-[#E6F3FF] text-[#0085FF]' 
+                                        hasSubmitted
+                                          ? 'bg-[#E6F3FF] text-[#0085FF]'
                                           : 'bg-[#ffebeb] text-[#f00]'
                                       }`}
                                     >
