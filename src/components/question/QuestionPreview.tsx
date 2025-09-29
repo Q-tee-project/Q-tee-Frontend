@@ -180,27 +180,30 @@ export const QuestionPreview: React.FC<QuestionPreviewProps> = ({
                   <LaTeXRenderer content={q.question || q.title} />
                 </div>
                 {(q.choices || q.options) &&
-                  (q.choices || q.options)!.map((opt, idx) => (
-                    <div key={idx} className="flex items-start gap-3 mb-3">
-                      <span
-                        className={`flex-shrink-0 w-6 h-6 border-2 ${
-                          idx === q.answerIndex
-                            ? 'border-green-500 bg-green-500 text-white'
-                            : 'border-gray-300 text-gray-600'
-                        } rounded-full flex items-center justify-center text-sm font-medium`}
-                      >
-                        {String.fromCharCode(65 + idx)}
-                      </span>
-                      <div className="flex-1 text-gray-900">
-                        <LaTeXRenderer content={opt} />
-                      </div>
-                      {idx === q.answerIndex && (
-                        <span className="text-xs font-medium text-green-700 bg-green-200 px-2 py-1 rounded">
-                          정답
+                  (q.choices || q.options)!.map((opt, idx) => {
+                    const displayChoice = opt.replace(/^[A-E][\.\)]\s*/, '');
+                    return (
+                      <div key={idx} className="flex items-start gap-3 mb-3">
+                        <span
+                          className={`flex-shrink-0 w-6 h-6 border-2 ${
+                            idx === q.answerIndex
+                              ? 'border-green-500 bg-green-500 text-white'
+                              : 'border-gray-300 text-gray-600'
+                          } rounded-full flex items-center justify-center text-sm font-medium`}
+                        >
+                          {String.fromCharCode(65 + idx)}
                         </span>
-                      )}
-                    </div>
-                  ))}
+                        <div className="flex-1 text-gray-900">
+                          <LaTeXRenderer content={displayChoice} />
+                        </div>
+                        {idx === q.answerIndex && (
+                          <span className="text-xs font-medium text-green-700 bg-green-200 px-2 py-1 rounded">
+                            정답
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
               </div>
               <div className="col-span-4">
                 <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
