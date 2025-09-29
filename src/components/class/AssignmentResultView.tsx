@@ -7,7 +7,7 @@ import { EnglishService } from '@/services/englishService';
 import { classroomService } from '@/services/authService';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   Table,
   TableBody,
@@ -128,8 +128,7 @@ export function AssignmentResultView({
       } else if (isEnglish) {
         // 영어 과제의 경우 워크시트 상세 정보를 가져와서 문제들 추출
         data = await EnglishService.getEnglishWorksheetDetail(assignment.worksheet_id);
-        // 영어 API 응답 구조: { worksheet_data: { questions: [...] } }
-        setProblems(data.worksheet_data?.questions || data.questions || []);
+        setProblems(data.questions || []);
       } else {
         // 수학 과제의 경우 문제는 채점 결과에서 가져옴
         console.log('Math assignment - problems will be loaded from grading results');
@@ -522,19 +521,8 @@ export function AssignmentResultView({
           });
         }
       } else {
-        // 수학 과제의 경우 API를 통해 상세 정보 가져오기
-        try {
-          const sessionId = session.id || session.grading_session_id;
-          if (!sessionId) {
-            throw new Error('No valid session ID found');
-          }
-          const details = await mathService.getGradingSessionDetails(sessionId);
-          setSessionDetails(details);
-        } catch (error) {
-          console.warn('Math grading session details not available, using session data:', error);
-          // API가 실패하면 session 데이터를 직접 사용
-          setSessionDetails(session);
-        }
+        // 수학 과제의 경우 session 자체에 이미 problem_results가 포함되어 있음
+        setSessionDetails(session);
       }
     } catch (error) {
       console.error('Failed to load session details:', error);
@@ -951,11 +939,10 @@ export function AssignmentResultView({
                                 ) : isEnglish ? (
                                   <div>
                                     {item.question_text && <p>{item.question_text}</p>}
-                                    {/* 영어 지문 표시 - passage나 example_content 사용 */}
-                                    {(item.passage || item.example_content) && (
+                                    {item.passage && (
                                       <div className="bg-gray-50 p-3 rounded mt-2 mb-2">
                                         <p className="text-sm text-gray-700 whitespace-pre-wrap">
-                                          {item.passage || item.example_content}
+                                          {item.passage}
                                         </p>
                                       </div>
                                     )}
@@ -973,9 +960,9 @@ export function AssignmentResultView({
                             </div>
 
                             {/* Choices */}
-                            {(item.choices || item.question_choices) && (
+                            {item.choices && (
                               <div className="space-y-2 mb-4">
-                                {(item.choices || item.question_choices).map((choice: string, choiceIndex: number) => {
+                                {item.choices.map((choice: string, choiceIndex: number) => {
                                   const choiceNumber = (choiceIndex + 1).toString();
                                   const isStudentAnswer = isEnglish
                                     ? answerStatus?.studentAnswer === choice
@@ -1135,14 +1122,11 @@ export function AssignmentResultView({
 
                             {/* Explanation */}
                             {((isKorean && item.explanation) ||
-                              (isEnglish && item.explanation) ||
-                              (!isKorean && !isEnglish && answerStatus?.explanation)) && (
+                              (!isKorean && answerStatus?.explanation)) && (
                               <div className="mt-4 p-4 bg-blue-50 rounded-lg">
                                 <h4 className="font-medium text-blue-900 mb-2">해설</h4>
                                 <div className="text-blue-800 text-sm">
                                   {isKorean ? (
-                                    <p>{item.explanation}</p>
-                                  ) : isEnglish ? (
                                     <p>{item.explanation}</p>
                                   ) : (
                                     <LaTeXRenderer content={answerStatus?.explanation || ''} />

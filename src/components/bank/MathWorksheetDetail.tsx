@@ -29,8 +29,7 @@ const getProblemTypeInKorean = (type: string): string => {
   switch (type.toLowerCase()) {
     case ProblemType.MULTIPLE_CHOICE:
       return '객관식';
-    case ProblemType.ESSAY:
-      return '서술형';
+
     case ProblemType.SHORT_ANSWER:
       return '단답형';
     default:
@@ -206,6 +205,7 @@ export const MathWorksheetDetail: React.FC<MathWorksheetDetailProps> = ({
                             {problem.choices.map((choice: string, choiceIndex: number) => {
                               const optionLabel = String.fromCharCode(65 + choiceIndex);
                               const isCorrect = problem.correct_answer === optionLabel;
+                              const displayChoice = choice.replace(/^[A-E]\)\s*/, '');
                               return (
                                 <div
                                   key={choiceIndex}
@@ -225,7 +225,7 @@ export const MathWorksheetDetail: React.FC<MathWorksheetDetailProps> = ({
                                     {showAnswerSheet && isCorrect ? '✓' : optionLabel}
                                   </span>
                                   <div className="flex-1 text-gray-900">
-                                    <LaTeXRenderer content={choice} />
+                                    <LaTeXRenderer content={displayChoice} />
                                   </div>
                                   {showAnswerSheet && isCorrect && (
                                     <span className="text-xs font-medium text-green-700 bg-green-200 px-2 py-1 rounded">
@@ -244,7 +244,9 @@ export const MathWorksheetDetail: React.FC<MathWorksheetDetailProps> = ({
                               <span className="text-sm font-semibold text-blue-800">해설:</span>
                             </div>
                             <div className="text-sm text-blue-800">
-                              <LaTeXRenderer content={problem.explanation || '해설 정보가 없습니다'} />
+                              <LaTeXRenderer
+                                content={problem.explanation || '해설 정보가 없습니다'}
+                              />
                             </div>
                           </div>
                         )}
@@ -258,10 +260,7 @@ export const MathWorksheetDetail: React.FC<MathWorksheetDetailProps> = ({
                                   {showAnswerSheet ? (
                                     <div className="bg-green-100 border border-green-300 rounded px-3 py-2 text-green-800 font-medium">
                                       <LaTeXRenderer
-                                        content={
-                                          problem.correct_answer ||
-                                          '답안 정보가 없습니다'
-                                        }
+                                        content={problem.correct_answer || '답안 정보가 없습니다'}
                                       />
                                     </div>
                                   ) : (
@@ -271,7 +270,9 @@ export const MathWorksheetDetail: React.FC<MathWorksheetDetailProps> = ({
                                 {showAnswerSheet && (
                                   <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
                                     <div className="flex items-center gap-2 mb-2">
-                                      <span className="text-sm font-semibold text-blue-800">해설:</span>
+                                      <span className="text-sm font-semibold text-blue-800">
+                                        해설:
+                                      </span>
                                     </div>
                                     <div className="text-sm text-blue-800">
                                       <LaTeXRenderer
@@ -307,10 +308,7 @@ export const MathWorksheetDetail: React.FC<MathWorksheetDetailProps> = ({
                                     </div>
                                     <div className="text-sm text-blue-900">
                                       <LaTeXRenderer
-                                        content={
-                                          problem.correct_answer ||
-                                          '답안 정보가 없습니다'
-                                        }
+                                        content={problem.correct_answer || '답안 정보가 없습니다'}
                                       />
                                     </div>
                                     <div className="mt-3 pt-3 border-t border-blue-200">
