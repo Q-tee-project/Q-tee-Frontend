@@ -684,7 +684,9 @@ const TeacherDashboard = () => {
                               className="h-9 px-4 text-xs bg-[#0072CE] hover:bg-[#0072CE]/90"
                             >
                               적용
-                    </Button>
+                            </Button>
+                          </div>
+                        </div>
                       </DialogContent>
                     </Dialog>
                   ) : (
@@ -970,8 +972,10 @@ const TeacherDashboard = () => {
               </div>
 
             </div>
+          </div>
           </CardContent>
         </Card>
+      </div>
   );
 };
 
