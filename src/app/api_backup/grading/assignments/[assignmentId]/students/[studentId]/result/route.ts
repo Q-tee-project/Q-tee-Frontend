@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { assignmentId: string; studentId: string } }
+  { params }: { params: Promise<{ assignmentId: string; studentId: string }> }
 ) {
   try {
-    const { assignmentId, studentId } = params;
+    const { assignmentId, studentId } = await params;
     const subject = request.nextUrl.searchParams.get('subject') || 'math';
 
     // Get auth header from the request

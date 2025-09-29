@@ -3,107 +3,370 @@
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Users, FileText, ClipboardList, BarChart3, BookOpen, Calendar, MessageSquare, Info } from 'lucide-react';
 import { RxDashboard } from 'react-icons/rx';
 import { PageHeader } from '@/components/layout/PageHeader';
-import {
-  ComposedChart,
-  Line,
-  Area,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from 'recharts';
+import { mathService } from '@/services/mathService';
+import { koreanService } from '@/services/koreanService';
+import { EnglishService } from '@/services/englishService';
+import ClassAverage from '@/components/dashboard/student/ClassAverage';
+import SubjectAverage from '@/components/dashboard/student/SubjectAverage';
+import PendingAssignmentsList from '@/components/dashboard/student/PendingAssignmentsList';
+import GradedAssignmentsList from '@/components/dashboard/student/GradedAssignmentsList';
 
 const StudentDashboard = () => {
-  const { userProfile, logout } = useAuth();
+  const { userProfile } = useAuth();
   const router = useRouter();
-  const [selectedClass, setSelectedClass] = React.useState('');
+  const [selectedClass, setSelectedClass] = React.useState('1'); // 기본값: 첫 번째 클래스
+  const [dashboardAssignments, setDashboardAssignments] = React.useState<any[]>([]);
+  const [isLoadingAssignments, setIsLoadingAssignments] = React.useState(false);
+  const [chartType, setChartType] = React.useState<'period' | 'assignment'>('period'); // 기본값: 기간별
   const [selectedAssignments, setSelectedAssignments] = React.useState<string[]>([]);
+  const [showPeriodModal, setShowPeriodModal] = React.useState(false);
+  const [showAssignmentModal, setShowAssignmentModal] = React.useState(false);
+  const [tempSelectedAssignments, setTempSelectedAssignments] = React.useState<string[]>([]);
+  const [customStartYear, setCustomStartYear] = React.useState('');
+  const [customStartMonth, setCustomStartMonth] = React.useState('');
+  const [customEndYear, setCustomEndYear] = React.useState('');
+  const [customEndMonth, setCustomEndMonth] = React.useState('');
+  const [selectedMonth, setSelectedMonth] = React.useState('');
 
   // 임시 클래스 데이터
   const classes = [
-    { id: '1', name: '수학 1-1반' },
-    { id: '2', name: '수학 1-2반' },
-    { id: '3', name: '수학 2-1반' },
-    { id: '4', name: '수학 2-2반' },
-    { id: '5', name: '수학 3-1반' },
+    { id: '1', name: '클래스 A' },
+    { id: '2', name: '클래스 B' },
+    { id: '3', name: '클래스 C' },
+    { id: '4', name: '클래스 D' },
+    { id: '5', name: '클래스 E' },
   ];
 
   // 임시 과제 데이터
   const assignments = [
-    { id: '1', title: '1차 중간고사', subject: '수학', dueDate: '2024-03-15' },
-    { id: '2', title: '2차 중간고사', subject: '수학', dueDate: '2024-04-20' },
-    { id: '3', title: '기말고사', subject: '수학', dueDate: '2024-06-10' },
-    { id: '4', title: '과제 1', subject: '수학', dueDate: '2024-03-01' },
-    { id: '5', title: '과제 2', subject: '수학', dueDate: '2024-03-08' },
+    { id: '1', name: '1차 중간고사' },
+    { id: '2', name: '2차 중간고사' },
+    { id: '3', name: '기말고사' },
+    { id: '4', name: '과제 1' },
+    { id: '5', name: '과제 2' },
+    { id: '6', name: '과제 3' },
+    { id: '7', name: '과제 4' },
   ];
 
-  // 성적 분석 차트 데이터
-  const chartData = [
+  // 레이더 차트 데이터
+  const radarData = [
+    {
+      subject: '국어',
+      클래스평균: 85,
+      내점수: 40,
+      fullMark: 100,
+    },
+    {
+      subject: '영어',
+      클래스평균: 60,
+      내점수: 92,
+      fullMark: 100,
+    },
+    {
+      subject: '수학',
+      클래스평균: 82,
+      내점수: 75,
+      fullMark: 100,
+    },
+  ];
+
+  // 기본 ComposedChart 데이터
+  const defaultChartData = [
     {
       name: '1월',
       클래스평균: 85,
-      본인평균: 78,
-      과제수: 5,
+      내점수: 78,
     },
     {
       name: '2월',
       클래스평균: 88,
-      본인평균: 82,
-      과제수: 7,
+      내점수: 82,
     },
     {
       name: '3월',
       클래스평균: 82,
-      본인평균: 75,
-      과제수: 6,
+      내점수: 75,
     },
     {
       name: '4월',
       클래스평균: 90,
-      본인평균: 85,
-      과제수: 8,
+      내점수: 85,
     },
     {
       name: '5월',
       클래스평균: 87,
-      본인평균: 80,
-      과제수: 6,
+      내점수: 80,
     },
     {
       name: '6월',
       클래스평균: 92,
-      본인평균: 88,
-      과제수: 9,
+      내점수: 88,
+    },
+    {
+      name: '7월',
+      클래스평균: 92,
+      내점수: 88,
+    },
+    {
+      name: '8월',
+      클래스평균: 92,
+      내점수: 88,
+    },
+    {
+      name: '9월',
+      클래스평균: 92,
+      내점수: 88,
+    },
+    {
+      name: '10월',
+      클래스평균: 65,
+      내점수: 70,
+    },
+    {
+      name: '11월',
+      클래스평균: 92,
+      내점수: 50,
+    },
+    {
+      name: '12월',
+      클래스평균: 60,
+      내점수: 88,
     },
   ];
 
-  // 과목별 평균 비교 데이터
-  const subjectComparisonData = [
-    { subject: '국어', 클래스평균: 85, 내평균: 78 },
-    { subject: '영어', 클래스평균: 88, 내평균: 82 },
-    { subject: '수학', 클래스평균: 82, 내평균: 75 },
-  ];
+  // 동적 차트 데이터 생성
+  const getChartData = () => {
+    if (chartType === 'assignment' && selectedAssignments.length > 0) {
+      // 과제별 차트 데이터
+      return selectedAssignments.map((assignmentId, index) => {
+        const assignment = assignments.find(a => a.id === assignmentId);
+        return {
+          name: assignment?.name || `과제${index + 1}`,
+          클래스평균: Math.floor(Math.random() * 20) + 80, // 임시 데이터
+          내점수: Math.floor(Math.random() * 20) + 75, // 임시 데이터
+          과제수: Math.floor(Math.random() * 5) + 3, // 임시 데이터
+        };
+      });
+    } else if (chartType === 'period') {
+      // 월 선택 시 해당 월 데이터만 표시
+      if (selectedMonth && selectedMonth !== 'all') {
+        return defaultChartData.filter(item => item.name === selectedMonth);
+      }
+      // 기간별 차트 데이터 (선택된 기간에 따라 필터링)
+      if (customStartYear && customEndYear && customStartMonth && customEndMonth) {
+        // 커스텀 기간에 따른 데이터 필터링 로직
+        return defaultChartData; // 임시로 기본 데이터 반환
+      }
+      return defaultChartData;
+    }
+    return defaultChartData;
+  };
 
-  // 미제출 과제 데이터
-  const unsubmittedAssignments = [
-    { id: 1, title: '수학 과제 3', dueDate: '2024-03-15', subject: '수학' },
-    { id: 2, title: '영어 에세이', dueDate: '2024-03-20', subject: '영어' },
-  ];
+  const composedChartData = getChartData();
 
-  // 채점 완료 과제 데이터
-  const completedAssignments = [
-    { id: 1, title: '수학 과제 1', score: 85, maxScore: 100, subject: '수학' },
-    { id: 2, title: '국어 독서록', score: 92, maxScore: 100, subject: '국어' },
-  ];
+  // 과제 데이터 로딩
+  React.useEffect(() => {
+    if (userProfile?.id) {
+      loadDashboardAssignments();
+    }
+  }, [userProfile]);
+
+  const loadDashboardAssignments = async () => {
+    if (!userProfile?.id) return;
+    
+    setIsLoadingAssignments(true);
+    try {
+      const allAssignments: any[] = [];
+      
+      // 수학 과제
+      try {
+        const mathAssignments = await mathService.getStudentAssignments(userProfile.id);
+        allAssignments.push(...mathAssignments.map((assignment: any) => ({
+          ...assignment,
+          subject: '수학',
+          id: assignment.assignment_id,
+          title: assignment.title,
+          problem_count: assignment.problem_count,
+          status: assignment.status,
+          deployed_at: assignment.deployed_at,
+        })));
+      } catch (error) {
+        console.log('수학 과제 로드 실패:', error);
+      }
+
+      // 국어 과제
+      try {
+        const koreanAssignments = await koreanService.getStudentAssignments(userProfile.id);
+        allAssignments.push(...koreanAssignments.map((assignment: any) => ({
+          ...assignment,
+          subject: '국어',
+          id: assignment.assignment_id,
+          title: assignment.title,
+          problem_count: assignment.problem_count,
+          status: assignment.status,
+          deployed_at: assignment.deployed_at,
+        })));
+      } catch (error) {
+        console.log('국어 과제 로드 실패:', error);
+      }
+
+      // 영어 과제
+      try {
+        const englishAssignments = await EnglishService.getStudentAssignments(userProfile.id);
+        allAssignments.push(...englishAssignments.map((assignment: any) => ({
+          ...assignment,
+          subject: '영어',
+          id: assignment.assignment?.id || assignment.assignment_id,
+          title: assignment.assignment?.title || assignment.title,
+          problem_count: assignment.assignment?.total_questions || assignment.total_questions,
+          status: assignment.deployment?.status || assignment.status,
+          deployed_at: assignment.deployment?.deployed_at || assignment.deployed_at,
+        })));
+      } catch (error) {
+        console.log('영어 과제 로드 실패:', error);
+      }
+
+      setDashboardAssignments(allAssignments);
+      console.log('📋 로드된 모든 과제:', allAssignments);
+      console.log('📋 과제 상태들:', allAssignments.map(a => ({ title: a.title, status: a.status, subject: a.subject })));
+      
+      // 미응시 과제 디버깅
+      const unsubmitted = allAssignments.filter(assignment => {
+        const status = assignment.status?.toLowerCase();
+        return status === 'deployed' || 
+               status === 'assigned' || 
+               status === '미응시' ||
+               status === 'not_started' ||
+               status === 'pending' ||
+               !status;
+      });
+      console.log('📋 미응시 과제들:', unsubmitted);
+    } catch (error) {
+      console.error('과제 로드 실패:', error);
+    } finally {
+      setIsLoadingAssignments(false);
+    }
+  };
+
+  // 과제 상태별 분류 (더 유연한 필터링)
+  const unsubmittedAssignments = dashboardAssignments.filter(assignment => {
+    const status = assignment.status?.toLowerCase();
+    console.log(`🔍 과제 "${assignment.title}" 상태 확인:`, status);
+    
+    // 미응시 상태들 (더 포괄적으로)
+    const isUnsubmitted = status === 'deployed' || 
+           status === 'assigned' || 
+           status === '미응시' ||
+           status === 'not_started' ||
+           status === 'pending' ||
+           status === 'active' ||
+           status === 'available' ||
+           !status; // 상태가 없는 경우도 미제출로 간주
+    
+    console.log(`🔍 "${assignment.title}" 미응시 여부:`, isUnsubmitted);
+    return isUnsubmitted;
+  });
+
+  const gradedAssignments = dashboardAssignments.filter(assignment => {
+    const status = assignment.status?.toLowerCase();
+    return status === 'completed' || 
+           status === 'submitted' || 
+           status === '응시' ||
+           status === 'graded' ||
+           status === 'finished';
+  });
+
+  // 디버깅용 로그
+  console.log('🔍 미제출 과제들:', unsubmittedAssignments);
+  console.log('🔍 채점 완료 과제들:', gradedAssignments);
+
+  // 과제 클릭 핸들러
+  const handleAssignmentClick = (assignment: any) => {
+    router.push('/test');
+  };
+
+
+  // 과제 제거 핸들러 (배지에서 제거)
+  const handleAssignmentRemove = (assignmentId: string) => {
+    setSelectedAssignments(prev => prev.filter(id => id !== assignmentId));
+  };
+
+  // 기간 설정 적용
+  const handlePeriodApply = () => {
+    // 날짜 유효성 검사
+    if (!customStartYear || !customStartMonth || !customEndYear || !customEndMonth) {
+      alert('시작일과 종료일을 모두 선택해주세요.');
+      return;
+    }
+
+    // 오늘 이후 날짜 체크
+    const today = new Date();
+    const endDate = new Date(parseInt(customEndYear), parseInt(customEndMonth) - 1);
+    if (endDate > today) {
+      alert('오늘 이후 날짜는 선택할 수 없습니다.');
+      return;
+    }
+
+    // 최대 10개월 체크
+    const startDate = new Date(parseInt(customStartYear), parseInt(customStartMonth) - 1);
+    const monthDiff = (endDate.getFullYear() - startDate.getFullYear()) * 12 + (endDate.getMonth() - startDate.getMonth());
+    if (monthDiff > 10) {
+      alert('최대 10개월까지 선택 가능합니다.');
+      return;
+    }
+
+    setShowPeriodModal(false);
+    // 차트 데이터가 자동으로 업데이트됨 (composedChartData가 변경됨)
+  };
+
+  // 과제 선택 모달 열기
+  const handleOpenAssignmentModal = () => {
+    setTempSelectedAssignments([...selectedAssignments]);
+    setShowAssignmentModal(true);
+  };
+
+  // 과제 선택 모달 적용
+  const handleAssignmentModalApply = () => {
+    if (tempSelectedAssignments.length < 1) {
+      alert('최소 1개 이상의 과제를 선택해주세요.');
+      return;
+    }
+    if (tempSelectedAssignments.length > 5) {
+      alert('최대 5개까지 선택 가능합니다.');
+      return;
+    }
+    setSelectedAssignments(tempSelectedAssignments);
+    setShowAssignmentModal(false);
+  };
+
+  // 과제 선택/해제
+  const handleAssignmentToggle = (assignmentId: string) => {
+    setTempSelectedAssignments(prev => {
+      if (prev.includes(assignmentId)) {
+        return prev.filter(id => id !== assignmentId);
+      } else if (prev.length < 5) {
+        return [...prev, assignmentId];
+      }
+      return prev;
+    });
+  };
+
+  // 년도 옵션 생성
+  const generateYearOptions = () => {
+    const currentYear = new Date().getFullYear();
+    const years = [];
+    for (let i = currentYear; i >= currentYear - 5; i--) {
+      years.push(i.toString());
+    }
+    return years;
+  };
+
+  // 월 옵션 생성
+  const generateMonthOptions = () => {
+    return Array.from({ length: 12 }, (_, i) => (i + 1).toString().padStart(2, '0'));
+  };
 
   return (
     <div className="flex flex-col" style={{ padding: '20px', display: 'flex', gap: '20px' }}>
@@ -111,211 +374,80 @@ const StudentDashboard = () => {
         icon={<RxDashboard />}
         title={`${userProfile?.name || '학생'}님의 대시보드`}
         variant="default"
-        description="학습 현황과 성적을 확인하세요"
+        description="나의 학습 현황과 성적을 확인하세요"
       />
 
-      {/* Main Dashboard Card */}
-      <Card className="flex-1 flex flex-col shadow-sm">
-        <CardHeader className="py-2 px-6 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="text-base font-medium">대시보드</h2>
-          <span className="text-sm font-normal text-gray-400">
-            실시간 업데이트
-          </span>
-        </CardHeader>
-        <CardContent>
-          {/* Selection Controls */}
-          <div className="mb-6 space-y-4">
-            <div className="flex items-center gap-4">
-              <label className="text-sm font-medium text-gray-700">클래스 선택</label>
-              <Select value={selectedClass} onValueChange={setSelectedClass}>
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="나의 클래스 중 선택" />
-                </SelectTrigger>
-                <SelectContent>
-                  {classes.map((cls) => (
-                    <SelectItem key={cls.id} value={cls.id}>
-                      {cls.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+      {/* Main Dashboard Layout */}
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-5 gap-6 h-full">
+        
+        {/* Left Section */}
+        <div className="flex flex-col gap-6 lg:col-span-3 h-full">
+          
+          {/* Left Top - 클래스별 과제별 전체 평균과 내 평균 */}
+          <ClassAverage
+            selectedClass={selectedClass}
+            setSelectedClass={setSelectedClass}
+            chartType={chartType}
+            setChartType={setChartType}
+            selectedAssignments={selectedAssignments}
+            setSelectedAssignments={setSelectedAssignments}
+            selectedMonth={selectedMonth}
+            setSelectedMonth={setSelectedMonth}
+            showPeriodModal={showPeriodModal}
+            setShowPeriodModal={setShowPeriodModal}
+            showAssignmentModal={showAssignmentModal}
+            setShowAssignmentModal={setShowAssignmentModal}
+            tempSelectedAssignments={tempSelectedAssignments}
+            setTempSelectedAssignments={setTempSelectedAssignments}
+            customStartYear={customStartYear}
+            setCustomStartYear={setCustomStartYear}
+            customStartMonth={customStartMonth}
+            setCustomStartMonth={setCustomStartMonth}
+            customEndYear={customEndYear}
+            setCustomEndYear={setCustomEndYear}
+            customEndMonth={customEndMonth}
+            setCustomEndMonth={setCustomEndMonth}
+            composedChartData={composedChartData}
+            classes={classes}
+            assignments={assignments}
+            defaultChartData={defaultChartData}
+            onPeriodApply={handlePeriodApply}
+            onOpenAssignmentModal={handleOpenAssignmentModal}
+            onAssignmentModalApply={handleAssignmentModalApply}
+            onAssignmentToggle={handleAssignmentToggle}
+            onAssignmentRemove={handleAssignmentRemove}
+            generateYearOptions={generateYearOptions}
+            generateMonthOptions={generateMonthOptions}
+          />
+
+          {/* Left Bottom - Two Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1">
             
-            <div className="flex items-center gap-4">
-              <label className="text-sm font-medium text-gray-700">과제 선택 (최소 3개-최대 5개)</label>
-              <Select>
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="과제를 선택하세요" />
-                </SelectTrigger>
-                <SelectContent>
-                  {assignments.map((assignment) => (
-                    <SelectItem key={assignment.id} value={assignment.id}>
-                      {assignment.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Assignment Not Submitted */}
+            <PendingAssignmentsList
+              unsubmittedAssignments={unsubmittedAssignments}
+              isLoadingAssignments={isLoadingAssignments}
+              onAssignmentClick={handleAssignmentClick}
+            />
+
+            {/* Assignment Graded */}
+            <GradedAssignmentsList
+              gradedAssignments={gradedAssignments}
+              isLoadingAssignments={isLoadingAssignments}
+              onAssignmentClick={handleAssignmentClick}
+            />
           </div>
+        </div>
 
-          {/* Main Content Sections */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            {/* Left Section - Class vs Personal Average Chart */}
-            <div className="bg-gray-50 rounded-lg p-6">
-              <div className="flex items-center mb-4">
-                <BarChart3 className="h-5 w-5 text-blue-600 mr-2" />
-                <h3 className="text-lg font-medium text-gray-900">성적 분석</h3>
-                <div className="relative group ml-2">
-                  <Info className="h-4 w-4 text-gray-400 cursor-help" />
-                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-10">
-                    막대 그래프: 클래스 평균<br />
-                    선 그래프: 본인 평균<br />
-                    월별 성적 추이를 확인할 수 있습니다
-                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-800"></div>
-                  </div>
-                </div>
-              </div>
-              <div className="space-y-2 text-sm text-gray-600 mb-4">
-                <p>클래스 평균 막대</p>
-                <p>본인 평균 라인</p>
-              </div>
-              <div className="h-96 bg-white rounded-lg border border-gray-200 p-4">
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart
-                    width={500}
-                    height={400}
-                    data={chartData}
-                    margin={{
-                      top: 20,
-                      right: 80,
-                      bottom: 20,
-                      left: 20,
-                    }}
-                    style={{ backgroundColor: 'white' }}
-                  >
-                    <CartesianGrid stroke="#f5f5f5" />
-                    <XAxis dataKey="name" label={{ value: '월', position: 'insideBottomRight', offset: 0 }} scale="band" />
-                    <YAxis label={{ value: '점수', angle: -90, position: 'insideLeft' }} />
-                    <Tooltip />
-                    <Legend />
-                    <Area type="monotone" dataKey="과제수" fill="#8884d8" stroke="#8884d8" />
-                    <Bar dataKey="클래스평균" barSize={20} fill="#413ea0" />
-                    <Line type="monotone" dataKey="본인평균" stroke="#ff7300" />
-                  </ComposedChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
+        {/* Right Section */}
+        <SubjectAverage
+          selectedClass={selectedClass}
+          setSelectedClass={setSelectedClass}
+          radarData={radarData}
+          classes={classes}
+        />
+      </div>
 
-            {/* Right Section - Subject Comparison */}
-            <div className="bg-gray-50 rounded-lg p-6">
-              <div className="flex items-center mb-4">
-                <Users className="h-5 w-5 text-green-600 mr-2" />
-                <h3 className="text-lg font-medium text-gray-900">과목별 평균 비교</h3>
-                <div className="relative group ml-2">
-                  <Info className="h-4 w-4 text-gray-400 cursor-help" />
-                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-10">
-                    클래스에서 (국, 영, 수) 평균<br />
-                    내 평균 비교<br />
-                    과목별 성적을 확인할 수 있습니다
-                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-800"></div>
-                  </div>
-                </div>
-              </div>
-              <div className="space-y-2 text-sm text-gray-600 mb-4">
-                <p>클래스에서 (국, 영, 수) 평균</p>
-                <p>내 평균 비교</p>
-              </div>
-              <div className="h-96 bg-white rounded-lg border border-gray-200 p-4">
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart
-                    width={500}
-                    height={400}
-                    data={subjectComparisonData}
-                    margin={{
-                      top: 20,
-                      right: 80,
-                      bottom: 20,
-                      left: 20,
-                    }}
-                    style={{ backgroundColor: 'white' }}
-                  >
-                    <CartesianGrid stroke="#f5f5f5" />
-                    <XAxis dataKey="subject" label={{ value: '과목', position: 'insideBottomRight', offset: 0 }} scale="band" />
-                    <YAxis label={{ value: '점수', angle: -90, position: 'insideLeft' }} />
-                    <Tooltip />
-                    <Legend />
-                    <Bar dataKey="클래스평균" barSize={20} fill="#413ea0" />
-                    <Bar dataKey="내평균" barSize={20} fill="#ff7300" />
-                  </ComposedChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          </div>
-
-          {/* Bottom Sections */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Left Bottom - Unsubmitted Assignments */}
-            <div className="bg-gray-50 rounded-lg p-6">
-              <div className="flex items-center mb-4">
-                <ClipboardList className="h-5 w-5 text-red-600 mr-2" />
-                <h3 className="text-lg font-medium text-gray-900">과제 미제출</h3>
-              </div>
-              <div className="h-64 bg-white rounded-lg border border-gray-200 p-4 overflow-y-auto">
-                {unsubmittedAssignments.length > 0 ? (
-                  <div className="space-y-3">
-                    {unsubmittedAssignments.map((assignment) => (
-                      <div key={assignment.id} className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200">
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">{assignment.title}</p>
-                          <p className="text-xs text-gray-500">{assignment.subject}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-xs text-red-600 font-medium">미제출</p>
-                          <p className="text-xs text-gray-500">마감: {assignment.dueDate}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="h-full flex items-center justify-center">
-                    <p className="text-gray-500 text-sm">미제출 과제가 없습니다</p>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Right Bottom - Completed Assignments */}
-            <div className="bg-gray-50 rounded-lg p-6">
-              <div className="flex items-center mb-4">
-                <FileText className="h-5 w-5 text-green-600 mr-2" />
-                <h3 className="text-lg font-medium text-gray-900">과제 채점 완료 (결과 확인)</h3>
-              </div>
-              <div className="h-64 bg-white rounded-lg border border-gray-200 p-4 overflow-y-auto">
-                {completedAssignments.length > 0 ? (
-                  <div className="space-y-3">
-                    {completedAssignments.map((assignment) => (
-                      <div key={assignment.id} className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">{assignment.title}</p>
-                          <p className="text-xs text-gray-500">{assignment.subject}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-medium text-green-600">{assignment.score}/{assignment.maxScore}</p>
-                          <p className="text-xs text-gray-500">채점완료</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="h-full flex items-center justify-center">
-                    <p className="text-gray-500 text-sm">채점 완료된 과제가 없습니다</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 };

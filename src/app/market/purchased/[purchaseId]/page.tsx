@@ -39,33 +39,61 @@ interface Problem {
   diagram_elements?: any[];
 }
 
-// 과목별 컴포넌트 타입 정의
-interface PurchasedWorksheetDetailProps {
+// 영어 문제 전용 타입 (API 응답에 맞춤)
+interface EnglishProblemFromAPI {
+  id: number;
+  sequence_order: number;
+  question: string;
+  problem_type: string;
+  question_subject: string;
+  difficulty: string;
+  correct_answer: string;
+  choices?: string[];
+  explanation?: string;
+  learning_point?: string;
+  example_content?: string;
+  passage_content?: string;
+  source_text?: string;
+  source_title?: string;
+}
+
+// 과목별 컴포넌트 타입 정의 (공통)
+interface BasePurchasedWorksheetDetailProps {
   worksheet: PurchasedWorksheet;
-  problems: Problem[];
   showAnswerSheet: boolean;
   onToggleAnswerSheet: () => void;
 }
 
-type PurchasedWorksheetDetailComponent = React.ComponentType<PurchasedWorksheetDetailProps>;
+// 각 과목별 특화 타입
+interface PurchasedMathWorksheetDetailProps extends BasePurchasedWorksheetDetailProps {
+  problems: Problem[];
+}
+
+interface PurchasedKoreanWorksheetDetailProps extends BasePurchasedWorksheetDetailProps {
+  problems: Problem[];
+}
+
+interface PurchasedEnglishWorksheetDetailProps extends BasePurchasedWorksheetDetailProps {
+  problems: EnglishProblemFromAPI[];
+}
 
 export default function PurchasedWorksheetPage() {
   const router = useRouter();
   const params = useParams();
   const [loading, setLoading] = useState(true);
   const [worksheet, setWorksheet] = useState<PurchasedWorksheet | null>(null);
-  const [problems, setProblems] = useState<Problem[]>([]);
+  const [problems, setProblems] = useState<Problem[] | EnglishProblemFromAPI[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [showAnswerSheet, setShowAnswerSheet] = useState(false);
 
   const purchaseId = params.purchaseId as string;
 
   // 과목별 컴포넌트 매핑
-  const WorksheetDetailComponents: Record<string, PurchasedWorksheetDetailComponent> = useMemo(
+  const WorksheetDetailComponents = useMemo(
     () => ({
-      math: PurchasedMathWorksheetDetail,
-      korean: PurchasedKoreanWorksheetDetail,
-      english: PurchasedEnglishWorksheetDetail,
+      math: PurchasedMathWorksheetDetail as React.FC<PurchasedMathWorksheetDetailProps>,
+      korean: PurchasedKoreanWorksheetDetail as React.FC<PurchasedKoreanWorksheetDetailProps>,
+      english: PurchasedEnglishWorksheetDetail as React.FC<PurchasedEnglishWorksheetDetailProps>,
     }),
     []
   );
@@ -110,25 +138,39 @@ export default function PurchasedWorksheetPage() {
         if (problemsResponse.ok) {
           const data = await problemsResponse.json();
           console.log(`[DEBUG] 수학 문제 데이터:`, data);
-          setProblems(data.problems || []);
+          const mathProblems: Problem[] = data.problems || [];
+          setProblems(mathProblems);
         } else {
           const errorText = await problemsResponse.text();
           console.error(`[DEBUG] 수학 API 오류:`, errorText);
         }
       } else if (worksheetData.service === 'korean') {
-        const problemsResponse = await fetch(`http://localhost:8004/korean/worksheets/${worksheetData.original_worksheet_id}/problems`, {
+        // 복사된 워크시트 ID 사용 (copied_worksheet_id가 있으면 사용, 없으면 original_worksheet_id 사용)
+        const worksheetId = worksheetData.copied_worksheet_id || worksheetData.original_worksheet_id;
+        console.log(`[DEBUG] 국어 문제 로드 시도: worksheet_id=${worksheetId} (copied_id=${worksheetData.copied_worksheet_id}, original_id=${worksheetData.original_worksheet_id})`);
+
+        const problemsResponse = await fetch(`http://localhost:8004/api/korean-generation/worksheets/${worksheetId}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           }
         });
 
+        console.log(`[DEBUG] 국어 API 응답 상태: ${problemsResponse.status} ${problemsResponse.statusText}`);
+
         if (problemsResponse.ok) {
           const data = await problemsResponse.json();
-          setProblems(data.problems || []);
+          console.log(`[DEBUG] 국어 문제 데이터:`, data);
+          const koreanProblems: Problem[] = data.problems || [];
+          setProblems(koreanProblems);
+        } else {
+          const errorText = await problemsResponse.text();
+          console.error(`[DEBUG] 국어 API 오류:`, errorText);
         }
       } else if (worksheetData.service === 'english') {
-        const problemsResponse = await fetch(`http://localhost:8002/english/worksheets/${worksheetData.original_worksheet_id}/problems`, {
+        // 복사된 워크시트 ID 사용
+        const worksheetId = worksheetData.copied_worksheet_id || worksheetData.original_worksheet_id;
+        const problemsResponse = await fetch(`http://localhost:8002/market/worksheets/${worksheetId}/problems`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -137,7 +179,12 @@ export default function PurchasedWorksheetPage() {
 
         if (problemsResponse.ok) {
           const data = await problemsResponse.json();
-          setProblems(data.problems || []);
+          // 영어 서비스는 {worksheet: ..., problems: [...]} 구조로 응답
+          const englishProblems: EnglishProblemFromAPI[] = data.problems || [];
+          setProblems(englishProblems);
+        } else {
+          const errorText = await problemsResponse.text();
+          console.error(`영어 API 오류:`, errorText);
         }
       }
 
@@ -264,33 +311,50 @@ export default function PurchasedWorksheetPage() {
 
           {/* 워크시트 상세 내용 */}
           {(() => {
-            const WorksheetDetailComponent = WorksheetDetailComponents[worksheet.service];
-            if (!WorksheetDetailComponent) {
-              // 기본 렌더러 (서비스별 컴포넌트가 없는 경우)
-              return (
-                <Card className="flex-1 shadow-sm">
-                  <CardHeader className="py-3 px-6 border-b border-gray-100">
-                    <CardTitle className="text-lg font-medium">
-                      문제 목록 ({problems.length}문제)
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-0">
-                    <div className="text-center py-8 text-gray-500">
-                      이 과목은 아직 지원되지 않습니다.
-                    </div>
-                  </CardContent>
-                </Card>
-              );
+            switch (worksheet.service) {
+              case 'math':
+                return (
+                  <WorksheetDetailComponents.math
+                    worksheet={worksheet}
+                    problems={problems as Problem[]}
+                    showAnswerSheet={showAnswerSheet}
+                    onToggleAnswerSheet={() => setShowAnswerSheet(!showAnswerSheet)}
+                  />
+                );
+              case 'korean':
+                return (
+                  <WorksheetDetailComponents.korean
+                    worksheet={worksheet}
+                    problems={problems as Problem[]}
+                    showAnswerSheet={showAnswerSheet}
+                    onToggleAnswerSheet={() => setShowAnswerSheet(!showAnswerSheet)}
+                  />
+                );
+              case 'english':
+                return (
+                  <WorksheetDetailComponents.english
+                    worksheet={worksheet}
+                    problems={problems as EnglishProblemFromAPI[]}
+                    showAnswerSheet={showAnswerSheet}
+                    onToggleAnswerSheet={() => setShowAnswerSheet(!showAnswerSheet)}
+                  />
+                );
+              default:
+                return (
+                  <Card className="flex-1 shadow-sm">
+                    <CardHeader className="py-3 px-6 border-b border-gray-100">
+                      <CardTitle className="text-lg font-medium">
+                        문제 목록 ({problems.length}문제)
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                      <div className="text-center py-8 text-gray-500">
+                        이 과목은 아직 지원되지 않습니다.
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
             }
-
-            return (
-              <WorksheetDetailComponent
-                worksheet={worksheet}
-                problems={problems}
-                showAnswerSheet={showAnswerSheet}
-                onToggleAnswerSheet={() => setShowAnswerSheet(!showAnswerSheet)}
-              />
-            );
           })()}
         </div>
       </div>

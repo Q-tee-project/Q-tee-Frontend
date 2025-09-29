@@ -31,7 +31,7 @@ const FixedNotificationIcon = ({ isSidebarOpen = false }: FixedNotificationIconP
     }
   };
 
-  // 벨 메뉴가 열릴 때 읽지 않은 알림을 읽음 처리
+  // 벨 메뉴가 열릴 때 읽지 않은 알림을 모두 읽음 처리
   useEffect(() => {
     if (isBellOpen && unreadCount > 0) {
       markAllAsRead();

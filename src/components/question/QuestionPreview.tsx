@@ -77,7 +77,6 @@ export const QuestionPreview: React.FC<QuestionPreviewProps> = ({
 
           <div className="text-left space-y-4 text-gray-700">
             <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-              <h4 className="font-medium text-blue-900 mb-2">📝 문제 생성 순서</h4>
               <ol className="text-sm space-y-1 text-blue-800">
                 <li>1. 좌측에서 과목을 선택하세요</li>
                 <li>2. 생성 옵션을 설정하세요</li>
@@ -85,23 +84,6 @@ export const QuestionPreview: React.FC<QuestionPreviewProps> = ({
                 <li>4. 생성된 문제를 확인하고 수정하세요</li>
                 <li>5. 문제지 이름을 입력하고 저장하세요</li>
               </ol>
-            </div>
-
-            <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-              <h4 className="font-medium text-green-900 mb-2">✨ 팁</h4>
-              <ul className="text-sm space-y-1 text-green-800">
-                <li>• 각 문제 옆의 새로고침 버튼으로 개별 재생성 가능</li>
-                <li>• 재생성 시 요청사항을 입력하면 더 원하는 문제 생성</li>
-                <li>• 마음에 드는 문제만 선택해서 저장 가능</li>
-              </ul>
-            </div>
-
-            <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-              <h4 className="font-medium text-yellow-900 mb-2">⚠️ 주의사항</h4>
-              <ul className="text-sm space-y-1 text-yellow-800">
-                <li>• 문제 생성 후 '문제 저장하기'를 누르지 않으면 저장되지 않습니다</li>
-                <li>• 빈 문제나 오류 문제가 생성되면 자동으로 알림이 표시됩니다</li>
-              </ul>
             </div>
           </div>
         </div>
@@ -223,7 +205,7 @@ export const QuestionPreview: React.FC<QuestionPreviewProps> = ({
               <div className="col-span-4">
                 <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
                   <div className="text-sm font-semibold text-gray-700 mb-2">
-                    {((q.choices || q.options) && (q.choices || q.options)!.length > 0) ? (
+                    {(q.choices || q.options) && (q.choices || q.options)!.length > 0 ? (
                       <span>정답: {String.fromCharCode(65 + (q.answerIndex || 0))}</span>
                     ) : (
                       <div className="flex items-center gap-2">

@@ -685,8 +685,6 @@ const TeacherDashboard = () => {
                             >
                               적용
                     </Button>
-                  </div>
-                  </div>
                       </DialogContent>
                     </Dialog>
                   ) : (
@@ -970,13 +968,10 @@ const TeacherDashboard = () => {
                   )}
                 </div>
               </div>
-            </div>
+
             </div>
           </CardContent>
         </Card>
-
-
-    </div>
   );
 };
 

@@ -71,7 +71,12 @@ export default function TrendyPopularProducts({ products, className }: TrendyPop
                   <div className="absolute -top-1 -left-1 w-[32rem] h-80 rounded-lg bg-gradient-to-br from-gray-150 to-blue-50 border border-gray-250 transform rotate-1"></div>
                   
                   {/* 메인 이미지 컨테이너 */}
-                  <div className="relative w-[32rem] h-80 rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50 border border-gray-200 overflow-hidden shadow-lg z-10">
+                  <div className={`relative w-[32rem] h-80 rounded-lg border border-gray-200 overflow-hidden shadow-lg z-10 ${
+                    product.subject_type === '국어' ? 'bg-gradient-to-br from-green-50 to-emerald-50' :
+                    product.subject_type === '영어' ? 'bg-gradient-to-br from-rose-50 to-pink-50' :
+                    product.subject_type === '수학' ? 'bg-gradient-to-br from-blue-50 to-indigo-50' :
+                    'bg-gradient-to-br from-gray-50 to-slate-50'
+                  }`}>
                     <div className="w-full h-full flex flex-col items-center justify-center text-gray-700 p-6">
                       <div className="text-center space-y-4">
                         <div className="text-3xl font-bold text-[#0072CE]">{product.subject_type}</div>
