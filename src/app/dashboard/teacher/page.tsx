@@ -3,11 +3,12 @@
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
+import { motion, useMotionValue, useTransform, animate } from 'framer-motion';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Users, FileText, ClipboardList, BarChart3, BookOpen, Calendar, MessageSquare, Info, GraduationCap, BookOpen as BookIcon, CheckSquare, UserCheck, RefreshCw, ArrowRight } from 'lucide-react';
+import { Users, FileText, ClipboardList, BarChart3, BookOpen, Calendar, MessageSquare, Info, GraduationCap, BookOpen as BookIcon, CheckSquare, UserCheck, RefreshCw, ArrowRight, X, Package, ShoppingCart, Star, DollarSign } from 'lucide-react';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { RxDashboard } from 'react-icons/rx';
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -24,12 +25,31 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 
+// 애니메이션 카운터 컴포넌트
+const AnimatedCounter = ({ value, suffix = '' }: { value: number; suffix?: string }) => {
+  const count = useMotionValue(0);
+  const rounded = useTransform(count, latest => Math.round(latest));
+  const [displayValue, setDisplayValue] = React.useState(0);
+
+  React.useEffect(() => {
+    const controls = animate(count, value, {
+      duration: 2,
+      ease: "easeOut",
+      onUpdate: (latest) => setDisplayValue(Math.round(latest))
+    });
+    return controls.stop;
+  }, [count, value]);
+
+  return <span>{displayValue.toLocaleString()}{suffix}</span>;
+};
+
 const TeacherDashboard = () => {
   const { userProfile, logout } = useAuth();
   const router = useRouter();
   const [selectedTab, setSelectedTab] = React.useState('클래스 관리');
   const [selectedClass, setSelectedClass] = React.useState('');
   const [selectedStudents, setSelectedStudents] = React.useState<number[]>([]);
+  const [studentColorMap, setStudentColorMap] = React.useState<Record<number, string>>({});
   const [selectedAssignment, setSelectedAssignment] = React.useState('');
   const [chartPeriod, setChartPeriod] = React.useState<{
     fromYear: number | null, 
@@ -57,10 +77,29 @@ const TeacherDashboard = () => {
     
     setSelectedStudents(prev => {
       if (prev.includes(studentId)) {
-        // 이미 선택된 학생이면 제거
+        // 개별 제거 애니메이션
+        const cardElement = document.querySelector(`[data-student-id="${studentId}"]`) as HTMLElement;
+        if (cardElement) {
+          cardElement.style.transform = 'translateY(100%)';
+          cardElement.style.opacity = '0';
+          setTimeout(() => {
+            setSelectedStudents(current => current.filter(id => id !== studentId));
+            // 색상 정보는 유지 (제거하지 않음)
+          }, 300);
+          return prev; // 애니메이션 완료 후 실제 제거
+        }
         return prev.filter(id => id !== studentId);
       } else {
-        // 새로운 학생 추가
+        // 새로운 학생 추가 시 색상 할당 (이미 할당된 색상은 제외)
+        const usedColors = Object.values(studentColorMap);
+        const availableColors = studentColors.filter(color => !usedColors.includes(color));
+        const assignedColor = availableColors[0] || studentColors[prev.length % studentColors.length];
+        
+        setStudentColorMap(prevMap => ({
+          ...prevMap,
+          [studentId]: assignedColor
+        }));
+        
         return [...prev, studentId];
       }
     });
@@ -69,6 +108,7 @@ const TeacherDashboard = () => {
   // 클래스 변경 시 선택된 학생 초기화
   React.useEffect(() => {
     setSelectedStudents([]);
+    setStudentColorMap({});
   }, [selectedClass]);
 
   // 달 범위 제한 함수
@@ -347,21 +387,19 @@ const TeacherDashboard = () => {
   const getSelectedStudentsData = () => {
     if (selectedStudents.length === 0) return {};
     
-    const selectedStudentsData = students[selectedClass as keyof typeof students]?.filter(
-      student => selectedStudents.includes(student.id)
-    );
-    
-    if (!selectedStudentsData || selectedStudentsData.length === 0) return {};
-    
     const studentsData: Record<string, number[]> = {};
     
-    selectedStudentsData.forEach(student => {
-      // 각 학생별로 월별 성적 변동 시뮬레이션
-      studentsData[`${student.name}(${student.id})`] = baseChartData.map(month => {
-        // 학생별로 월별 성적 변동 시뮬레이션 (기본 성적 ± 랜덤 변동)
-        const variation = (Math.random() - 0.5) * 20; // ±10점 변동
-        return Math.round(Math.max(0, Math.min(100, student.grade + variation)));
-      });
+    // 선택된 순서대로 데이터 생성 (색상 순서 유지)
+    selectedStudents.forEach((studentId, index) => {
+      const student = students[selectedClass as keyof typeof students]?.find(s => s.id === studentId);
+      if (student) {
+        // 각 학생별로 월별 성적 변동 시뮬레이션
+        studentsData[`${student.name}(${student.id})`] = baseChartData.map(month => {
+          // 학생별로 월별 성적 변동 시뮬레이션 (기본 성적 ± 랜덤 변동)
+          const variation = (Math.random() - 0.5) * 20; // ±10점 변동
+          return Math.round(Math.max(0, Math.min(100, student.grade + variation)));
+        });
+      }
     });
     
     return studentsData;
@@ -386,13 +424,12 @@ const TeacherDashboard = () => {
 
   const chartData = getFilteredChartData();
 
-  // 선택된 학생들을 위한 색상 배열 (빨간색, 보라색, 초록색)
-  const studentColors = ['#ef4444', '#8b5cf6', '#10b981'];
+  // 선택된 학생들을 위한 색상 배열 (학생 대시보드 과목별 색상)
+  const studentColors = ['#22c55e', '#a855f7', '#eab308']; // 국어(초록), 영어(보라), 수학(노랑)
   
-  // 학생 ID에 따른 색상 매핑 함수
+  // 학생별 고정 색상 매핑 함수
   const getStudentColor = (studentId: number) => {
-    const index = selectedStudents.indexOf(studentId);
-    return index >= 0 ? studentColors[index] : null;
+    return studentColorMap[studentId] || null;
   };
   
   // 학생 ID에 따른 배경색 매핑 함수
@@ -400,18 +437,18 @@ const TeacherDashboard = () => {
     const color = getStudentColor(studentId);
     if (!color) return 'bg-gray-50';
     
-    // 색상을 배경색으로 변환 (빨강, 보라, 초록 계열 기반)
+    // 색상을 배경색으로 변환 (국어, 영어, 수학 계열 기반)
     const colorMap: Record<string, string> = {
-      '#ef4444': 'bg-red-100',
-      '#8b5cf6': 'bg-purple-100', 
-      '#10b981': 'bg-green-100'
+      '#22c55e': 'bg-green-100',
+      '#a855f7': 'bg-purple-100', 
+      '#eab308': 'bg-yellow-100'
     };
     
     return colorMap[color] || 'bg-gray-50';
   };
 
   return (
-    <div className="flex flex-col" style={{ padding: '20px', display: 'flex', gap: '20px' }}>
+    <div className="flex flex-col min-h-screen" style={{ padding: '20px', display: 'flex', gap: '20px' }}>
       <PageHeader
         icon={<RxDashboard />}
         title={`${userProfile?.name || 'user'} 대시보드`}
@@ -420,561 +457,713 @@ const TeacherDashboard = () => {
       />
 
 
-      {/* 통합 섹션 */}
+      {/* 통계 카드 */}
       <Card className="bg-card text-card-foreground gap-6 rounded-xl border py-6 flex-1 flex flex-col shadow-sm">
         <CardHeader className="py-2 px-6 border-b border-gray-100 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <h2 className="text-base font-medium">클래스 관리</h2>
+          <div className="flex items-center gap-4">
+            <h2 className="text-base font-medium">마켓플레이스</h2>
+          </div>
+          <button 
+            onClick={handleRefresh}
+            className="flex items-center gap-2 text-sm font-normal text-gray-400 hover:text-[#0072CE] transition-colors duration-200"
+          >
+            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+          </button>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="text-center p-6 bg-gradient-to-br from-blue-50/80 to-blue-100/60 backdrop-blur-sm rounded-xl border border-blue-200/50 shadow-lg">
+              <div className="flex justify-center mb-3">
+                <div className="p-2 bg-[#0072CE]/20 rounded-lg backdrop-blur-sm">
+                  <Package className="h-6 w-6 text-[#0072CE]" />
+                </div>
+              </div>
+              <div className="text-2xl font-bold text-[#0072CE] mb-1">
+                <AnimatedCounter value={24} />
+              </div>
+              <div className="text-sm text-[#0072CE]/80 font-medium">등록 상품</div>
             </div>
-            <button 
-              onClick={handleRefresh}
-              className="flex items-center gap-2 text-sm font-normal text-gray-400 hover:text-[#0072CE] transition-colors duration-200"
-            >
-              <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-            </button>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-8">
-            {/* Quick Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-              <div className="text-center p-6 bg-gradient-to-br from-blue-50/80 to-blue-100/60 backdrop-blur-sm rounded-xl border border-blue-200/50 shadow-lg">
-                <div className="flex justify-center mb-3">
-                  <div className="p-2 bg-[#0072CE]/20 rounded-lg backdrop-blur-sm">
-                    <BookIcon className="h-6 w-6 text-[#0072CE]" />
-                  </div>
+            <div className="text-center p-6 bg-gradient-to-br from-cyan-50/80 to-cyan-100/60 backdrop-blur-sm rounded-xl border border-cyan-200/50 shadow-lg">
+              <div className="flex justify-center mb-3">
+                <div className="p-2 bg-cyan-500/20 rounded-lg backdrop-blur-sm">
+                  <ShoppingCart className="h-6 w-6 text-cyan-600" />
                 </div>
-                <div className="text-2xl font-bold text-[#0072CE] mb-1">24</div>
-                <div className="text-sm text-[#0072CE]/80 font-medium">등록 상품</div>
               </div>
-              <div className="text-center p-6 bg-gradient-to-br from-cyan-50/80 to-cyan-100/60 backdrop-blur-sm rounded-xl border border-cyan-200/50 shadow-lg">
-                <div className="flex justify-center mb-3">
-                  <div className="p-2 bg-cyan-500/20 rounded-lg backdrop-blur-sm">
-                    <Users className="h-6 w-6 text-cyan-600" />
-                  </div>
-                </div>
-                <div className="text-2xl font-bold text-cyan-700 mb-1">1,247</div>
-                <div className="text-sm text-cyan-600 font-medium">총 판매량</div>
+              <div className="text-2xl font-bold text-cyan-700 mb-1">
+                <AnimatedCounter value={1247} />
               </div>
-              <div className="text-center p-6 bg-gradient-to-br from-indigo-50/80 to-indigo-100/60 backdrop-blur-sm rounded-xl border border-indigo-200/50 shadow-lg">
-                <div className="flex justify-center mb-3">
-                  <div className="p-2 bg-indigo-500/20 rounded-lg backdrop-blur-sm">
-                    <BarChart3 className="h-6 w-6 text-indigo-600" />
-                  </div>
-                </div>
-                <div className="text-2xl font-bold text-indigo-700 mb-1">4.3</div>
-                <div className="text-sm text-indigo-600 font-medium">평균 평점</div>
-              </div>
-              <div className="text-center p-6 bg-gradient-to-br from-sky-50/80 to-sky-100/60 backdrop-blur-sm rounded-xl border border-sky-200/50 shadow-lg">
-                <div className="flex justify-center mb-3">
-                  <div className="p-2 bg-sky-500/20 rounded-lg backdrop-blur-sm">
-                    <FileText className="h-6 w-6 text-sky-600" />
-                  </div>
-                </div>
-                <div className="text-2xl font-bold text-sky-700 mb-1">₩5,240,000</div>
-                <div className="text-sm text-sky-600 font-medium">총 수익</div>
-              </div>
+              <div className="text-sm text-cyan-600 font-medium">총 판매량</div>
             </div>
+            <div className="text-center p-6 bg-gradient-to-br from-indigo-50/80 to-indigo-100/60 backdrop-blur-sm rounded-xl border border-indigo-200/50 shadow-lg">
+              <div className="flex justify-center mb-3">
+                <div className="p-2 bg-indigo-500/20 rounded-lg backdrop-blur-sm">
+                  <Star className="h-6 w-6 text-indigo-600" />
+                </div>
+              </div>
+              <div className="text-2xl font-bold text-indigo-700 mb-1">
+                <AnimatedCounter value={86} suffix="%" />
+              </div>
+              <div className="text-sm text-indigo-600 font-medium">평균 평점</div>
+            </div>
+            <div className="text-center p-6 bg-gradient-to-br from-sky-50/80 to-sky-100/60 backdrop-blur-sm rounded-xl border border-sky-200/50 shadow-lg">
+              <div className="flex justify-center mb-3">
+                <div className="p-2 bg-sky-500/20 rounded-lg backdrop-blur-sm">
+                  <DollarSign className="h-6 w-6 text-sky-600" />
+                </div>
+              </div>
+              <div className="text-2xl font-bold text-sky-700 mb-1">
+                ₩<AnimatedCounter value={5240000} />
+              </div>
+              <div className="text-sm text-sky-600 font-medium">총 수익</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
+      {/* 클래스 성적 분석과 학생 관리 카드들을 나란히 배치 */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* 클래스 성적 분석 카드 */}
+        <Card className="bg-card text-card-foreground gap-6 rounded-xl border py-6 flex-1 flex flex-col shadow-sm lg:col-span-2 min-h-[620px]">
+          <CardHeader className="py-2 px-6 border-b border-gray-100 flex flex-col gap-4">
+            <div className="flex items-center gap-4">
+              <BarChart3 className="h-5 w-5 text-blue-600 mr-2" />
+              <h2 className="text-base font-medium">클래스 성적 분석</h2>
+              <div className="relative ml-2 inline-block">
+                <div className="group w-4 h-4">
+                  <Info className="h-4 w-4 text-gray-400 cursor-help" />
+                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-4 py-3 bg-white/90 backdrop-blur-md border border-white/30 text-gray-800 text-sm rounded-xl opacity-0 group-hover:opacity-100 transition-all duration-300 whitespace-nowrap z-10 pointer-events-none shadow-lg">
+                    막대 그래프: 학생 평균 성적<br />
+                    선 그래프: 선택된 학생별 개별 성적<br />
+                    클래스별 성적 추이를 확인할 수 있습니다
+                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-white/30"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
             {/* Class Selection and Chart Period */}
-            <div className="mb-6">
-              <div className="flex items-center gap-4">
-                <Select value={selectedClass} onValueChange={setSelectedClass}>
-                  <SelectTrigger className="w-48">
-                    <SelectValue placeholder="클래스 선택" />
+            <div className="flex items-center gap-4">
+              <Select value={selectedClass} onValueChange={setSelectedClass}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="클래스 선택" />
+                </SelectTrigger>
+                <SelectContent>
+                  {classes.map((cls) => (
+                    <SelectItem key={cls.id} value={cls.id}>
+                      {cls.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              <div className="flex items-center gap-3">
+                <Select value={chartMode} onValueChange={(value: 'period' | 'assignment') => setChartMode(value)}>
+                  <SelectTrigger className="h-8 px-3 text-xs font-medium">
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {classes.map((cls) => (
-                      <SelectItem key={cls.id} value={cls.id}>
-                        {cls.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                
-                <div className="flex items-center gap-3">
-                  <Select value={chartMode} onValueChange={(value: 'period' | 'assignment') => setChartMode(value)}>
-                    <SelectTrigger className="h-8 px-3 text-xs font-medium border-[#0072CE]/30 hover:border-[#0072CE]/50 hover:bg-[#0072CE]/5 transition-all duration-200">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="period">기간별</SelectItem>
-                      <SelectItem value="assignment">과제별</SelectItem>
-                  </SelectContent>
-                </Select>
-                
-                <div className="flex items-center gap-2">
-                    {chartMode === 'period' ? (
-                      <CalendarIcon className="h-4 w-4 text-[#0072CE]" />
-                    ) : (
-                      <BookIcon className="h-4 w-4 text-[#0072CE]" />
-                    )}
-                    <label className="text-sm font-medium text-gray-700">
-                      {chartMode === 'period' ? '기간별 차트' : '과제별 차트'}
-                    </label>
-                  </div>
-                  
+                    <SelectItem value="period">기간별</SelectItem>
+                    <SelectItem value="assignment">과제별</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              <div className="flex items-center gap-2">
                   {chartMode === 'period' ? (
-                    <Dialog open={isDateModalOpen} onOpenChange={setIsDateModalOpen}>
-                      <DialogTrigger asChild>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="h-8 px-3 text-xs font-medium border-[#0072CE]/30 hover:border-[#0072CE]/50 hover:bg-[#0072CE]/5 transition-all duration-200"
-                        >
-                          <CalendarIcon className="h-3 w-3 mr-1" />
-                          {chartPeriod.fromYear && chartPeriod.fromMonth && chartPeriod.toYear && chartPeriod.toMonth
-                            ? `${chartPeriod.fromYear}.${chartPeriod.fromMonth} ~ ${chartPeriod.toYear}.${chartPeriod.toMonth}`
-                            : '기간 선택'}
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="sm:max-w-lg">
-                        <DialogHeader className="pb-4">
-                          <DialogTitle className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                            <CalendarIcon className="h-5 w-5 text-[#0072CE]" />
-                            차트 기간 설정
-                          </DialogTitle>
-                        </DialogHeader>
-                        
-                        <div className="space-y-6">
-                          {/* 빠른 선택 버튼들 */}
-                          <div className="space-y-3">
-                            <label className="text-sm font-medium text-gray-700">빠른 선택</label>
-                            <div className="flex gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setChartPeriod({ fromYear: null, fromMonth: null, toYear: null, toMonth: null })}
-                                className="h-9 text-xs font-medium hover:bg-[#0072CE]/5 hover:border-[#0072CE]/30"
-                              >
-                                전체 기간
-                              </Button>
-                            </div>
-                          </div>
-                          
-                          {/* 커스텀 기간 선택 */}
-                          <div className="space-y-4">
-                            <label className="text-sm font-medium text-gray-700">커스텀 기간</label>
-                            
-                            <div className="grid grid-cols-2 gap-4">
-                              {/* 시작 기간 */}
-                              <div className="space-y-2">
-                                <label className="text-xs text-gray-600 font-medium">시작</label>
-                  <div className="flex items-center gap-2">
-                      <Select 
-                        value={chartPeriod.fromYear ? chartPeriod.fromYear.toString() : ''} 
-                        onValueChange={(value) => handleDateRangeChange('from', 'year', value)}
-                      >
-                                    <SelectTrigger className="h-9 text-xs">
-                                      <SelectValue placeholder="년도" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(year => (
-                                        <SelectItem key={year} value={year.toString()} className="text-xs">
-                                          {year}년
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <Select 
-                        value={chartPeriod.fromMonth ? chartPeriod.fromMonth.toString() : ''} 
-                        onValueChange={(value) => handleDateRangeChange('from', 'month', value)}
-                      >
-                                    <SelectTrigger className="h-9 text-xs w-16">
-                          <SelectValue placeholder="월" />
-                        </SelectTrigger>
-                        <SelectContent>
-                                      {Array.from({ length: 12 }, (_, i) => i + 1).map(month => {
-                                        const year = chartPeriod.fromYear || new Date().getFullYear();
-                                        const isDisabled = !isDateSelectable(year, month);
-                                        return (
-                                          <SelectItem 
-                                            key={month} 
-                                            value={month.toString()}
-                                            disabled={isDisabled}
-                                            className="text-xs"
-                                          >
-                              {month}월
-                            </SelectItem>
-                                        );
-                                      })}
-                        </SelectContent>
-                      </Select>
-                                </div>
-                    </div>
-                    
-                              {/* 종료 기간 */}
-                              <div className="space-y-2">
-                                <label className="text-xs text-gray-600 font-medium">종료</label>
-                                <div className="flex items-center gap-2">
-                      <Select 
-                        value={chartPeriod.toYear ? chartPeriod.toYear.toString() : ''} 
-                        onValueChange={(value) => handleDateRangeChange('to', 'year', value)}
-                      >
-                                    <SelectTrigger className="h-9 text-xs">
-                                      <SelectValue placeholder="년도" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(year => (
-                                        <SelectItem key={year} value={year.toString()} className="text-xs">
-                                          {year}년
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <Select 
-                        value={chartPeriod.toMonth ? chartPeriod.toMonth.toString() : ''} 
-                        onValueChange={(value) => handleDateRangeChange('to', 'month', value)}
-                      >
-                                    <SelectTrigger className="h-9 text-xs w-16">
-                          <SelectValue placeholder="월" />
-                        </SelectTrigger>
-                        <SelectContent>
-                                      {Array.from({ length: 12 }, (_, i) => i + 1).map(month => {
-                                        const year = chartPeriod.toYear || new Date().getFullYear();
-                                        const isDisabled = !isDateSelectable(year, month);
-                                        return (
-                                          <SelectItem 
-                                            key={month} 
-                                            value={month.toString()}
-                                            disabled={isDisabled}
-                                            className="text-xs"
-                                          >
-                              {month}월
-                            </SelectItem>
-                                        );
-                                      })}
-                        </SelectContent>
-                      </Select>
-                                </div>
-                              </div>
-                            </div>
-                    </div>
-                    
-                          {/* 선택된 기간 미리보기 */}
-                          {chartPeriod.fromYear && chartPeriod.fromMonth && chartPeriod.toYear && chartPeriod.toMonth && (
-                            <div className="p-3 bg-[#0072CE]/5 rounded-lg border border-[#0072CE]/20">
-                              <div className="text-xs text-[#0072CE] font-medium">
-                                선택된 기간: {chartPeriod.fromYear}년 {chartPeriod.fromMonth}월 ~ {chartPeriod.toYear}년 {chartPeriod.toMonth}월
-                              </div>
-                            </div>
-                          )}
-                          
-                          {/* 안내 메시지 */}
-                          <div className="p-3 bg-gray-50 rounded-lg">
-                            <div className="text-xs text-gray-600 space-y-1">
-                              <div>• 최대 10개월까지 선택 가능합니다</div>
-                              <div>• 오늘 이후 날짜는 선택할 수 없습니다</div>
-                              <div>• 기간을 선택하면 해당 기간의 데이터가 차트에 표시됩니다</div>
-                            </div>
-                          </div>
-                          
-                          {/* 액션 버튼들 */}
-                          <div className="flex justify-end gap-2 pt-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                              onClick={() => setIsDateModalOpen(false)}
-                              className="h-9 px-4 text-xs"
-                            >
-                              취소
-                            </Button>
-                            <Button
-                              size="sm"
-                              onClick={() => setIsDateModalOpen(false)}
-                              className="h-9 px-4 text-xs bg-[#0072CE] hover:bg-[#0072CE]/90"
-                            >
-                              적용
-                            </Button>
-                          </div>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
+                    <CalendarIcon className="h-4 w-4 text-[#0072CE]" />
                   ) : (
-                    <Dialog open={isAssignmentModalOpen} onOpenChange={setIsAssignmentModalOpen}>
-                      <DialogTrigger asChild>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="h-8 px-3 text-xs font-medium border-[#0072CE]/30 hover:border-[#0072CE]/50 hover:bg-[#0072CE]/5 transition-all duration-200"
-                        >
-                          <ClipboardList className="h-3 w-3 mr-1" />
-                          {selectedAssignments.length > 0 
-                            ? `${selectedAssignments.length}개 과제 선택됨`
-                            : '과제 선택'}
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="sm:max-w-lg">
-                        <DialogHeader className="pb-4">
-                          <DialogTitle className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                            <ClipboardList className="h-5 w-5 text-[#0072CE]" />
-                            과제 선택 (최대 5개)
-                          </DialogTitle>
-                        </DialogHeader>
-                        
-                        <div className="space-y-4">
-                          <div className="text-sm text-gray-600">
-                            차트에 표시할 과제를 선택하세요. 최대 5개까지 선택 가능합니다.
+                    <BookIcon className="h-4 w-4 text-[#0072CE]" />
+                  )}
+                  <label className="text-sm font-medium text-gray-700">
+                    {chartMode === 'period' ? '기간별 차트' : '과제별 차트'}
+                  </label>
                 </div>
-                          
-                          <div className="space-y-2">
-                            {assignments.map((assignment) => (
-                              <div 
-                                key={assignment.id}
-                                onClick={() => handleAssignmentSelect(assignment.id)}
-                                className={`p-3 rounded-lg border cursor-pointer transition-all duration-200 ${
-                                  selectedAssignments.includes(assignment.id)
-                                    ? 'bg-[#0072CE]/10 border-[#0072CE]/50'
-                                    : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
-                                } ${
-                                  !selectedAssignments.includes(assignment.id) && selectedAssignments.length >= 5
-                                    ? 'opacity-50 cursor-not-allowed'
-                                    : ''
-                                }`}
-                              >
-                                <div className="flex items-center justify-between">
-                                  <div>
-                                    <p className="text-sm font-medium text-gray-900">{assignment.title}</p>
-                                    <p className="text-xs text-gray-500">{assignment.subject} • 마감: {assignment.dueDate}</p>
-                                  </div>
-                                  <div className="text-right">
-                                    <p className="text-xs text-gray-600">{assignment.submitted}/{assignment.total}명 제출</p>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                          
-                          {selectedAssignments.length > 0 && (
-                            <div className="p-3 bg-[#0072CE]/5 rounded-lg border border-[#0072CE]/20">
-                              <div className="text-xs text-[#0072CE] font-medium">
-                                선택된 과제: {selectedAssignments.length}개
-                              </div>
-                            </div>
-                          )}
-                          
-                          <div className="flex justify-end gap-2 pt-2">
+                
+                {chartMode === 'period' ? (
+                  <Dialog open={isDateModalOpen} onOpenChange={setIsDateModalOpen}>
+                    <DialogTrigger asChild>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="h-8 px-3 text-xs font-medium border-[#0072CE]/30 hover:border-[#0072CE]/50 hover:bg-[#0072CE]/5 transition-all duration-200"
+                      >
+                        <CalendarIcon className="h-3 w-3 mr-1" />
+                        {chartPeriod.fromYear && chartPeriod.fromMonth && chartPeriod.toYear && chartPeriod.toMonth
+                          ? `${chartPeriod.fromYear}.${chartPeriod.fromMonth} ~ ${chartPeriod.toYear}.${chartPeriod.toMonth}`
+                          : '기간 선택'}
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-lg">
+                      <DialogHeader className="pb-4">
+                        <DialogTitle className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                          <CalendarIcon className="h-5 w-5 text-[#0072CE]" />
+                          차트 기간 설정
+                        </DialogTitle>
+                      </DialogHeader>
+                      
+                      <div className="space-y-6">
+                        {/* 빠른 선택 버튼들 */}
+                        <div className="space-y-3">
+                          <label className="text-sm font-medium text-gray-700">빠른 선택</label>
+                          <div className="flex gap-2">
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => setIsAssignmentModalOpen(false)}
-                              className="h-9 px-4 text-xs"
+                              onClick={() => setChartPeriod({ fromYear: null, fromMonth: null, toYear: null, toMonth: null })}
+                              className="h-9 text-xs font-medium hover:bg-[#0072CE]/5 hover:border-[#0072CE]/30"
                             >
-                              취소
-                            </Button>
-                            <Button
-                              size="sm"
-                              onClick={() => setIsAssignmentModalOpen(false)}
-                              className="h-9 px-4 text-xs bg-[#0072CE] hover:bg-[#0072CE]/90"
-                            >
-                              적용
+                              전체 기간
                             </Button>
                           </div>
                         </div>
-                      </DialogContent>
-                    </Dialog>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Main Content Sections */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Left Section - Chart Area */}
-              <div className="bg-gray-50 rounded-lg p-6 lg:col-span-2">
-                <div className="flex items-center mb-4">
-                  <BarChart3 className="h-5 w-5 text-blue-600 mr-2" />
-                  <h3 className="text-lg font-medium text-gray-900">
-                    {selectedClass ? classes.find(c => c.id === selectedClass)?.name : '클래스'} 성적 분석
-                    {chartPeriod.fromYear && chartPeriod.fromMonth && chartPeriod.toYear && chartPeriod.toMonth && (
-                      <span className="text-sm font-normal text-gray-500 ml-2">
-                        ({chartPeriod.fromYear}년 {chartPeriod.fromMonth}월 ~ {chartPeriod.toYear}년 {chartPeriod.toMonth}월)
-                      </span>
-                    )}
-                  </h3>
-                  <div className="relative ml-2 inline-block">
-                    <div className="group w-4 h-4">
-                      <Info className="h-4 w-4 text-gray-400 cursor-help" />
-                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-10 pointer-events-none">
-                        막대 그래프: 학생 평균 성적<br />
-                        선 그래프: 선택된 학생별 개별 성적<br />
-                        클래스별 성적 추이를 확인할 수 있습니다
-                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-800"></div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="h-96 bg-white rounded-lg border border-gray-200 p-4">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart
-                      width={500}
-                      height={400}
-                      data={chartData}
-                      margin={{
-                        top: 20,
-                        right: 80,
-                        bottom: 20,
-                        left: 20,
-                      }}
-                      style={{ backgroundColor: 'white' }}
+                        
+                        {/* 커스텀 기간 선택 */}
+                        <div className="space-y-4">
+                          <label className="text-sm font-medium text-gray-700">커스텀 기간</label>
+                          
+                          <div className="grid grid-cols-2 gap-4">
+                            {/* 시작 기간 */}
+                            <div className="space-y-2">
+                              <label className="text-xs text-gray-600 font-medium">시작</label>
+                <div className="flex items-center gap-2">
+                    <Select 
+                      value={chartPeriod.fromYear ? chartPeriod.fromYear.toString() : ''} 
+                      onValueChange={(value) => handleDateRangeChange('from', 'year', value)}
                     >
-                      <CartesianGrid stroke="#f5f5f5" />
-                      <XAxis dataKey="name" label={{ value: '월', position: 'insideBottomRight', offset: 0 }} scale="band" />
-                      <YAxis />
-                      <Tooltip />
-                      <Area type="monotone" dataKey="과제수" fill="#0072CE" fillOpacity={0.3} stroke="#0072CE" strokeWidth={2} />
-                      <Bar dataKey="학생평균" barSize={40} fill="#1e3a8a" stroke="#1e40af" strokeWidth={2} />
-                      {Object.keys(selectedStudentsData).map((studentName, index) => (
-                        <Line 
-                          key={studentName}
-                          type="linear" 
-                          dataKey={studentName} 
-                          stroke={studentColors[index]} 
-                          strokeWidth={3}
-                          dot={{ fill: studentColors[index], strokeWidth: 2, r: 4 }}
-                        />
-                      ))}
-                    </ComposedChart>
-                  </ResponsiveContainer>
-                  
-                  {/* 커스텀 범례 */}
-                  <div className="mt-4">
-                    {/* 첫 번째 줄: 과제수, 학생평균 */}
-                    <div className="flex justify-center gap-6 mb-2">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-[#0072CE] rounded-sm"></div>
-                        <span className="text-sm text-[#0072CE]">과제수</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-[#1e3a8a] rounded-sm"></div>
-                        <span className="text-sm text-[#1e3a8a]">학생평균</span>
-                      </div>
-                    </div>
-                    
-                    {/* 두 번째 줄: 선택된 학생들 */}
-                    {Object.keys(selectedStudentsData).length > 0 && (
-                      <div className="flex justify-center gap-6">
-                        {Object.keys(selectedStudentsData).map((studentName, index) => (
-                          <div key={studentName} className="flex items-center gap-2">
-                            <div 
-                              className="w-3 h-3 rounded-sm" 
-                              style={{ backgroundColor: studentColors[index] }}
-                            ></div>
-                            <span 
-                              className="text-sm" 
-                              style={{ color: studentColors[index] }}
-                            >
-                              {studentName}
-                            </span>
-                          </div>
+                                  <SelectTrigger className="h-9 text-xs">
+                                    <SelectValue placeholder="년도" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(year => (
+                                      <SelectItem key={year} value={year.toString()} className="text-xs">
+                                        {year}년
+                          </SelectItem>
                         ))}
-                      </div>
-                    )}
+                      </SelectContent>
+                    </Select>
+                    <Select 
+                      value={chartPeriod.fromMonth ? chartPeriod.fromMonth.toString() : ''} 
+                      onValueChange={(value) => handleDateRangeChange('from', 'month', value)}
+                    >
+                                  <SelectTrigger className="h-9 text-xs w-16">
+                        <SelectValue placeholder="월" />
+                      </SelectTrigger>
+                      <SelectContent>
+                                    {Array.from({ length: 12 }, (_, i) => i + 1).map(month => {
+                                      const year = chartPeriod.fromYear || new Date().getFullYear();
+                                      const isDisabled = !isDateSelectable(year, month);
+                                      return (
+                                        <SelectItem 
+                                          key={month} 
+                                          value={month.toString()}
+                                          disabled={isDisabled}
+                                          className="text-xs"
+                                        >
+                            {month}월
+                          </SelectItem>
+                                      );
+                                    })}
+                      </SelectContent>
+                    </Select>
+                              </div>
                   </div>
-                </div>
-              </div>
-
-              {/* Right Section - Student List */}
-              <div className="bg-green-50 rounded-lg p-6 lg:col-span-1">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center">
-                  <Users className="h-5 w-5 text-green-600 mr-2" />
-                  <h3 className="text-lg font-medium text-green-700">학생 관리</h3>
-                  <div className="relative ml-2 inline-block">
-                    <div className="group w-4 h-4">
-                      <Info className="h-4 w-4 text-gray-400 cursor-help" />
-                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-4 py-3 bg-white/90 backdrop-blur-md border border-white/30 text-gray-800 text-sm rounded-xl opacity-0 group-hover:opacity-100 transition-all duration-300 whitespace-nowrap z-10 pointer-events-none shadow-lg">
-                        클래스를 선택하면<br />
-                        해당 클래스의 학생 목록이<br />
-                        표시됩니다
-                          <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-white/30"></div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                  {selectedClass && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-green-800">
-                            {classes.find(c => c.id === selectedClass)?.name} 학생 목록
-                          </span>
-                            <span className="text-xs text-gray-500">
-                              총 {students[selectedClass as keyof typeof students]?.length || 0}명
-                            </span>
-                            {selectedStudents.length > 0 && (
-                        <span className="text-xs text-green-600 font-medium">
-                                선택: {selectedStudents.length}/3명
-                              </span>
-                            )}
-                          </div>
-                  )}
-                        </div>
-                <div className="h-96 bg-white rounded-lg border border-gray-200 p-4 overflow-y-auto">
-                  {selectedClass ? (
-                    <div className="space-y-3">
-                        {selectedStudents.length > 0 && (
-                        <div className="p-3 bg-green-50 rounded-lg border border-green-200 mb-4">
-                          <div className="text-xs text-green-600">
-                            선택된 학생들의 개별 성적이 차트에 각각 다른 색상의 선으로 표시됩니다.
-                            <br />
-                            과제수와 학생평균 아래에 선택된 학생들의 정보가 표시됩니다.
-                          </div>
-                      </div>
-                      )}
-                      
-                        {students[selectedClass as keyof typeof students]
-                          ?.sort((a, b) => {
-                            // 선택된 학생들을 상위로 정렬
-                            const aSelected = selectedStudents.includes(a.id);
-                            const bSelected = selectedStudents.includes(b.id);
-                            
-                            if (aSelected && !bSelected) return -1;
-                            if (!aSelected && bSelected) return 1;
-                            
-                            // 둘 다 선택되었거나 둘 다 선택되지 않은 경우, ID 순으로 정렬
-                            return a.id - b.id;
-                          })
-                          ?.map((student) => (
-                          <div 
-                            key={student.id} 
-                            onClick={() => handleStudentSelect(student.id)}
-                          className={`flex items-center justify-between p-3 rounded-lg border transition-colors cursor-pointer ${
-                              selectedStudents.includes(student.id) 
-                              ? `${getStudentBackgroundColor(student.id)} border-opacity-50 hover:bg-opacity-80` 
-                              : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
-                            } ${
-                              !selectedStudents.includes(student.id) && selectedStudents.length >= 3
-                                ? 'opacity-50 cursor-not-allowed'
-                                : ''
-                            }`}
-                          >
-                            <div className="flex items-center">
-                              <div>
-                                <p className="text-sm font-medium text-gray-900">{student.name}</p>
+                  
+                            {/* 종료 기간 */}
+                            <div className="space-y-2">
+                              <label className="text-xs text-gray-600 font-medium">종료</label>
+                              <div className="flex items-center gap-2">
+                    <Select 
+                      value={chartPeriod.toYear ? chartPeriod.toYear.toString() : ''} 
+                      onValueChange={(value) => handleDateRangeChange('to', 'year', value)}
+                    >
+                                  <SelectTrigger className="h-9 text-xs">
+                                    <SelectValue placeholder="년도" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(year => (
+                                      <SelectItem key={year} value={year.toString()} className="text-xs">
+                                        {year}년
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select 
+                      value={chartPeriod.toMonth ? chartPeriod.toMonth.toString() : ''} 
+                      onValueChange={(value) => handleDateRangeChange('to', 'month', value)}
+                    >
+                                  <SelectTrigger className="h-9 text-xs w-16">
+                        <SelectValue placeholder="월" />
+                      </SelectTrigger>
+                      <SelectContent>
+                                    {Array.from({ length: 12 }, (_, i) => i + 1).map(month => {
+                                      const year = chartPeriod.toYear || new Date().getFullYear();
+                                      const isDisabled = !isDateSelectable(year, month);
+                                      return (
+                                        <SelectItem 
+                                          key={month} 
+                                          value={month.toString()}
+                                          disabled={isDisabled}
+                                          className="text-xs"
+                                        >
+                            {month}월
+                          </SelectItem>
+                                      );
+                                    })}
+                      </SelectContent>
+                    </Select>
                               </div>
                             </div>
-                            <div className="text-right">
-                              <p className="text-sm font-medium text-gray-900">{student.grade}점</p>
+                          </div>
+                  </div>
+                  
+                        {/* 선택된 기간 미리보기 */}
+                        {chartPeriod.fromYear && chartPeriod.fromMonth && chartPeriod.toYear && chartPeriod.toMonth && (
+                          <div className="p-3 bg-[#0072CE]/5 rounded-lg border border-[#0072CE]/20">
+                            <div className="text-xs text-[#0072CE] font-medium">
+                              선택된 기간: {chartPeriod.fromYear}년 {chartPeriod.fromMonth}월 ~ {chartPeriod.toYear}년 {chartPeriod.toMonth}월
                             </div>
                           </div>
-                        ))}
-                    </div>
-                  ) : (
-                    <div className="h-full flex items-center justify-center">
-                      <div className="text-center">
-                        <Users className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                        <p className="text-gray-500 text-sm">클래스를 선택해주세요</p>
-                        <p className="text-gray-400 text-xs mt-1">위의 드롭다운에서 클래스를 선택하면</p>
-                        <p className="text-gray-400 text-xs">해당 클래스의 학생 목록이 표시됩니다</p>
+                        )}
+                        
+                        {/* 안내 메시지 */}
+                        <div className="p-3 bg-gray-50 rounded-lg">
+                          <div className="text-xs text-gray-600 space-y-1">
+                            <div>• 최대 10개월까지 선택 가능합니다</div>
+                            <div>• 오늘 이후 날짜는 선택할 수 없습니다</div>
+                            <div>• 기간을 선택하면 해당 기간의 데이터가 차트에 표시됩니다</div>
+                          </div>
+                        </div>
+                        
+                        {/* 액션 버튼들 */}
+                        <div className="flex justify-end gap-2 pt-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                            onClick={() => setIsDateModalOpen(false)}
+                            className="h-9 px-4 text-xs"
+                          >
+                            취소
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => setIsDateModalOpen(false)}
+                            className="h-9 px-4 text-xs bg-[#0072CE] hover:bg-[#0072CE]/90"
+                          >
+                            적용
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </div>
+                    </DialogContent>
+                  </Dialog>
+                ) : (
+                  <Dialog open={isAssignmentModalOpen} onOpenChange={setIsAssignmentModalOpen}>
+                    <DialogTrigger asChild>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="h-8 px-3 text-xs font-medium border-[#0072CE]/30 hover:border-[#0072CE]/50 hover:bg-[#0072CE]/5 transition-all duration-200"
+                      >
+                        <ClipboardList className="h-3 w-3 mr-1" />
+                        {selectedAssignments.length > 0 
+                          ? `${selectedAssignments.length}개 과제 선택됨`
+                          : '과제 선택'}
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-lg">
+                      <DialogHeader className="pb-4">
+                        <DialogTitle className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                          <ClipboardList className="h-5 w-5 text-[#0072CE]" />
+                          과제 선택 (최대 5개)
+                        </DialogTitle>
+                      </DialogHeader>
+                      
+                      <div className="space-y-4">
+                        <div className="text-sm text-gray-600">
+                          차트에 표시할 과제를 선택하세요. 최대 5개까지 선택 가능합니다.
               </div>
-
+                        
+                        <div className="space-y-2">
+                          {assignments.map((assignment) => (
+                            <div 
+                              key={assignment.id}
+                              onClick={() => handleAssignmentSelect(assignment.id)}
+                              className={`p-3 rounded-lg border cursor-pointer transition-all duration-200 ${
+                                selectedAssignments.includes(assignment.id)
+                                  ? 'bg-[#0072CE]/10 border-[#0072CE]/50'
+                                  : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
+                              } ${
+                                !selectedAssignments.includes(assignment.id) && selectedAssignments.length >= 5
+                                  ? 'opacity-50 cursor-not-allowed'
+                                  : ''
+                              }`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="text-sm font-medium text-gray-900">{assignment.title}</p>
+                                  <p className="text-xs text-gray-500">{assignment.subject} • 마감: {assignment.dueDate}</p>
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-xs text-gray-600">{assignment.submitted}/{assignment.total}명 제출</p>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        
+                        {selectedAssignments.length > 0 && (
+                          <div className="p-3 bg-[#0072CE]/5 rounded-lg border border-[#0072CE]/20">
+                            <div className="text-xs text-[#0072CE] font-medium">
+                              선택된 과제: {selectedAssignments.length}개
+                            </div>
+                          </div>
+                        )}
+                        
+                        <div className="flex justify-end gap-2 pt-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setIsAssignmentModalOpen(false)}
+                            className="h-9 px-4 text-xs"
+                          >
+                            취소
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => setIsAssignmentModalOpen(false)}
+                            className="h-9 px-4 text-xs bg-[#0072CE] hover:bg-[#0072CE]/90"
+                          >
+                            적용
+                          </Button>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                )}
+              </div>
             </div>
-          </div>
+          </CardHeader>
+          <CardContent>
+            <div className="relative h-[28rem] bg-white rounded-lg border-t border-l border-r border-gray-200 border-b-0 p-4 shadow-inner">
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart
+                  width={500}
+                  height={400}
+                  data={chartData}
+                  margin={{
+                    top: 20,
+                    right: 80,
+                    bottom: 20,
+                    left: 20,
+                  }}
+                  style={{ backgroundColor: 'white' }}
+                >
+                  <defs>
+                    {/* 밝은 블루 그라데이션 */}
+                    <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#dbeafe" stopOpacity={1}/>
+                      <stop offset="30%" stopColor="#bfdbfe" stopOpacity={1}/>
+                      <stop offset="70%" stopColor="#93c5fd" stopOpacity={1}/>
+                      <stop offset="100%" stopColor="#60a5fa" stopOpacity={1}/>
+                    </linearGradient>
+                    
+                    {/* 인디고 그라데이션 */}
+                    <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#6366f1" stopOpacity={1}/>
+                      <stop offset="30%" stopColor="#4f46e5" stopOpacity={1}/>
+                      <stop offset="70%" stopColor="#4338ca" stopOpacity={1}/>
+                      <stop offset="100%" stopColor="#3730a3" stopOpacity={1}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid stroke="#f5f5f5" />
+                  <XAxis dataKey="name" label={{ value: '월', position: 'insideBottomRight', offset: 0 }} scale="band" />
+                  <YAxis />
+                  <Tooltip />
+                  <Area type="monotone" dataKey="과제수" fill="url(#areaGradient)" stroke="#4f46e5" strokeWidth={1} />
+                  <Bar 
+                    dataKey="학생평균" 
+                    barSize={40} 
+                    fill="url(#barGradient)" 
+                    stroke="#93c5fd" 
+                    strokeWidth={1}
+                    style={{
+                      filter: 'drop-shadow(0 4px 6px rgba(59, 130, 246, 0.1))'
+                    }}
+                  />
+                  {Object.keys(selectedStudentsData).map((studentName, index) => (
+                    <Line 
+                      key={studentName}
+                      type="linear" 
+                      dataKey={studentName} 
+                      stroke={studentColors[index]} 
+                      strokeWidth={1.5}
+                      dot={{ 
+                        fill: 'white', 
+                        stroke: studentColors[index], 
+                        strokeWidth: 2, 
+                        r: 4 
+                      }}
+                    />
+                  ))}
+                </ComposedChart>
+              </ResponsiveContainer>
+              
+              
+              {/* 커스텀 범례 */}
+              <div className="mt-4 relative z-10">
+                {/* 첫 번째 줄: 과제수, 학생평균 */}
+                <div className="flex justify-center gap-6 mb-2">
+                  <div className="flex items-center gap-2">
+                    <div 
+                      className="w-3 h-3 rounded-sm relative overflow-hidden"
+                      style={{
+                        background: 'linear-gradient(135deg, #6366f1 0%, #3730a3 100%)',
+                        boxShadow: '0 0 8px rgba(99, 102, 241, 0.4), inset 0 1px 0 rgba(255,255,255,0.2)',
+                        filter: 'drop-shadow(0 2px 4px rgba(99, 102, 241, 0.3))'
+                      }}
+                    >
+                      <div 
+                        className="absolute inset-0 opacity-30"
+                        style={{
+                          background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.4) 50%, transparent 100%)'
+                        }}
+                      ></div>
+                    </div>
+                    <span 
+                      className="text-sm font-medium"
+                      style={{
+                        background: 'linear-gradient(135deg, #6366f1 0%, #3730a3 100%)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        backgroundClip: 'text',
+                        filter: 'drop-shadow(0 0 4px rgba(99, 102, 241, 0.3))'
+                      }}
+                    >
+                      과제수
+                    </span>
+                  </div>
+                   <div className="flex items-center gap-2">
+                     <div 
+                       className="w-3 h-3 rounded-sm"
+                       style={{
+                         background: 'linear-gradient(135deg, #dbeafe 0%, #60a5fa 100%)',
+                         border: '1px solid rgba(59, 130, 246, 0.3)',
+                         boxShadow: '0 4px 6px rgba(59, 130, 246, 0.1)'
+                       }}
+                     ></div>
+                     <span className="text-sm text-blue-600 font-medium">학생평균</span>
+                   </div>
+                </div>
+                
+                {/* 두 번째 줄: 선택된 학생들 */}
+                {Object.keys(selectedStudentsData).length > 0 && (
+                  <div className="flex justify-center gap-6">
+                    {Object.keys(selectedStudentsData).map((studentName, index) => (
+                      <div key={studentName} className="flex items-center gap-2">
+                        <div 
+                          className="w-3 h-3 rounded-sm" 
+                          style={{ backgroundColor: studentColors[index] }}
+                        ></div>
+                        <span 
+                          className="text-sm" 
+                          style={{ color: studentColors[index] }}
+                        >
+                          {studentName}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           </CardContent>
         </Card>
+
+        {/* 학생 관리 카드 */}
+        <Card className="bg-card text-card-foreground gap-6 rounded-xl border py-6 flex-1 flex flex-col shadow-sm lg:col-span-1 min-h-[620px]">
+          <CardHeader className="py-2 px-6 border-b border-gray-100 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Users className="h-5 w-5 text-green-600 mr-2" />
+              <h2 className="text-base font-medium">학생 관리</h2>
+              <div className="relative ml-2 inline-block">
+                <div className="group w-4 h-4">
+                  <Info className="h-4 w-4 text-gray-400 cursor-help" />
+                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-4 py-3 bg-white/90 backdrop-blur-md border border-white/30 text-gray-800 text-sm rounded-xl opacity-0 group-hover:opacity-100 transition-all duration-300 whitespace-nowrap z-10 pointer-events-none shadow-lg">
+                    클래스를 선택하면<br />
+                    해당 클래스의 학생 목록이<br />
+                    표시됩니다
+                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-white/30"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            {selectedClass && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-green-800">
+                  {classes.find(c => c.id === selectedClass)?.name} 학생 목록
+                </span>
+                <span className="text-xs text-gray-500">
+                  총 {students[selectedClass as keyof typeof students]?.length || 0}명
+                </span>
+              </div>
+            )}
+          </CardHeader>
+          <CardContent>
+            {/* 선택된 학생 목록 */}
+            {selectedClass && (
+              <div className="mb-4 px-6 pt-6 pb-2 bg-white backdrop-blur-sm rounded-xl border border-gray-200 shadow-lg h-60">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-sm font-medium text-green-800">선택된 학생 ({selectedStudents.length}/3명)</h4>
+                    <div className="relative">
+                      <div className="group w-4 h-4">
+                        <Info className="h-4 w-4 text-green-600 cursor-help" />
+                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-4 py-3 bg-white/90 backdrop-blur-md border border-white/30 text-gray-800 text-sm rounded-xl opacity-0 group-hover:opacity-100 transition-all duration-300 whitespace-nowrap z-10 pointer-events-none shadow-lg">
+                          선택된 학생들의 개별 성적이 차트에 각각 다른 색상의 선으로 표시됩니다.
+                          <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-white/30"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  {selectedStudents.length > 0 && (
+                    <button
+                      onClick={() => {
+                        // 전체 제거 애니메이션 (3번째부터 역순으로)
+                        const cards = document.querySelectorAll('[data-student-id]');
+                        const reversedCards = Array.from(cards).reverse();
+                        
+                        reversedCards.forEach((card, index) => {
+                          setTimeout(() => {
+                            (card as HTMLElement).style.transform = 'translateY(100%)';
+                            (card as HTMLElement).style.opacity = '0';
+                          }, index * 150);
+                        });
+                        
+                        // 모든 애니메이션 완료 후 상태 업데이트
+                        setTimeout(() => {
+                          setSelectedStudents([]);
+                          setStudentColorMap({});
+                        }, reversedCards.length * 150 + 200);
+                      }}
+                      className="flex items-center gap-1 px-2 py-1 text-xs text-red-600 rounded-md"
+                      title="모든 학생 선택 해제"
+                    >
+                      <X className="h-3 w-3" />
+                      전체 제거
+                    </button>
+                  )}
+                </div>
+                {selectedStudents.length > 0 ? (
+                  <div className="space-y-2 overflow-hidden" style={{ maxHeight: 'calc(100% - 60px)' }}>
+                    {selectedStudents.map((studentId, index) => {
+                      const student = students[selectedClass as keyof typeof students]?.find(s => s.id === studentId);
+                      if (!student) return null;
+                      return (
+                        <motion.div 
+                          key={student.id}
+                          data-student-id={student.id}
+                          onClick={() => handleStudentSelect(student.id)}
+                          className="group flex items-center gap-3 p-2.5 rounded-lg border transition-all backdrop-blur-sm cursor-pointer"
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -20 }}
+                          transition={{ 
+                            duration: 0.1, 
+                            delay: index * 0.03,
+                            ease: "easeOut"
+                          }}
+                          style={{ 
+                            backgroundColor: `${studentColors[index]}20`,
+                            borderColor: studentColors[index],
+                            boxShadow: `0 4px 6px -1px ${studentColors[index]}20, 0 2px 4px -1px ${studentColors[index]}10`
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = '#fef2f2';
+                            e.currentTarget.style.borderColor = '#fca5a5';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = `${studentColors[index]}20`;
+                            e.currentTarget.style.borderColor = studentColors[index];
+                          }}
+                        >
+                          <div className="relative w-3 h-3">
+                            <div 
+                              className="w-3 h-3 rounded-sm group-hover:opacity-0 transition-opacity" 
+                              style={{ backgroundColor: studentColors[index] }}
+                            ></div>
+                            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                              <X className="w-3 h-3 text-red-500" />
+                            </div>
+                          </div>
+                          <p className="text-sm font-medium text-gray-900">{student.name}</p>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center" style={{ height: 'calc(100% - 60px)' }}>
+                    <div className="text-center">
+                      <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <Users className="h-6 w-6 text-gray-400" />
+                      </div>
+                      <p className="text-sm text-gray-500 mb-1">선택된 학생이 없습니다</p>
+                      <p className="text-xs text-gray-400">아래 목록에서 학생을 선택해주세요 (최대 3명)</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 전체 학생 목록 */}
+            <div className={`h-80 bg-white rounded-lg border border-gray-200 overflow-hidden transition-all duration-300 ${selectedStudents.length >= 3 ? 'opacity-25 pointer-events-none' : ''}`}>
+              {selectedClass ? (
+                <div className="h-full flex flex-col">
+                  <h4 className="text-sm font-medium text-gray-700 p-4 pb-3 bg-white border-b border-gray-100 sticky top-0 z-10">전체 학생 목록</h4>
+                  <div className="flex-1 p-4 pt-3 overflow-y-auto">
+                    <div className="space-y-3">
+                      {students[selectedClass as keyof typeof students]
+                    ?.sort((a, b) => a.id - b.id)
+                    ?.map((student, index) => {
+                      const isSelected = selectedStudents.includes(student.id);
+                      const canSelect = !isSelected && selectedStudents.length < 3;
+                      
+                      return (
+                        <div 
+                          key={student.id} 
+                          onClick={() => canSelect ? handleStudentSelect(student.id) : undefined}
+                          className={`flex items-center justify-between p-2.5 rounded-lg border transition-colors ${
+                            isSelected 
+                              ? 'bg-gray-200 border-gray-300 text-gray-500 cursor-not-allowed' 
+                              : canSelect
+                              ? 'bg-gray-50 border-gray-200 hover:bg-gray-100 cursor-pointer'
+                              : 'bg-gray-50 border-gray-200 opacity-50 cursor-not-allowed'
+                          }`}
+                        >
+                          <div className="flex items-center">
+                            <div>
+                              <p className={`text-sm font-medium ${isSelected ? 'text-gray-500' : 'text-gray-900'}`}>
+                                {student.name} {isSelected ? '(선택됨)' : ''}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="h-full flex items-center justify-center">
+                  <div className="text-center">
+                    <Users className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                    <p className="text-gray-500 text-sm">클래스를 선택해주세요</p>
+                    <p className="text-gray-400 text-xs mt-1">위의 드롭다운에서 클래스를 선택하면</p>
+                    <p className="text-gray-400 text-xs">해당 클래스의 학생 목록이 표시됩니다</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
       </div>
   );
 };
