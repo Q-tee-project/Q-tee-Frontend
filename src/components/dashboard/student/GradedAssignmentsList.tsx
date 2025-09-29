@@ -4,6 +4,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { FileText, CheckCircle } from 'lucide-react';
+import { RxExternalLink } from "react-icons/rx";
 
 interface Assignment {
   id: string;
@@ -27,12 +28,12 @@ const GradedAssignmentsList: React.FC<GradedAssignmentsListProps> = ({
   onAssignmentClick,
 }) => {
   return (
-    <Card className="shadow-sm h-full flex flex-col px-6 py-5">
+    <Card className="shadow-sm h-full flex flex-col px-6 py-5 gap-0">
       <CardHeader className="px-0 py-3">
         <h3 className="text-xl font-bold text-gray-900">과제 채점 완료</h3>
       </CardHeader>
       <CardContent className="flex-1 px-0">
-        <div className="h-full bg-white rounded-lg border border-gray-200 overflow-y-auto">
+        <div className="h-full bg-white overflow-y-auto">
           {isLoadingAssignments ? (
             <div className="h-full flex items-center justify-center">
               <div className="text-center">
@@ -48,33 +49,21 @@ const GradedAssignmentsList: React.FC<GradedAssignmentsListProps> = ({
               </div>
             </div>
           ) : (
-            <div className="p-2 space-y-2">
+            <div className="space-y-2">
               {gradedAssignments.slice(0, 3).map((assignment) => (
                 <div
                   key={assignment.id}
-                  className="p-2 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors"
+                  className="p-3 bg-white rounded-lg border border-gray-200 hover:bg-green-50 hover:border-green-200 cursor-pointer transition-colors"
                   onClick={() => onAssignmentClick(assignment)}
                 >
                   <div className="flex items-center justify-between">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-gray-900 truncate">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div className="w-3 h-3 bg-green-500 rounded-full flex-shrink-0"></div>
+                      <h4 className="text-sm font-medium text-gray-900 truncate">
                         {assignment.title}
-                      </p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Badge className="bg-green-100 text-green-800 text-xs px-1 py-0">
-                          {assignment.subject}
-                        </Badge>
-                        <span className="text-xs text-gray-500">
-                          {assignment.problem_count}문제
-                        </span>
-                        {assignment.score && (
-                          <span className="text-xs font-medium text-green-600">
-                            {assignment.score}점
-                          </span>
-                        )}
-                      </div>
+                      </h4>
                     </div>
-                    <CheckCircle className="h-4 w-4 text-green-500" />
+                    <RxExternalLink className="h-4 w-4 text-gray-400 flex-shrink-0" />
                   </div>
                 </div>
               ))}

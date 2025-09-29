@@ -85,10 +85,55 @@ const ClassAverage: React.FC<ClassAverageProps> = ({
   generateYearOptions,
   generateMonthOptions,
 }) => {
+  // 기간별 차트 데이터 필터링
+  const getFilteredChartData = () => {
+    if (chartType === 'period' && customStartYear && customStartMonth && customEndYear && customEndMonth) {
+      const startDate = new Date(parseInt(customStartYear), parseInt(customStartMonth) - 1);
+      const endDate = new Date(parseInt(customEndYear), parseInt(customEndMonth) - 1);
+      
+      // 2025년 1월부터 6월까지만 데이터 표시
+      const dataStartDate = new Date(2025, 0); // 2025년 1월
+      const dataEndDate = new Date(2025, 5); // 2025년 6월
+      
+      return composedChartData.filter(item => {
+        // 다양한 날짜 형식 처리
+        let itemDate;
+        
+        if (item.date) {
+          itemDate = new Date(item.date);
+        } else if (item.name) {
+          // "1월", "2월" 등의 형식 처리
+          const monthMatch = item.name.match(/(\d+)월/);
+          if (monthMatch) {
+            itemDate = new Date(2025, parseInt(monthMatch[1]) - 1);
+          } else {
+            // 다른 형식 시도
+            itemDate = new Date(item.name);
+          }
+        } else {
+          return false;
+        }
+        
+        // 유효한 날짜인지 확인
+        if (isNaN(itemDate.getTime())) {
+          return false;
+        }
+        
+        return itemDate >= startDate && itemDate <= endDate && 
+               itemDate >= dataStartDate && itemDate <= dataEndDate;
+      });
+    }
+    return composedChartData;
+  };
+
+  const filteredChartData = getFilteredChartData();
+  
+  // 디버깅: 필터링된 데이터가 비어있으면 원본 데이터 사용
+  const displayData = filteredChartData.length > 0 ? filteredChartData : composedChartData;
   return (
     <Card className="flex-1 shadow-sm px-6">
       <CardHeader className="p-0">
-        <h3 className="text-xl font-bold text-gray-900">클래스별 과제별 전체 평균과 내 평균</h3>
+        <h3 className="text-xl font-bold text-gray-900">과제별 내 점수</h3>
       </CardHeader>
       <div className="p-0">
         <div className="flex items-center gap-4 flex-wrap">
@@ -117,22 +162,9 @@ const ClassAverage: React.FC<ClassAverageProps> = ({
             </SelectContent>
           </Select>
 
-          {/* 3. 기간별 선택 시 월 선택 및 기간 설정 */}
+          {/* 3. 기간별 선택 시 기간 설정 */}
           {chartType === 'period' && (
             <div className="flex items-center gap-2">
-              <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                <SelectTrigger className="w-32">
-                  <SelectValue placeholder="월 선택" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">전체</SelectItem>
-                  {defaultChartData.map((item) => (
-                    <SelectItem key={item.name} value={item.name}>
-                      {item.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
               <Button
                 variant="outline"
                 onClick={() => setShowPeriodModal(true)}
@@ -141,6 +173,11 @@ const ClassAverage: React.FC<ClassAverageProps> = ({
                 <Settings className="h-4 w-4" />
                 기간 설정
               </Button>
+              {customStartYear && customStartMonth && customEndYear && customEndMonth && (
+                <div className="text-sm text-gray-600">
+                  {customStartYear}년 {customStartMonth}월 ~ {customEndYear}년 {customEndMonth}월
+                </div>
+              )}
             </div>
           )}
 
@@ -185,7 +222,7 @@ const ClassAverage: React.FC<ClassAverageProps> = ({
             <LineChart
               width={500}
               height={300}
-              data={composedChartData}
+              data={displayData}
               margin={{
                 top: 5,
                 right: 30,
@@ -282,6 +319,7 @@ const ClassAverage: React.FC<ClassAverageProps> = ({
                 <li>• 최대 10개월까지 선택 가능합니다</li>
                 <li>• 오늘 이후 날짜는 선택할 수 없습니다</li>
                 <li>• 기간을 선택하면 해당 기간의 데이터가 차트에 표시됩니다</li>
+                <li>• 시작일과 종료일을 모두 선택해야 적용됩니다</li>
               </ul>
             </div>
           </div>
@@ -296,6 +334,7 @@ const ClassAverage: React.FC<ClassAverageProps> = ({
             <Button
               onClick={onPeriodApply}
               className="bg-blue-600 hover:bg-blue-700"
+              disabled={!customStartYear || !customStartMonth || !customEndYear || !customEndMonth}
             >
               적용
             </Button>

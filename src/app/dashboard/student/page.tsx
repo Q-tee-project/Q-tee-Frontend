@@ -50,27 +50,62 @@ const StudentDashboard = () => {
     { id: '7', name: '과제 4' },
   ];
 
-  // 레이더 차트 데이터
-  const radarData = [
-    {
-      subject: '국어',
-      클래스평균: 85,
-      내점수: 40,
-      fullMark: 100,
-    },
-    {
-      subject: '영어',
-      클래스평균: 60,
-      내점수: 92,
-      fullMark: 100,
-    },
-    {
-      subject: '수학',
-      클래스평균: 82,
-      내점수: 75,
-      fullMark: 100,
-    },
-  ];
+  // 클래스별 레이더 차트 데이터 생성
+  const getRadarData = (classId: string) => {
+    // 클래스별 데이터 (실제로는 API에서 가져와야 함)
+    const classData: Record<string, any> = {
+      '1': { // 클래스 A
+        국어: { 클래스평균: 85, 내점수: 40 },
+        영어: { 클래스평균: 60, 내점수: 92 },
+        수학: { 클래스평균: 82, 내점수: 75 },
+      },
+      '2': { // 클래스 B
+        국어: { 클래스평균: 78, 내점수: 45 },
+        영어: { 클래스평균: 72, 내점수: 88 },
+        수학: { 클래스평균: 85, 내점수: 70 },
+      },
+      '3': { // 클래스 C
+        국어: { 클래스평균: 90, 내점수: 35 },
+        영어: { 클래스평균: 65, 내점수: 95 },
+        수학: { 클래스평균: 88, 내점수: 80 },
+      },
+      '4': { // 클래스 D
+        국어: { 클래스평균: 82, 내점수: 50 },
+        영어: { 클래스평균: 70, 내점수: 85 },
+        수학: { 클래스평균: 75, 내점수: 65 },
+      },
+      '5': { // 클래스 E
+        국어: { 클래스평균: 88, 내점수: 42 },
+        영어: { 클래스평균: 68, 내점수: 90 },
+        수학: { 클래스평균: 80, 내점수: 72 },
+      },
+    };
+
+    const currentClassData = classData[classId] || classData['1'];
+    
+    return [
+      {
+        subject: '국어',
+        클래스평균: currentClassData.국어.클래스평균,
+        내점수: currentClassData.국어.내점수,
+        fullMark: 100,
+      },
+      {
+        subject: '영어',
+        클래스평균: currentClassData.영어.클래스평균,
+        내점수: currentClassData.영어.내점수,
+        fullMark: 100,
+      },
+      {
+        subject: '수학',
+        클래스평균: currentClassData.수학.클래스평균,
+        내점수: currentClassData.수학.내점수,
+        fullMark: 100,
+      },
+    ];
+  };
+
+  const radarData = getRadarData(selectedClass);
 
   // 기본 ComposedChart 데이터
   const defaultChartData = [
@@ -284,7 +319,25 @@ const StudentDashboard = () => {
 
   // 과제 클릭 핸들러
   const handleAssignmentClick = (assignment: any) => {
-    router.push('/test');
+    const assignmentId = assignment.assignment_id || assignment.id;
+    const assignmentTitle = assignment.title;
+    const subject = assignment.subject;
+    
+    // 과제 상태에 따라 viewResult 파라미터 설정
+    const status = assignment.status?.toLowerCase();
+    const isCompleted = status === 'completed' || status === 'submitted' || status === 'graded' || status === 'finished' || status === '응시';
+    
+    const params = new URLSearchParams({
+      assignmentId: assignmentId.toString(),
+      assignmentTitle: assignmentTitle,
+      subject: subject
+    });
+    
+    if (isCompleted) {
+      params.append('viewResult', 'true');
+    }
+    
+    router.push(`/test?${params.toString()}`);
   };
 
 
