@@ -7,6 +7,10 @@ import {
   EnglishRegenerationRequest,
   EnglishRegenerationResponse,
   EnglishDataRegenerationRequest,
+  EnglishAsyncResponse,
+  EnglishTaskStatus,
+  EnglishRegenerationAsyncResponse,
+  EnglishRegenerationTaskStatus,
 } from '@/types/english';
 
 // Helper function to get auth token
@@ -51,10 +55,10 @@ export interface EnglishAssignmentResult {
 }
 
 export class EnglishService {
-  // 영어 문제 생성
+  // 영어 문제 생성 (비동기 처리로 변경)
   static async generateEnglishProblems(
     formData: EnglishFormData,
-  ): Promise<EnglishGenerationResponse> {
+  ): Promise<EnglishAsyncResponse> {
     const currentUser = JSON.parse(localStorage.getItem('user_profile') || '{}');
     const userId = currentUser?.id;
 
@@ -74,7 +78,7 @@ export class EnglishService {
       throw new Error(`English API Error: ${response.status}`);
     }
 
-    return response.json();
+    return response.json(); // 이제 {task_id, status, message} 반환
   }
 
   // 영어 워크시트 목록 가져오기
@@ -124,9 +128,9 @@ export class EnglishService {
     return response.json();
   }
 
-  // 영어 태스크 상태 확인
-  static async getEnglishTaskStatus(taskId: string): Promise<any> {
-    const response = await fetch(`${ENGLISH_API_BASE}/tasks/${taskId}`);
+  // 영어 태스크 상태 확인 (개선)
+  static async getTaskStatus(taskId: string): Promise<EnglishTaskStatus> {
+    const response = await fetch(`${ENGLISH_API_BASE}/task-status/${taskId}`);
 
     if (!response.ok) {
       throw new Error(`English API Error: ${response.status}`);
@@ -371,12 +375,12 @@ export class EnglishService {
     return result;
   }
 
-  // 영어 문제 재생성 (데이터 기반) - v2.0 API
+  // 영어 문제 재생성 (데이터 기반) - v2.0 API (비동기)
   static async regenerateEnglishQuestionFromData(
     questionsData: EnglishQuestion[],
     passageData: any | null,
     regenerationRequest: EnglishRegenerationRequest,
-  ): Promise<EnglishRegenerationResponse> {
+  ): Promise<EnglishRegenerationAsyncResponse> {
     const currentUser = JSON.parse(localStorage.getItem('user_profile') || '{}');
     const userId = currentUser?.id;
 
@@ -420,8 +424,19 @@ export class EnglishService {
     }
 
     const result = await response.json();
-    console.log('✅ 영어 지문/문제 재생성 응답 성공:', result);
+    console.log('✅ 영어 지문/문제 재생성 비동기 시작:', result);
     return result;
+  }
+
+  // 영어 재생성 태스크 상태 조회
+  static async getRegenerationTaskStatus(taskId: string): Promise<EnglishRegenerationTaskStatus> {
+    const response = await fetch(`${ENGLISH_API_BASE}/task-status/${taskId}`);
+
+    if (!response.ok) {
+      throw new Error(`재생성 작업 상태 조회 실패: ${response.status}`);
+    }
+
+    return response.json();
   }
 
   // 영어 서비스 헬스체크
