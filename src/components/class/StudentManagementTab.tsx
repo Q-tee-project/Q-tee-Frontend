@@ -54,7 +54,7 @@ export function StudentManagementTab({ classId, refreshTrigger }: StudentManagem
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+    <div className="flex flex-col gap-4">
       {/* 학생 목록 헤더 */}
       <div>
         <h3 className="text-lg font-semibold text-gray-800">
@@ -84,8 +84,7 @@ export function StudentManagementTab({ classId, refreshTrigger }: StudentManagem
           )}
           <button 
             onClick={() => router.push(`/class/${classId}/register`)}
-            style={{ backgroundColor: '#0072CE' }}
-            className="hover:opacity-90 ml-4 flex items-center gap-2 text-white px-4 py-2 rounded-lg transition-colors"
+            className="bg-[#0072CE] hover:opacity-90 ml-4 flex items-center gap-2 text-white px-4 py-2 rounded-lg transition-colors"
           >
             학생 등록
           </button>
@@ -100,7 +99,7 @@ export function StudentManagementTab({ classId, refreshTrigger }: StudentManagem
       )}
 
       {/* 학생 목록 */}
-      <div className="bg-white border border-gray-200 rounded-lg shadow-sm" style={{ padding: '0 20px' }}>
+      <div className="bg-white border border-gray-200 rounded-lg shadow-sm px-5">
         {isLoading ? (
           <div className="text-center py-12">
             <div className="text-gray-500">학생 목록을 불러오는 중...</div>
@@ -125,24 +124,24 @@ export function StudentManagementTab({ classId, refreshTrigger }: StudentManagem
           </div>
         ) : (
           <Table>
-            <TableHeader style={{ background: '#fff', borderBottom: '1px solid #666' }}>
+            <TableHeader className="bg-white border-b border-[#666]">
               <TableRow className="hover:bg-transparent">
-                <TableHead className="text-center text-base font-bold" style={{ color: '#666' }}>
+                <TableHead className="text-center text-base font-bold text-[#666]">
                   학교/학년
                 </TableHead>
-                <TableHead className="text-center text-base font-bold" style={{ color: '#666' }}>
+                <TableHead className="text-center text-base font-bold text-[#666]">
                   이름
                 </TableHead>
-                <TableHead className="text-center text-base font-bold" style={{ color: '#666' }}>
+                <TableHead className="text-center text-base font-bold text-[#666]">
                   이메일
                 </TableHead>
-                <TableHead className="text-center text-base font-bold" style={{ color: '#666' }}>
+                <TableHead className="text-center text-base font-bold text-[#666]">
                   학생 연락처
                 </TableHead>
-                <TableHead className="text-center text-base font-bold" style={{ color: '#666' }}>
+                <TableHead className="text-center text-base font-bold text-[#666]">
                   학부모 연락처
                 </TableHead>
-                <TableHead className="text-center text-base font-bold" style={{ color: '#666' }}>
+                <TableHead className="text-center text-base font-bold text-[#666]">
                   가입일
                 </TableHead>
               </TableRow>
@@ -154,29 +153,15 @@ export function StudentManagementTab({ classId, refreshTrigger }: StudentManagem
                     <div className="flex items-center justify-center">
                       <div className="flex gap-2">
                         <Badge
-                          className="text-sm"
-                          style={{
-                            backgroundColor: student.school_level === 'middle' ? '#E6F3FF' : '#FFF5E9',
-                            border: 'none',
-                            color: student.school_level === 'middle' ? '#0085FF' : '#FF9F2D',
-                            padding: '6px 12px',
-                            minWidth: '60px',
-                            textAlign: 'center',
-                          }}
+                          className={`text-sm border-none px-3 py-1.5 min-w-[60px] text-center ${
+                            student.school_level === 'middle' 
+                              ? 'bg-[#E6F3FF] text-[#0085FF]' 
+                              : 'bg-[#FFF5E9] text-[#FF9F2D]'
+                          }`}
                         >
                           {student.school_level === 'middle' ? '중학교' : '고등학교'}
                         </Badge>
-                        <Badge
-                          className="text-sm"
-                          style={{
-                            backgroundColor: '#f5f5f5',
-                            border: 'none',
-                            color: '#999999',
-                            padding: '6px 12px',
-                            minWidth: '60px',
-                            textAlign: 'center',
-                          }}
-                        >
+                        <Badge className="text-sm border-none px-3 py-1.5 min-w-[60px] text-center bg-[#f5f5f5] text-[#999999]">
                           {student.grade}학년
                         </Badge>
                       </div>

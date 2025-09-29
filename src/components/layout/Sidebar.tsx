@@ -1,27 +1,17 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { IoIosArrowDropright } from 'react-icons/io';
 import { RxDashboard } from 'react-icons/rx';
 import { MdOutlineEmail } from 'react-icons/md';
-import { FiClipboard } from 'react-icons/fi';
-import { FiEdit } from 'react-icons/fi';
-import { FiUsers } from 'react-icons/fi';
-import { FiShoppingCart } from 'react-icons/fi';
+import { FiClipboard, FiEdit, FiUsers, FiShoppingCart, FiSun, FiBook, FiHome, FiLogOut } from 'react-icons/fi';
 import { CiDark } from 'react-icons/ci';
-import { FiSun } from "react-icons/fi";
 import { FaUserCircle } from 'react-icons/fa';
-import { FiCalendar } from 'react-icons/fi';
-import { FiList } from 'react-icons/fi';
-import { FiBook } from 'react-icons/fi';
-import { FiHome } from 'react-icons/fi';
-import { FiLogOut } from 'react-icons/fi';
 import { useAuth } from '@/contexts/AuthContext';
 import Image from 'next/image';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
 
 interface SidebarProps {
   onToggle?: (isOpen: boolean) => void;
@@ -37,7 +27,7 @@ const Sidebar = ({ onToggle }: SidebarProps) => {
   // Teacher 메뉴
   const teacherMenuItems = [
     { icon: <RxDashboard />, text: '대시보드', path: '/dashboard/teacher' },
-    { icon: <MdOutlineEmail />, text: '메일', path: '/message/[id]' },
+    { icon: <MdOutlineEmail />, text: '메일', path: '/message' },
     { icon: <FiClipboard />, text: '문제함', path: '/question/bank' },
     { icon: <FiEdit />, text: '문제 생성', path: '/question/create' },
     { icon: <FiUsers />, text: '클래스 관리', path: '/class/create' },
@@ -47,7 +37,7 @@ const Sidebar = ({ onToggle }: SidebarProps) => {
   // Student 메뉴
   const studentMenuItems = [
     { icon: <RxDashboard />, text: '대시보드', path: '/dashboard/student' },
-    { icon: <MdOutlineEmail />, text: '메일', path: '/message/[id]' },
+    { icon: <MdOutlineEmail />, text: '메일', path: '/message' },
     { icon: <FiBook />, text: '과제 풀이', path: '/test' },
     { icon: <FiHome />, text: '내 클래스', path: '/class' },
   ];

@@ -75,14 +75,13 @@ export default function CreateClassModal({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md" showCloseButton={false}>
         <DialogHeader>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div className="flex justify-between items-center">
             <DialogTitle>
               수업 생성
             </DialogTitle>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600"
-              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              className="text-gray-400 hover:text-gray-600 bg-none border-none cursor-pointer p-0 w-6 h-6 flex items-center justify-center"
             >
               <IoIosClose />
             </button>
@@ -98,7 +97,7 @@ export default function CreateClassModal({
           
           <div>
             <label htmlFor="className" className="block text-sm font-medium text-gray-700 mb-2">
-              수업명 <span style={{ color: '#FF0000' }}>*</span>
+              수업명 <span className="text-red-500">*</span>
             </label>
             <Input
               id="className"
@@ -108,10 +107,10 @@ export default function CreateClassModal({
             />
           </div>
 
-          <div className="flex gap-[15px] pb-4" style={{ borderBottom: '1px solid #D1D1D1' }}>
+          <div className="flex gap-4 pb-4 border-b border-[#D1D1D1]">
             <div className="flex-1">
               <label htmlFor="school" className="block text-sm font-medium text-gray-700 mb-2">
-                학교 <span style={{ color: '#FF0000' }}>*</span>
+                학교 <span className="text-red-500">*</span>
               </label>
               <Select
                 value={formData.school_level}
@@ -131,7 +130,7 @@ export default function CreateClassModal({
 
             <div className="flex-1">
               <label htmlFor="grade" className="block text-sm font-medium text-gray-700 mb-2">
-                학년 <span style={{ color: '#FF0000' }}>*</span>
+                학년 <span className="text-red-500">*</span>
               </label>
               <Select
                 value={formData.grade.toString()}
@@ -150,23 +149,17 @@ export default function CreateClassModal({
           </div>
         </div>
 
-        <DialogFooter style={{ display: 'flex', gap: '15px' }}>
+        <DialogFooter className="flex gap-4">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
-            style={{ flex: 1 }}
+            className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 flex-1"
             disabled={isSubmitting}
           >
             취소
           </button>
           <button
             onClick={handleCreateClass}
-            className="px-4 py-2 rounded-md transition-colors"
-            style={{ 
-              flex: 1,
-              backgroundColor: '#0072CE',
-              color: '#ffffff'
-            }}
+            className="px-4 py-2 rounded-md transition-colors flex-1 bg-[#0072CE] text-white"
             disabled={isSubmitting || !formData.name.trim()}
           >
             {isSubmitting ? '생성 중...' : '생성하기'}

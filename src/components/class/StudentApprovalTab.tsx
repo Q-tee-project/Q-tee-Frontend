@@ -155,7 +155,7 @@ export function ApprovalTab({ classId, onStudentApproved }: ApprovalTabProps) {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+    <div className="flex flex-col gap-4">
       {/* 승인 대기 목록 헤더 */}
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold text-gray-800">
@@ -165,26 +165,14 @@ export function ApprovalTab({ classId, onStudentApproved }: ApprovalTabProps) {
           <button
             onClick={() => handleBatchApproval('approve')}
             disabled={!selectedApprovals.some(selected => selected)}
-            className="flex items-center gap-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{
-              backgroundColor: '#E8FFE8',
-              color: '#04AA04',
-              border: 'none',
-              padding: '6px 12px'
-            }}
+            className="flex items-center gap-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed bg-[#E8FFE8] text-[#04AA04] border-none px-3 py-1.5"
           >
             일괄 승인
           </button>
           <button
             onClick={() => handleBatchApproval('reject')}
             disabled={!selectedApprovals.some(selected => selected)}
-            className="flex items-center gap-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{
-              backgroundColor: '#FFEEEE',
-              color: '#FF0004',
-              border: 'none',
-              padding: '6px 12px'
-            }}
+            className="flex items-center gap-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed bg-[#FFEEEE] text-[#FF0004] border-none px-3 py-1.5"
           >
             일괄 거절
           </button>
@@ -199,7 +187,7 @@ export function ApprovalTab({ classId, onStudentApproved }: ApprovalTabProps) {
       )}
 
       {/* 승인 대기 목록 테이블 */}
-      <div className="bg-white border border-gray-200 rounded-lg shadow-sm" style={{ padding: '0 20px' }}>
+      <div className="bg-white border border-gray-200 rounded-lg shadow-sm px-5">
         {isLoading ? (
           <div className="text-center py-12">
             <div className="text-gray-500">승인 대기 목록을 불러오는 중...</div>
@@ -213,9 +201,9 @@ export function ApprovalTab({ classId, onStudentApproved }: ApprovalTabProps) {
           </div>
         ) : (
           <Table>
-            <TableHeader style={{ background: '#fff', borderBottom: '1px solid #666' }}>
+            <TableHeader className="bg-white border-b border-[#666]">
               <TableRow className="hover:bg-transparent">
-                <TableHead className="text-left" style={{ padding: '10px 12px' }}>
+                <TableHead className="text-left p-3">
                   <div className="flex items-center justify-center">
                     <Checkbox
                       checked={approvalSelectAll}
@@ -224,28 +212,28 @@ export function ApprovalTab({ classId, onStudentApproved }: ApprovalTabProps) {
                     />
                   </div>
                 </TableHead>
-                <TableHead className="text-center text-base font-bold" style={{ color: '#666', padding: '10px 12px' }}>
+                <TableHead className="text-center text-base font-bold text-[#666] p-3">
                   학생명
                 </TableHead>
-                <TableHead className="text-center text-base font-bold" style={{ color: '#666', padding: '10px 12px' }}>
+                <TableHead className="text-center text-base font-bold text-[#666] p-3">
                   학교/학년
                 </TableHead>
-                <TableHead className="text-center text-base font-bold" style={{ color: '#666', padding: '10px 12px' }}>
+                <TableHead className="text-center text-base font-bold text-[#666] p-3">
                   이메일
                 </TableHead>
-                <TableHead className="text-center text-base font-bold" style={{ color: '#666', padding: '10px 12px' }}>
+                <TableHead className="text-center text-base font-bold text-[#666] p-3">
                   학생 연락처
                 </TableHead>
-                <TableHead className="text-center text-base font-bold" style={{ color: '#666', padding: '10px 12px' }}>
+                <TableHead className="text-center text-base font-bold text-[#666] p-3">
                   학부모 연락처
                 </TableHead>
-                <TableHead className="text-center text-base font-bold" style={{ color: '#666', padding: '10px 12px' }}>
+                <TableHead className="text-center text-base font-bold text-[#666] p-3">
                   신청일시
                 </TableHead>
-                <TableHead className="text-center text-base font-bold" style={{ color: '#666', padding: '10px 12px' }}>
+                <TableHead className="text-center text-base font-bold text-[#666] p-3">
                   상태
                 </TableHead>
-                <TableHead className="text-center text-base font-bold" style={{ color: '#666', padding: '10px 12px' }}>
+                <TableHead className="text-center text-base font-bold text-[#666] p-3">
                   승인 / 거절
                 </TableHead>
               </TableRow>
@@ -253,7 +241,7 @@ export function ApprovalTab({ classId, onStudentApproved }: ApprovalTabProps) {
             <TableBody className="bg-white divide-y divide-gray-200">
               {pendingRequests.map((request, index) => (
                 <TableRow key={request.id} className="hover:bg-gray-50">
-                  <TableCell className="whitespace-nowrap" style={{ padding: '10px 12px' }}>
+                  <TableCell className="whitespace-nowrap p-3">
                     <div className="flex items-center justify-center">
                       <Checkbox
                         checked={selectedApprovals[index] || false}
@@ -263,51 +251,37 @@ export function ApprovalTab({ classId, onStudentApproved }: ApprovalTabProps) {
                       />
                     </div>
                   </TableCell>
-                  <TableCell className="text-center text-sm text-gray-600 font-medium" style={{ padding: '10px 12px' }}>
+                  <TableCell className="text-center text-sm text-gray-600 font-medium p-3">
                     {request.student.name}
                   </TableCell>
-                  <TableCell className="whitespace-nowrap" style={{ padding: '10px 12px' }}>
+                  <TableCell className="whitespace-nowrap p-3">
                     <div className="flex items-center justify-center">
                       <div className="flex gap-2">
                         <Badge
-                          className="text-sm"
-                          style={{
-                            backgroundColor: request.student.school_level === 'middle' ? '#E6F3FF' : '#FFF5E9',
-                            border: 'none',
-                            color: request.student.school_level === 'middle' ? '#0085FF' : '#FF9F2D',
-                            padding: '6px 12px',
-                            minWidth: '60px',
-                            textAlign: 'center',
-                          }}
+                          className={`text-sm border-none px-3 py-1.5 min-w-[60px] text-center ${
+                            request.student.school_level === 'middle' 
+                              ? 'bg-[#E6F3FF] text-[#0085FF]' 
+                              : 'bg-[#FFF5E9] text-[#FF9F2D]'
+                          }`}
                         >
                           {request.student.school_level === 'middle' ? '중학교' : '고등학교'}
                         </Badge>
-                        <Badge
-                          className="text-sm"
-                          style={{
-                            backgroundColor: '#f5f5f5',
-                            border: 'none',
-                            color: '#999999',
-                            padding: '6px 12px',
-                            minWidth: '60px',
-                            textAlign: 'center',
-                          }}
-                        >
+                        <Badge className="text-sm border-none px-3 py-1.5 min-w-[60px] text-center bg-[#f5f5f5] text-[#999999]">
                           {request.student.grade}학년
                         </Badge>
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="text-center text-sm text-gray-600" style={{ padding: '10px 12px' }}>
+                  <TableCell className="text-center text-sm text-gray-600 p-3">
                     {request.student.email}
                   </TableCell>
-                  <TableCell className="text-center text-sm text-gray-600" style={{ padding: '10px 12px' }}>
+                  <TableCell className="text-center text-sm text-gray-600 p-3">
                     {request.student.phone}
                   </TableCell>
-                  <TableCell className="text-center text-sm text-gray-600" style={{ padding: '10px 12px' }}>
+                  <TableCell className="text-center text-sm text-gray-600 p-3">
                     {request.student.parent_phone}
                   </TableCell>
-                  <TableCell className="text-center text-sm text-gray-600" style={{ padding: '10px 12px' }}>
+                  <TableCell className="text-center text-sm text-gray-600 p-3">
                     {new Date(request.requested_at).toLocaleDateString('ko-KR', {
                       year: 'numeric',
                       month: '2-digit',
@@ -316,47 +290,31 @@ export function ApprovalTab({ classId, onStudentApproved }: ApprovalTabProps) {
                       minute: '2-digit'
                     })}
                   </TableCell>
-                  <TableCell className="text-center" style={{ padding: '10px 12px' }}>
+                  <TableCell className="text-center p-3">
                     <Badge
-                      className="text-sm"
-                      style={{
-                        backgroundColor: request.status === 'invited' ? '#E0F2FE' : '#FEF3C7',
-                        color: request.status === 'invited' ? '#0369A1' : '#D97706',
-                        border: 'none',
-                        padding: '6px 12px'
-                      }}
+                      className={`text-sm border-none px-3 py-1.5 ${
+                        request.status === 'invited' 
+                          ? 'bg-[#E0F2FE] text-[#0369A1]' 
+                          : 'bg-[#FEF3C7] text-[#D97706]'
+                      }`}
                     >
                       {request.status === 'invited' ? '초대 완료' : '승인 대기'}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-center" style={{ padding: '10px 12px' }}>
+                  <TableCell className="text-center p-3">
                     {request.status === 'invited' ? (
                       <span className="text-sm text-gray-400">학생 코드 입력전</span>
                     ) : (
                       <div className="flex items-center justify-center gap-2">
                         <button
                           onClick={() => handleApprovalAction(request, 'approve')}
-                          className="text-sm rounded"
-                          style={{
-                            backgroundColor: '#E8FFE8',
-                            color: '#04AA04',
-                            border: 'none',
-                            padding: '6px 12px',
-                            cursor: 'pointer'
-                          }}
+                          className="text-sm rounded bg-[#E8FFE8] text-[#04AA04] border-none px-3 py-1.5 cursor-pointer"
                         >
                           승인
                         </button>
                         <button
                           onClick={() => handleApprovalAction(request, 'reject')}
-                          className="text-sm rounded"
-                          style={{
-                            backgroundColor: '#FFEEEE',
-                            color: '#FF0004',
-                            border: 'none',
-                            padding: '6px 12px',
-                            cursor: 'pointer'
-                          }}
+                          className="text-sm rounded bg-[#FFEEEE] text-[#FF0004] border-none px-3 py-1.5 cursor-pointer"
                         >
                           거절
                         </button>
@@ -374,14 +332,13 @@ export function ApprovalTab({ classId, onStudentApproved }: ApprovalTabProps) {
       <Dialog open={isApprovalModalOpen} onOpenChange={setIsApprovalModalOpen}>
         <DialogContent className="max-w-md" showCloseButton={false}>
           <DialogHeader>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="flex justify-between items-center">
               <DialogTitle>
                 {approvalAction === 'approve' ? '가입 승인' : '가입 거절'}
               </DialogTitle>
               <button
                 onClick={() => setIsApprovalModalOpen(false)}
-                className="text-gray-400 hover:text-gray-600"
-                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                className="text-gray-400 hover:text-gray-600 bg-none border-none cursor-pointer p-0 w-6 h-6 flex items-center justify-center"
               >
                 <IoIosClose />
               </button>
@@ -395,8 +352,8 @@ export function ApprovalTab({ classId, onStudentApproved }: ApprovalTabProps) {
                   {approvalAction === 'approve' ? '승인' : '거절'}하시겠습니까?
                 </p>
                 
-                <div className="p-3 rounded-lg text-sm" style={{ background: '#f5f5f5' }}>
-                  <div className="grid grid-cols-2 gap-2" style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                <div className="p-3 rounded-lg text-sm bg-[#f5f5f5]">
+                  <div className="flex flex-col gap-4">
                     <div>
                       <span className="text-gray-500">이메일:</span>
                       <span className="ml-2">{approvingRequest.student.email}</span>
@@ -426,22 +383,18 @@ export function ApprovalTab({ classId, onStudentApproved }: ApprovalTabProps) {
               </div>
             )}
           </div>
-          <DialogFooter style={{ display: 'flex', gap: '15px' }}>
+          <DialogFooter className="flex gap-4">
             <button
               onClick={() => setIsApprovalModalOpen(false)}
-              className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
-              style={{ flex: 1 }}
+              className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 flex-1"
             >
               취소
             </button>
             <button
               onClick={confirmApprovalAction}
-              className="px-4 py-2 rounded-md transition-colors"
-              style={{ 
-                flex: 1,
-                backgroundColor: approvalAction === 'approve' ? '#0b7300' : '#d30f0f',
-                color: '#ffffff'
-              }}
+              className={`px-4 py-2 rounded-md transition-colors flex-1 text-white ${
+                approvalAction === 'approve' ? 'bg-[#0b7300]' : 'bg-[#d30f0f]'
+              }`}
             >
               {approvalAction === 'approve' ? '승인' : '거절'}
             </button>

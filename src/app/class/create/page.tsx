@@ -142,7 +142,7 @@ export default function ClassCreatePage() {
   );
 
   return (
-    <div className="flex flex-col" style={{ padding: '20px', display: 'flex', gap: '20px' }}>
+    <div className="flex flex-col p-5 gap-5">
       {/* 헤더 */}
       <PageHeader
         icon={<Users />}
@@ -169,8 +169,7 @@ export default function ClassCreatePage() {
             </div>
             <Button
               onClick={() => setIsCreateModalOpen(true)}
-              style={{ backgroundColor: '#0072CE' }}
-              className="hover:opacity-90 ml-4"
+              className="bg-[#0072CE] hover:opacity-90 ml-4"
             >
               클래스 생성
             </Button>
@@ -209,8 +208,7 @@ export default function ClassCreatePage() {
                     <p className="text-gray-500 mb-4">첫 번째 클래스를 생성해보세요!</p>
                     <Button
                       onClick={() => setIsCreateModalOpen(true)}
-                      style={{ backgroundColor: '#0072CE' }}
-                      className="hover:opacity-90"
+                      className="bg-[#0072CE] hover:opacity-90"
                     >
                       클래스 생성
                     </Button>
@@ -223,76 +221,22 @@ export default function ClassCreatePage() {
               <Table>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
-                    <TableHead 
-                      className="font-semibold text-center border-b"
-                      style={{ 
-                        fontSize: '16px', 
-                        color: '#666666',
-                        borderBottomColor: '#666666',
-                        padding: '10px 12px',
-                        width: '15%'
-                      }}
-                    >
+                    <TableHead className="font-semibold text-center border-b border-[#666666] text-base text-[#666666] p-3 w-[15%]">
                       클래스명
                     </TableHead>
-                    <TableHead 
-                      className="font-semibold text-center border-b"
-                      style={{ 
-                        fontSize: '16px', 
-                        color: '#666666',
-                        borderBottomColor: '#666666',
-                        padding: '10px 12px',
-                        width: '15%'
-                      }}
-                    >
+                    <TableHead className="font-semibold text-center border-b border-[#666666] text-base text-[#666666] p-3 w-[15%]">
                       학교
                     </TableHead>
-                    <TableHead 
-                      className="font-semibold text-center border-b"
-                      style={{ 
-                        fontSize: '16px', 
-                        color: '#666666',
-                        borderBottomColor: '#666666',
-                        padding: '10px 12px',
-                        width: '10%'
-                      }}
-                    >
+                    <TableHead className="font-semibold text-center border-b border-[#666666] text-base text-[#666666] p-3 w-[10%]">
                       학년
                     </TableHead>
-                    <TableHead 
-                      className="font-semibold text-center border-b"
-                      style={{ 
-                        fontSize: '16px',
-                        color: '#666666',
-                        borderBottomColor: '#666666',
-                        padding: '10px 12px',
-                        width: '20%'
-                      }}
-                    >
+                    <TableHead className="font-semibold text-center border-b border-[#666666] text-base text-[#666666] p-3 w-1/5">
                       생성일
                     </TableHead>
-                    <TableHead 
-                      className="font-semibold text-center border-b"
-                      style={{ 
-                        fontSize: '16px',
-                        color: '#666666',
-                        borderBottomColor: '#666666',
-                        padding: '10px 12px',
-                        width: '15%'
-                      }}
-                    >
+                    <TableHead className="font-semibold text-center border-b border-[#666666] text-base text-[#666666] p-3 w-[15%]">
                       학생 수
                     </TableHead>
-                    <TableHead 
-                      className="font-semibold text-center border-b"
-                      style={{ 
-                        fontSize: '16px',
-                        color: '#666666',
-                        borderBottomColor: '#666666',
-                        padding: '10px 12px',
-                        width: '15%'
-                      }}
-                    >
+                    <TableHead className="font-semibold text-center border-b border-[#666666] text-base text-[#666666] p-3 w-[15%]">
                       코드
                     </TableHead>
                   </TableRow>
@@ -301,76 +245,35 @@ export default function ClassCreatePage() {
                   {filteredClasses.map((classroom) => (
                     <TableRow
                       key={classroom.id}
-                      className="cursor-pointer hover:bg-gray-50 transition-colors"
-                      style={{ borderBottom: '1px solid #e1e1e1' }}
+                      className="cursor-pointer hover:bg-gray-50 transition-colors border-b border-[#e1e1e1]"
                       onClick={() => handleClassClick(classroom)}
                     >
-                      <TableCell 
-                        className="font-medium text-center"
-                        style={{ 
-                          fontSize: '14px', 
-                          color: '#666666',
-                          padding: '10px 12px'
-                        }}
-                      >
+                      <TableCell className="font-medium text-center text-sm text-[#666666] p-3">
                         {classroom.name}
                       </TableCell>
-                      <TableCell 
-                        className="text-center"
-                        style={{ padding: '10px 12px' }}
-                      >
+                      <TableCell className="text-center p-3">
                         <Badge
-                          className="rounded-[4px]"
-                          style={{
-                            backgroundColor: classroom.school_level === 'middle' ? '#E6F3FF' : '#FFF5E9',
-                            color: classroom.school_level === 'middle' ? '#0085FF' : '#FF9F2D',
-                            padding: '5px 10px',
-                            fontSize: '14px',
-                          }}
+                          className={`rounded px-2.5 py-1.5 text-sm ${
+                            classroom.school_level === 'middle' 
+                              ? 'bg-[#E6F3FF] text-[#0085FF]' 
+                              : 'bg-[#FFF5E9] text-[#FF9F2D]'
+                          }`}
                         >
                           {classroom.school_level === 'middle' ? '중학교' : '고등학교'}
                         </Badge>
                       </TableCell>
-                      <TableCell 
-                        className="text-center"
-                        style={{ padding: '10px 12px' }}
-                      >
-                        <Badge
-                          className="rounded-[4px]"
-                          style={{
-                            backgroundColor: '#f5f5f5',
-                            color: '#999999',
-                            padding: '5px 10px',
-                            fontSize: '14px',
-                          }}
-                        >
+                      <TableCell className="text-center p-3">
+                        <Badge className="rounded px-2.5 py-1.5 text-sm bg-[#f5f5f5] text-[#999999]">
                           {classroom.grade}학년
                         </Badge>
                       </TableCell>
-                      <TableCell 
-                        className="text-center"
-                        style={{ 
-                          fontSize: '14px', 
-                          color: '#666666',
-                          padding: '10px 12px'
-                        }}
-                      >
+                      <TableCell className="text-center text-sm text-[#666666] p-3">
                         {new Date(classroom.created_at).toLocaleDateString('ko-KR')}
                       </TableCell>
-                      <TableCell 
-                        className="text-center"
-                        style={{ 
-                          fontSize: '14px', 
-                          color: '#666666',
-                          padding: '10px 12px'
-                        }}
-                      >
+                      <TableCell className="text-center text-sm text-[#666666] p-3">
                         {studentCounts[classroom.id] || 0}명
                       </TableCell>
-                      <TableCell 
-                        className="text-center"
-                        style={{ padding: '10px 12px' }}
-                      >
+                      <TableCell className="text-center p-3">
                         <Button
                           variant="outline"
                           size="sm"
@@ -378,8 +281,7 @@ export default function ClassCreatePage() {
                             e.stopPropagation();
                             handleShowCode(classroom);
                           }}
-                          className="hover:bg-blue-50 hover:border-blue-200"
-                          style={{ padding: '10px' }}
+                          className="hover:bg-blue-50 hover:border-blue-200 p-2.5"
                         >
                           <IoCopyOutline className="w-4 h-4" />
                         </Button>
@@ -406,14 +308,13 @@ export default function ClassCreatePage() {
       <Dialog open={isCodeModalOpen} onOpenChange={setIsCodeModalOpen}>
         <DialogContent className="max-w-md" showCloseButton={false}>
           <DialogHeader>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="flex justify-between items-center">
               <DialogTitle className="flex items-center gap-2">
                 클래스 코드
               </DialogTitle>
               <button
                 onClick={() => setIsCodeModalOpen(false)}
-                className="text-gray-400 hover:text-gray-600"
-                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                className="text-gray-400 hover:text-gray-600 bg-none border-none cursor-pointer p-0 w-6 h-6 flex items-center justify-center"
               >
                 <IoIosClose />
               </button>
@@ -422,7 +323,7 @@ export default function ClassCreatePage() {
 
           {selectedClass && (
             <div className="space-y-4">
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+              <div className="flex flex-col gap-4">
                 <p className="text-sm text-gray-600">클래스명: {selectedClass.name}</p>
                 <div className="text-xs text-gray-500 space-y-1">
                   <p>• 이 코드를 학생들에게 공유하세요</p>
@@ -438,25 +339,16 @@ export default function ClassCreatePage() {
             </div>
           )}
 
-          <DialogFooter style={{ display: 'flex', gap: '15px' }}>
+          <DialogFooter className="flex gap-4">
             <button
               onClick={() => setIsCodeModalOpen(false)}
-              className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
-              style={{ flex: 1 }}
+              className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 flex-1"
             >
               닫기
             </button>
             <button
               onClick={handleCopyCode}
-              className="px-4 py-2 rounded-md transition-colors"
-              style={{ 
-                flex: 1,
-                backgroundColor: '#0072CE',
-                color: '#ffffff',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
+              className="px-4 py-2 rounded-md transition-colors flex-1 bg-[#0072CE] text-white flex items-center justify-center"
             >
               {copied ? (
                 <>

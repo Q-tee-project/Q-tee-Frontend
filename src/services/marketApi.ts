@@ -31,6 +31,7 @@ export interface MarketProduct {
   satisfaction_rate: number;
   view_count: number;
   purchase_count: number;
+  total_revenue: number;
   created_at: string;
 }
 
