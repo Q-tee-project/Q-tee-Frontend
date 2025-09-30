@@ -28,7 +28,7 @@ interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
   onRowClick?: (row: TData) => void;
-  selectedRowId?: number;
+  selectedRowId?: number | string;
   onRowSelectionChange?: (selectedRows: TData[]) => void;
   clearSelection?: boolean; // 선택 상태 초기화 트리거
 }
@@ -56,6 +56,10 @@ export function DataTable<TData, TValue>({
     getFilteredRowModel: getFilteredRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
+    getRowId: (originalRow) => {
+      const row = originalRow as any;
+      return row.id ?? row.worksheet_id;
+    },
     state: {
       sorting,
       columnFilters,
@@ -104,23 +108,29 @@ export function DataTable<TData, TValue>({
         </TableHeader>
         <TableBody>
           {table.getRowModel().rows?.length ? (
-            table.getRowModel().rows.map((row) => (
-              <TableRow
-                key={row.id}
-                data-state={row.getIsSelected() && 'selected'}
-                className={`cursor-pointer hover:bg-[#F8FAFF] transition-colors ${
-                  (row.original as any)?.id === selectedRowId ? 'bg-[#F0F7FF]' : ''
-                }`}
-                style={{ minHeight: '60px' }}
-                onClick={() => onRowClick?.(row.original)}
-              >
-                {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id} className="py-4">
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))
+            table.getRowModel().rows.map((row) => {
+              const rowData = row.original as any;
+              const rowId = rowData.id ?? rowData.worksheet_id;
+              const isSelected = selectedRowId !== undefined && rowId === selectedRowId;
+
+              return (
+                <TableRow
+                  key={rowId}
+                  data-state={row.getIsSelected() && 'selected'}
+                  className={`cursor-pointer hover:bg-[#F8FAFF] transition-colors ${
+                    isSelected ? 'bg-[#F0F7FF]' : ''
+                  }`}
+                  style={{ minHeight: '60px' }}
+                  onClick={() => onRowClick?.(row.original)}
+                >
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell key={cell.id} className="py-4">
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              );
+            })
           ) : (
             <TableRow>
               <TableCell colSpan={columns.length} className="h-24 text-center">
