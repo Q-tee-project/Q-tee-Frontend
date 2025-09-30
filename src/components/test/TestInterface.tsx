@@ -126,7 +126,7 @@ export function TestInterface({
                       {currentProblem.choices.map((choice, index) => {
                         const optionLabel = String.fromCharCode(65 + index);
                         const isSelected = answers[currentProblem.id] === optionLabel;
-                        const displayChoice = choice.replace(/^[A-E][\.\)]\s*/, '');
+                        const displayChoice = choice.replace(/^[A-E][\.\):\s]+/, '');
                         return (
                           <label
                             key={index}

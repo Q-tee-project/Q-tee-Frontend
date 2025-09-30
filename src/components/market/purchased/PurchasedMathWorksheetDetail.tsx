@@ -130,7 +130,7 @@ export const PurchasedMathWorksheetDetail: React.FC<PurchasedMathWorksheetDetail
                         <h4 className="font-medium text-gray-800 mb-3">선택지</h4>
                         <div className="space-y-2">
                           {problem.choices.map((choice, choiceIndex) => {
-                            const displayChoice = choice.replace(/^[A-E][\.\)]\s*/, '');
+                            const displayChoice = choice.replace(/^[A-E][\.\):\s]+/, '');
                             return (
                               <div key={choiceIndex} className="flex items-start gap-3">
                                 <div className={`

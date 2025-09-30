@@ -79,10 +79,6 @@ export const LaTeXRenderer: React.FC<LaTeXRendererProps> = ({
   };
 
   const cleanTextContent = (text: string): string => {
-    // 일반 텍스트에서 잘못된 $ 기호만 제거
-    // 단독 $ 기호 제거
-    text = text.replace(/(?<!\$)\$(?!\$)(?![a-zA-Z\\])/g, '');
-
     // AI가 생성한 '\\n'과 일반 '\n'을 모두 <br />로 변환
     // 이 로직이 일반 텍스트에만 적용됩니다.
     text = text.replace(/\\n/g, '<br />'); // AI가 생성한 literal '\n' 처리
@@ -108,6 +104,7 @@ export const LaTeXRenderer: React.FC<LaTeXRendererProps> = ({
         displayMode: isDisplayMode,
         throwOnError: false,
         strict: false,
+        output: 'mathml', // MathML만 출력
       });
       return rendered;
     } catch (error) {

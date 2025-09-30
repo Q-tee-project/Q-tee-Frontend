@@ -181,7 +181,7 @@ export const QuestionPreview: React.FC<QuestionPreviewProps> = ({
                 </div>
                 {(q.choices || q.options) &&
                   (q.choices || q.options)!.map((opt, idx) => {
-                    const displayChoice = opt.replace(/^[A-E][\.\)]\s*/, '');
+                    const displayChoice = opt.replace(/^[A-E][\.\):\s]+/, '');
                     return (
                       <div key={idx} className="flex items-start gap-3 mb-3">
                         <span

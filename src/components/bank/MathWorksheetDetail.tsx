@@ -203,7 +203,7 @@ export const MathWorksheetDetail: React.FC<MathWorksheetDetailProps> = ({
                         {problem.choices && problem.choices.length > 0 && (
                           <div className="ml-4 space-y-3">
                             {problem.choices.map((choice: string, choiceIndex: number) => {
-                              const displayChoice = choice.replace(/^[A-E][\.\)]\s*/, '');
+                              const displayChoice = choice.replace(/^[A-E][\.\):\s]+/, '');
                               const optionLabel = String.fromCharCode(65 + choiceIndex);
                               const isCorrect = problem.correct_answer === optionLabel;
                               return (
