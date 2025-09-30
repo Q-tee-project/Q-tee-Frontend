@@ -205,7 +205,6 @@ export const MathWorksheetDetail: React.FC<MathWorksheetDetailProps> = ({
                             {problem.choices.map((choice: string, choiceIndex: number) => {
                               const optionLabel = String.fromCharCode(65 + choiceIndex);
                               const isCorrect = problem.correct_answer === optionLabel;
-                              const displayChoice = choice.replace(/^[A-E][\.\)]\s*/, '');
                               return (
                                 <div
                                   key={choiceIndex}
@@ -225,7 +224,7 @@ export const MathWorksheetDetail: React.FC<MathWorksheetDetailProps> = ({
                                     {showAnswerSheet && isCorrect ? '✓' : optionLabel}
                                   </span>
                                   <div className="flex-1 text-gray-900">
-                                    <LaTeXRenderer content={displayChoice} />
+                                    <LaTeXRenderer content={choice} />
                                   </div>
                                   {showAnswerSheet && isCorrect && (
                                     <span className="text-xs font-medium text-green-700 bg-green-200 px-2 py-1 rounded">

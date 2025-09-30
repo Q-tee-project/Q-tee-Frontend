@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { HelpCircle } from 'lucide-react';
-import { MathFormData, Unit, Chapter } from '@/types/math';
+import { MathFormData } from '@/types/math';
 
 const SCHOOL_OPTIONS = ['중학교', '고등학교'];
 const GRADE_OPTIONS = ['1학년', '2학년', '3학년'];
@@ -57,9 +57,7 @@ export default function MathGenerator({ onGenerate, isGenerating }: MathGenerato
     try {
       console.log('🔍 교육과정 로딩 시작:', { school, grade, semester });
       const response = await fetch(
-        `http://localhost:8001/api/curriculum/structure?school_level=${encodeURIComponent(
-          school,
-        )}`,
+        `http://localhost:8001/api/curriculum/structure?school_level=${encodeURIComponent(school)}`,
       );
       const data = await response.json();
       console.log('📥 API 응답:', data);
@@ -292,8 +290,7 @@ export default function MathGenerator({ onGenerate, isGenerating }: MathGenerato
               <div className="max-w-xs">
                 <p className="font-medium mb-1">문제 유형 설정 팁</p>
                 <p className="text-xs">
-                  • <strong>전체</strong>를 선택하면 객관식, 단답형의 비율을 설정할 수
-                  있습니다
+                  • <strong>전체</strong>를 선택하면 객관식, 단답형의 비율을 설정할 수 있습니다
                   <br />
                   • 각 유형별로 10% 단위로 비율을 조정할 수 있습니다
                   <br />• 총 비율은 100%가 되어야 합니다
