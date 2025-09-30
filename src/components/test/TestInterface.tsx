@@ -126,6 +126,7 @@ export function TestInterface({
                       {currentProblem.choices.map((choice, index) => {
                         const optionLabel = String.fromCharCode(65 + index);
                         const isSelected = answers[currentProblem.id] === optionLabel;
+                        const displayChoice = choice.replace(/^[A-E][\.\)]\s*/, '');
                         return (
                           <label
                             key={index}
@@ -141,11 +142,8 @@ export function TestInterface({
                               }
                               className="mt-1"
                             />
-                            <span className="font-medium text-gray-700 mr-2">
-                              {optionLabel}.
-                            </span>
                             <div className="flex-1 text-gray-900">
-                              <LaTeXRenderer content={choice} />
+                              <LaTeXRenderer content={displayChoice} />
                             </div>
                           </label>
                         );

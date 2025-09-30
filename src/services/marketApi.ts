@@ -271,6 +271,52 @@ export const getPurchasedProductData = async (productId: number): Promise<any> =
   return response.data;
 };
 
+// 마켓 통계 조회
+export interface MarketStats {
+  total_products: number;
+  total_sales: number;
+  average_rating: number;
+  total_revenue: number;
+}
+
+export const getMarketStats = async (): Promise<MarketStats> => {
+  try {
+    // 먼저 전용 통계 API를 시도
+    const response = await marketApi.get('/market/stats');
+    console.log('마켓 통계 API 응답:', response.data);
+    return response.data;
+  } catch (error) {
+    console.warn('마켓 통계 API 실패, 상품 데이터로 계산 시도:', error);
+    
+    // 통계 API가 실패하면 실제 상품 데이터를 가져와서 계산
+    try {
+      const products = await getProducts();
+      console.log('가져온 상품 데이터:', products);
+      
+      const stats: MarketStats = {
+        total_products: products.length,
+        total_sales: products.reduce((sum, product) => sum + product.purchase_count, 0),
+        average_rating: products.length > 0 
+          ? products.reduce((sum, product) => sum + product.satisfaction_rate, 0) / products.length 
+          : 0,
+        total_revenue: products.reduce((sum, product) => sum + product.total_revenue, 0),
+      };
+      
+      console.log('계산된 마켓 통계:', stats);
+      return stats;
+    } catch (fallbackError) {
+      console.error('상품 데이터로 통계 계산도 실패:', fallbackError);
+      // 최종 실패 시 기본값 반환
+      return {
+        total_products: 0,
+        total_sales: 0,
+        average_rating: 0,
+        total_revenue: 0,
+      };
+    }
+  }
+};
+
 // Worksheet 관련 API - 상품 등록 시 사용
 const KOREAN_API_BASE_URL = process.env.NEXT_PUBLIC_KOREAN_API_URL || 'http://localhost:8004';
 const MATH_API_BASE_URL = process.env.NEXT_PUBLIC_MATH_API_URL || 'http://localhost:8001';
