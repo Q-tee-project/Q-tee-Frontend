@@ -19,8 +19,8 @@ import { studentClassService } from '@/services/authService';
 import type { Classroom, ClassroomWithTeacher } from '@/services/authService';
 import { TeacherInfoModal } from '@/components/student/TeacherInfoModal';
 import { useAuth } from '@/contexts/AuthContext';
-import { Users, Plus, Calendar, User } from 'lucide-react';
-import { IoSearch } from "react-icons/io5";
+import { Users, Calendar } from 'lucide-react';
+import { IoSearch } from 'react-icons/io5';
 
 export default function StudentClassPage() {
   const router = useRouter();
@@ -31,7 +31,7 @@ export default function StudentClassPage() {
   const [error, setError] = useState('');
   const [selectedClassroom, setSelectedClassroom] = useState<ClassroomWithTeacher | null>(null);
   const [isTeacherModalOpen, setIsTeacherModalOpen] = useState(false);
-  
+
   // 검색 상태
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -51,10 +51,12 @@ export default function StudentClassPage() {
     try {
       const classData = await studentClassService.getMyClasses();
       setClasses(classData);
-      
+
       // 선생님 정보를 포함한 클래스 데이터 로드
       if (userProfile?.id) {
-        const classesWithTeachersData = await studentClassService.getMyClassesWithTeachers(userProfile.id);
+        const classesWithTeachersData = await studentClassService.getMyClassesWithTeachers(
+          userProfile.id,
+        );
         setClassesWithTeachers(classesWithTeachersData);
       }
     } catch (error: any) {
@@ -69,7 +71,7 @@ export default function StudentClassPage() {
   const handleClassClick = async (classroom: Classroom) => {
     try {
       // 이미 로드된 선생님 정보에서 찾기
-      const classroomWithTeacher = classesWithTeachers.find(c => c.id === classroom.id);
+      const classroomWithTeacher = classesWithTeachers.find((c) => c.id === classroom.id);
 
       if (classroomWithTeacher) {
         setSelectedClassroom(classroomWithTeacher);
@@ -89,7 +91,7 @@ export default function StudentClassPage() {
   };
 
   // 검색 필터링된 클래스 목록 (클래스명과 선생님명으로 검색)
-  const filteredClasses = classes.filter(classroom => {
+  const filteredClasses = classes.filter((classroom) => {
     const classMatch = classroom.name.toLowerCase().includes(searchTerm.toLowerCase());
     // 선생님명 검색은 실제 데이터 구조에 따라 조정 필요
     return classMatch;
@@ -121,10 +123,7 @@ export default function StudentClassPage() {
                 />
                 <IoSearch className="absolute right-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               </div>
-              <Button
-                onClick={handleJoinClass}
-                className="bg-[#0072CE] hover:opacity-90 ml-4"
-              >
+              <Button onClick={handleJoinClass} className="bg-[#0072CE] hover:opacity-90 ml-4">
                 클래스 가입하기
               </Button>
             </div>
@@ -152,17 +151,20 @@ export default function StudentClassPage() {
                     <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                     {searchTerm ? (
                       <>
-                        <h3 className="text-lg font-medium text-gray-900 mb-2">검색 결과가 없습니다</h3>
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">
+                          검색 결과가 없습니다
+                        </h3>
                         <p className="text-gray-500 mb-4">다른 검색어로 검색해보세요.</p>
                       </>
                     ) : (
                       <>
-                        <h3 className="text-lg font-medium text-gray-900 mb-2">가입한 클래스가 없습니다</h3>
-                        <p className="text-gray-500 mb-4">클래스 코드를 입력하여 클래스에 가입해보세요!</p>
-                        <Button
-                          onClick={handleJoinClass}
-                          className="bg-[#0072CE] hover:opacity-90"
-                        >
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">
+                          가입한 클래스가 없습니다
+                        </h3>
+                        <p className="text-gray-500 mb-4">
+                          클래스 코드를 입력하여 클래스에 가입해보세요!
+                        </p>
+                        <Button onClick={handleJoinClass} className="bg-[#0072CE] hover:opacity-90">
                           클래스 가입하기
                         </Button>
                       </>
@@ -204,8 +206,8 @@ export default function StudentClassPage() {
                         <TableCell className="text-center p-3">
                           <Badge
                             className={`rounded px-2.5 py-1.5 text-sm ${
-                              classroom.school_level === 'middle' 
-                                ? 'bg-[#E6F3FF] text-[#0085FF]' 
+                              classroom.school_level === 'middle'
+                                ? 'bg-[#E6F3FF] text-[#0085FF]'
                                 : 'bg-[#FFF5E9] text-[#FF9F2D]'
                             }`}
                           >
@@ -231,7 +233,9 @@ export default function StudentClassPage() {
                             className="hover:bg-blue-50 hover:border-blue-200 p-2.5"
                           >
                             {(() => {
-                              const classroomWithTeacher = classesWithTeachers.find(c => c.id === classroom.id);
+                              const classroomWithTeacher = classesWithTeachers.find(
+                                (c) => c.id === classroom.id,
+                              );
                               return classroomWithTeacher?.teacher?.name || '선생님 정보';
                             })()}
                             <span>선생님</span>

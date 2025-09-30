@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { studentClassService } from '@/services/authService';
 import { useAuth } from '@/contexts/AuthContext';
-import { Users, Plus } from 'lucide-react';
+import { Users } from 'lucide-react';
 
 export default function ClassJoinPage() {
   const router = useRouter();

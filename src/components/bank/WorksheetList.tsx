@@ -3,16 +3,19 @@
 import React, { useState, useCallback } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { DataTable } from '@/app/question/bank/data-table';
 import { columns } from '@/app/question/bank/columns';
 import { Worksheet, Subject } from '@/types/math';
 import { KoreanWorksheet } from '@/types/korean';
 import { EnglishWorksheetData } from '@/types/english';
-
+import { BaseWorksheetDetail } from '@/types/common';
 // 타입 별칭
-type EnglishWorksheet = EnglishWorksheetData;
+
+type EnglishWorksheet = EnglishWorksheetData & BaseWorksheetDetail;
+
 import { Trash2, RefreshCw } from 'lucide-react';
+
+import { ColumnDef } from '@tanstack/react-table';
 
 type AnyWorksheet = Worksheet | KoreanWorksheet | EnglishWorksheet;
 
@@ -90,7 +93,10 @@ export const WorksheetList: React.FC<WorksheetListProps> = ({
       className={`w-1/3 flex flex-col shadow-sm ${hasNoData ? 'h-auto' : 'h-[calc(100vh-200px)]'}`}
       style={{ gap: '0', padding: '0' }}
     >
-      <CardHeader className="flex flex-row items-center justify-between border-b border-gray-100" style={{ padding: '20px' }}>
+      <CardHeader
+        className="flex flex-row items-center justify-between border-b border-gray-100"
+        style={{ padding: '20px' }}
+      >
         <CardTitle className="text-lg font-semibold text-gray-900">
           문제 목록
           {selectedWorksheets.length > 0 && (
@@ -134,7 +140,10 @@ export const WorksheetList: React.FC<WorksheetListProps> = ({
           )}
         </div>
       </CardHeader>
-      <CardContent className={`flex-1 min-h-0 ${hasNoData ? 'flex-none' : ''}`} style={{ padding: '20px' }}>
+      <CardContent
+        className={`flex-1 min-h-0 ${hasNoData ? 'flex-none' : ''}`}
+        style={{ padding: '20px' }}
+      >
         {/* 과목 탭 */}
         <div className="mb-4">
           <div className="flex gap-2">
@@ -164,7 +173,7 @@ export const WorksheetList: React.FC<WorksheetListProps> = ({
         ) : (
           <div className="overflow-y-auto pr-2" style={{ height: 'calc(100vh - 400px)' }}>
             <DataTable
-              columns={columns}
+              columns={columns as ColumnDef<AnyWorksheet, unknown>[]}
               data={worksheets}
               onRowClick={onWorksheetSelect}
               selectedRowId={selectedWorksheet?.id}

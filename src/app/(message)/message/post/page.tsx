@@ -15,7 +15,6 @@ import { authService, UserProfile } from '@/services/authService';
 import { messageService, MessageRecipient } from '@/services/messageService';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Phone, Mail, User } from 'lucide-react';
-import { IoBookOutline } from 'react-icons/io5';
 import { IoIosClose } from 'react-icons/io';
 
 interface ClassroomInfo {

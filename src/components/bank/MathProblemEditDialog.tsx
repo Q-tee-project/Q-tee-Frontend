@@ -249,7 +249,7 @@ export const MathProblemEditDialog: React.FC<MathProblemEditDialogProps> = ({
                           <LaTeXRenderer
                             content={
                               choice
-                                ? autoConvertToLatex(choice)
+                                ? autoConvertToLatex(choice.replace(/^[A-E][\.\)]\s*/, ''))
                                 : `${String.fromCharCode(65 + index)}번 선택지`
                             }
                           />

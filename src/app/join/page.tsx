@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ChevronDown, GraduationCap, User, AlertCircle, Mail, Lock, Check } from 'lucide-react';
+import { ChevronDown, Check } from 'lucide-react';
 import { FaChalkboardTeacher, FaUserGraduate } from 'react-icons/fa';
 import { authService } from '@/services/authService';
 import { BasicInfoForm, AccountInfoForm, StudentInfoForm, StepNavigation } from '@/components/join';

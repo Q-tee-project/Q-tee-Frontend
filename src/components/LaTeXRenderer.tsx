@@ -1,5 +1,5 @@
 import React from 'react';
-import 'katex/dist/katex.min.css';
+
 import katex from 'katex';
 
 interface LaTeXRendererProps {
