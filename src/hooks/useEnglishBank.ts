@@ -2,10 +2,11 @@ import { useEffect } from 'react';
 import { EnglishService } from '@/services/englishService';
 import { EnglishWorksheetData, EnglishQuestion } from '@/types/english';
 
+import { useBankState } from './useBankState';
+
 // 타입 별칭 (기존 코드 호환성)
 type EnglishWorksheet = EnglishWorksheetData;
 type EnglishProblem = EnglishQuestion;
-import { useBankState } from './useBankState';
 
 export const useEnglishBank = () => {
   const {
@@ -60,7 +61,7 @@ export const useEnglishBank = () => {
       console.log('전체 응답:', worksheetDetail);
 
       // API 응답 구조가 worksheet_data 안에 중첩되어 있음
-      const worksheetData = worksheetDetail.worksheet_data;
+      const worksheetData = worksheetDetail;
       const questions = worksheetData?.questions || [];
       const passages = worksheetData?.passages || [];
 
@@ -98,7 +99,7 @@ export const useEnglishBank = () => {
     event.stopPropagation();
 
     if (
-      !confirm(`"${worksheet.title}" 워크시트를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)
+      !confirm(`"${worksheet.worksheet_name}" 워크시트를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)
     ) {
       return;
     }
@@ -108,7 +109,7 @@ export const useEnglishBank = () => {
       // English delete not implemented yet
       throw new Error('영어 워크시트 삭제 기능은 아직 구현되지 않았습니다.');
 
-      if (selectedWorksheet?.id === worksheet.id) {
+      if (selectedWorksheet?.worksheet_id === worksheet.worksheet_id) {
         updateState({
           selectedWorksheet: null,
           worksheetProblems: [],
@@ -125,15 +126,52 @@ export const useEnglishBank = () => {
     }
   };
 
-  const handleBatchDeleteWorksheets = async (worksheets: EnglishWorksheet[]) => {
+  const handleBatchDeleteWorksheets = async (worksheetsToDelete: EnglishWorksheet[]) => {
     try {
       updateState({ isLoading: true });
 
-      // English batch delete not implemented yet
-      throw new Error('영어 워크시트 일괄 삭제 기능은 아직 구현되지 않았습니다.');
+      // 삭제할 워크시트의 ID 목록 생성
+      const worksheetIdsToDelete = worksheetsToDelete
+        .map(w => w.worksheet_id)
+        .filter(id => id !== undefined) as number[];
+
+      console.log('🗑️ 삭제할 워크시트:', {
+        ids: worksheetIdsToDelete,
+        titles: worksheetsToDelete.map(w => w.worksheet_name),
+        count: worksheetsToDelete.length
+      });
+
+      // 백엔드 API 호출
+      const deleteResult = await EnglishService.batchDeleteEnglishWorksheets(worksheetIdsToDelete);
+      console.log('🗑️ 백엔드 삭제 결과:', deleteResult);
+
+      // 백엔드 삭제 성공 후 메모리에서도 삭제 처리
+      const updatedWorksheets = worksheets.filter(
+        worksheet => !worksheetIdsToDelete.includes(worksheet.worksheet_id!)
+      );
+
+      // 선택된 워크시트가 삭제된 경우 새로운 워크시트 선택
+      let newSelectedWorksheet = selectedWorksheet;
+      if (selectedWorksheet && worksheetIdsToDelete.includes(selectedWorksheet.worksheet_id!)) {
+        newSelectedWorksheet = updatedWorksheets.length > 0 ? updatedWorksheets[0] : null;
+      }
+
+      // 상태 업데이트
+      updateState({
+        worksheets: updatedWorksheets,
+        selectedWorksheet: newSelectedWorksheet,
+        worksheetProblems: newSelectedWorksheet ? worksheetProblems : null
+      });
+
+      // 새로운 워크시트가 선택된 경우 문제 로드
+      if (newSelectedWorksheet && newSelectedWorksheet.worksheet_id !== selectedWorksheet?.worksheet_id) {
+        await loadWorksheetProblems(newSelectedWorksheet.worksheet_id!);
+      }
+
+      alert(`✅ ${worksheetsToDelete.length}개의 워크시트가 삭제되었습니다.`);
     } catch (error: any) {
-      console.error('영어 워크시트 일괄 삭제 실패:', error);
-      alert(`일괄 삭제 실패: ${error.message}`);
+      console.error('❌ 영어 워크시트 일괄 삭제 실패:', error);
+      alert(`삭제 실패: ${error.message}`);
     } finally {
       updateState({ isLoading: false });
     }

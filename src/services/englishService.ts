@@ -312,6 +312,45 @@ export class EnglishService {
     return { success: true, message: result.message || '영어 워크시트 제목이 업데이트되었습니다.' };
   }
 
+  // 영어 워크시트 일괄 삭제
+  static async batchDeleteEnglishWorksheets(
+    worksheetIds: number[]
+  ): Promise<{ success: boolean; message: string; deleted_count: number }> {
+    const currentUser = JSON.parse(localStorage.getItem('user_profile') || '{}');
+    const userId = currentUser?.id;
+
+    if (!userId) {
+      throw new Error('로그인이 필요합니다.');
+    }
+
+    if (!worksheetIds || worksheetIds.length === 0) {
+      throw new Error('삭제할 워크시트 ID가 필요합니다.');
+    }
+
+    const response = await fetch(
+      `${ENGLISH_API_BASE}/worksheets/batch?user_id=${userId}`,
+      {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ worksheet_ids: worksheetIds }),
+      },
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(`일괄 삭제 실패: ${errorData.detail || response.status}`);
+    }
+
+    const result = await response.json();
+    return {
+      success: true,
+      message: result.message || `${worksheetIds.length}개의 워크시트가 삭제되었습니다.`,
+      deleted_count: result.deleted_count || worksheetIds.length
+    };
+  }
+
   // 영어 문제 재생성 정보 조회
   static async getEnglishQuestionRegenerationInfo(
     worksheetId: number,
