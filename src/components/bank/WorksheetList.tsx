@@ -10,7 +10,9 @@ import { KoreanWorksheet } from '@/types/korean';
 import { EnglishWorksheetData } from '@/types/english';
 import { BaseWorksheetDetail } from '@/types/common';
 // 타입 별칭
+
 type EnglishWorksheet = EnglishWorksheetData & BaseWorksheetDetail;
+
 import { Trash2, RefreshCw } from 'lucide-react';
 
 import { ColumnDef } from '@tanstack/react-table';
@@ -59,18 +61,27 @@ export const WorksheetList: React.FC<WorksheetListProps> = ({
     }
   }, [clearSelection]);
 
+  // 워크시트 제목 가져오기 (과목별 필드명 처리)
+  const getWorksheetTitle = (worksheet: AnyWorksheet): string => {
+    if ('worksheet_name' in worksheet) {
+      return worksheet.worksheet_name || '제목 없음';
+    }
+    return (worksheet as any).title || '제목 없음';
+  };
+
   const handleBatchDelete = () => {
     if (selectedWorksheets.length === 0) {
       alert('삭제할 워크시트를 선택해주세요.');
       return;
     }
 
-    const worksheetTitles = selectedWorksheets.map((w) => w.title).join(', ');
+    const worksheetTitles = selectedWorksheets.map(w => getWorksheetTitle(w)).join(', ');
     if (
       confirm(
         `선택된 ${selectedWorksheets.length}개의 워크시트를 삭제하시겠습니까?\n\n${worksheetTitles}\n\n이 작업은 되돌릴 수 없습니다.`,
       )
     ) {
+      console.log('🗑️ 일괄 삭제 시작:', selectedWorksheets);
       onBatchDeleteWorksheets(selectedWorksheets);
       setSelectedWorksheets([]); // 선택 초기화
       setClearSelection(true); // 테이블 선택 상태 초기화 트리거

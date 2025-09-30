@@ -4,6 +4,7 @@ import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { motion, useMotionValue, useTransform, animate } from 'framer-motion';
+import { getMarketStats, MarketStats } from '@/services/marketApi';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -106,6 +107,8 @@ const TeacherDashboard = () => {
   const [chartMode, setChartMode] = React.useState<'period' | 'assignment'>('period');
   const [isAssignmentModalOpen, setIsAssignmentModalOpen] = React.useState(false);
   const [selectedAssignments, setSelectedAssignments] = React.useState<string[]>([]);
+  const [marketStats, setMarketStats] = React.useState<MarketStats | null>(null);
+  const [isLoadingStats, setIsLoadingStats] = React.useState(true);
 
   // 학생 선택 핸들러
   const handleStudentSelect = (studentId: number) => {
@@ -177,9 +180,38 @@ const TeacherDashboard = () => {
     return selectedDate <= today;
   };
 
+  // 마켓 통계 로드 함수
+  const loadMarketStats = async () => {
+    try {
+      setIsLoadingStats(true);
+      console.log('마켓 통계 로드 시작...');
+      
+      const stats = await getMarketStats();
+      console.log('마켓 통계 로드 성공:', stats);
+      setMarketStats(stats);
+    } catch (error: any) {
+      console.error('마켓 통계 로드 실패:', error);
+      
+      // 에러 발생 시 기본값 설정
+      const fallbackStats = {
+        total_products: 0,
+        total_sales: 0,
+        average_rating: 0,
+        total_revenue: 0,
+      };
+      console.log('기본값으로 설정:', fallbackStats);
+      setMarketStats(fallbackStats);
+    } finally {
+      setIsLoadingStats(false);
+    }
+  };
+
   // 실시간 업데이트 함수
   const handleRefresh = async () => {
     setIsRefreshing(true);
+
+    // 마켓 통계 새로고침
+    await loadMarketStats();
 
     // 실제 API 호출을 시뮬레이션 (2초 대기)
     await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -298,6 +330,9 @@ const TeacherDashboard = () => {
       toYear: today.getFullYear(),
       toMonth: today.getMonth() + 1,
     });
+
+    // 마켓 통계 로드
+    loadMarketStats();
   }, []);
 
   // 임시 과제 데이터
@@ -575,13 +610,28 @@ const TeacherDashboard = () => {
         <CardHeader className="py-2 px-6 border-b border-gray-100 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <h2 className="text-base font-medium">마켓플레이스</h2>
+            {marketStats && (
+              <div className="text-xs text-gray-500">
+                (데이터 로드됨: {new Date().toLocaleTimeString()})
+              </div>
+            )}
           </div>
-          <button
-            onClick={() => router.push('/market/myMarket')}
-            className="flex items-center gap-2 text-sm font-normal text-gray-400 hover:text-[#0072CE] transition-colors duration-200"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={loadMarketStats}
+              className="flex items-center gap-1 px-2 py-1 text-xs text-gray-500 hover:text-[#0072CE] transition-colors duration-200"
+              title="마켓 통계 새로고침"
+            >
+              <RefreshCw className="h-3 w-3" />
+              새로고침
+            </button>
+            <button
+              onClick={() => router.push('/market/myMarket')}
+              className="flex items-center gap-2 text-sm font-normal text-gray-400 hover:text-[#0072CE] transition-colors duration-200"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -592,7 +642,11 @@ const TeacherDashboard = () => {
                 </div>
               </div>
               <div className="text-2xl font-bold text-[#0072CE] mb-1">
-                <AnimatedCounter value={24} />
+                {isLoadingStats ? (
+                  <div className="animate-pulse bg-gray-200 h-8 w-16 rounded"></div>
+                ) : (
+                  <AnimatedCounter value={marketStats?.total_products || 0} />
+                )}
               </div>
               <div className="text-sm text-[#0072CE]/80 font-medium">등록 상품 수</div>
             </div>
@@ -603,7 +657,11 @@ const TeacherDashboard = () => {
                 </div>
               </div>
               <div className="text-2xl font-bold text-cyan-700 mb-1">
-                <AnimatedCounter value={1247} />
+                {isLoadingStats ? (
+                  <div className="animate-pulse bg-gray-200 h-8 w-20 rounded"></div>
+                ) : (
+                  <AnimatedCounter value={marketStats?.total_sales || 0} />
+                )}
               </div>
               <div className="text-sm text-cyan-600 font-medium">총 판매량</div>
             </div>
@@ -614,7 +672,11 @@ const TeacherDashboard = () => {
                 </div>
               </div>
               <div className="text-2xl font-bold text-indigo-700 mb-1">
-                <AnimatedCounter value={86} suffix="%" />
+                {isLoadingStats ? (
+                  <div className="animate-pulse bg-gray-200 h-8 w-12 rounded"></div>
+                ) : (
+                  <AnimatedCounter value={Math.round(marketStats?.average_rating || 0)} suffix="%" />
+                )}
               </div>
               <div className="text-sm text-indigo-600 font-medium">평균 평점</div>
             </div>
@@ -625,7 +687,11 @@ const TeacherDashboard = () => {
                 </div>
               </div>
               <div className="text-2xl font-bold text-sky-700 mb-1">
-                ₩<AnimatedCounter value={5240000} />
+                {isLoadingStats ? (
+                  <div className="animate-pulse bg-gray-200 h-8 w-24 rounded"></div>
+                ) : (
+                  <>₩<AnimatedCounter value={marketStats?.total_revenue || 0} /></>
+                )}
               </div>
               <div className="text-sm text-sky-600 font-medium">총 수익</div>
             </div>

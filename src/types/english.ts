@@ -54,6 +54,23 @@ export interface EnglishGenerationResponse {
   llm_error?: string;
 }
 
+// 비동기 처리 관련 타입 추가
+export interface EnglishAsyncResponse {
+  task_id: string;
+  status: 'started';
+  message: string;
+}
+
+export interface EnglishTaskStatus {
+  task_id: string;
+  state: 'PENDING' | 'PROGRESS' | 'SUCCESS' | 'FAILURE';
+  status: string;
+  current: number;
+  total: number;
+  result?: EnglishGenerationResponse;  // SUCCESS일 때 기존 응답 포함
+  error?: string;
+}
+
 // 영어 워크시트 데이터 타입 정의
 export interface EnglishWorksheetData {
   worksheet_id?: number;
@@ -177,4 +194,22 @@ export interface EnglishDataRegenerationRequest {
   questions_data: EnglishQuestion[]; // 기본 문제와 연관 문제를 모두 포함하는 배열
   passage_data?: EnglishPassage;
   regeneration_request: EnglishRegenerationRequest;
+}
+
+// 영어 문제 재생성 비동기 응답 타입
+export interface EnglishRegenerationAsyncResponse {
+  task_id: string;
+  status: 'started';
+  message: string;
+}
+
+// 영어 재생성 작업 상태 타입
+export interface EnglishRegenerationTaskStatus {
+  task_id: string;
+  state: 'PENDING' | 'PROGRESS' | 'SUCCESS' | 'FAILURE';
+  status: string;
+  current: number;
+  total: number;
+  result?: EnglishRegenerationResponse;  // SUCCESS일 때 재생성 결과 포함
+  error?: string;
 }
