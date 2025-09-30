@@ -37,7 +37,14 @@ async function apiRequest<T>(endpoint: string, options: RequestInit = {}, baseUr
   });
 
   try {
+    console.log('🌐 Making fetch request to:', url);
     const response = await fetch(url, config);
+    console.log('🌐 Response received:', {
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok,
+      headers: Object.fromEntries(response.headers.entries())
+    });
 
     if (!response.ok) {
       // 401 에러 (토큰 만료)인 경우 자동 로그아웃 처리
@@ -60,11 +67,16 @@ async function apiRequest<T>(endpoint: string, options: RequestInit = {}, baseUr
     const data = await response.json();
     return data;
   } catch (error) {
+    console.error('🌐 API Request Error:', error);
+    
     if (error instanceof ApiError) {
       throw error;
     }
 
-    // 네트워크 오류 등
+    if (error instanceof TypeError && error.message === 'Failed to fetch') {
+      throw new Error(`API 서버에 연결할 수 없습니다. 서버가 실행 중인지 확인해주세요. (${url})`);
+    }
+
     throw new Error(`API 통신 오류: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
   }
 }

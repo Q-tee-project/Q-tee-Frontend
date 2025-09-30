@@ -81,7 +81,18 @@ export default function ClassCreatePage() {
       setStudentCounts(counts);
     } catch (error: any) {
       console.error('클래스 로드 실패:', error);
-      setError('클래스 목록을 불러오는데 실패했습니다.');
+      
+      if (error.message.includes('API 서버에 연결할 수 없습니다')) {
+        setError('서버에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.');
+      } else if (error.message.includes('Not authenticated') || error.message.includes('401')) {
+        setError('로그인이 필요합니다. 다시 로그인해주세요.');
+        // 자동으로 로그인 페이지로 리다이렉트
+        setTimeout(() => {
+          router.push('/');
+        }, 2000);
+      } else {
+        setError('클래스 목록을 불러오는데 실패했습니다.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -183,8 +194,13 @@ export default function ClassCreatePage() {
 
           {/* 에러 메시지 */}
           {error && (
-            <div className="text-red-600 text-sm bg-red-50 p-3 rounded mb-4 border border-red-200">
-              {error}
+            <div className="text-red-600 text-sm bg-red-50 p-4 rounded-lg mb-4 border border-red-200 shadow-sm">
+              <div className="flex items-center gap-2">
+                <svg className="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="font-medium">{error}</span>
+              </div>
             </div>
           )}
 
