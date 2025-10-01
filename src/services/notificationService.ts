@@ -35,13 +35,8 @@ class NotificationService {
       this.disconnect();
     }
 
-    // TODO: Notification service is not implemented yet
-    // Temporarily disable SSE connection to prevent errors
-    console.log('SSE 연결 비활성화됨 - 알림 서비스가 구현되지 않음');
-    console.log(`SSE 연결 시도 (비활성화됨): ${this.baseUrl}/api/notifications/stream/${userType}/${userId}`);
-    
     // Uncomment the following code when notification service is implemented:
-    /*
+    
     const url = `${this.baseUrl}/api/notifications/stream/${userType}/${userId}`;
     console.log('SSE 연결 시도:', url);
 
@@ -66,7 +61,7 @@ class NotificationService {
       console.error('SSE 연결 에러:', error);
       this.handleReconnect(userType, userId);
     };
-    */
+    
   }
 
   disconnect(): void {
