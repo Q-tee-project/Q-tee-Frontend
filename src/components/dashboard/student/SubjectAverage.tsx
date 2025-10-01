@@ -26,10 +26,8 @@ const SubjectAverage: React.FC<SubjectAverageProps> = ({
   return (
     <Card className="shadow-sm lg:col-span-2 h-full flex flex-col px-6 py-5">
       <CardHeader className="px-0 py-0">
-        <h3 className="text-xl font-bold text-gray-900">과목별 내 점수</h3>
-      </CardHeader>
-      <div className="px-0">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xl font-bold text-gray-900">과목별 내 점수</h3>
           <Select value={selectedClass} onValueChange={setSelectedClass}>
             <SelectTrigger className="w-48">
               <SelectValue placeholder="클래스를 선택하세요" />
@@ -43,7 +41,7 @@ const SubjectAverage: React.FC<SubjectAverageProps> = ({
             </SelectContent>
           </Select>
         </div>
-      </div>
+      </CardHeader>
       <CardContent className="flex-1 pt-4 px-0">
         <div className="h-96 bg-white">
           <ResponsiveContainer width="100%" height="100%">
