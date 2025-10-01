@@ -367,6 +367,14 @@ export const classroomService = {
       headers: getAuthHeaders(),
     });
   },
+
+  // 클래스룸에서 학생 삭제
+  async removeStudentFromClassroom(classroomId: number, studentId: number): Promise<void> {
+    await authApiRequest<void>(`/api/classrooms/${classroomId}/students/${studentId}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+  },
 };
 
 // 학생 클래스 가입 API 서비스 (Student용)

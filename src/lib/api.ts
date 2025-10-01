@@ -64,6 +64,10 @@ async function apiRequest<T>(endpoint: string, options: RequestInit = {}, baseUr
       throw new ApiError(response.status, errorMessage);
     }
 
+    if (response.status === 204) {
+      return {} as T; // 204 No Content의 경우, 빈 객체를 반환
+    }
+
     const data = await response.json();
     return data;
   } catch (error) {
