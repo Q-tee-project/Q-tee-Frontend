@@ -81,7 +81,7 @@ const getToken = (): string | null => {
 export const koreanService = {
   getKoreanWorksheets: async (
     skip: number = 0,
-    limit: number = 20,
+    limit: number = 1000,
   ): Promise<{ worksheets: KoreanWorksheet[]; total: number }> => {
     const token = getToken();
     if (!token) {

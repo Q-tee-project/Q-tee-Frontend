@@ -92,7 +92,7 @@ export class EnglishService {
       throw new Error('로그인이 필요합니다.');
     }
 
-    const apiUrl = `${ENGLISH_API_BASE}/worksheets?user_id=${userId}&limit=100`;
+    const apiUrl = `${ENGLISH_API_BASE}/worksheets?user_id=${userId}&limit=1000`;
     console.log('📚 영어 워크시트 API URL:', apiUrl);
 
     const response = await fetch(apiUrl);

@@ -160,11 +160,12 @@ export default function KoreanGenerator({ onGenerate, isGenerating }: KoreanGene
         </GeneratorSection>
       </div>
 
-      <div className="pt-3">
+      {/* 문제 생성 버튼 */}
+      <div className="mt-6">
         <Button
-          disabled={!isReadyToGenerate || isGenerating}
-          className="w-full text-base py-3"
           onClick={handleGenerate}
+          disabled={!isReadyToGenerate || isGenerating}
+          className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white py-3 px-4 rounded-md font-medium"
         >
           {isGenerating ? '문제 생성 중...' : '문제 생성하기'}
         </Button>
