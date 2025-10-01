@@ -1,7 +1,12 @@
 // API 기본 설정
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8001';
-const ENGLISH_API_BASE_URL = process.env.NEXT_PUBLIC_ENGLISH_API_BASE_URL || 'http://localhost:8002';
+const ENGLISH_API_BASE_URL =
+  process.env.NEXT_PUBLIC_ENGLISH_API_BASE_URL || 'http://localhost:8002';
 const AUTH_API_BASE_URL = process.env.NEXT_PUBLIC_AUTH_API_BASE_URL || 'http://localhost:8003';
+const KOREAN_API_BASE_URL = process.env.NEXT_PUBLIC_KOREAN_API_BASE_URL || 'http://localhost:8004';
+const MARKET_API_BASE_URL = process.env.NEXT_PUBLIC_MARKET_API_BASE_URL || 'http://localhost:8005';
+const NOTIFICATION_API_BASE_URL =
+  process.env.NEXT_PUBLIC_NOTIFICATION_API_BASE_URL || 'http://localhost:8006';
 
 // 토큰 만료 처리를 위한 callback
 let onTokenExpired: (() => void) | null = null;
@@ -18,7 +23,11 @@ class ApiError extends Error {
 }
 
 // 기본 API 호출 함수
-async function apiRequest<T>(endpoint: string, options: RequestInit = {}, baseUrl: string = API_BASE_URL): Promise<T> {
+async function apiRequest<T>(
+  endpoint: string,
+  options: RequestInit = {},
+  baseUrl: string = API_BASE_URL,
+): Promise<T> {
   const url = `${baseUrl}${endpoint}`;
 
   const config: RequestInit = {
@@ -43,7 +52,7 @@ async function apiRequest<T>(endpoint: string, options: RequestInit = {}, baseUr
       status: response.status,
       statusText: response.statusText,
       ok: response.ok,
-      headers: Object.fromEntries(response.headers.entries())
+      headers: Object.fromEntries(response.headers.entries()),
     });
 
     if (!response.ok) {
@@ -52,7 +61,7 @@ async function apiRequest<T>(endpoint: string, options: RequestInit = {}, baseUr
         console.log('🚨 Token expired, logging out...');
         onTokenExpired();
       }
-      
+
       // Try to get the error response body
       let errorMessage = `API 요청 실패: ${response.status}`;
       try {
@@ -68,7 +77,7 @@ async function apiRequest<T>(endpoint: string, options: RequestInit = {}, baseUr
     return data;
   } catch (error) {
     console.error('🌐 API Request Error:', error);
-    
+
     if (error instanceof ApiError) {
       throw error;
     }
@@ -119,13 +128,10 @@ export const mathApi = {
 
   // 문제 생성
   async generateProblems(requestData: any) {
-    return apiRequest<{ task_id: string; status: string; message: string }>(
-      '/generate',
-      {
-        method: 'POST',
-        body: JSON.stringify(requestData),
-      },
-    );
+    return apiRequest<{ task_id: string; status: string; message: string }>('/generate', {
+      method: 'POST',
+      body: JSON.stringify(requestData),
+    });
   },
 
   // 태스크 상태 조회
@@ -146,4 +152,14 @@ export const mathApi = {
   },
 };
 
-export { apiRequest, authApiRequest, ApiError, API_BASE_URL, AUTH_API_BASE_URL };
+export {
+  apiRequest,
+  authApiRequest,
+  ApiError,
+  API_BASE_URL,
+  AUTH_API_BASE_URL,
+  ENGLISH_API_BASE_URL,
+  KOREAN_API_BASE_URL,
+  MARKET_API_BASE_URL,
+  NOTIFICATION_API_BASE_URL,
+};
