@@ -10,7 +10,7 @@ const getToken = (): string | null => {
 };
 
 export const mathService = {
-  getMathWorksheets: async (skip: number = 0, limit: number = 20): Promise<{ worksheets: Worksheet[], total: number }> => {
+  getMathWorksheets: async (skip: number = 0, limit: number = 1000): Promise<{ worksheets: Worksheet[], total: number }> => {
     const token = getToken();
     if (!token) {
       throw new Error("Authentication token not found. Please log in.");

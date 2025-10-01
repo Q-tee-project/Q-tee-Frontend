@@ -74,12 +74,12 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
     );
 
     if (xAxisMatch) {
-      data.xMin = parseFloat(xAxisMatch[1]);
-      data.xMax = parseFloat(xAxisMatch[3]);
+      data.xMin = Math.floor(parseFloat(xAxisMatch[1]));
+      data.xMax = Math.ceil(parseFloat(xAxisMatch[3]));
     }
     if (yAxisMatch) {
-      data.yMin = parseFloat(yAxisMatch[2]);
-      data.yMax = parseFloat(yAxisMatch[4]);
+      data.yMin = Math.floor(parseFloat(yAxisMatch[2]));
+      data.yMax = Math.ceil(parseFloat(yAxisMatch[4]));
     }
 
     // Coordinate 정의 파싱: \coordinate (A) at (x,y);
@@ -241,11 +241,17 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
       const coord = resolveCoord(`(${coordStr})`);
       if (!coord) continue;
 
+      // 원점 O 라벨 필터링 (O, $O$ 등)
+      const cleanedText = cleanLatexLabel(text);
+      if (coord.x === 0 && coord.y === 0 && (cleanedText === 'O' || cleanedText === 'o')) {
+        continue;
+      }
+
       let color = 'black';
       if (colorSpec.includes('blue')) color = 'blue';
       if (colorSpec.includes('red')) color = 'red';
 
-      data.labels.push({ coord, text: cleanLatexLabel(text), color });
+      data.labels.push({ coord, text: cleanedText, color });
     }
 
     return data;
@@ -278,8 +284,18 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
     }
   };
 
-  const xStep = 1;
-  const yStep = 1;
+  // 축 범위에 따라 적절한 눈금 간격 계산
+  const calculateStep = (min: number, max: number): number => {
+    const range = max - min;
+    if (range <= 10) return 1;
+    if (range <= 20) return 2;
+    if (range <= 50) return 5;
+    if (range <= 100) return 10;
+    return Math.ceil(range / 10);
+  };
+
+  const xStep = calculateStep(xMin, xMax);
+  const yStep = calculateStep(yMin, yMax);
 
   // 색상 팔레트
   const colors = {
@@ -379,73 +395,67 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
           />
 
           {/* X축 눈금 */}
-          {Array.from({ length: Math.floor((xMax - xMin) / xStep) + 1 }, (_, i) => {
-            const x = xMin + i * xStep;
-            if (x === 0) return null;
-            return (
-              <g key={`tick-x-${i}`}>
-                <line
-                  x1={toSvgX(x)}
-                  y1={toSvgY(0) - 4}
-                  x2={toSvgX(x)}
-                  y2={toSvgY(0) + 4}
-                  stroke={colors.axis}
-                  strokeWidth="1.5"
-                />
-                <text
-                  x={toSvgX(x)}
-                  y={toSvgY(0) + 18}
-                  textAnchor="middle"
-                  fontSize="13"
-                  fill={colors.tick}
-                  fontFamily="system-ui, -apple-system, sans-serif"
-                >
-                  {x}
-                </text>
-              </g>
-            );
-          })}
+          {(() => {
+            const ticks = [];
+            for (let x = Math.ceil(xMin); x <= Math.floor(xMax); x += xStep) {
+              if (x === 0) continue;
+              ticks.push(
+                <g key={`tick-x-${x}`}>
+                  <line
+                    x1={toSvgX(x)}
+                    y1={toSvgY(0) - 4}
+                    x2={toSvgX(x)}
+                    y2={toSvgY(0) + 4}
+                    stroke={colors.axis}
+                    strokeWidth="1.5"
+                  />
+                  <text
+                    x={toSvgX(x)}
+                    y={toSvgY(0) + 18}
+                    textAnchor="middle"
+                    fontSize="13"
+                    fill={colors.tick}
+                    fontFamily="system-ui, -apple-system, sans-serif"
+                  >
+                    {x}
+                  </text>
+                </g>
+              );
+            }
+            return ticks;
+          })()}
 
           {/* Y축 눈금 */}
-          {Array.from({ length: Math.floor((yMax - yMin) / yStep) + 1 }, (_, i) => {
-            const y = yMin + i * yStep;
-            if (y === 0) return null;
-            return (
-              <g key={`tick-y-${i}`}>
-                <line
-                  x1={toSvgX(0) - 4}
-                  y1={toSvgY(y)}
-                  x2={toSvgX(0) + 4}
-                  y2={toSvgY(y)}
-                  stroke={colors.axis}
-                  strokeWidth="1.5"
-                />
-                <text
-                  x={toSvgX(0) - 12}
-                  y={toSvgY(y) + 5}
-                  textAnchor="end"
-                  fontSize="13"
-                  fill={colors.tick}
-                  fontFamily="system-ui, -apple-system, sans-serif"
-                >
-                  {y}
-                </text>
-              </g>
-            );
-          })}
+          {(() => {
+            const ticks = [];
+            for (let y = Math.ceil(yMin); y <= Math.floor(yMax); y += yStep) {
+              if (y === 0) continue;
+              ticks.push(
+                <g key={`tick-y-${y}`}>
+                  <line
+                    x1={toSvgX(0) - 4}
+                    y1={toSvgY(y)}
+                    x2={toSvgX(0) + 4}
+                    y2={toSvgY(y)}
+                    stroke={colors.axis}
+                    strokeWidth="1.5"
+                  />
+                  <text
+                    x={toSvgX(0) - 12}
+                    y={toSvgY(y) + 5}
+                    textAnchor="end"
+                    fontSize="13"
+                    fill={colors.tick}
+                    fontFamily="system-ui, -apple-system, sans-serif"
+                  >
+                    {y}
+                  </text>
+                </g>
+              );
+            }
+            return ticks;
+          })()}
 
-          {/* 원점 O */}
-          <text
-            x={toSvgX(0) - 12}
-            y={toSvgY(0) + 18}
-            textAnchor="end"
-            fontSize="14"
-            fill={colors.label}
-            fontFamily="system-ui, -apple-system, sans-serif"
-            fontWeight="500"
-          >
-            O
-          </text>
 
           {/* 축 라벨 */}
           <text
