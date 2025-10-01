@@ -25,6 +25,13 @@ interface ParsedData {
 }
 
 export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className = '' }) => {
+  // LaTeX 수식을 일반 텍스트로 변환하는 헬퍼 함수
+  const cleanLatexLabel = (label: string): string => {
+    if (!label) return '';
+    // $A$, $B$ 등의 LaTeX 수식에서 내용만 추출
+    return label.replace(/\$/g, '').trim();
+  };
+
   const parsedData = useMemo(() => {
     if (!tikzCode) return null;
 
@@ -156,8 +163,8 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
       }
     }
 
-    // Points 파싱: \filldraw (A) circle (2pt) node[above] {A};
-    const pointMatches = tikzCode.matchAll(/\\filldraw(?:\[(\w+)\])?\s*\(([^)]+)\)\s*circle.*?(?:node\[([^\]]+)\]\s*\{([^}]+)\})?/g);
+    // Points 파싱: \filldraw[blue] (3,4) circle (2.5pt) node[above right] {A};
+    const pointMatches = tikzCode.matchAll(/\\filldraw(?:\[(\w+)\])?\s*\(([^)]+)\)\s*circle\s*\([^)]+\)(?:\s*node\[([^\]]+)\]\s*\{([^}]+)\})?/g);
     for (const match of pointMatches) {
       const [, colorSpec, coordStr, labelPos, label] = match;
 
@@ -344,12 +351,28 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
             const svgX = toSvgX(point.coord.x);
             const svgY = toSvgY(point.coord.y);
 
+            // 라벨 위치 계산 (above, below, left, right, 조합 지원)
             let labelX = svgX;
-            let labelY = svgY - 12;
+            let labelY = svgY - 15; // 기본값: above
+            let textAnchor: 'start' | 'middle' | 'end' = 'middle';
 
-            if (point.labelPos.includes('below')) labelY = svgY + 18;
-            if (point.labelPos.includes('right')) labelX = svgX + 12;
-            if (point.labelPos.includes('left')) labelX = svgX - 12;
+            const pos = point.labelPos.toLowerCase();
+
+            // 수직 위치
+            if (pos.includes('below')) {
+              labelY = svgY + 20;
+            } else if (pos.includes('above')) {
+              labelY = svgY - 15;
+            }
+
+            // 수평 위치
+            if (pos.includes('right')) {
+              labelX = svgX + 10;
+              textAnchor = 'start';
+            } else if (pos.includes('left')) {
+              labelX = svgX - 10;
+              textAnchor = 'end';
+            }
 
             const colorMap: Record<string, string> = {
               black: '#000000',
@@ -357,12 +380,15 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
               blue: '#3b82f6',
             };
 
+            // LaTeX 수식에서 텍스트만 추출
+            const displayLabel = cleanLatexLabel(point.label);
+
             return (
               <g key={`point-${idx}`}>
-                <circle cx={svgX} cy={svgY} r="3" fill={colorMap[point.color] || point.color} />
-                {point.label && (
-                  <text x={labelX} y={labelY} fontSize="14" fill="#374151" textAnchor="middle">
-                    {point.label}
+                <circle cx={svgX} cy={svgY} r="4" fill={colorMap[point.color] || point.color} />
+                {displayLabel && (
+                  <text x={labelX} y={labelY} fontSize="14" fill="#374151" textAnchor={textAnchor} fontWeight="600">
+                    {displayLabel}
                   </text>
                 )}
               </g>
