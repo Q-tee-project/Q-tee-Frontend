@@ -12,6 +12,13 @@ interface Coordinate {
   y: number;
 }
 
+interface FunctionPlot {
+  expression: string;
+  domain: { min: number; max: number };
+  color: string;
+  style: string;
+}
+
 interface ParsedData {
   xMin: number;
   xMax: number;
@@ -22,6 +29,8 @@ interface ParsedData {
   points: Array<{ coord: Coordinate; color: string; label: string; labelPos: string }>;
   lines: Array<{ points: Coordinate[]; style: string; color: string; isCycle: boolean }>;
   filledAreas: Array<{ points: Coordinate[]; color: string; opacity: number }>;
+  functionPlots: Array<FunctionPlot>;
+  labels: Array<{ coord: Coordinate; text: string; color: string }>;
 }
 
 export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className = '' }) => {
@@ -29,7 +38,10 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
   const cleanLatexLabel = (label: string): string => {
     if (!label) return '';
     // $A$, $B$ 등의 LaTeX 수식에서 내용만 추출
-    return label.replace(/\$/g, '').trim();
+    return label
+      .replace(/\$/g, '')
+      .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '$1/$2')
+      .trim();
   };
 
   const parsedData = useMemo(() => {
@@ -45,6 +57,8 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
       points: [],
       lines: [],
       filledAreas: [],
+      functionPlots: [],
+      labels: [],
     };
 
     // Scale 파싱
@@ -52,8 +66,12 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
     if (scaleMatch) data.scale = parseFloat(scaleMatch[1]);
 
     // 축 범위 파싱
-    const xAxisMatch = tikzCode.match(/\\draw\[->.*?\]\s*\(([-\d.]+),([-\d.]+)\)\s*--\s*\(([-\d.]+),([-\d.]+)\)\s*node\[right\]/);
-    const yAxisMatch = tikzCode.match(/\\draw\[->.*?\]\s*\(([-\d.]+),([-\d.]+)\)\s*--\s*\(([-\d.]+),([-\d.]+)\)\s*node\[(?:above|top)\]/);
+    const xAxisMatch = tikzCode.match(
+      /\\draw\[->.*?\]\s*\(([-\d.]+),([-\d.]+)\)\s*--\s*\(([-\d.]+),([-\d.]+)\)\s*node\[right\]/,
+    );
+    const yAxisMatch = tikzCode.match(
+      /\\draw\[->.*?\]\s*\(([-\d.]+),([-\d.]+)\)\s*--\s*\(([-\d.]+),([-\d.]+)\)\s*node\[(?:above|top)\]/,
+    );
 
     if (xAxisMatch) {
       data.xMin = parseFloat(xAxisMatch[1]);
@@ -65,7 +83,9 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
     }
 
     // Coordinate 정의 파싱: \coordinate (A) at (x,y);
-    const coordMatches = tikzCode.matchAll(/\\coordinate\s*\((\w+)\)\s*at\s*\(([-\d.]+),([-\d.]+)\)/g);
+    const coordMatches = tikzCode.matchAll(
+      /\\coordinate\s*\((\w+)\)\s*at\s*\(([-\d.]+),([-\d.]+)\)/g,
+    );
     for (const match of coordMatches) {
       const [, name, x, y] = match;
       data.coordinates.set(name, { x: parseFloat(x), y: parseFloat(y) });
@@ -114,7 +134,7 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
       }
 
       // 경로에서 좌표 추출
-      const coordParts = pathStr.split('--').map(s => s.trim());
+      const coordParts = pathStr.split('--').map((s) => s.trim());
       const points: Coordinate[] = [];
 
       for (const part of coordParts) {
@@ -145,7 +165,7 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
       if (styleStr.includes('gray')) color = 'gray';
 
       // 경로에서 좌표 추출
-      const coordParts = pathStr.split('--').map(s => s.trim());
+      const coordParts = pathStr.split('--').map((s) => s.trim());
       const points: Coordinate[] = [];
       let isCycle = false;
 
@@ -164,7 +184,9 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
     }
 
     // Points 파싱: \filldraw[blue] (3,4) circle (2.5pt) node[above right] {A};
-    const pointMatches = tikzCode.matchAll(/\\filldraw(?:\[(\w+)\])?\s*\(([^)]+)\)\s*circle\s*\([^)]+\)(?:\s*node\[([^\]]+)\]\s*\{([^}]+)\})?/g);
+    const pointMatches = tikzCode.matchAll(
+      /\\filldraw(?:\[(\w+)\])?\s*\(([^)]+)\)\s*circle\s*\([^)]+\)(?:\s*node\[([^\]]+)\]\s*\{([^}]+)\})?/g,
+    );
     for (const match of pointMatches) {
       const [, colorSpec, coordStr, labelPos, label] = match;
 
@@ -183,17 +205,61 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
       });
     }
 
+    // Function plots 파싱: \draw[domain=1.2:5, smooth, variable=\x, blue, thick] plot ({\x}, {-6/\x});
+    const functionMatches = tikzCode.matchAll(
+      /\\draw\[([^\]]*domain=([^,\]]+)[^\]]*)\]\s*plot\s*\(\{([^}]+)\},\s*\{([^}]+)\}\)/g,
+    );
+    for (const match of functionMatches) {
+      const [, styleStr, domainStr, xExpr, yExpr] = match;
+
+      // 도메인 파싱
+      const [minStr, maxStr] = domainStr.split(':');
+      const domain = { min: parseFloat(minStr), max: parseFloat(maxStr) };
+
+      // 색상 파싱
+      let color = 'black';
+      if (styleStr.includes('blue')) color = 'blue';
+      if (styleStr.includes('red')) color = 'red';
+      if (styleStr.includes('green')) color = 'green';
+
+      // 스타일 파싱
+      const style = styleStr.includes('dashed') ? 'dashed' : 'solid';
+
+      data.functionPlots.push({
+        expression: yExpr.replace(/\\x/g, 'x'),
+        domain,
+        color,
+        style,
+      });
+    }
+
+    // Labels 파싱: \node[blue] at (4, -2.5) {$y=\frac{a}{x}$};
+    const labelMatches = tikzCode.matchAll(/\\node\[([^\]]*)\]\s*at\s*\(([^)]+)\)\s*\{([^}]+)\}/g);
+    for (const match of labelMatches) {
+      const [, colorSpec, coordStr, text] = match;
+
+      const coord = resolveCoord(`(${coordStr})`);
+      if (!coord) continue;
+
+      let color = 'black';
+      if (colorSpec.includes('blue')) color = 'blue';
+      if (colorSpec.includes('red')) color = 'red';
+
+      data.labels.push({ coord, text: cleanLatexLabel(text), color });
+    }
+
     return data;
   }, [tikzCode]);
 
   if (!tikzCode || !parsedData) return null;
 
-  const { xMin, xMax, yMin, yMax, coordinates, points, lines, filledAreas } = parsedData;
+  const { xMin, xMax, yMin, yMax, coordinates, points, lines, filledAreas, functionPlots, labels } =
+    parsedData;
 
   // SVG 좌표계 설정
-  const svgWidth = 600;
-  const svgHeight = 400;
-  const padding = 50;
+  const svgWidth = 500;
+  const svgHeight = 500;
+  const padding = 40;
   const graphWidth = svgWidth - 2 * padding;
   const graphHeight = svgHeight - 2 * padding;
 
@@ -201,28 +267,94 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
   const toSvgX = (x: number) => padding + ((x - xMin) / (xMax - xMin)) * graphWidth;
   const toSvgY = (y: number) => svgHeight - padding - ((y - yMin) / (yMax - yMin)) * graphHeight;
 
+  // 함수 표현식 평가
+  const evaluateExpression = (expr: string, x: number): number | null => {
+    try {
+      // {-6/\x} 형식을 JavaScript 표현식으로 변환
+      const jsExpr = expr.replace(/x/g, `(${x})`);
+      return eval(jsExpr);
+    } catch {
+      return null;
+    }
+  };
+
   const xStep = 1;
   const yStep = 1;
 
+  // 색상 팔레트
+  const colors = {
+    grid: '#f3f4f6',
+    axis: '#1f2937',
+    tick: '#6b7280',
+    label: '#374151',
+    blue: '#2563eb',
+    red: '#dc2626',
+    green: '#16a34a',
+    gray: '#9ca3af',
+    black: '#000000',
+  };
+
   return (
-    <div className={`tikz-renderer my-4 ${className}`}>
-      <div className="border-2 border-blue-200 rounded-lg p-6 bg-white flex justify-center">
+    <div className={`tikz-renderer my-6 ${className}`}>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex justify-center">
         <svg width={svgWidth} height={svgHeight} className="bg-white">
           {/* 그리드 라인 */}
-          <g stroke="#e5e7eb" strokeWidth="0.5">
+          <g>
             {Array.from({ length: Math.floor((xMax - xMin) / xStep) + 1 }, (_, i) => {
               const x = xMin + i * xStep;
               return x !== 0 ? (
-                <line key={`grid-v-${i}`} x1={toSvgX(x)} y1={padding} x2={toSvgX(x)} y2={svgHeight - padding} />
+                <line
+                  key={`grid-v-${i}`}
+                  x1={toSvgX(x)}
+                  y1={padding}
+                  x2={toSvgX(x)}
+                  y2={svgHeight - padding}
+                  stroke={colors.grid}
+                  strokeWidth="1"
+                />
               ) : null;
             })}
             {Array.from({ length: Math.floor((yMax - yMin) / yStep) + 1 }, (_, i) => {
               const y = yMin + i * yStep;
               return y !== 0 ? (
-                <line key={`grid-h-${i}`} x1={padding} y1={toSvgY(y)} x2={svgWidth - padding} y2={toSvgY(y)} />
+                <line
+                  key={`grid-h-${i}`}
+                  x1={padding}
+                  y1={toSvgY(y)}
+                  x2={svgWidth - padding}
+                  y2={toSvgY(y)}
+                  stroke={colors.grid}
+                  strokeWidth="1"
+                />
               ) : null;
             })}
           </g>
+
+          {/* 화살표 정의 */}
+          <defs>
+            <marker
+              id="arrowX"
+              markerWidth="12"
+              markerHeight="12"
+              refX="10"
+              refY="4"
+              orient="auto"
+              markerUnits="strokeWidth"
+            >
+              <path d="M0,0 L0,8 L10,4 z" fill={colors.axis} />
+            </marker>
+            <marker
+              id="arrowY"
+              markerWidth="12"
+              markerHeight="12"
+              refX="10"
+              refY="4"
+              orient="auto"
+              markerUnits="strokeWidth"
+            >
+              <path d="M0,0 L0,8 L10,4 z" fill={colors.axis} />
+            </marker>
+          </defs>
 
           {/* X축 */}
           <line
@@ -230,8 +362,8 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
             y1={toSvgY(0)}
             x2={toSvgX(xMax)}
             y2={toSvgY(0)}
-            stroke="#374151"
-            strokeWidth="2"
+            stroke={colors.axis}
+            strokeWidth="1.5"
             markerEnd="url(#arrowX)"
           />
 
@@ -241,20 +373,10 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
             y1={toSvgY(yMin)}
             x2={toSvgX(0)}
             y2={toSvgY(yMax)}
-            stroke="#374151"
-            strokeWidth="2"
+            stroke={colors.axis}
+            strokeWidth="1.5"
             markerEnd="url(#arrowY)"
           />
-
-          {/* 화살표 정의 */}
-          <defs>
-            <marker id="arrowX" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
-              <path d="M0,0 L0,6 L9,3 z" fill="#374151" />
-            </marker>
-            <marker id="arrowY" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
-              <path d="M0,0 L0,6 L9,3 z" fill="#374151" />
-            </marker>
-          </defs>
 
           {/* X축 눈금 */}
           {Array.from({ length: Math.floor((xMax - xMin) / xStep) + 1 }, (_, i) => {
@@ -262,8 +384,22 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
             if (x === 0) return null;
             return (
               <g key={`tick-x-${i}`}>
-                <line x1={toSvgX(x)} y1={toSvgY(0) - 5} x2={toSvgX(x)} y2={toSvgY(0) + 5} stroke="#374151" strokeWidth="1" />
-                <text x={toSvgX(x)} y={toSvgY(0) + 20} textAnchor="middle" fontSize="12" fill="#374151">
+                <line
+                  x1={toSvgX(x)}
+                  y1={toSvgY(0) - 4}
+                  x2={toSvgX(x)}
+                  y2={toSvgY(0) + 4}
+                  stroke={colors.axis}
+                  strokeWidth="1.5"
+                />
+                <text
+                  x={toSvgX(x)}
+                  y={toSvgY(0) + 18}
+                  textAnchor="middle"
+                  fontSize="13"
+                  fill={colors.tick}
+                  fontFamily="system-ui, -apple-system, sans-serif"
+                >
                   {x}
                 </text>
               </g>
@@ -276,8 +412,22 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
             if (y === 0) return null;
             return (
               <g key={`tick-y-${i}`}>
-                <line x1={toSvgX(0) - 5} y1={toSvgY(y)} x2={toSvgX(0) + 5} y2={toSvgY(y)} stroke="#374151" strokeWidth="1" />
-                <text x={toSvgX(0) - 15} y={toSvgY(y) + 5} textAnchor="end" fontSize="12" fill="#374151">
+                <line
+                  x1={toSvgX(0) - 4}
+                  y1={toSvgY(y)}
+                  x2={toSvgX(0) + 4}
+                  y2={toSvgY(y)}
+                  stroke={colors.axis}
+                  strokeWidth="1.5"
+                />
+                <text
+                  x={toSvgX(0) - 12}
+                  y={toSvgY(y) + 5}
+                  textAnchor="end"
+                  fontSize="13"
+                  fill={colors.tick}
+                  fontFamily="system-ui, -apple-system, sans-serif"
+                >
                   {y}
                 </text>
               </g>
@@ -285,37 +435,52 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
           })}
 
           {/* 원점 O */}
-          <text x={toSvgX(0) - 10} y={toSvgY(0) + 20} textAnchor="end" fontSize="14" fill="#374151">
+          <text
+            x={toSvgX(0) - 12}
+            y={toSvgY(0) + 18}
+            textAnchor="end"
+            fontSize="14"
+            fill={colors.label}
+            fontFamily="system-ui, -apple-system, sans-serif"
+            fontWeight="500"
+          >
             O
           </text>
 
           {/* 축 라벨 */}
-          <text x={toSvgX(xMax) + 10} y={toSvgY(0) + 5} fontSize="16" fill="#374151">
+          <text
+            x={toSvgX(xMax) + 5}
+            y={toSvgY(0) - 5}
+            fontSize="16"
+            fill={colors.label}
+            fontFamily="system-ui, -apple-system, sans-serif"
+            fontStyle="italic"
+          >
             x
           </text>
-          <text x={toSvgX(0) - 5} y={toSvgY(yMax) - 10} fontSize="16" fill="#374151">
+          <text
+            x={toSvgX(0) + 10}
+            y={toSvgY(yMax) + 5}
+            fontSize="16"
+            fill={colors.label}
+            fontFamily="system-ui, -apple-system, sans-serif"
+            fontStyle="italic"
+          >
             y
           </text>
 
           {/* Filled areas (색칠된 영역) */}
           {filledAreas.map((area, idx) => {
-            const pathData = area.points.map((p, i) =>
-              `${i === 0 ? 'M' : 'L'} ${toSvgX(p.x)} ${toSvgY(p.y)}`
-            ).join(' ') + ' Z';
-
-            const colorMap: Record<string, string> = {
-              blue: '#3b82f6',
-              red: '#ef4444',
-              green: '#22c55e',
-              yellow: '#eab308',
-              gray: '#6b7280',
-            };
+            const pathData =
+              area.points
+                .map((p, i) => `${i === 0 ? 'M' : 'L'} ${toSvgX(p.x)} ${toSvgY(p.y)}`)
+                .join(' ') + ' Z';
 
             return (
               <path
                 key={`fill-${idx}`}
                 d={pathData}
-                fill={colorMap[area.color] || area.color}
+                fill={colors[area.color as keyof typeof colors] || area.color}
                 opacity={area.opacity}
               />
             );
@@ -323,25 +488,53 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
 
           {/* Lines (선, 도형) */}
           {lines.map((line, idx) => {
-            const pathData = line.points.map((p, i) =>
-              `${i === 0 ? 'M' : 'L'} ${toSvgX(p.x)} ${toSvgY(p.y)}`
-            ).join(' ') + (line.isCycle ? ' Z' : '');
-
-            const colorMap: Record<string, string> = {
-              black: '#000000',
-              blue: '#3b82f6',
-              red: '#ef4444',
-              gray: '#9ca3af',
-            };
+            const pathData =
+              line.points
+                .map((p, i) => `${i === 0 ? 'M' : 'L'} ${toSvgX(p.x)} ${toSvgY(p.y)}`)
+                .join(' ') + (line.isCycle ? ' Z' : '');
 
             return (
               <path
                 key={`line-${idx}`}
                 d={pathData}
-                stroke={colorMap[line.color] || line.color}
-                strokeWidth={line.style === 'dashed' ? 1.5 : 2}
-                strokeDasharray={line.style === 'dashed' ? '4 4' : undefined}
+                stroke={colors[line.color as keyof typeof colors] || line.color}
+                strokeWidth={2}
+                strokeDasharray={line.style === 'dashed' ? '5 3' : undefined}
                 fill="none"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            );
+          })}
+
+          {/* Function plots (함수 그래프) */}
+          {functionPlots.map((func, idx) => {
+            const points: Array<{ x: number; y: number }> = [];
+            const step = (func.domain.max - func.domain.min) / 150; // 150개의 점으로 매우 부드러운 곡선
+
+            for (let x = func.domain.min; x <= func.domain.max; x += step) {
+              const y = evaluateExpression(func.expression, x);
+              if (y !== null && !isNaN(y) && isFinite(y) && Math.abs(y) < 100) {
+                points.push({ x, y });
+              }
+            }
+
+            if (points.length === 0) return null;
+
+            const pathData = points
+              .map((p, i) => `${i === 0 ? 'M' : 'L'} ${toSvgX(p.x)} ${toSvgY(p.y)}`)
+              .join(' ');
+
+            return (
+              <path
+                key={`func-${idx}`}
+                d={pathData}
+                stroke={colors[func.color as keyof typeof colors] || func.color}
+                strokeWidth={2.5}
+                strokeDasharray={func.style === 'dashed' ? '5 3' : undefined}
+                fill="none"
+                strokeLinecap="round"
+                strokeLinejoin="round"
               />
             );
           })}
@@ -353,45 +546,76 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
 
             // 라벨 위치 계산 (above, below, left, right, 조합 지원)
             let labelX = svgX;
-            let labelY = svgY - 15; // 기본값: above
+            let labelY = svgY - 12; // 기본값: above
             let textAnchor: 'start' | 'middle' | 'end' = 'middle';
 
             const pos = point.labelPos.toLowerCase();
 
             // 수직 위치
             if (pos.includes('below')) {
-              labelY = svgY + 20;
+              labelY = svgY + 18;
             } else if (pos.includes('above')) {
-              labelY = svgY - 15;
+              labelY = svgY - 12;
             }
 
             // 수평 위치
             if (pos.includes('right')) {
-              labelX = svgX + 10;
+              labelX = svgX + 8;
               textAnchor = 'start';
             } else if (pos.includes('left')) {
-              labelX = svgX - 10;
+              labelX = svgX - 8;
               textAnchor = 'end';
             }
-
-            const colorMap: Record<string, string> = {
-              black: '#000000',
-              red: '#ef4444',
-              blue: '#3b82f6',
-            };
 
             // LaTeX 수식에서 텍스트만 추출
             const displayLabel = cleanLatexLabel(point.label);
 
             return (
               <g key={`point-${idx}`}>
-                <circle cx={svgX} cy={svgY} r="4" fill={colorMap[point.color] || point.color} />
+                <circle
+                  cx={svgX}
+                  cy={svgY}
+                  r="4"
+                  fill={colors[point.color as keyof typeof colors] || point.color}
+                  stroke="white"
+                  strokeWidth="1"
+                />
                 {displayLabel && (
-                  <text x={labelX} y={labelY} fontSize="14" fill="#374151" textAnchor={textAnchor} fontWeight="600">
+                  <text
+                    x={labelX}
+                    y={labelY}
+                    fontSize="13"
+                    fill={colors.label}
+                    textAnchor={textAnchor}
+                    fontWeight="500"
+                    fontFamily="system-ui, -apple-system, sans-serif"
+                  >
                     {displayLabel}
                   </text>
                 )}
               </g>
+            );
+          })}
+
+          {/* Labels (함수 라벨 등) */}
+          {labels.map((label, idx) => {
+            const svgX = toSvgX(label.coord.x);
+            const svgY = toSvgY(label.coord.y);
+
+            return (
+              <text
+                key={`label-${idx}`}
+                x={svgX}
+                y={svgY}
+                fontSize="14"
+                fill={colors[label.color as keyof typeof colors] || label.color}
+                textAnchor="middle"
+                fontFamily="system-ui, -apple-system, sans-serif"
+                fontStyle="italic"
+                fontWeight="500"
+              >
+                {label.text}
+              </text>
             );
           })}
         </svg>
