@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FaArrowLeft, FaCheckCircle, FaTimesCircle, FaDotCircle } from 'react-icons/fa';
 import { LaTeXRenderer } from '@/components/LaTeXRenderer';
+import { TikZRenderer } from '@/components/TikZRenderer';
 
 interface StudentResultViewProps {
   assignmentId: number;
@@ -476,11 +477,22 @@ export function StudentResultView({
                           ) : (
                             <LaTeXRenderer
                               content={
-                                problemItem.question || item.question || `문제 ${problemNumber}`
+                                (problemItem.question || item.question || `문제 ${problemNumber}`)
+                                  .replace(/\\begin\{tikzpicture\}[\s\S]*?\\end\{tikzpicture\}/g, '')
+                                  .trim()
                               }
                             />
                           )}
                         </div>
+
+                        {/* TikZ 그래프 */}
+                        {((problemItem as any)?.tikz_code || (item as any)?.tikz_code) && (
+                          <div className="mb-4">
+                            <TikZRenderer
+                              tikzCode={(problemItem as any)?.tikz_code || (item as any)?.tikz_code}
+                            />
+                          </div>
+                        )}
                       </div>
 
                       {/* Choices */}

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { LaTeXRenderer } from '@/components/LaTeXRenderer';
+import { TikZRenderer } from '@/components/TikZRenderer';
 import { Worksheet, MathProblem, ProblemType } from '@/types/math';
 import { Edit3 } from 'lucide-react';
 
@@ -197,8 +198,41 @@ export const MathWorksheetDetail: React.FC<MathWorksheetDetailProps> = ({
                         </div>
 
                         <div className="text-base leading-relaxed text-gray-900 mb-4">
-                          <LaTeXRenderer content={problem.question} />
+                          <LaTeXRenderer content={(() => {
+                            let cleanedQuestion = problem.question;
+
+                            // 1. 완전한 TikZ 환경 제거 (백슬래시 있는 경우)
+                            cleanedQuestion = cleanedQuestion.replace(/\\begin\{tikzpicture\}[\s\S]*?\\end\{tikzpicture\}/g, '');
+
+                            // 2. 백슬래시가 없는 깨진 TikZ 코드 제거 (사진처럼)
+                            cleanedQuestion = cleanedQuestion.replace(/\[tikz[^\]]*\][^[]*standalone[^[]*tikz[\s\S]*?;/g, '');
+
+                            // 3. documentclass, usepackage 등 제거
+                            cleanedQuestion = cleanedQuestion
+                              .replace(/\\documentclass\[.*?\]\{.*?\}/g, '')
+                              .replace(/\\usepackage\{.*?\}/g, '')
+                              .replace(/\\begin\{document\}/g, '')
+                              .replace(/\\end\{document\}/g, '');
+
+                            cleanedQuestion = cleanedQuestion.trim();
+
+                            if (problem.question !== cleanedQuestion) {
+                              console.log(`🧹 Problem ${problem.id} cleaned:`, {
+                                original: problem.question.substring(0, 150),
+                                cleaned: cleanedQuestion
+                              });
+                            }
+
+                            return cleanedQuestion;
+                          })()} />
                         </div>
+
+                        {/* TikZ 그래프 */}
+                        {problem.tikz_code && (
+                          <div className="mb-4">
+                            <TikZRenderer tikzCode={problem.tikz_code} />
+                          </div>
+                        )}
 
                         {problem.choices && problem.choices.length > 0 && (
                           <div className="ml-4 space-y-3">

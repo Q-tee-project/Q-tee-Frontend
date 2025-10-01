@@ -19,6 +19,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { LaTeXRenderer } from '@/components/LaTeXRenderer';
+import { TikZRenderer } from '@/components/TikZRenderer';
 import { autoConvertToLatex } from '@/utils/mathLatexConverter';
 
 interface MathProblemEditDialogProps {

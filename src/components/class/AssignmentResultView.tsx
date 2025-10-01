@@ -26,6 +26,7 @@ import {
   FaTimes,
 } from 'react-icons/fa';
 import { LaTeXRenderer } from '@/components/LaTeXRenderer';
+import { TikZRenderer } from '@/components/TikZRenderer';
 import type { StudentProfile } from '@/services/authService';
 
 // 과제 결과 데이터 인터페이스
@@ -945,13 +946,22 @@ export function AssignmentResultView({
                                 ) : (
                                   <LaTeXRenderer
                                     content={
-                                      problemItem.question ||
-                                      item.question ||
-                                      `문제 ${problemNumber}`
+                                      (problemItem.question || item.question || `문제 ${problemNumber}`)
+                                        .replace(/\\begin\{tikzpicture\}[\s\S]*?\\end\{tikzpicture\}/g, '')
+                                        .trim()
                                     }
                                   />
                                 )}
                               </div>
+
+                              {/* TikZ 그래프 */}
+                              {((problemItem as any)?.tikz_code || (item as any)?.tikz_code) && (
+                                <div className="mb-4">
+                                  <TikZRenderer
+                                    tikzCode={(problemItem as any)?.tikz_code || (item as any)?.tikz_code}
+                                  />
+                                </div>
+                              )}
                             </div>
 
                             {/* Choices */}
