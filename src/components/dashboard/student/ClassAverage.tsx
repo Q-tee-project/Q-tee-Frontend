@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import {
   Dialog,
   DialogContent,
@@ -13,216 +14,256 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
-import { FileText, Calendar, Settings } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { VscSettings } from "react-icons/vsc";
+import { CalendarIcon, Search } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { format } from 'date-fns';
+import { ko } from 'date-fns/locale';
+
+// 백엔드 API 연동을 위한 타입 정의
+interface Assignment {
+  id: string;
+  name: string;
+  subject: string;
+  dueDate: string;
+  submittedCount: number;
+  totalCount: number;
+}
 
 interface ClassAverageProps {
   selectedClass: string;
   setSelectedClass: (value: string) => void;
-  chartType: 'period' | 'assignment';
-  setChartType: (value: 'period' | 'assignment') => void;
-  selectedAssignments: string[];
-  setSelectedAssignments: (assignments: string[]) => void;
-  selectedMonth: string;
-  setSelectedMonth: (month: string) => void;
-  showPeriodModal: boolean;
-  setShowPeriodModal: (show: boolean) => void;
-  showAssignmentModal: boolean;
-  setShowAssignmentModal: (show: boolean) => void;
-  tempSelectedAssignments: string[];
-  setTempSelectedAssignments: (assignments: string[]) => void;
-  customStartYear: string;
-  setCustomStartYear: (year: string) => void;
-  customStartMonth: string;
-  setCustomStartMonth: (month: string) => void;
-  customEndYear: string;
-  setCustomEndYear: (year: string) => void;
-  customEndMonth: string;
-  setCustomEndMonth: (month: string) => void;
-  composedChartData: any[];
+  chartData: any[];
   classes: Array<{ id: string; name: string }>;
-  assignments: Array<{ id: string; name: string }>;
-  defaultChartData: any[];
-  onPeriodApply: () => void;
-  onOpenAssignmentModal: () => void;
-  onAssignmentModalApply: () => void;
-  onAssignmentToggle: (assignmentId: string) => void;
-  onAssignmentRemove: (assignmentId: string) => void;
-  generateYearOptions: () => string[];
-  generateMonthOptions: () => string[];
+  // 백엔드에서 받아올 데이터들
+  assignments?: Assignment[];
+  onDataRequest?: (params: {
+    classId: string;
+    startDate: string;
+    endDate: string;
+    assignmentIds?: string[];
+  }) => Promise<any[]>;
 }
 
 const ClassAverage: React.FC<ClassAverageProps> = ({
   selectedClass,
   setSelectedClass,
-  chartType,
-  setChartType,
-  selectedAssignments,
-  selectedMonth,
-  setSelectedMonth,
-  showPeriodModal,
-  setShowPeriodModal,
-  showAssignmentModal,
-  setShowAssignmentModal,
-  tempSelectedAssignments,
-  customStartYear,
-  setCustomStartYear,
-  customStartMonth,
-  setCustomStartMonth,
-  customEndYear,
-  setCustomEndYear,
-  customEndMonth,
-  setCustomEndMonth,
-  composedChartData,
+  chartData,
   classes,
-  assignments,
-  defaultChartData,
-  onPeriodApply,
-  onOpenAssignmentModal,
-  onAssignmentModalApply,
-  onAssignmentToggle,
-  onAssignmentRemove,
-  generateYearOptions,
-  generateMonthOptions,
+  assignments = [],
+  onDataRequest,
 }) => {
-  // 기간별 차트 데이터 필터링
-  const getFilteredChartData = () => {
-    if (chartType === 'period' && customStartYear && customStartMonth && customEndYear && customEndMonth) {
-      const startDate = new Date(parseInt(customStartYear), parseInt(customStartMonth) - 1);
-      const endDate = new Date(parseInt(customEndYear), parseInt(customEndMonth) - 1);
-      
-      // 2025년 1월부터 6월까지만 데이터 표시
-      const dataStartDate = new Date(2025, 0); // 2025년 1월
-      const dataEndDate = new Date(2025, 5); // 2025년 6월
-      
-      return composedChartData.filter(item => {
-        // 다양한 날짜 형식 처리
-        let itemDate;
-        
-        if (item.date) {
-          itemDate = new Date(item.date);
-        } else if (item.name) {
-          // "1월", "2월" 등의 형식 처리
-          const monthMatch = item.name.match(/(\d+)월/);
-          if (monthMatch) {
-            itemDate = new Date(2025, parseInt(monthMatch[1]) - 1);
-          } else {
-            // 다른 형식 시도
-            itemDate = new Date(item.name);
-          }
-        } else {
-          return false;
-        }
-        
-        // 유효한 날짜인지 확인
-        if (isNaN(itemDate.getTime())) {
-          return false;
-        }
-        
-        return itemDate >= startDate && itemDate <= endDate && 
-               itemDate >= dataStartDate && itemDate <= dataEndDate;
+  // 통합된 설정 모달 상태 관리
+  const [showSettingsModal, setShowSettingsModal] = React.useState(false);
+  const [selectedAssignments, setSelectedAssignments] = React.useState<string[]>([]);
+  const [startDate, setStartDate] = React.useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = React.useState<Date | undefined>(undefined);
+  const [subjectFilter, setSubjectFilter] = React.useState<string>('전체');
+  const [searchQuery, setSearchQuery] = React.useState<string>('');
+  const [startDatePopoverOpen, setStartDatePopoverOpen] = React.useState(false);
+  const [endDatePopoverOpen, setEndDatePopoverOpen] = React.useState(false);
+
+  // 백엔드 연동을 위한 로딩 상태
+  const [isLoading, setIsLoading] = React.useState(false);
+
+  // 백엔드에서 받아온 실제 데이터 또는 임시 데이터
+  const allAssignments = assignments.length > 0 ? assignments : [
+    { id: '1', name: '1차 중간고사', subject: '수학', dueDate: '2025-05-25', submittedCount: 25, totalCount: 30 },
+    { id: '2', name: '2차 중간고사', subject: '수학', dueDate: '2025-05-20', submittedCount: 28, totalCount: 30 },
+    { id: '3', name: '기말고사', subject: '수학', dueDate: '2025-05-15', submittedCount: 30, totalCount: 30 },
+    { id: '4', name: '독서 감상문', subject: '국어', dueDate: '2025-05-10', submittedCount: 27, totalCount: 30 },
+    { id: '5', name: '문법 퀴즈', subject: '국어', dueDate: '2025-05-05', submittedCount: 29, totalCount: 30 },
+    { id: '6', name: '영어 단어 시험', subject: '영어', dueDate: '2025-04-30', submittedCount: 26, totalCount: 30 },
+    { id: '7', name: '영작 과제', subject: '영어', dueDate: '2025-04-25', submittedCount: 24, totalCount: 30 },
+    { id: '8', name: '수학 문제집', subject: '수학', dueDate: '2025-04-20', submittedCount: 24, totalCount: 30 },
+    { id: '9', name: '수학 프로젝트', subject: '수학', dueDate: '2025-04-15', submittedCount: 27, totalCount: 30 },
+    { id: '10', name: '국어 작문', subject: '국어', dueDate: '2025-04-10', submittedCount: 23, totalCount: 30 },
+    { id: '11', name: '영어 듣기 평가', subject: '영어', dueDate: '2025-04-05', submittedCount: 29, totalCount: 30 },
+    { id: '12', name: '수학 단원평가', subject: '수학', dueDate: '2025-03-30', submittedCount: 26, totalCount: 30 },
+    { id: '13', name: '국어 시 암송', subject: '국어', dueDate: '2025-03-25', submittedCount: 28, totalCount: 30 },
+    { id: '14', name: '영어 발표', subject: '영어', dueDate: '2025-03-20', submittedCount: 25, totalCount: 30 },
+    { id: '15', name: '수학 응용 문제', subject: '수학', dueDate: '2025-03-15', submittedCount: 27, totalCount: 30 },
+  ];
+
+  // 기간, 과목, 검색어에 따른 과제 필터링 함수
+  const getFilteredAssignments = () => {
+    let filtered = allAssignments;
+
+    // 기간 필터
+    if (startDate && endDate) {
+      filtered = filtered.filter(assignment => {
+        const assignmentDate = new Date(assignment.dueDate);
+        return assignmentDate >= startDate && assignmentDate <= endDate;
       });
     }
-    return composedChartData;
+
+    // 과목 필터
+    if (subjectFilter !== '전체') {
+      filtered = filtered.filter(assignment => assignment.subject === subjectFilter);
+    }
+
+    // 검색어 필터
+    if (searchQuery.trim()) {
+      filtered = filtered.filter(assignment => 
+        assignment.name.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    return filtered;
   };
 
-  const filteredChartData = getFilteredChartData();
-  
-  // 디버깅: 필터링된 데이터가 비어있으면 원본 데이터 사용
-  const displayData = filteredChartData.length > 0 ? filteredChartData : composedChartData;
+  const filteredAssignments = getFilteredAssignments();
+
+  // 백엔드 API 호출 함수
+  const fetchChartData = async () => {
+    if (!onDataRequest || !startDate || !endDate) return;
+    
+    setIsLoading(true);
+    try {
+      const params = {
+        classId: selectedClass,
+        startDate: format(startDate, 'yyyy-MM-dd'),
+        endDate: format(endDate, 'yyyy-MM-dd'),
+        assignmentIds: selectedAssignments.length > 0 ? selectedAssignments : undefined,
+      };
+      
+      const data = await onDataRequest(params);
+      // 백엔드에서 받은 데이터로 차트 업데이트
+      console.log('Received chart data:', data);
+    } catch (error) {
+      console.error('Failed to fetch chart data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 설정 적용 핸들러
+  const handleSettingsApply = () => {
+    setShowSettingsModal(false);
+    fetchChartData();
+  };
+
+  // 과제 선택 핸들러
+  const handleAssignmentToggle = (assignmentId: string) => {
+    setSelectedAssignments(prev => {
+      if (prev.includes(assignmentId)) {
+        return prev.filter(id => id !== assignmentId);
+      } else if (prev.length < 10) {
+        return [...prev, assignmentId];
+      }
+      return prev;
+    });
+  };
+
+  const handleAssignmentRemove = (assignmentId: string) => {
+    setSelectedAssignments(prev => prev.filter(id => id !== assignmentId));
+  };
+
+  // 날짜 선택 핸들러 (선택 후 캘린더 자동 닫힘)
+  const handleStartDateSelect = (date: Date | undefined) => {
+    setStartDate(date);
+    setStartDatePopoverOpen(false);
+  };
+
+  const handleEndDateSelect = (date: Date | undefined) => {
+    setEndDate(date);
+    setEndDatePopoverOpen(false);
+  };
+
+  // 차트 데이터 생성 함수
+  const getFilteredChartData = () => {
+    if (selectedAssignments.length > 0) {
+      // 과제별: 선택된 과제들의 데이터
+      return selectedAssignments.map((assignmentId, index) => {
+        const assignment = allAssignments.find(a => a.id === assignmentId);
+        return {
+          name: assignment?.name || `과제${index + 1}`,
+          클래스평균: Math.floor(Math.random() * 20) + 80,
+          내점수: Math.floor(Math.random() * 20) + 75,
+        };
+      });
+    } else {
+      // 선택된 과제가 없으면 가장 최근 10개 과제를 자동으로 표시
+      const recentAssignments = [...allAssignments]
+        .sort((a, b) => new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime())
+        .slice(0, 10);
+      
+      return recentAssignments.map((assignment) => {
+        return {
+          name: assignment.name,
+          클래스평균: Math.floor(Math.random() * 20) + 80,
+          내점수: Math.floor(Math.random() * 20) + 75,
+        };
+      });
+    }
+  };
+
+  const displayChartData = getFilteredChartData();
   return (
     <Card className="flex-1 shadow-sm px-6">
       <CardHeader className="p-0">
-        <h3 className="text-xl font-bold text-gray-900">과제별 내 점수</h3>
-      </CardHeader>
-      <div className="p-0">
-        <div className="flex items-center gap-4 flex-wrap">
-          {/* 1. 클래스 드롭다운 */}
-          <Select value={selectedClass} onValueChange={setSelectedClass}>
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder="클래스를 선택하세요" />
-            </SelectTrigger>
-            <SelectContent>
-              {classes.map((cls) => (
-                <SelectItem key={cls.id} value={cls.id}>
-                  {cls.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          {/* 2. 기간별/과제별 드롭다운 */}
-          <Select value={chartType} onValueChange={(value: 'period' | 'assignment') => setChartType(value)}>
-            <SelectTrigger className="w-32">
-              <SelectValue placeholder="분석 방식" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="period">기간별</SelectItem>
-              <SelectItem value="assignment">과제별</SelectItem>
-            </SelectContent>
-          </Select>
-
-          {/* 3. 기간별 선택 시 기간 설정 */}
-          {chartType === 'period' && (
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setShowPeriodModal(true)}
-                className="flex items-center gap-2"
-              >
-                <Settings className="h-4 w-4" />
-                기간 설정
-              </Button>
-              {customStartYear && customStartMonth && customEndYear && customEndMonth && (
-                <div className="text-sm text-gray-600">
-                  {customStartYear}년 {customStartMonth}월 ~ {customEndYear}년 {customEndMonth}월
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* 4. 과제별 선택 시 과제 선택 버튼 */}
-          {chartType === 'assignment' && (
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                onClick={onOpenAssignmentModal}
-                className="flex items-center gap-2"
-              >
-                <FileText className="h-4 w-4" />
-                과제 선택 ({selectedAssignments.length}/5)
-              </Button>
-            </div>
-          )}
-        </div>
-
-        {/* 선택된 과제들 표시 (과제별 선택 시) */}
-        {chartType === 'assignment' && selectedAssignments.length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-2">
-            {selectedAssignments.map((assignmentId) => {
-              const assignment = assignments.find(a => a.id === assignmentId);
-              return assignment ? (
-                <Badge key={assignmentId} variant="secondary" className="flex items-center gap-1">
-                  {assignment.name}
-                  <button
-                    onClick={() => onAssignmentRemove(assignmentId)}
-                    className="ml-1 text-gray-500 hover:text-gray-700"
-                  >
-                    ×
-                  </button>
-                </Badge>
-              ) : null;
-            })}
+        <div className="flex items-center justify-between">
+          <h3 className="text-xl font-bold text-gray-900">과제별 내 점수</h3>
+          <div className="flex items-center gap-3">
+            {/* 클래스 선택 */}
+            <Select value={selectedClass} onValueChange={setSelectedClass}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="클래스를 선택하세요" />
+              </SelectTrigger>
+              <SelectContent>
+                {classes.map((cls) => (
+                  <SelectItem key={cls.id} value={cls.id}>
+                    {cls.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
+            {/* 설정 아이콘 */}
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setShowSettingsModal(true)}
+              className="h-9 w-9"
+            >
+              <VscSettings className="h-4 w-4" />
+            </Button>
           </div>
-        )}
-      </div>
+        </div>
+      </CardHeader>
+      
+      {/* 선택된 과제들 표시 */}
+      {selectedAssignments.length > 0 && (
+        <div className="flex flex-wrap gap-2 mt-2 p-0">
+          {selectedAssignments.map((assignmentId) => {
+            const assignment = allAssignments.find(a => a.id === assignmentId);
+            return assignment ? (
+              <div 
+                key={assignmentId} 
+                className="flex items-center gap-1 px-3 py-1 rounded-full bg-[#E6F3FF] text-[#0085FF] text-sm font-medium"
+              >
+                {assignment.name}
+                <button
+                  onClick={() => handleAssignmentRemove(assignmentId)}
+                  className="ml-1 text-[#0085FF] hover:text-[#0066CC] font-bold"
+                >
+                  ×
+                </button>
+              </div>
+            ) : null;
+          })}
+        </div>
+      )}
+      
       <CardContent className="p-0">
         <div className="h-96">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart
-              width={500}
-              height={300}
-              data={displayData}
+        <LineChart
+          width={500}
+          height={300}
+          data={displayChartData}
               margin={{
                 top: 5,
                 right: 30,
@@ -242,167 +283,188 @@ const ClassAverage: React.FC<ClassAverageProps> = ({
         </div>
       </CardContent>
 
-      {/* 기간 설정 모달 */}
-      <Dialog open={showPeriodModal} onOpenChange={setShowPeriodModal}>
-        <DialogContent className="sm:max-w-md">
+      {/* 통합 설정 모달 */}
+      <Dialog open={showSettingsModal} onOpenChange={setShowSettingsModal}>
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-blue-600" />
-              차트 기간 설정
+              차트 설정
             </DialogTitle>
           </DialogHeader>
           
-          <div className="space-y-6">
-            {/* 커스텀 기간 */}
+          <div className="space-y-4">
+            {/* 안내 사항 */}
+            <div className="p-2 bg-gray-50 rounded-lg">
+              <ul className="text-xs text-gray-600 space-y-0.5">
+                <li>• 기간 설정 시 해당 기간 내의 과제만 표시됩니다</li>
+                <li>• 최대 10개의 과제까지 선택 가능합니다</li>
+              </ul>
+            </div>
+            
+            {/* 기간 설정 */}
             <div>
-              <label className="text-sm font-medium text-gray-700 mb-3 block">기간 선택</label>
-              <div className="space-y-4">
-                {/* 시작 기간 */}
-                <div>
-                  <label className="text-xs text-gray-600 mb-2 block">시작</label>
-                  <div className="flex gap-2">
-                    <Select value={customStartYear} onValueChange={setCustomStartYear}>
-                      <SelectTrigger className="flex-1">
-                        <SelectValue placeholder="년도" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {generateYearOptions().map(year => (
-                          <SelectItem key={year} value={year}>{year}년</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select value={customStartMonth} onValueChange={setCustomStartMonth}>
-                      <SelectTrigger className="flex-1">
-                        <SelectValue placeholder="월" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {generateMonthOptions().map(month => (
-                          <SelectItem key={month} value={month}>{month}월</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+              <label className="text-base font-semibold text-gray-800 mb-3 block">기간 설정</label>
+              <div className="flex items-center gap-2">
+                {/* 시작 날짜 박스 */}
+                <div className="flex-1">
+                  <Popover open={startDatePopoverOpen} onOpenChange={setStartDatePopoverOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="w-full flex items-center justify-start gap-2 h-10"
+                      >
+                        <CalendarIcon className="h-4 w-4 text-gray-500" />
+                        <span className="text-sm">
+                          {startDate ? format(startDate, 'yyyy.MM.dd', { locale: ko }) : '시작 날짜'}
+                        </span>
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={startDate}
+                        onSelect={handleStartDateSelect}
+                        initialFocus
+                        locale={ko}
+                        captionLayout="dropdown"
+                        fromYear={2020}
+                        toYear={new Date().getFullYear()}
+                        className="rounded-md border shadow-sm"
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
 
-                {/* 종료 기간 */}
-                <div>
-                  <label className="text-xs text-gray-600 mb-2 block">종료</label>
-                  <div className="flex gap-2">
-                    <Select value={customEndYear} onValueChange={setCustomEndYear}>
-                      <SelectTrigger className="flex-1">
-                        <SelectValue placeholder="년도" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {generateYearOptions().map(year => (
-                          <SelectItem key={year} value={year}>{year}년</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select value={customEndMonth} onValueChange={setCustomEndMonth}>
-                      <SelectTrigger className="flex-1">
-                        <SelectValue placeholder="월" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {generateMonthOptions().map(month => (
-                          <SelectItem key={month} value={month}>{month}월</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                {/* 구분선 */}
+                <span className="text-gray-400">-</span>
+
+                {/* 종료 날짜 박스 */}
+                <div className="flex-1">
+                  <Popover open={endDatePopoverOpen} onOpenChange={setEndDatePopoverOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="w-full flex items-center justify-start gap-2 h-10"
+                      >
+                        <CalendarIcon className="h-4 w-4 text-gray-500" />
+                        <span className="text-sm">
+                          {endDate ? format(endDate, 'yyyy.MM.dd', { locale: ko }) : '종료 날짜'}
+                        </span>
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={endDate}
+                        onSelect={handleEndDateSelect}
+                        initialFocus
+                        locale={ko}
+                        captionLayout="dropdown"
+                        fromYear={2020}
+                        toYear={new Date().getFullYear()}
+                        className="rounded-md border shadow-sm"
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
               </div>
             </div>
 
-            {/* 안내 사항 */}
-            <div className="p-3 bg-gray-50 rounded-lg">
-              <ul className="text-xs text-gray-600 space-y-1">
-                <li>• 최대 10개월까지 선택 가능합니다</li>
-                <li>• 오늘 이후 날짜는 선택할 수 없습니다</li>
-                <li>• 기간을 선택하면 해당 기간의 데이터가 차트에 표시됩니다</li>
-                <li>• 시작일과 종료일을 모두 선택해야 적용됩니다</li>
-              </ul>
-            </div>
-          </div>
+            {/* 과제 선택 */}
+            <div>
+              <label className="text-base font-semibold text-gray-800 mb-3 block">
+                과제 선택 (최대 10개) 
+                {filteredAssignments.length !== allAssignments.length && (
+                  <span className="text-xs text-blue-600 ml-2">
+                    ({filteredAssignments.length}개 과제 중)
+                  </span>
+                )}
+              </label>
 
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowPeriodModal(false)}
-            >
-              취소
-            </Button>
-            <Button
-              onClick={onPeriodApply}
-              className="bg-blue-600 hover:bg-blue-700"
-              disabled={!customStartYear || !customStartMonth || !customEndYear || !customEndMonth}
-            >
-              적용
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+              {/* 필터 및 검색 */}
+              <div className="flex gap-2 mb-3">
+                <Select value={subjectFilter} onValueChange={setSubjectFilter}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue placeholder="과목" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="전체">전체</SelectItem>
+                    <SelectItem value="국어">국어</SelectItem>
+                    <SelectItem value="영어">영어</SelectItem>
+                    <SelectItem value="수학">수학</SelectItem>
+                  </SelectContent>
+                </Select>
+                
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    type="text"
+                    placeholder="과제명 검색"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+              </div>
 
-      {/* 과제 선택 모달 */}
-      <Dialog open={showAssignmentModal} onOpenChange={setShowAssignmentModal}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5 text-blue-600" />
-              과제 선택 (최대 5개)
-            </DialogTitle>
-            <p className="text-sm text-gray-600 mt-2">
-              차트에 표시할 과제를 선택하세요. 최대 5개까지 선택 가능합니다.
-            </p>
-          </DialogHeader>
-          
-          <div className="space-y-3">
-            <div className="max-h-80 overflow-y-auto space-y-2">
-              {assignments.map((assignment) => (
-                <div 
-                  key={assignment.id} 
-                  className={`p-4 border rounded-lg cursor-pointer transition-all hover:shadow-sm ${
-                    tempSelectedAssignments.includes(assignment.id) 
-                      ? 'border-blue-500 bg-blue-50' 
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                  onClick={() => onAssignmentToggle(assignment.id)}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3">
-                        <Checkbox
-                          checked={tempSelectedAssignments.includes(assignment.id)}
-                          disabled={!tempSelectedAssignments.includes(assignment.id) && tempSelectedAssignments.length >= 5}
-                        />
-                        <div>
-                          <h4 className="font-medium text-gray-900">{assignment.name}</h4>
-                          <p className="text-sm text-gray-500">
-                            수학 • 마감: 2024-03-{assignment.id}5
-                          </p>
+              <div className="max-h-48 overflow-y-auto space-y-2">
+                {filteredAssignments.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <p>선택한 기간에 해당하는 과제가 없습니다.</p>
+                    <p className="text-xs mt-1">다른 기간을 선택해보세요.</p>
+                  </div>
+                ) : (
+                  filteredAssignments.map((assignment) => (
+                    <div 
+                      key={assignment.id} 
+                      className={`p-2 border rounded-md cursor-pointer transition-all hover:shadow-sm ${
+                        selectedAssignments.includes(assignment.id) 
+                          ? 'border-blue-500 bg-blue-50' 
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                      onClick={() => handleAssignmentToggle(assignment.id)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2">
+                            <Checkbox
+                              checked={selectedAssignments.includes(assignment.id)}
+                              disabled={!selectedAssignments.includes(assignment.id) && selectedAssignments.length >= 5}
+                            />
+                            <div>
+                              <h4 className="text-sm font-medium text-gray-900">{assignment.name}</h4>
+                              <p className="text-xs text-gray-500">
+                                {assignment.subject} • 마감: {assignment.dueDate}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {assignment.submittedCount}/{assignment.totalCount}명
                         </div>
                       </div>
                     </div>
-                    <div className="text-sm text-gray-500">
-                      {Math.floor(Math.random() * 15) + 15}/30명 제출
-                    </div>
-                  </div>
-                </div>
-              ))}
+                  ))
+                )}
+              </div>
             </div>
+
+            
           </div>
 
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => setShowAssignmentModal(false)}
+              onClick={() => setShowSettingsModal(false)}
             >
               취소
             </Button>
             <Button
-              onClick={onAssignmentModalApply}
+              onClick={handleSettingsApply}
               className="bg-blue-600 hover:bg-blue-700"
+              disabled={isLoading || !startDate || !endDate}
             >
-              적용
+              {isLoading ? '적용 중...' : '적용'}
             </Button>
           </DialogFooter>
         </DialogContent>
