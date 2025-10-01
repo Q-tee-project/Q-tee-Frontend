@@ -19,6 +19,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { LaTeXRenderer } from '@/components/LaTeXRenderer';
+import { TikZRenderer } from '@/components/TikZRenderer';
 import { autoConvertToLatex } from '@/utils/mathLatexConverter';
 
 interface MathProblemEditDialogProps {
@@ -249,7 +250,7 @@ export const MathProblemEditDialog: React.FC<MathProblemEditDialogProps> = ({
                           <LaTeXRenderer
                             content={
                               choice
-                                ? autoConvertToLatex(choice.replace(/^[A-E][\.\)]\s*/, ''))
+                                ? autoConvertToLatex(choice.replace(/^[A-E][\.\):\s]+/, ''))
                                 : `${String.fromCharCode(65 + index)}번 선택지`
                             }
                           />

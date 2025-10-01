@@ -5,6 +5,7 @@ import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { LaTeXRenderer } from '@/components/LaTeXRenderer';
+import { TikZRenderer } from '@/components/TikZRenderer';
 import { HandwritingCanvas } from '@/components/HandwritingCanvas';
 import { FaArrowLeft } from "react-icons/fa6";
 import { BookOpen } from 'lucide-react';
@@ -114,8 +115,17 @@ export function TestInterface({
 
                 {/* 문제 내용 */}
                 <div className="text-base leading-relaxed text-gray-900 mb-6">
-                  <LaTeXRenderer content={currentProblem.question} />
+                  <LaTeXRenderer
+                    content={currentProblem.question.replace(/\\begin\{tikzpicture\}[\s\S]*?\\end\{tikzpicture\}/g, '').trim()}
+                  />
                 </div>
+
+                {/* TikZ 그래프 (있는 경우) */}
+                {currentProblem.tikz_code && (
+                  <div className="mb-6">
+                    <TikZRenderer tikzCode={currentProblem.tikz_code} />
+                  </div>
+                )}
 
                 {/* 답안 입력 영역 */}
                 <div className="space-y-4">
@@ -126,7 +136,7 @@ export function TestInterface({
                       {currentProblem.choices.map((choice, index) => {
                         const optionLabel = String.fromCharCode(65 + index);
                         const isSelected = answers[currentProblem.id] === optionLabel;
-                        const displayChoice = choice.replace(/^[A-E][\.\)]\s*/, '');
+                        const displayChoice = choice.replace(/^[A-E][\.\):\s]+/, '');
                         return (
                           <label
                             key={index}

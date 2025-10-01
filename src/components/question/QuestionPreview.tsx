@@ -1,6 +1,7 @@
 import React from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { LaTeXRenderer } from '@/components/LaTeXRenderer';
+import { TikZRenderer } from '@/components/TikZRenderer';
 import { PreviewQuestion } from '@/hooks/useProblemGeneration';
 
 interface QuestionPreviewProps {
@@ -177,11 +178,16 @@ export const QuestionPreview: React.FC<QuestionPreviewProps> = ({
                   </div>
                 </div>
                 <div className="text-base leading-relaxed text-gray-900 mb-4">
-                  <LaTeXRenderer content={q.question || q.title} />
+                  <LaTeXRenderer content={(q.question || q.title).replace(/\\begin\{tikzpicture\}[\s\S]*?\\end\{tikzpicture\}/g, '').trim()} />
                 </div>
+                {(q as any).tikz_code && (
+                  <div className="mb-4">
+                    <TikZRenderer tikzCode={(q as any).tikz_code} />
+                  </div>
+                )}
                 {(q.choices || q.options) &&
                   (q.choices || q.options)!.map((opt, idx) => {
-                    const displayChoice = opt.replace(/^[A-E][\.\)]\s*/, '');
+                    const displayChoice = opt.replace(/^[A-E][\.\):\s]+/, '');
                     return (
                       <div key={idx} className="flex items-start gap-3 mb-3">
                         <span
