@@ -210,10 +210,10 @@ export function AssignmentCreateModal({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {worksheets.map((worksheet) => {
+                    {worksheets.map((worksheet, index) => {
                       const worksheetId = activeSubject === 'english' ? (worksheet as EnglishWorksheet).worksheet_id : (worksheet as any).id;
                       return (
-                      <TableRow key={worksheetId}>
+                      <TableRow key={`${activeSubject}-${worksheetId}-${index}`}>
                         <TableCell>
                           <Checkbox
                             checked={selectedWorksheetIds.includes(worksheetId)}
