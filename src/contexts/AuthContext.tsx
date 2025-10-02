@@ -39,7 +39,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   // 초기 로드시 로컬 스토리지에서 인증 정보 복원
   useEffect(() => {
     refreshAuth();
-    
+
     // 토큰 만료 시 자동 로그아웃 콜백 설정
     setTokenExpiredCallback(() => {
       console.log('토큰이 만료되어 자동 로그아웃됩니다.');
@@ -117,9 +117,5 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     isLoading,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

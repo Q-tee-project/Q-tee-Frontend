@@ -151,6 +151,7 @@ export default function BankPage() {
                 onOpenDistributeDialog={() => setIsDistributeDialogOpen(true)}
                 onOpenEditDialog={() => setIsEditDialogOpen(true)}
                 onEditProblem={handleEditProblem}
+                onRegenerateProblem={currentBank.handleRegenerateProblem}
                 onStartEditTitle={() => {
                   const currentTitle =
                     selectedSubject === '영어'

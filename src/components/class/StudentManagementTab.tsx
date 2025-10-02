@@ -99,9 +99,9 @@ export function StudentManagementTab({ classId, refreshTrigger }: StudentManagem
               검색 초기화
             </button>
           )}
-          <button 
+          <button
             onClick={() => router.push(`/class/${classId}/register`)}
-            className="bg-[#0072CE] hover:opacity-90 ml-4 flex items-center gap-2 text-white px-4 py-2 rounded-lg transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-[#ffffff] text-[#000000] border border-[#000000] rounded-md hover:bg-[#f0f0f0] transition-colors"
           >
             학생 등록
           </button>

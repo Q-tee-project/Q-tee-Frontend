@@ -1,6 +1,10 @@
-import { Worksheet, Problem, Assignment, AssignmentDeployRequest, AssignmentDeploymentResponse } from "@/services/koreanService"; // Re-using interfaces from koreanService
+import { Worksheet, MathProblem } from "@/types/math";
+import { Assignment, AssignmentDeployRequest, AssignmentDeploymentResponse } from "@/services/koreanService";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_MATH_API_URL || "http://localhost:8001"; // Adjust as per your backend setup
+
+// Type alias for compatibility
+type Problem = MathProblem;
 
 const getToken = (): string | null => {
   if (typeof window !== 'undefined') {
@@ -106,7 +110,11 @@ export const mathService = {
         title: `수학 워크시트 ${worksheetId}`,
         school_level: '중학교',
         grade: 1,
+        semester: 1,
+        unit_name: '대수',
+        chapter_name: '일차방정식',
         problem_count: 0,
+        status: 'completed',
         created_at: new Date().toISOString()
       };
       return { worksheet: mockWorksheet, problems: [] };
@@ -737,5 +745,67 @@ export const mathService = {
 
     const data = await response.json();
     return data;
+  },
+
+  // PDF 다운로드 - 시험지
+  downloadExamPDF: async (worksheetId: number): Promise<void> => {
+    const token = getToken();
+    if (!token) {
+      throw new Error("Authentication token not found. Please log in.");
+    }
+
+    const response = await fetch(`${API_BASE_URL}/api/export/worksheets/${worksheetId}/exam.pdf`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ detail: "PDF 생성 실패" }));
+      throw new Error(errorData.detail || "시험지 PDF 생성에 실패했습니다.");
+    }
+
+    // Blob으로 변환하여 다운로드
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `worksheet_${worksheetId}_exam.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  },
+
+  // PDF 다운로드 - 해설지
+  downloadSolutionPDF: async (worksheetId: number): Promise<void> => {
+    const token = getToken();
+    if (!token) {
+      throw new Error("Authentication token not found. Please log in.");
+    }
+
+    const response = await fetch(`${API_BASE_URL}/api/export/worksheets/${worksheetId}/solution.pdf`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ detail: "PDF 생성 실패" }));
+      throw new Error(errorData.detail || "해설지 PDF 생성에 실패했습니다.");
+    }
+
+    // Blob으로 변환하여 다운로드
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `worksheet_${worksheetId}_solution.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
   },
 };

@@ -1,10 +1,7 @@
 import { useState } from 'react';
-import { Worksheet, Problem } from '@/services/koreanService'; // Import Worksheet and Problem from koreanService
 
-export interface BankState<
-  TWorksheet extends Worksheet = Worksheet,
-  TProblem extends Problem = Problem,
-> {
+// Generic types without constraints - each service will provide its own types
+export interface BankState<TWorksheet = any, TProblem = any> {
   worksheets: TWorksheet[];
   selectedWorksheet: TWorksheet | null;
   worksheetProblems: TProblem[];
@@ -13,10 +10,7 @@ export interface BankState<
   showAnswerSheet: boolean;
 }
 
-export const useBankState = <
-  TWorksheet extends Worksheet = Worksheet,
-  TProblem extends Problem = Problem,
->() => {
+export const useBankState = <TWorksheet = any, TProblem = any>() => {
   const [state, setState] = useState<BankState<TWorksheet, TProblem>>({
     worksheets: [],
     selectedWorksheet: null,

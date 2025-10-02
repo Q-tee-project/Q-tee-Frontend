@@ -111,6 +111,78 @@ export const useKoreanBank = () => {
     }
   };
 
+  const handleRegenerateProblem = async (problem: Problem, feedback?: string) => {
+    if (!selectedWorksheet) return;
+
+    // feedback이 제공되지 않으면 함수 종료 (모달에서 호출될 것으로 예상)
+    if (feedback === undefined) {
+      return { problem, worksheetId: selectedWorksheet.id };
+    }
+
+    if (!feedback.trim()) {
+      alert('수정 요청 사항을 입력해주세요.');
+      return;
+    }
+
+    try {
+      const regenerationData = {
+        problem_id: problem.id,
+        requirements: feedback,
+        current_problem: {
+          question: problem.question,
+          difficulty: problem.difficulty,
+          problem_type: problem.problem_type,
+        }
+      };
+
+      console.log('🚀 국어 문제 재생성 요청:', regenerationData);
+
+      // 재생성 전 원본 문제 저장 (변경 감지용)
+      const originalQuestion = problem.question;
+
+      await koreanService.regenerateProblemAsync(regenerationData);
+
+      alert('문제 재생성 요청이 전송되었습니다.\n백그라운드에서 처리되며, 완료되면 알림이 표시됩니다.');
+
+      // 재생성 완료 후 문제 목록 새로고침 (폴링 방식 - 백그라운드)
+      let attempts = 0;
+      const maxAttempts = 20; // 최대 1분 대기
+      const pollInterval = 3000;
+
+      const checkCompletion = setInterval(async () => {
+        attempts++;
+
+        try {
+          const worksheetDetail = await koreanService.getKoreanWorksheetProblems(selectedWorksheet.id);
+          const updatedProblem = worksheetDetail.problems?.find((p: Problem) => p.id === problem.id);
+
+          // 문제가 실제로 변경되었는지 확인
+          if (updatedProblem && updatedProblem.question !== originalQuestion) {
+            console.log('✅ 국어 문제 재생성 완료!');
+            updateState({ worksheetProblems: worksheetDetail.problems || [] });
+            clearInterval(checkCompletion);
+            alert('✅ 문제 재생성이 완료되었습니다!');
+            return;
+          }
+
+          // 중간 업데이트
+          updateState({ worksheetProblems: worksheetDetail.problems || [] });
+
+          if (attempts >= maxAttempts) {
+            clearInterval(checkCompletion);
+            console.warn('⏰ 재생성 완료 대기 시간 초과');
+          }
+        } catch (error) {
+          console.error('문제 목록 갱신 실패:', error);
+        }
+      }, pollInterval);
+
+    } catch (error: any) {
+      console.error('국어 문제 재생성 실패:', error);
+      alert(`재생성 실패: ${error.message}`);
+    }
+  };
+
   return {
     worksheets,
     selectedWorksheet,
@@ -124,6 +196,7 @@ export const useKoreanBank = () => {
     handleWorksheetSelect,
     handleDeleteWorksheet,
     handleBatchDeleteWorksheets,
+    handleRegenerateProblem,
     clearError,
   };
 };
