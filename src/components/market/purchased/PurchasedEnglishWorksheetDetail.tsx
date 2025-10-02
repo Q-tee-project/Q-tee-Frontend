@@ -4,6 +4,7 @@ import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import { EnglishContentRenderer } from '@/components/EnglishContentRenderer';
 
 interface PurchasedWorksheet {
   purchase_id: number;
@@ -150,9 +151,10 @@ export const PurchasedEnglishWorksheetDetail: React.FC<PurchasedEnglishWorksheet
                       <div className="mb-6">
                         <h3 className="font-medium text-gray-800 mb-3">지문</h3>
                         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                          <div className="text-gray-700 leading-relaxed whitespace-pre-line font-mono">
-                            {problem.passage || problem.passage_content}
-                          </div>
+                          <EnglishContentRenderer
+                            content={problem.passage || problem.passage_content || ''}
+                            className="text-gray-700 leading-relaxed"
+                          />
                         </div>
                       </div>
                     )}
@@ -161,9 +163,10 @@ export const PurchasedEnglishWorksheetDetail: React.FC<PurchasedEnglishWorksheet
                     <div className="mb-4">
                       <h3 className="font-medium text-gray-800 mb-3">문제</h3>
                       <div className="bg-gray-50 rounded-lg p-4">
-                        <div className="text-gray-700 leading-relaxed whitespace-pre-line">
-                          {problem.question}
-                        </div>
+                        <EnglishContentRenderer
+                          content={problem.question}
+                          className="text-gray-700 leading-relaxed"
+                        />
                         {/* 예문 표시 */}
                         {problem.example_content && (
                           <div className="mt-4 pt-4 border-t border-gray-200">
@@ -171,9 +174,10 @@ export const PurchasedEnglishWorksheetDetail: React.FC<PurchasedEnglishWorksheet
                               <span className="text-sm font-medium text-blue-600">📝 예문</span>
                             </div>
                             <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
-                              <div className="text-gray-800 font-mono leading-relaxed whitespace-pre-line">
-                                {problem.example_content}
-                              </div>
+                              <EnglishContentRenderer
+                                content={problem.example_content}
+                                className="text-gray-800 leading-relaxed"
+                              />
                             </div>
                           </div>
                         )}
@@ -203,7 +207,7 @@ export const PurchasedEnglishWorksheetDetail: React.FC<PurchasedEnglishWorksheet
                                   : ''
                                 }
                               `}>
-                                {choice}
+                                <EnglishContentRenderer content={choice} />
                               </div>
                             </div>
                           ))}
@@ -228,9 +232,10 @@ export const PurchasedEnglishWorksheetDetail: React.FC<PurchasedEnglishWorksheet
                       <div className="mb-4">
                         <h4 className="font-medium text-gray-800 mb-2">해설</h4>
                         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                          <div className="text-blue-800 leading-relaxed whitespace-pre-line">
-                            {problem.explanation}
-                          </div>
+                          <EnglishContentRenderer
+                            content={problem.explanation}
+                            className="text-blue-800 leading-relaxed"
+                          />
                         </div>
                       </div>
                     )}
@@ -240,9 +245,10 @@ export const PurchasedEnglishWorksheetDetail: React.FC<PurchasedEnglishWorksheet
                       <div>
                         <h4 className="font-medium text-gray-800 mb-2">학습 포인트</h4>
                         <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                          <div className="text-green-800 leading-relaxed whitespace-pre-line">
-                            {problem.learning_point}
-                          </div>
+                          <EnglishContentRenderer
+                            content={problem.learning_point}
+                            className="text-green-800 leading-relaxed"
+                          />
                         </div>
                       </div>
                     )}

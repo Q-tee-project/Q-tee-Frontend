@@ -61,7 +61,7 @@ export const useEnglishBank = () => {
       console.log('전체 응답:', worksheetDetail);
 
       // API 응답 구조가 worksheet_data 안에 중첩되어 있음
-      const worksheetData = worksheetDetail;
+      const worksheetData = worksheetDetail.worksheet_data;
       const questions = worksheetData?.questions || [];
       const passages = worksheetData?.passages || [];
 
