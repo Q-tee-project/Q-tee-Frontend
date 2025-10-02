@@ -264,8 +264,9 @@ export default function CreatePage() {
         englishGeneration.worksheetData as EnglishWorksheetData,
         () => {
           currentGeneration.updateState({
-            errorMessage: '영어 문제지가 성공적으로 저장되었습니다! ✅',
+            errorMessage: null,
           });
+          alert('영어 문제지가 성공적으로 저장되었습니다! ✅');
         },
         (error) => {
           currentGeneration.updateState({ errorMessage: error });
