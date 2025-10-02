@@ -81,12 +81,6 @@ export function AssignmentList({
           assignment.question_type !== undefined || assignment.korean_type !== undefined;
         const isEnglish = assignment.problem_type !== undefined && !isKorean;
 
-        console.log(
-          `🔍 Loading results for assignment ${assignment.id} (${
-            isKorean ? 'Korean' : isEnglish ? 'English' : 'Math'
-          })`,
-        );
-
         if (isKorean) {
           assignmentResultData = await koreanService.getAssignmentResults(assignment.id);
         } else if (isEnglish) {
@@ -95,8 +89,6 @@ export function AssignmentList({
         } else {
           assignmentResultData = await mathService.getAssignmentResults(assignment.id);
         }
-
-        console.log(`📊 Raw API response for assignment ${assignment.id}:`, assignmentResultData);
 
         // API 응답이 배열인지 확인하고 안전하게 처리
         if (Array.isArray(assignmentResultData)) {
@@ -391,7 +383,9 @@ export function AssignmentList({
                                         onClick={async (e) => {
                                           e.stopPropagation();
                                           try {
-                                            const result = await mathService.startAIGrading(assignment.id);
+                                            const result = await mathService.startAIGrading(
+                                              assignment.id,
+                                            );
                                             if (result.task_id) {
                                               alert(
                                                 'OCR + AI 채점이 시작되었습니다. 완료 후 결과를 확인하세요.',
@@ -401,15 +395,16 @@ export function AssignmentList({
                                               }
                                             } else {
                                               alert(
-                                                result.message ||
-                                                  'OCR 채점을 시작할 수 없습니다.',
+                                                result.message || 'OCR 채점을 시작할 수 없습니다.',
                                               );
                                             }
                                           } catch (error) {
                                             console.error('OCR grading error:', error);
                                             alert(
                                               `채점 처리 실패: ${
-                                                error instanceof Error ? error.message : '알 수 없는 오류'
+                                                error instanceof Error
+                                                  ? error.message
+                                                  : '알 수 없는 오류'
                                               }`,
                                             );
                                           }
