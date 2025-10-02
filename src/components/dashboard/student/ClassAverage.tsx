@@ -12,6 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -30,6 +31,8 @@ interface Assignment {
   dueDate: string;
   submittedCount: number;
   totalCount: number;
+  myScore?: number;
+  classAverageScore?: number;
 }
 
 interface ClassAverageProps {
@@ -37,7 +40,6 @@ interface ClassAverageProps {
   setSelectedClass: (value: string) => void;
   chartData: any[];
   classes: Array<{ id: string; name: string }>;
-  // 백엔드에서 받아올 데이터들
   assignments?: Assignment[];
   onDataRequest?: (params: {
     classId: string;
@@ -68,32 +70,17 @@ const ClassAverage: React.FC<ClassAverageProps> = ({
   // 백엔드 연동을 위한 로딩 상태
   const [isLoading, setIsLoading] = React.useState(false);
 
-  // 백엔드에서 받아온 실제 데이터 또는 임시 데이터
-  const allAssignments = assignments.length > 0 ? assignments : [
-    { id: '1', name: '1차 중간고사', subject: '수학', dueDate: '2025-05-25', submittedCount: 25, totalCount: 30 },
-    { id: '2', name: '2차 중간고사', subject: '수학', dueDate: '2025-05-20', submittedCount: 28, totalCount: 30 },
-    { id: '3', name: '기말고사', subject: '수학', dueDate: '2025-05-15', submittedCount: 30, totalCount: 30 },
-    { id: '4', name: '독서 감상문', subject: '국어', dueDate: '2025-05-10', submittedCount: 27, totalCount: 30 },
-    { id: '5', name: '문법 퀴즈', subject: '국어', dueDate: '2025-05-05', submittedCount: 29, totalCount: 30 },
-    { id: '6', name: '영어 단어 시험', subject: '영어', dueDate: '2025-04-30', submittedCount: 26, totalCount: 30 },
-    { id: '7', name: '영작 과제', subject: '영어', dueDate: '2025-04-25', submittedCount: 24, totalCount: 30 },
-    { id: '8', name: '수학 문제집', subject: '수학', dueDate: '2025-04-20', submittedCount: 24, totalCount: 30 },
-    { id: '9', name: '수학 프로젝트', subject: '수학', dueDate: '2025-04-15', submittedCount: 27, totalCount: 30 },
-    { id: '10', name: '국어 작문', subject: '국어', dueDate: '2025-04-10', submittedCount: 23, totalCount: 30 },
-    { id: '11', name: '영어 듣기 평가', subject: '영어', dueDate: '2025-04-05', submittedCount: 29, totalCount: 30 },
-    { id: '12', name: '수학 단원평가', subject: '수학', dueDate: '2025-03-30', submittedCount: 26, totalCount: 30 },
-    { id: '13', name: '국어 시 암송', subject: '국어', dueDate: '2025-03-25', submittedCount: 28, totalCount: 30 },
-    { id: '14', name: '영어 발표', subject: '영어', dueDate: '2025-03-20', submittedCount: 25, totalCount: 30 },
-    { id: '15', name: '수학 응용 문제', subject: '수학', dueDate: '2025-03-15', submittedCount: 27, totalCount: 30 },
-  ];
+  // 부모로부터 받은 assignments prop을 유일한 데이터 소스로 사용
+  const allAssignments = assignments || [];
 
   // 기간, 과목, 검색어에 따른 과제 필터링 함수
   const getFilteredAssignments = () => {
     let filtered = allAssignments;
 
-    // 기간 필터
+    // 기간 필터 (날짜가 설정된 경우에만 적용)
     if (startDate && endDate) {
       filtered = filtered.filter(assignment => {
+        if (!assignment.dueDate) return false; // dueDate가 없는 경우 필터링 제외
         const assignmentDate = new Date(assignment.dueDate);
         return assignmentDate >= startDate && assignmentDate <= endDate;
       });
@@ -142,7 +129,6 @@ const ClassAverage: React.FC<ClassAverageProps> = ({
   // 설정 적용 핸들러
   const handleSettingsApply = () => {
     setShowSettingsModal(false);
-    fetchChartData();
   };
 
   // 과제 선택 핸들러
@@ -150,7 +136,7 @@ const ClassAverage: React.FC<ClassAverageProps> = ({
     setSelectedAssignments(prev => {
       if (prev.includes(assignmentId)) {
         return prev.filter(id => id !== assignmentId);
-      } else if (prev.length < 10) {
+      } else if (prev.length < 7) {
         return [...prev, assignmentId];
       }
       return prev;
@@ -180,21 +166,24 @@ const ClassAverage: React.FC<ClassAverageProps> = ({
         const assignment = allAssignments.find(a => a.id === assignmentId);
         return {
           name: assignment?.name || `과제${index + 1}`,
-          클래스평균: Math.floor(Math.random() * 20) + 80,
-          내점수: Math.floor(Math.random() * 20) + 75,
+          클래스평균: (assignment as any)?.classAverageScore || 0,
+          내점수: (assignment as any)?.myScore || 0,
         };
       });
     } else {
-      // 선택된 과제가 없으면 가장 최근 10개 과제를 자동으로 표시
+      // 선택된 과제가 없으면 가장 최근 7개 과제를 자동으로 표시
       const recentAssignments = [...allAssignments]
-        .sort((a, b) => new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime())
-        .slice(0, 10);
+        .sort((a, b) => {
+          if (!a.dueDate || !b.dueDate) return 0;
+          return new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime()
+        })
+        .slice(0, 7);
       
       return recentAssignments.map((assignment) => {
         return {
           name: assignment.name,
-          클래스평균: Math.floor(Math.random() * 20) + 80,
-          내점수: Math.floor(Math.random() * 20) + 75,
+          클래스평균: assignment.classAverageScore || 0,
+          내점수: assignment.myScore || 0,
         };
       });
     }
@@ -214,7 +203,7 @@ const ClassAverage: React.FC<ClassAverageProps> = ({
               </SelectTrigger>
               <SelectContent>
                 {classes.map((cls) => (
-                  <SelectItem key={cls.id} value={cls.id}>
+                  <SelectItem key={cls.id} value={cls.id.toString()}>
                     {cls.name}
                   </SelectItem>
                 ))}
@@ -233,29 +222,6 @@ const ClassAverage: React.FC<ClassAverageProps> = ({
           </div>
         </div>
       </CardHeader>
-      
-      {/* 선택된 과제들 표시 */}
-      {selectedAssignments.length > 0 && (
-        <div className="flex flex-wrap gap-2 mt-2 p-0">
-          {selectedAssignments.map((assignmentId) => {
-            const assignment = allAssignments.find(a => a.id === assignmentId);
-            return assignment ? (
-              <div 
-                key={assignmentId} 
-                className="flex items-center gap-1 px-3 py-1 rounded-full bg-[#E6F3FF] text-[#0085FF] text-sm font-medium"
-              >
-                {assignment.name}
-                <button
-                  onClick={() => handleAssignmentRemove(assignmentId)}
-                  className="ml-1 text-[#0085FF] hover:text-[#0066CC] font-bold"
-                >
-                  ×
-                </button>
-              </div>
-            ) : null;
-          })}
-        </div>
-      )}
       
       <CardContent className="p-0">
         <div className="h-[28rem]">
@@ -320,6 +286,9 @@ const ClassAverage: React.FC<ClassAverageProps> = ({
             <DialogTitle className="flex items-center gap-2">
               차트 설정
             </DialogTitle>
+            <DialogDescription className="sr-only">
+              기간, 과목, 과제명을 기준으로 차트에 표시할 데이터를 설정합니다.
+            </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4">
@@ -327,7 +296,7 @@ const ClassAverage: React.FC<ClassAverageProps> = ({
             <div className="p-2 bg-gray-50 rounded-lg">
               <ul className="text-xs text-gray-600 space-y-0.5">
                 <li>• 기간 설정 시 해당 기간 내의 과제만 표시됩니다</li>
-                <li>• 최대 10개의 과제까지 선택 가능합니다</li>
+                <li>• 최대 7개의 과제까지 선택 가능합니다</li>
               </ul>
             </div>
             
@@ -403,7 +372,7 @@ const ClassAverage: React.FC<ClassAverageProps> = ({
             {/* 과제 선택 */}
             <div>
               <label className="text-base font-semibold text-gray-800 mb-3 block">
-                과제 선택 (최대 10개) 
+                과제 선택 (최대 7개) 
                 {filteredAssignments.length !== allAssignments.length && (
                   <span className="text-xs text-blue-600 ml-2">
                     ({filteredAssignments.length}개 과제 중)
@@ -459,18 +428,13 @@ const ClassAverage: React.FC<ClassAverageProps> = ({
                           <div className="flex items-center space-x-2">
                             <Checkbox
                               checked={selectedAssignments.includes(assignment.id)}
-                              disabled={!selectedAssignments.includes(assignment.id) && selectedAssignments.length >= 5}
+                              disabled={!selectedAssignments.includes(assignment.id) && selectedAssignments.length >= 7}
                             />
                             <div>
                               <h4 className="text-sm font-medium text-gray-900">{assignment.name}</h4>
-                              <p className="text-xs text-gray-500">
-                                {assignment.subject} • 마감: {assignment.dueDate}
-                              </p>
+                              <p className="text-xs text-gray-500">{assignment.subject}</p>
                             </div>
                           </div>
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {assignment.submittedCount}/{assignment.totalCount}명
                         </div>
                       </div>
                     </div>
@@ -492,7 +456,7 @@ const ClassAverage: React.FC<ClassAverageProps> = ({
             <Button
               onClick={handleSettingsApply}
               className="bg-blue-600 hover:bg-blue-700"
-              disabled={isLoading || !startDate || !endDate}
+              disabled={isLoading}
             >
               {isLoading ? '적용 중...' : '적용'}
             </Button>

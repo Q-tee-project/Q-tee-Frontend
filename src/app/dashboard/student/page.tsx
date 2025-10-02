@@ -8,6 +8,7 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { mathService } from '@/services/mathService';
 import { koreanService } from '@/services/koreanService';
 import { EnglishService } from '@/services/englishService';
+import { studentClassService } from '@/services/authService';
 import ClassAverage from '@/components/dashboard/student/ClassAverage';
 import SubjectAverage from '@/components/dashboard/student/SubjectAverage';
 import PendingAssignmentsList from '@/components/dashboard/student/PendingAssignmentsList';
@@ -16,10 +17,12 @@ import GradedAssignmentsList from '@/components/dashboard/student/GradedAssignme
 const StudentDashboard = () => {
   const { userProfile } = useAuth();
   const router = useRouter();
-  const [selectedClassForAssignments, setSelectedClassForAssignments] = React.useState('1'); // 과제별용
-  const [selectedClassForSubjects, setSelectedClassForSubjects] = React.useState('1'); // 과목별용
+  const [selectedClassForAssignments, setSelectedClassForAssignments] = React.useState(''); // 과제별용
+  const [selectedClassForSubjects, setSelectedClassForSubjects] = React.useState(''); // 과목별용
   const [dashboardAssignments, setDashboardAssignments] = React.useState<any[]>([]);
   const [isLoadingAssignments, setIsLoadingAssignments] = React.useState(false);
+  const [classes, setClasses] = React.useState<any[]>([]);
+  const [isLoadingClasses, setIsLoadingClasses] = React.useState(true);
 
   // 컴포넌트 메모이제이션 (불필요한 리렌더 방지)
   const MemoClassAverage = React.useMemo(() => React.memo(ClassAverage), []);
@@ -33,14 +36,35 @@ const StudentDashboard = () => {
     setSelectedClassForSubjects(val);
   }, []);
 
-  // 임시 클래스 데이터 (참조 안정화)
-  const classes = React.useMemo(() => ([
-    { id: '1', name: '클래스 A' },
-    { id: '2', name: '클래스 B' },
-    { id: '3', name: '클래스 C' },
-    { id: '4', name: '클래스 D' },
-    { id: '5', name: '클래스 E' },
-  ]), []);
+  // 클래스 목록 로딩
+  React.useEffect(() => {
+    const fetchClasses = async () => {
+      if (userProfile?.id) {
+        try {
+          setIsLoadingClasses(true);
+          const fetchedClasses = await studentClassService.getMyClasses();
+          
+          // 가입일(created_at) 기준으로 오름차순 정렬
+          const sortedClasses = [...fetchedClasses].sort((a, b) => 
+            new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+          );
+
+          setClasses(sortedClasses);
+
+          if (sortedClasses.length > 0) {
+            const firstClassId = sortedClasses[0].id.toString();
+            setSelectedClassForAssignments(firstClassId);
+            setSelectedClassForSubjects(firstClassId);
+          }
+        } catch (error) {
+          console.error('Failed to fetch classes:', error);
+        } finally {
+          setIsLoadingClasses(false);
+        }
+      }
+    };
+    fetchClasses();
+  }, [userProfile]);
 
 
   // 클래스별 레이더 차트 데이터 생성
@@ -99,6 +123,38 @@ const StudentDashboard = () => {
   };
 
   const radarData = React.useMemo(() => getRadarData(selectedClassForSubjects), [selectedClassForSubjects]);
+
+  const submittedAssignmentsForModal = React.useMemo(() => {
+    return dashboardAssignments
+      .filter(assignment => {
+        // 1. 응시 완료 상태 필터
+        const status = assignment.status?.toLowerCase();
+        const isSubmitted = status === 'completed' ||
+                            status === 'submitted' ||
+                            status === '응시' ||
+                            status === 'graded' ||
+                            status === 'finished';
+        if (!isSubmitted) {
+          return false;
+        }
+
+        // 2. 클래스별 필터
+        if (assignment.subject === '영어') {
+          return true; // 영어 과제는 classroom_id가 없으므로 항상 포함
+        }
+        return assignment.classroom_id?.toString() === selectedClassForAssignments;
+      })
+      .map(assignment => ({
+        id: assignment.id,
+        name: assignment.title,
+        subject: assignment.subject,
+        dueDate: assignment.deployed_at,
+        submittedCount: 0,
+        totalCount: 0,
+        myScore: Math.floor(Math.random() * 51) + 50, // 임시 내 점수
+        classAverageScore: Math.floor(Math.random() * 51) + 50, // 임시 클래스 평균
+      }));
+  }, [dashboardAssignments, selectedClassForAssignments]);
 
   // 기본 ComposedChart 데이터
   const defaultChartData = [
@@ -188,7 +244,7 @@ const StudentDashboard = () => {
         allAssignments.push(...mathAssignments.map((assignment: any) => ({
           ...assignment,
           subject: '수학',
-          id: assignment.assignment_id,
+          id: `math-${assignment.assignment_id}`, // 고유 ID 생성
           title: assignment.title,
           problem_count: assignment.problem_count,
           status: assignment.status,
@@ -204,7 +260,7 @@ const StudentDashboard = () => {
         allAssignments.push(...koreanAssignments.map((assignment: any) => ({
           ...assignment,
           subject: '국어',
-          id: assignment.assignment_id,
+          id: `korean-${assignment.assignment_id}`, // 고유 ID 생성
           title: assignment.title,
           problem_count: assignment.problem_count,
           status: assignment.status,
@@ -220,7 +276,7 @@ const StudentDashboard = () => {
         allAssignments.push(...englishAssignments.map((assignment: any) => ({
           ...assignment,
           subject: '영어',
-          id: assignment.assignment?.id || assignment.assignment_id,
+          id: `english-${assignment.assignment?.id || assignment.assignment_id}`, // 고유 ID 생성
           title: assignment.assignment?.title || assignment.title,
           problem_count: assignment.assignment?.total_questions || assignment.total_questions,
           status: assignment.deployment?.status || assignment.status,
@@ -247,7 +303,8 @@ const StudentDashboard = () => {
       console.log('📋 미응시 과제들:', unsubmitted);
     } catch (error) {
       console.error('과제 로드 실패:', error);
-    } finally {
+    }
+    finally {
       setIsLoadingAssignments(false);
     }
   };
@@ -330,6 +387,7 @@ const StudentDashboard = () => {
             setSelectedClass={handleSetClassForAssignments}
             chartData={composedChartData}
             classes={classes}
+            assignments={submittedAssignmentsForModal}
           />
 
           {/* Left Bottom - Two Cards */}
