@@ -21,14 +21,26 @@ const StudentDashboard = () => {
   const [dashboardAssignments, setDashboardAssignments] = React.useState<any[]>([]);
   const [isLoadingAssignments, setIsLoadingAssignments] = React.useState(false);
 
-  // 임시 클래스 데이터
-  const classes = [
+  // 컴포넌트 메모이제이션 (불필요한 리렌더 방지)
+  const MemoClassAverage = React.useMemo(() => React.memo(ClassAverage), []);
+  const MemoSubjectAverage = React.useMemo(() => React.memo(SubjectAverage), []);
+
+  // 독립 상태 업데이트 콜백 (참조 안정화 및 디버깅)
+  const handleSetClassForAssignments = React.useCallback((val: string) => {
+    setSelectedClassForAssignments(val);
+  }, []);
+  const handleSetClassForSubjects = React.useCallback((val: string) => {
+    setSelectedClassForSubjects(val);
+  }, []);
+
+  // 임시 클래스 데이터 (참조 안정화)
+  const classes = React.useMemo(() => ([
     { id: '1', name: '클래스 A' },
     { id: '2', name: '클래스 B' },
     { id: '3', name: '클래스 C' },
     { id: '4', name: '클래스 D' },
     { id: '5', name: '클래스 E' },
-  ];
+  ]), []);
 
 
   // 클래스별 레이더 차트 데이터 생성
@@ -86,7 +98,7 @@ const StudentDashboard = () => {
     ];
   };
 
-  const radarData = getRadarData(selectedClassForSubjects);
+  const radarData = React.useMemo(() => getRadarData(selectedClassForSubjects), [selectedClassForSubjects]);
 
   // 기본 ComposedChart 데이터
   const defaultChartData = [
@@ -153,7 +165,8 @@ const StudentDashboard = () => {
   ];
 
   // 간단한 차트 데이터 (백엔드 담당자를 위해 단순화)
-  const composedChartData = defaultChartData;
+  // 좌측 라인차트 데이터 고정 (불필요한 재생성으로 인한 애니메이션 방지)
+  const composedChartData = React.useMemo(() => defaultChartData, []);
 
   // 과제 데이터 로딩
   React.useEffect(() => {
@@ -309,18 +322,18 @@ const StudentDashboard = () => {
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-5 gap-6 h-full">
         
         {/* Left Section */}
-        <div className="flex flex-col gap-6 lg:col-span-3 h-full">
+        <div className="lg:col-span-3 grid grid-rows-2 gap-6">
           
           {/* Left Top - 클래스별 과제별 전체 평균과 내 평균 */}
-          <ClassAverage
+          <MemoClassAverage
             selectedClass={selectedClassForAssignments}
-            setSelectedClass={setSelectedClassForAssignments}
+            setSelectedClass={handleSetClassForAssignments}
             chartData={composedChartData}
             classes={classes}
           />
 
           {/* Left Bottom - Two Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             
             {/* Assignment Not Submitted */}
             <PendingAssignmentsList
@@ -339,12 +352,14 @@ const StudentDashboard = () => {
         </div>
 
         {/* Right Section */}
-        <SubjectAverage
-          selectedClass={selectedClassForSubjects}
-          setSelectedClass={setSelectedClassForSubjects}
-          radarData={radarData}
-          classes={classes}
-        />
+        <div className="lg:col-span-2">
+          <MemoSubjectAverage
+            selectedClass={selectedClassForSubjects}
+            setSelectedClass={handleSetClassForSubjects}
+            radarData={radarData}
+            classes={classes}
+          />
+        </div>
       </div>
 
     </div>

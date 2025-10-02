@@ -258,24 +258,54 @@ const ClassAverage: React.FC<ClassAverageProps> = ({
       )}
       
       <CardContent className="p-0">
-        <div className="h-96">
+        <div className="h-[28rem]">
           <ResponsiveContainer width="100%" height="100%">
         <LineChart
-          width={500}
-          height={300}
           data={displayChartData}
               margin={{
-                top: 5,
+                top: 20,
                 right: 30,
                 left: 20,
-                bottom: 5,
+                bottom: 20,
               }}
             >
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
+              <CartesianGrid strokeDasharray="0" stroke="#f0f0f0" />
+              <XAxis
+                dataKey="name"
+                type="category"
+                tick={{ fontSize: 11 }}
+                tickLine={false}
+                axisLine={false}
+                tickMargin={10}
+                interval={0}
+                angle={-45}
+                textAnchor="end"
+                domain={['dataMin', 'dataMax']}
+                height={80}
+              />
               <YAxis />
               <Tooltip />
-              <Legend />
+              <Legend 
+                content={(props: any) => {
+                  const { payload } = props;
+                  if (!payload) return null;
+                  return (
+                    <div className="flex justify-center gap-8 mt-6">
+                      {payload.map((entry: any, index: number) => (
+                        <div key={`item-${index}`} className="flex items-center gap-2">
+                          <div 
+                            className="w-3 h-3 rounded-full" 
+                            style={{ backgroundColor: entry.color }}
+                          ></div>
+                          <span style={{ color: entry.color }} className="text-sm font-medium">
+                            {entry.value}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                }}
+              />
               <Line type="monotone" dataKey="클래스평균" stroke="#9674CF" activeDot={{ r: 8 }} />
               <Line type="monotone" dataKey="내점수" stroke="#18BBCB" />
             </LineChart>
