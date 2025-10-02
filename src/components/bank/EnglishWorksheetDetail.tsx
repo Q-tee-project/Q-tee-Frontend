@@ -637,28 +637,6 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
           )}
 
           {/* 뱅크 모드: 배포 및 편집 버튼 */}
-          {mode === 'bank' && (
-            <>
-              {onOpenDistributeDialog && (
-                <Button
-                  onClick={onOpenDistributeDialog}
-                  variant="outline"
-                  className="bg-white/80 backdrop-blur-sm border-[#0072CE]/30 text-[#0072CE] hover:bg-[#0072CE]/10 hover:border-[#0072CE]/50"
-                >
-                  문제지 배포
-                </Button>
-              )}
-              {onOpenEditDialog && (
-                <Button
-                  onClick={onOpenEditDialog}
-                  variant="outline"
-                  className="bg-white/80 backdrop-blur-sm border-[#0072CE]/30 text-[#0072CE] hover:bg-[#0072CE]/10 hover:border-[#0072CE]/50"
-                >
-                  문제지 편집
-                </Button>
-              )}
-            </>
-          )}
         </div>
       </HeaderWrapper>
 

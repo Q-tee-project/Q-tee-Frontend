@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,7 +8,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { LaTeXRenderer } from '@/components/LaTeXRenderer';
 import { TikZRenderer } from '@/components/TikZRenderer';
 import { Worksheet, MathProblem, ProblemType } from '@/types/math';
-import { Edit3 } from 'lucide-react';
+import { Edit3, RotateCcw } from 'lucide-react';
+import { ProblemRegenerateDialog } from './ProblemRegenerateDialog';
 
 interface MathWorksheetDetailProps {
   selectedWorksheet: Worksheet | null;
@@ -20,6 +21,7 @@ interface MathWorksheetDetailProps {
   onOpenDistributeDialog: () => void;
   onOpenEditDialog: () => void;
   onEditProblem: (problem: MathProblem) => void;
+  onRegenerateProblem?: (problem: MathProblem, feedback?: string) => void;
   onStartEditTitle: () => void;
   onCancelEditTitle: () => void;
   onSaveTitle: () => void;
@@ -48,11 +50,26 @@ export const MathWorksheetDetail: React.FC<MathWorksheetDetailProps> = ({
   onOpenDistributeDialog,
   onOpenEditDialog,
   onEditProblem,
+  onRegenerateProblem,
   onStartEditTitle,
   onCancelEditTitle,
   onSaveTitle,
   onEditedTitleChange,
 }) => {
+  const [isRegenerateDialogOpen, setIsRegenerateDialogOpen] = useState(false);
+  const [selectedProblemForRegenerate, setSelectedProblemForRegenerate] = useState<MathProblem | null>(null);
+
+  const handleRegenerateClick = (problem: MathProblem) => {
+    setSelectedProblemForRegenerate(problem);
+    setIsRegenerateDialogOpen(true);
+  };
+
+  const handleRegenerateConfirm = (feedback: string) => {
+    if (selectedProblemForRegenerate && onRegenerateProblem) {
+      onRegenerateProblem(selectedProblemForRegenerate, feedback);
+    }
+  };
+
   if (!selectedWorksheet) {
     return (
       <Card className="w-2/3 flex items-center justify-center shadow-sm h-[calc(100vh-200px)]">
@@ -65,6 +82,7 @@ export const MathWorksheetDetail: React.FC<MathWorksheetDetailProps> = ({
   }
 
   return (
+    <>
     <Card className="w-2/3 flex flex-col shadow-sm h-[calc(100vh-200px)]">
       <CardHeader className="flex flex-row items-center py-6 px-6 border-b border-gray-100">
         <div className="flex-1"></div>
@@ -131,20 +149,6 @@ export const MathWorksheetDetail: React.FC<MathWorksheetDetailProps> = ({
               {showAnswerSheet ? '시험지 보기' : '정답 및 해설'}
             </Button>
           )}
-          <Button
-            onClick={onOpenDistributeDialog}
-            variant="outline"
-            className="bg-white/80 backdrop-blur-sm border-[#0072CE]/30 text-[#0072CE] hover:bg-[#0072CE]/10 hover:border-[#0072CE]/50"
-          >
-            문제지 배포
-          </Button>
-          <Button
-            onClick={onOpenEditDialog}
-            variant="outline"
-            className="bg-white/80 backdrop-blur-sm border-[#0072CE]/30 text-[#0072CE] hover:bg-[#0072CE]/10 hover:border-[#0072CE]/50"
-          >
-            문제지 편집
-          </Button>
         </div>
       </CardHeader>
 
@@ -186,15 +190,28 @@ export const MathWorksheetDetail: React.FC<MathWorksheetDetailProps> = ({
                               {problem.difficulty}
                             </span>
                           </div>
-                          <Button
-                            onClick={() => onEditProblem(problem)}
-                            variant="ghost"
-                            size="sm"
-                            className="text-[#0072CE] hover:text-[#0056A3] hover:bg-[#EBF6FF] p-1"
-                            title="문제 편집"
-                          >
-                            <Edit3 className="w-4 h-4" />
-                          </Button>
+                          <div className="flex gap-1">
+                            <Button
+                              onClick={() => onEditProblem(problem)}
+                              variant="ghost"
+                              size="sm"
+                              className="text-[#0072CE] hover:text-[#0056A3] hover:bg-[#EBF6FF] p-1"
+                              title="문제 편집"
+                            >
+                              <Edit3 className="w-4 h-4" />
+                            </Button>
+                            {onRegenerateProblem && (
+                              <Button
+                                onClick={() => handleRegenerateClick(problem)}
+                                variant="ghost"
+                                size="sm"
+                                className="text-green-600 hover:text-green-700 hover:bg-green-50 p-1"
+                                title="문제 재생성"
+                              >
+                                <RotateCcw className="w-4 h-4" />
+                              </Button>
+                            )}
+                          </div>
                         </div>
 
                         <div className="text-base leading-relaxed text-gray-900 mb-4">
@@ -371,5 +388,14 @@ export const MathWorksheetDetail: React.FC<MathWorksheetDetailProps> = ({
         </ScrollArea>
       </CardContent>
     </Card>
+
+    {/* 재생성 모달 */}
+    <ProblemRegenerateDialog
+      isOpen={isRegenerateDialogOpen}
+      onOpenChange={setIsRegenerateDialogOpen}
+      onConfirm={handleRegenerateConfirm}
+      subject="수학"
+    />
+    </>
   );
 };

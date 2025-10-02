@@ -286,9 +286,9 @@ export function AssignmentTab({ classId }: AssignmentTabProps) {
               />
               <IoSearch className="absolute right-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             </div>
-            <Button onClick={() => setIsCreateModalOpen(true)} className="flex items-center gap-2">
+            <button onClick={() => setIsCreateModalOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-[#ffffff] text-[#000000] border border-[#000000] rounded-md hover:bg-[#f0f0f0] transition-colors">
               <Plus className="w-4 h-4" /> 과제 생성
-            </Button>
+            </button>
           </div>
 
           {/* 과제 목록 */}
