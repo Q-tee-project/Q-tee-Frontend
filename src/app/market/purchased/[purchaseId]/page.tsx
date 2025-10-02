@@ -141,20 +141,16 @@ export default function PurchasedWorksheetPage() {
 
         if (problemsResponse.ok) {
           const data = await problemsResponse.json();
-          console.log(`[DEBUG] 수학 문제 데이터:`, data);
+
           const mathProblems: Problem[] = data.problems || [];
           setProblems(mathProblems);
         } else {
           const errorText = await problemsResponse.text();
-          console.error(`[DEBUG] 수학 API 오류:`, errorText);
         }
       } else if (worksheetData.service === 'korean') {
         // 복사된 워크시트 ID 사용 (copied_worksheet_id가 있으면 사용, 없으면 original_worksheet_id 사용)
         const worksheetId =
           worksheetData.copied_worksheet_id || worksheetData.original_worksheet_id;
-        console.log(
-          `[DEBUG] 국어 문제 로드 시도: worksheet_id=${worksheetId} (copied_id=${worksheetData.copied_worksheet_id}, original_id=${worksheetData.original_worksheet_id})`,
-        );
 
         const problemsResponse = await fetch(
           `http://localhost:8004/api/korean-generation/worksheets/${worksheetId}`,
@@ -168,12 +164,11 @@ export default function PurchasedWorksheetPage() {
 
         if (problemsResponse.ok) {
           const data = await problemsResponse.json();
-          console.log(`[DEBUG] 국어 문제 데이터:`, data);
+
           const koreanProblems: Problem[] = data.problems || [];
           setProblems(koreanProblems);
         } else {
           const errorText = await problemsResponse.text();
-          console.error(`[DEBUG] 국어 API 오류:`, errorText);
         }
       } else if (worksheetData.service === 'english') {
         // 복사된 워크시트 ID 사용

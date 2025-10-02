@@ -233,13 +233,6 @@ export const MathWorksheetDetail: React.FC<MathWorksheetDetailProps> = ({
 
                             cleanedQuestion = cleanedQuestion.trim();
 
-                            if (problem.question !== cleanedQuestion) {
-                              console.log(`🧹 Problem ${problem.id} cleaned:`, {
-                                original: problem.question.substring(0, 150),
-                                cleaned: cleanedQuestion
-                              });
-                            }
-
                             return cleanedQuestion;
                           })()} />
                         </div>

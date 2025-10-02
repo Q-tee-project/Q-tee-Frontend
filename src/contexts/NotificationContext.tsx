@@ -57,13 +57,13 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
           const storedNotifications = await notificationService.getStoredNotifications(
             userType,
             userProfile.id,
-            20
+            20,
           );
           if (storedNotifications.length > 0) {
             console.log(`저장된 알림 ${storedNotifications.length}개 로드`);
-            setNotifications(prev => {
-              const existingIds = new Set(prev.map(n => n.id));
-              const newNotifications = storedNotifications.filter(n => !existingIds.has(n.id));
+            setNotifications((prev) => {
+              const existingIds = new Set(prev.map((n) => n.id));
+              const newNotifications = storedNotifications.filter((n) => !existingIds.has(n.id));
               return [...newNotifications, ...prev];
             });
           }
@@ -77,8 +77,8 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
       // 알림 리스너 등록
       const handleNotification = (notification: SSENotification) => {
         console.log('새 알림 수신:', notification);
-        setNotifications(prev => {
-          if (prev.some(n => n.id === notification.id)) {
+        setNotifications((prev) => {
+          if (prev.some((n) => n.id === notification.id)) {
             return prev; // 이미 존재하면 상태 변경 안함
           }
           return [notification, ...prev];
@@ -103,11 +103,11 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
   }, [isLoading, isAuthenticated, userType, userProfile]);
 
   // 읽지 않은 알림 개수 계산
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
   // 알림 추가 (수동으로 알림을 추가해야 할 경우)
   const addNotification = (notification: SSENotification) => {
-    setNotifications(prev => [notification, ...prev]);
+    setNotifications((prev) => [notification, ...prev]);
   };
 
   // 알림 읽음 처리
@@ -117,10 +117,10 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
     }
 
     // 로컬 상태 먼저 업데이트
-    setNotifications(prev =>
-      prev.map(notification =>
-        notification.id === id ? { ...notification, read: true } : notification
-      )
+    setNotifications((prev) =>
+      prev.map((notification) =>
+        notification.id === id ? { ...notification, read: true } : notification,
+      ),
     );
 
     // 백엔드에 읽음 상태 전송
@@ -129,10 +129,10 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
       if (!success) {
         console.error(`Failed to mark notification ${id} as read on server`);
         // 실패 시 로컬 상태 롤백
-        setNotifications(prev =>
-          prev.map(notification =>
-            notification.id === id ? { ...notification, read: false } : notification
-          )
+        setNotifications((prev) =>
+          prev.map((notification) =>
+            notification.id === id ? { ...notification, read: false } : notification,
+          ),
         );
       }
     } catch (error) {
@@ -147,9 +147,7 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
     }
 
     // 로컬 상태 먼저 업데이트
-    setNotifications(prev =>
-      prev.map(notification => ({ ...notification, read: true }))
-    );
+    setNotifications((prev) => prev.map((notification) => ({ ...notification, read: true })));
 
     // 백엔드에 읽음 상태 전송
     try {
@@ -165,27 +163,26 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
   // 개별 알림 삭제
   const removeNotification = async (id: string, type: string) => {
     if (!userType || !userProfile) {
-      console.log('[DEBUG] removeNotification: userType or userProfile not found. Aborting.');
       return;
     }
-    console.log(`[DEBUG] removeNotification called with ID: ${id}, Type: ${type}`);
+
     try {
-      const success = await notificationService.deleteNotification(userType, userProfile.id, type, id);
-      console.log(`[DEBUG] API call success: ${success}`);
+      const success = await notificationService.deleteNotification(
+        userType,
+        userProfile.id,
+        type,
+        id,
+      );
 
       if (success) {
-        setNotifications(prev => {
-          console.log('[DEBUG] State before deletion:', prev);
-          const newState = prev.filter(n => n.id !== id);
-          console.log('[DEBUG] State after deletion:', newState);
+        setNotifications((prev) => {
+          const newState = prev.filter((n) => n.id !== id);
+
           return newState;
         });
       } else {
-        console.error(`[DEBUG] Failed to delete notification ${id} from server (API returned not 'ok').`);
       }
-    } catch (error) {
-      console.error(`[DEBUG] Error during notification deletion API call:`, error);
-    }
+    } catch (error) {}
   };
 
   // 타입별 알림 삭제
@@ -195,11 +192,15 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
     }
 
     // 로컬 상태 먼저 업데이트
-    setNotifications(prev => prev.filter(n => n.type !== type));
+    setNotifications((prev) => prev.filter((n) => n.type !== type));
 
     // 백엔드에서 삭제
     try {
-      const success = await notificationService.deleteNotificationsByType(userType, userProfile.id, type);
+      const success = await notificationService.deleteNotificationsByType(
+        userType,
+        userProfile.id,
+        type,
+      );
       if (!success) {
         console.error(`Failed to delete ${type} notifications from server`);
         // 실패 시에는 페이지를 새로고침하거나 알림을 다시 불러와야 할 수 있음
@@ -250,9 +251,5 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
     sendTestNotification,
   };
 
-  return (
-    <NotificationContext.Provider value={value}>
-      {children}
-    </NotificationContext.Provider>
-  );
+  return <NotificationContext.Provider value={value}>{children}</NotificationContext.Provider>;
 };

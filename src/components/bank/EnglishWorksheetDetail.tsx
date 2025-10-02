@@ -182,6 +182,11 @@ interface EditFormData {
   passage_content?: any;
   original_content?: any;
   korean_translation?: any;
+  passageId?: number;
+  passageContent?: any;
+  hasTitle?: boolean;
+  hasParagraphs?: boolean;
+  hasContent?: boolean;
 }
 
 export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
@@ -260,9 +265,6 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
       passage_content: deepCopy(passage.passage_content),
       original_content: deepCopy(passage.original_content),
       korean_translation: deepCopy(passage.korean_translation),
-    });
-
-    console.log('📝 지문 편집 시작:', {
       passageId: passage.passage_id,
       passageContent: passage.passage_content,
       hasTitle: !!passage.passage_content?.title,
@@ -415,14 +417,6 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
       const sanitizedQuestions = questionsToSend.map(q => sanitizeQuestionData(q));
       const sanitizedPassage = currentPassage ? sanitizePassageData(currentPassage) : null;
 
-      console.log('🚀 재생성 요청 보내는 데이터:', {
-        questions: sanitizedQuestions,
-        passage: sanitizedPassage,
-        passageId: sanitizedPassage?.passage_id,
-        passageType: sanitizedPassage?.passage_type,
-        formData: regenerationFormData
-      });
-
       // 비동기 재생성 시작
       const asyncResponse = await EnglishService.regenerateEnglishQuestionFromData(
         sanitizedQuestions,
@@ -430,7 +424,6 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
         regenerationFormData as EnglishRegenerationRequest
       );
 
-      console.log('🎯 재생성 작업 시작:', asyncResponse);
 
       // 폴링으로 작업 완료 대기
       let taskCompleted = false;
@@ -442,7 +435,6 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
 
         try {
           const taskStatus = await EnglishService.getRegenerationTaskStatus(asyncResponse.task_id);
-          console.log(`📊 재생성 진행률 (${pollCount + 1}/${maxPollCount}):`, taskStatus);
 
           if (taskStatus.state === 'SUCCESS' && taskStatus.result) {
             response = taskStatus.result;
@@ -452,7 +444,6 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
             throw new Error(taskStatus.error || '재생성 작업이 실패했습니다.');
           }
         } catch (pollError) {
-          console.error('폴링 중 오류:', pollError);
           // 폴링 오류는 무시하고 계속 시도
         }
 
@@ -476,13 +467,6 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
         const regeneratedQuestions = response.regenerated_questions || [];
         const mainRegeneratedQuestion = regeneratedQuestions.find((q: EnglishQuestion) => q.question_id === originalQuestion.question_id) || regeneratedQuestions[0];
         const relatedRegeneratedQuestions = regeneratedQuestions.filter((q: EnglishQuestion) => q.question_id !== originalQuestion.question_id);
-
-        console.log('🔄 재생성 결과 미리보기 데이터 설정:', {
-          originalPassage: originalPassage,
-          regeneratedPassage: response.regenerated_passage,
-          hasRegeneratedPassage: !!response.regenerated_passage,
-          regeneratedPassageContent: response.regenerated_passage?.passage_content
-        });
 
         // 재생성된 지문을 EnglishPassage 타입에 맞게 변환
         const regeneratedPassage: EnglishPassage | null = response.regenerated_passage ? {
@@ -513,8 +497,6 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
         alert(`재생성 실패: ${response?.message || '알 수 없는 오류'}`);
       }
     } catch (error: any) {
-      console.error('🚨 재생성 함수에서 에러 발생:', error);
-      console.error('🚨 에러 스택:', error.stack);
       alert(`재생성 실패: ${error.message}`);
     } finally {
       setIsRegenerating(false);
@@ -777,13 +759,6 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
         onClose={() => setIsRegenerationPreviewModalOpen(false)}
         onApply={async () => {
           if (!previewData || !selectedWorksheet) return;
-
-          console.log('🔄 재생성 결과 적용 중:', {
-            mode,
-            regeneratedQuestion: previewData.regenerated.question,
-            regeneratedPassage: previewData.regenerated.passage,
-            regeneratedRelatedQuestions: previewData.regenerated.relatedQuestions
-          });
 
           try {
             if (mode === 'generation' && onUpdateQuestion) {

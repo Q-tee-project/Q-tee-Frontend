@@ -38,22 +38,8 @@ async function apiRequest<T>(
     ...options,
   };
 
-  console.log('🌐 DEBUG Request:', {
-    url,
-    method: config.method || 'GET',
-    headers: config.headers,
-    body: config.body,
-  });
-
   try {
-    console.log('🌐 Making fetch request to:', url);
     const response = await fetch(url, config);
-    console.log('🌐 Response received:', {
-      status: response.status,
-      statusText: response.statusText,
-      ok: response.ok,
-      headers: Object.fromEntries(response.headers.entries()),
-    });
 
     if (!response.ok) {
       // 401 에러 (토큰 만료)인 경우 자동 로그아웃 처리

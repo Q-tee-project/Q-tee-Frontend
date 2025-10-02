@@ -212,14 +212,14 @@ export const koreanService = {
   createAssignment: async (worksheetId: number, classroomId: number): Promise<any> => {
     const token = getToken();
     if (!token) {
-      throw new Error("Authentication token not found. Please log in.");
+      throw new Error('Authentication token not found. Please log in.');
     }
 
     const response = await fetch(`${API_BASE_URL}/assignments/create`, {
-      method: "POST",
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
         worksheet_id: worksheetId,
@@ -229,7 +229,7 @@ export const koreanService = {
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.detail || "과제 생성에 실패했습니다.");
+      throw new Error(errorData.detail || '과제 생성에 실패했습니다.');
     }
 
     return response.json();
@@ -338,7 +338,7 @@ export const koreanService = {
     }
 
     const data = await response.json();
-    console.log(`Assignment results:`, data);
+
     return data;
   },
 
