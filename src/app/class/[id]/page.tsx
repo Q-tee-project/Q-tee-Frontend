@@ -201,25 +201,25 @@ export default function ClassDetailPage({ params }: ClassDetailPageProps) {
               </h1>
 
               {/* 클래스 정보 수정 버튼 */}
-              <Button
+              <button
                 onClick={handleEditModalOpen}
-                className="ml-3 p-2 rounded-md hover:text-gray-600 transition-colors duration-200 text-[#666666] cursor-pointer"
+                className="ml-3 p-2 rounded-md transition-colors duration-200 cursor-pointer bg-[#ffffff] hover:bg-[#f0f0f0]"
               >
-                <HiOutlinePencilSquare className="h-5 w-5" />
-              </Button>
+                <HiOutlinePencilSquare className="h-5 w-5 text-[#000000]" />
+              </button>
             </div>
 
             {/* 탭 네비게이션 */}
             <div className="border-b border-gray-200">
               <div className="flex">
                 {tabs.map((tab) => (
-                  <Button
+                  <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`border-b-2 font-medium text-sm px-5 py-2.5 ${
+                    className={`border-b-2 font-medium text-sm px-5 py-2.5 bg-[#ffffff] text-[#000000] hover:bg-[#ffffff] ${
                       activeTab === tab.id
-                        ? 'border-blue-500 text-blue-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                        ? 'border-black'
+                        : 'border-transparent hover:border-gray-300'
                     }`}
                   >
                     {tab.label}
@@ -228,7 +228,7 @@ export default function ClassDetailPage({ params }: ClassDetailPageProps) {
                         {tab.count}
                       </span>
                     )}
-                  </Button>
+                  </button>
                 ))}
               </div>
             </div>

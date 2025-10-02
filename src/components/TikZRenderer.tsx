@@ -262,10 +262,10 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
   const { xMin, xMax, yMin, yMax, coordinates, points, lines, filledAreas, functionPlots, labels } =
     parsedData;
 
-  // SVG 좌표계 설정
-  const svgWidth = 500;
-  const svgHeight = 500;
-  const padding = 40;
+  // SVG 좌표계 설정 (1/4 크기로 축소)
+  const svgWidth = 300;
+  const svgHeight = 300;
+  const padding = 30;
   const graphWidth = svgWidth - 2 * padding;
   const graphHeight = svgHeight - 2 * padding;
 
