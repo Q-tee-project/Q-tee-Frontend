@@ -195,8 +195,14 @@ export default function PurchasedWorksheetPage() {
           const englishProblems: EnglishProblemFromAPI[] = data.problems || [];
           setProblems(englishProblems);
         } else {
-          const errorText = await problemsResponse.text();
-          console.error(`영어 API 오류:`, errorText);
+          if (problemsResponse.status === 404) {
+            setError('구매한 문제지를 찾을 수 없습니다. 원본 데이터가 삭제되었을 수 있습니다.');
+          } else {
+            const errorText = await problemsResponse.text();
+            console.error(`영어 API 오류:`, errorText);
+            setError('문제 데이터를 불러오는 데 실패했습니다.');
+          }
+          setProblems([]); // 에러 발생 시 문제 목록 초기화
         }
       }
     } catch (error) {
