@@ -169,7 +169,7 @@ export const getProducts = async (params?: {
   sort_by?: string;
   sort_order?: string;
 }): Promise<MarketProduct[]> => {
-  const response = await marketApi.get('/market/products', { params });
+  const response = await marketApi.get('/market/products', params ? { params } : {});
   return response.data;
 };
 
@@ -198,7 +198,7 @@ export const getMyProducts = async (params?: {
   skip?: number;
   limit?: number;
 }): Promise<MarketProduct[]> => {
-  const response = await marketApi.get('/market/my-products', { params });
+  const response = await marketApi.get('/market/my-products', params ? { params } : {});
   return response.data;
 };
 
@@ -240,7 +240,7 @@ export const getPointTransactions = async (params?: {
   skip?: number;
   limit?: number;
 }): Promise<PointTransactionResponse[]> => {
-  const response = await marketApi.get('/market/points/transactions', { params });
+  const response = await marketApi.get('/market/points/transactions', params ? { params } : {});
   return response.data;
 };
 
@@ -261,7 +261,7 @@ export const getMyPurchases = async (params?: {
   skip?: number;
   limit?: number;
 }): Promise<MarketPurchase[]> => {
-  const response = await marketApi.get('/market/my-purchases', { params });
+  const response = await marketApi.get('/market/my-purchases', params ? { params } : {});
   return response.data;
 };
 
