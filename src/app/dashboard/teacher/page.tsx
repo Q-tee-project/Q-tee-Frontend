@@ -4,7 +4,7 @@ import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { motion, useMotionValue, useTransform, animate } from 'framer-motion';
-import * as marketApi from '@/services/marketApi';
+import { getMarketStats, MarketStats, getMyProducts, MarketProduct } from '@/services/marketApi';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -107,11 +107,12 @@ const TeacherDashboard = () => {
   const [isRefreshing, setIsRefreshing] = React.useState(false);
   const [isAssignmentModalOpen, setIsAssignmentModalOpen] = React.useState(false);
   const [selectedAssignments, setSelectedAssignments] = React.useState<string[]>([]);
-  const [marketStats, setMarketStats] = React.useState<marketApi.MarketStats | null>(null);
+  const [marketStats, setMarketStats] = React.useState<MarketStats | null>(null);
   const [isLoadingStats, setIsLoadingStats] = React.useState(true);
   const [selectedProducts, setSelectedProducts] = React.useState<number[]>([]);
-  const [marketProducts, setMarketProducts] = React.useState<any[]>([]);
+  const [marketProducts, setMarketProducts] = React.useState<MarketProduct[]>([]);
   const [isLoadingProducts, setIsLoadingProducts] = React.useState(true);
+  const [lastSyncTime, setLastSyncTime] = React.useState<Date | null>(null);
 
   // 상품 선택 핸들러
   const handleProductSelect = (productId: number) => {
@@ -122,6 +123,18 @@ const TeacherDashboard = () => {
 
     setSelectedProducts((prev) => {
       if (prev.includes(productId)) {
+        // 개별 제거 애니메이션
+        const cardElement = document.querySelector(
+          `[data-product-id="${productId}"]`,
+        ) as HTMLElement;
+        if (cardElement) {
+          cardElement.style.transform = 'translateY(100%)';
+          cardElement.style.opacity = '0';
+          setTimeout(() => {
+            setSelectedProducts((current) => current.filter((id) => id !== productId));
+          }, 300);
+          return prev; // 애니메이션 완료 후 실제 제거
+        }
         return prev.filter((id) => id !== productId);
       } else {
         return [...prev, productId];
@@ -138,6 +151,19 @@ const TeacherDashboard = () => {
 
     setSelectedStudents((prev) => {
       if (prev.includes(studentId)) {
+        // 개별 제거 애니메이션
+        const cardElement = document.querySelector(
+          `[data-student-id="${studentId}"]`,
+        ) as HTMLElement;
+        if (cardElement) {
+          cardElement.style.transform = 'translateY(100%)';
+          cardElement.style.opacity = '0';
+          setTimeout(() => {
+            setSelectedStudents((current) => current.filter((id) => id !== studentId));
+            // 색상 정보는 유지 (제거하지 않음)
+          }, 300);
+          return prev; // 애니메이션 완료 후 실제 제거
+        }
         return prev.filter((id) => id !== studentId);
       } else {
         // 새로운 학생 추가 시 색상 할당 (이미 할당된 색상은 제외)
@@ -186,28 +212,13 @@ const TeacherDashboard = () => {
     return selectedDate <= today;
   };
 
-  // 마켓 상품 목록 로드 함수
-  const loadMarketProducts = async () => {
-    if (!userProfile?.id) return;
-    try {
-      setIsLoadingProducts(true);
-      const products = await marketApi.getProducts(userProfile.id);
-      setMarketProducts(Array.isArray(products) ? products.filter(p => p) : []);
-    } catch (error) {
-      console.error('마켓 상품 목록 로드 실패:', error);
-      setMarketProducts([]);
-    } finally {
-      setIsLoadingProducts(false);
-    }
-  };
-
   // 마켓 통계 로드 함수
   const loadMarketStats = async () => {
     try {
       setIsLoadingStats(true);
       console.log('마켓 통계 로드 시작...');
       
-      const stats = await marketApi.getMarketStats();
+      const stats = await getMarketStats();
       console.log('마켓 통계 로드 성공:', stats);
       setMarketStats(stats);
     } catch (error: any) {
@@ -227,16 +238,38 @@ const TeacherDashboard = () => {
     }
   };
 
+  // 마켓 상품 로드 함수
+  const loadMarketProducts = async () => {
+    try {
+      setIsLoadingProducts(true);
+      console.log('마켓 상품 로드 시작...');
+      
+      const products = await getMyProducts();
+      console.log('마켓 상품 로드 성공:', products);
+      setMarketProducts(products);
+      setLastSyncTime(new Date());
+    } catch (error: any) {
+      console.error('마켓 상품 로드 실패:', error);
+      
+      // 에러 발생 시 빈 배열 설정
+      setMarketProducts([]);
+    } finally {
+      setIsLoadingProducts(false);
+    }
+  };
+
   // 실시간 업데이트 함수
   const handleRefresh = async () => {
     setIsRefreshing(true);
 
-    // 마켓 통계 새로고침
-    await loadMarketStats();
-    await loadMarketProducts();
+    // 마켓 통계와 상품 동시 새로고침
+    await Promise.all([
+      loadMarketStats(),
+      loadMarketProducts()
+    ]);
 
-    // 여기서 실제 데이터를 새로고침하는 로직을 추가할 수 있습니다
-    // 예: API 호출, 상태 업데이트 등
+    // 실제 API 호출을 시뮬레이션 (1초 대기)
+    await new Promise((resolve) => setTimeout(resolve, 1000));
 
     setIsRefreshing(false);
   };
@@ -350,21 +383,18 @@ const TeacherDashboard = () => {
       toMonth: today.getMonth() + 1,
     });
 
+    // 마켓 통계와 상품 로드
     loadMarketStats();
+    loadMarketProducts();
   }, []);
 
-  // userProfile이 변경되면 상품 목록을 로드합니다.
-  React.useEffect(() => {
-    loadMarketProducts();
-  }, [userProfile]);
-
-  // 상품 데이터가 로드되면 최근 2개 상품을 선택합니다.
-  React.useEffect(() => {
-    if (marketProducts && marketProducts.length >= 2) {
-      const sortedProducts = [...marketProducts].sort((a, b) => (b?.id || 0) - (a?.id || 0)).slice(0, 2);
-      setSelectedProducts(sortedProducts.map((p) => p.id));
+  // 최근 상품 정보를 가져오는 함수 (차트 표시용)
+  const getRecentProducts = () => {
+    if (marketProducts.length >= 2) {
+      return [...marketProducts].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 2);
     }
-  }, [marketProducts]);
+    return [];
+  };
 
   // 임시 과제 데이터 (학생별 성적 및 배포 상태 포함) - 테스트용
   const assignments = [
@@ -790,7 +820,15 @@ const TeacherDashboard = () => {
               title="마켓 통계 새로고침"
             >
               <RefreshCw className="h-3 w-3" />
-              새로고침
+              통계 새로고침
+            </button>
+            <button
+              onClick={loadMarketProducts}
+              className="flex items-center gap-1 px-2 py-1 text-xs text-gray-500 hover:text-[#0072CE] transition-colors duration-200"
+              title="마켓 상품 새로고침"
+            >
+              <RefreshCw className={`h-3 w-3 ${isLoadingProducts ? 'animate-spin' : ''}`} />
+              상품 새로고침
             </button>
             <button
               onClick={() => router.push('/market/myMarket')}
@@ -929,16 +967,20 @@ const TeacherDashboard = () => {
                   return baseData.map((month, index) => {
                     const monthData: any = { ...month };
                     
-                    selectedProducts.forEach((productId) => {
-                      const product = marketProducts.find(p => p.id === productId);
+                    // 선택된 상품이 있으면 선택된 상품 사용, 없으면 최근 상품 사용
+                    const productsToShow = selectedProducts.length > 0 
+                      ? selectedProducts.map(id => marketProducts.find(p => p.id === id)).filter(Boolean)
+                      : getRecentProducts();
+                    
+                    productsToShow.forEach((product, productIndex) => {
                       if (product) {
-                        const baseRevenue = product.price * product.sales / 10;
-                        const revenueVariation = Math.sin(index + productId) * baseRevenue * 0.2;
-                        const baseSales = product.sales / 10;
-                        const salesVariation = Math.sin(index + productId) * baseSales * 0.2;
+                        const baseRevenue = product.price * product.purchase_count / 10;
+                        const revenueVariation = Math.sin(index + product.id) * baseRevenue * 0.2;
+                        const baseSales = product.purchase_count / 10;
+                        const salesVariation = Math.sin(index + product.id) * baseSales * 0.2;
                         
-                        monthData[product.name] = Math.round(baseRevenue + revenueVariation);
-                        monthData[`${product.name}_sales`] = Math.round(baseSales + salesVariation);
+                        monthData[product.title] = Math.round(baseRevenue + revenueVariation);
+                        monthData[`${product.title}_sales`] = Math.round(baseSales + salesVariation);
                       }
                     });
                     
@@ -956,7 +998,7 @@ const TeacherDashboard = () => {
                 <XAxis dataKey="name" />
                 <YAxis />
                 <Tooltip 
-                  content={({ active, payload, label }: any) => {
+                  content={({ active, payload, label }) => {
                     if (active && payload && payload.length) {
                       return (
                         <div className="bg-white/95 backdrop-blur-sm p-4 border border-gray-300/50 rounded-xl shadow-xl min-w-[200px]">
@@ -1000,11 +1042,11 @@ const TeacherDashboard = () => {
                   }}
                 />
                 <Legend
-                  content={(props: any) => {
+                  content={(props) => {
                     const { payload } = props;
                     if (!payload) return null;
                     return (
-                      <ul style={{ listStyle: 'none', padding: '0', display: 'flex', justifyContent: 'center', gap: '24px' }}>
+                      <ul style={{ listStyle: 'none', padding: '0', display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: '20px' }}>
                         {payload.map((entry, index) => (
                           <li key={`item-${index}`} style={{ display: 'flex', alignItems: 'center' }}>
                             <div style={{ width: '10px', height: '10px', backgroundColor: entry.color, marginRight: '5px' }}></div>
@@ -1015,20 +1057,26 @@ const TeacherDashboard = () => {
                     );
                   }}
                 />
-                {selectedProducts.map((productId, index) => {
-                  const product = marketProducts.find(p => p.id === productId);
-                  const colors = ['#9674CF', '#18BBCB'];
-                  return product ? (
-                    <Line 
-                      key={productId}
-                      type="monotone" 
-                      dataKey={product.name} 
-                      stroke={colors[index]} 
-                      activeDot={{ r: 8 }} 
-                      strokeWidth={1} 
-                    />
-                  ) : null;
-                })}
+                {(() => {
+                  // 선택된 상품이 있으면 선택된 상품 사용, 없으면 최근 상품 사용
+                  const productsToShow = selectedProducts.length > 0 
+                    ? selectedProducts.map(id => marketProducts.find(p => p.id === id)).filter(Boolean)
+                    : getRecentProducts();
+                  
+                  return productsToShow.map((product, index) => {
+                    const colors = ['#9674CF', '#18BBCB'];
+                    return product ? (
+                      <Line 
+                        key={product.id}
+                        type="monotone" 
+                        dataKey={product.title} 
+                        stroke={colors[index]} 
+                        activeDot={{ r: 8 }} 
+                        strokeWidth={1} 
+                      />
+                    ) : null;
+                  });
+                })()}
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -1054,7 +1102,12 @@ const TeacherDashboard = () => {
               </div>
             </div>
                               <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-500">총 {marketStats?.total_products || 0}개</span>
+              <span className="text-sm text-gray-500">총 {marketProducts.length}개</span>
+              {lastSyncTime && (
+                <span className="text-xs text-gray-400">
+                  ({lastSyncTime.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })} 동기화)
+                </span>
+              )}
             </div>
           </CardHeader>
           <CardContent>
@@ -1080,23 +1133,9 @@ const TeacherDashboard = () => {
                 {selectedProducts.length > 0 && (
                   <button
                     onClick={() => {
-                      // 제거 애니메이션
-                      const cards = document.querySelectorAll('[data-product-id]');
-                      const reversedCards = Array.from(cards).reverse();
-
-                      reversedCards.forEach((card, index) => {
-                        setTimeout(() => {
-                          (card as HTMLElement).style.transform = 'translateY(100%)';
-                          (card as HTMLElement).style.opacity = '0';
-                        }, index * 150);
-                      });
-
-                      // 모든 애니메이션 완료 후 상태 업데이트
-                      setTimeout(() => {
-                        setSelectedProducts([]);
-                      }, reversedCards.length * 150 + 200);
+                      setSelectedProducts([]);
                     }}
-                    className="flex items-center gap-1 px-2 py-1 text-xs text-red-600 rounded-md"
+                    className="flex items-center gap-1 px-2 py-1 text-xs text-red-600 rounded-md hover:bg-red-50 transition-colors"
                     title="모든 상품 선택 해제"
                   >
                     <X className="h-3 w-3" />
@@ -1147,8 +1186,8 @@ const TeacherDashboard = () => {
                               <X className="w-3 h-3 text-red-500" />
                             </div>
                           </div>
-                          <p className="text-sm font-medium text-gray-900 flex-1 truncate">{product.name}</p>
-                          <span className="text-xs text-gray-500 flex-shrink-0">{product.category}</span>
+                          <p className="text-sm font-medium text-gray-900 flex-1 truncate">{product.title}</p>
+                          <span className="text-xs text-gray-500 flex-shrink-0">{product.subject_type}</span>
                         </div>
                       </motion.div>
                                       );
@@ -1157,10 +1196,13 @@ const TeacherDashboard = () => {
               ) : (
                 <div className="flex items-center justify-center" style={{ height: 'calc(100% - 60px)' }}>
                   <div className="text-center">
-                    <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-3">
-                      <Package className="h-6 w-6 text-gray-400" />
+                    <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <Package className="h-6 w-6 text-blue-600" />
                     </div>
                     <p className="text-sm text-gray-500 mb-1">선택된 상품이 없습니다</p>
+                    <p className="text-xs text-gray-400 mb-2">
+                      차트에는 최근 등록된 상품 정보가 표시됩니다
+                    </p>
                     <p className="text-xs text-gray-400">
                       아래 목록에서 상품을 선택해주세요
                     </p>
@@ -1176,76 +1218,93 @@ const TeacherDashboard = () => {
                   전체 상품 목록
                 </h4>
                 <div className="flex-1 p-4 pt-3 overflow-y-auto">
-                  <div className="space-y-3">
-                    {marketProducts.map((product) => {
-                      const isSelected = selectedProducts.includes(product.id);
-                      const canInteract = !isSelected || isSelected;
-                      
-                      return (
-                        <div
-                          key={product.id}
-                          onClick={() => canInteract ? handleProductSelect(product.id) : undefined}
-                          className={`p-3 rounded-lg border transition-colors ${
-                            isSelected
-                              ? 'bg-gray-50 border-gray-300 cursor-pointer'
-                              : selectedProducts.length >= 2
-                              ? 'bg-white border-gray-200 cursor-not-allowed opacity-50'
-                              : 'bg-white border-gray-200 cursor-pointer'
-                          }`}
-                          onMouseEnter={(e) => {
-                            if (isSelected || selectedProducts.length < 2) {
-                              e.currentTarget.style.backgroundColor = '#eff6ff';
-                              e.currentTarget.style.borderColor = '#bfdbfe';
-                            }
-                          }}
-                          onMouseLeave={(e) => {
-                            if (isSelected) {
-                              e.currentTarget.style.backgroundColor = '#f9fafb';
-                              e.currentTarget.style.borderColor = '#d1d5db';
-                            } else {
-                              e.currentTarget.style.backgroundColor = 'white';
-                              e.currentTarget.style.borderColor = '#e5e7eb';
-                            }
-                          }}
-                        >
-                          <div className="flex items-start justify-between mb-2">
-                            <div className="flex-1 min-w-0 flex items-start gap-2">
-                              {isSelected && (
-                                <FaRegCircleCheck className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                              )}
-                              <div className="flex-1 min-w-0">
-                                <h4 className={`text-sm font-medium truncate ${
-                                  isSelected ? 'text-gray-500' : 'text-gray-900'
-                                }`}>
-                                  {product.name}
-                                </h4>
-                                <div className="flex items-center gap-2 mt-1">
-                                  <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">
-                                    {product.category}
-                                  </span>
-                                  <div className="flex items-center gap-1">
-                                    <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
-                                    <span className="text-xs text-gray-600">{product.rating}</span>
+                  {isLoadingProducts ? (
+                    <div className="flex items-center justify-center h-32">
+                      <div className="text-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                        <p className="text-sm text-gray-500">상품 목록 로딩 중...</p>
+                      </div>
+                    </div>
+                  ) : marketProducts.length === 0 ? (
+                    <div className="flex items-center justify-center h-32">
+                      <div className="text-center">
+                        <Package className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                        <p className="text-sm text-gray-500">등록된 상품이 없습니다</p>
+                        <p className="text-xs text-gray-400 mt-1">마켓에서 상품을 등록해보세요</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {marketProducts.map((product) => {
+                        const isSelected = selectedProducts.includes(product.id);
+                        const canInteract = !isSelected || isSelected;
+                        
+                        return (
+                          <div
+                            key={product.id}
+                            onClick={() => canInteract ? handleProductSelect(product.id) : undefined}
+                            className={`p-3 rounded-lg border transition-colors ${
+                              isSelected
+                                ? 'bg-gray-50 border-gray-300 cursor-pointer'
+                                : selectedProducts.length >= 2
+                                ? 'bg-white border-gray-200 cursor-not-allowed opacity-50'
+                                : 'bg-white border-gray-200 cursor-pointer'
+                            }`}
+                            onMouseEnter={(e) => {
+                              if (isSelected || selectedProducts.length < 2) {
+                                e.currentTarget.style.backgroundColor = '#eff6ff';
+                                e.currentTarget.style.borderColor = '#bfdbfe';
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              if (isSelected) {
+                                e.currentTarget.style.backgroundColor = '#f9fafb';
+                                e.currentTarget.style.borderColor = '#d1d5db';
+                              } else {
+                                e.currentTarget.style.backgroundColor = 'white';
+                                e.currentTarget.style.borderColor = '#e5e7eb';
+                              }
+                            }}
+                          >
+                            <div className="flex items-start justify-between mb-2">
+                              <div className="flex-1 min-w-0 flex items-start gap-2">
+                                {isSelected && (
+                                  <FaRegCircleCheck className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  <h4 className={`text-sm font-medium truncate ${
+                                    isSelected ? 'text-gray-500' : 'text-gray-900'
+                                  }`}>
+                                    {product.title}
+                                  </h4>
+                                  <div className="flex items-center gap-2 mt-1">
+                                    <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">
+                                      {product.subject_type}
+                                    </span>
+                                    <div className="flex items-center gap-1">
+                                      <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
+                                      <span className="text-xs text-gray-600">{product.satisfaction_rate.toFixed(1)}%</span>
+                                    </div>
                                   </div>
                                 </div>
                               </div>
                             </div>
-                          </div>
-                          <div className="flex items-center justify-between mt-2">
-                            <div className={`text-sm font-semibold ${
-                              isSelected ? 'text-gray-400' : 'text-[#0072CE]'
-                            }`}>
-                              ₩{product.price.toLocaleString()}
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              판매 {product.sales}개
-                            </div>
-                          </div>
-                        </div>
-                                      );
-                                    })}
+                            <div className="flex items-center justify-between mt-2">
+                              <div className={`text-sm font-semibold ${
+                                isSelected ? 'text-gray-400' : 'text-[#0072CE]'
+                              }`}>
+                                {product.price.toLocaleString()}P
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                판매 {product.purchase_count}개
                               </div>
                             </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
                           </div>
                         </div>
           </CardContent>
@@ -1494,7 +1553,7 @@ const TeacherDashboard = () => {
                     domain={[0, 100]}
                   />
                   <Tooltip 
-                    content={({ active, payload }: any) => {
+                    content={({ active, payload }) => {
                       if (active && payload && payload.length) {
                         return (
                           <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
@@ -1576,7 +1635,9 @@ const TeacherDashboard = () => {
                 </ComposedChart>
               </ResponsiveContainer>
 
-              {/* 커스텀 범례 */}
+              {/* 커
+              
+              스텀 범례 */}
               <div className="mt-4 relative z-10">
                 {/* 첫 번째 줄: 과제평균 */}
                 <div className="flex justify-center gap-6 mb-2">
@@ -1675,24 +1736,10 @@ const TeacherDashboard = () => {
                   {selectedStudents.length > 0 && (
                     <button
                       onClick={() => {
-                        // 전체 제거 애니메이션 (3번째부터 역순으로)
-                        const cards = document.querySelectorAll('[data-student-id]');
-                        const reversedCards = Array.from(cards).reverse();
-
-                        reversedCards.forEach((card, index) => {
-                          setTimeout(() => {
-                            (card as HTMLElement).style.transform = 'translateY(100%)';
-                            (card as HTMLElement).style.opacity = '0';
-                          }, index * 150);
-                        });
-
-                        // 모든 애니메이션 완료 후 상태 업데이트
-                        setTimeout(() => {
-                          setSelectedStudents([]);
-                          setStudentColorMap({});
-                        }, reversedCards.length * 150 + 200);
+                        setSelectedStudents([]);
+                        setStudentColorMap({});
                       }}
-                      className="flex items-center gap-1 px-2 py-1 text-xs text-red-600 rounded-md"
+                      className="flex items-center gap-1 px-2 py-1 text-xs text-red-600 rounded-md hover:bg-red-50 transition-colors"
                       title="모든 학생 선택 해제"
                     >
                       <X className="h-3 w-3" />
