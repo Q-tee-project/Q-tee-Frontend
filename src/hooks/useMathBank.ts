@@ -25,12 +25,10 @@ export const useMathBank = () => {
   }, []);
 
   const loadWorksheets = async () => {
-    console.log('수학 워크시트 로드 시작...');
     updateState({ isLoading: true });
     try {
       const worksheetResponse = await mathService.getMathWorksheets();
       const worksheetData = worksheetResponse.worksheets;
-      console.log('수학 워크시트 데이터:', worksheetData);
 
       updateState({ worksheets: worksheetData });
 
@@ -39,7 +37,6 @@ export const useMathBank = () => {
         await loadWorksheetProblems(worksheetData[0].id);
       }
     } catch (error: any) {
-      console.error('수학 워크시트 로드 실패:', error);
       updateState({
         error: `수학 워크시트 데이터를 불러올 수 없습니다: ${error.message}`,
       });
@@ -49,20 +46,15 @@ export const useMathBank = () => {
   };
 
   const loadWorksheetProblems = async (worksheetId: number) => {
-    console.log('🔍 수학 워크시트 문제 로드 시작, ID:', worksheetId);
     try {
       const worksheetDetail = await mathService.getMathWorksheetProblems(worksheetId);
-      console.log('✅ 수학 워크시트 상세 데이터:', worksheetDetail);
-      console.log('📝 수학 문제 개수:', worksheetDetail.problems?.length || 0);
       updateState({ worksheetProblems: worksheetDetail.problems || [] });
     } catch (error: any) {
-      console.error('❌ 수학 워크시트 문제 로드 실패:', error);
       updateState({ error: '수학 워크시트 문제를 불러올 수 없습니다.' });
     }
   };
 
   const handleWorksheetSelect = async (worksheet: Worksheet) => {
-    console.log('🎯 수학 워크시트 선택됨:', worksheet.title, 'ID:', worksheet.id);
     updateState({ selectedWorksheet: worksheet });
     await loadWorksheetProblems(worksheet.id);
   };
@@ -90,9 +82,7 @@ export const useMathBank = () => {
       await loadWorksheets();
       alert('수학 워크시트가 삭제되었습니다.');
     } catch (error: any) {
-      console.error('수학 워크시트 삭제 실패:', error);
-      console.error('오류 상세:', error);
-      alert(`삭제 실패: ${error.message}\n\n자세한 정보는 개발자 도구 콘솔을 확인해주세요.`);
+      alert(`삭제 실패: ${error.message}`);
     } finally {
       updateState({ isLoading: false });
     }
@@ -119,9 +109,7 @@ export const useMathBank = () => {
       await loadWorksheets();
       alert(`${worksheets.length}개의 수학 워크시트가 삭제되었습니다.`);
     } catch (error: any) {
-      console.error('수학 워크시트 일괄 삭제 실패:', error);
-      console.error('오류 상세:', error);
-      alert(`일괄 삭제 실패: ${error.message}\n\n자세한 정보는 개발자 도구 콘솔을 확인해주세요.`);
+      alert(`일괄 삭제 실패: ${error.message}`);
     } finally {
       updateState({ isLoading: false });
     }
@@ -152,8 +140,6 @@ export const useMathBank = () => {
         }
       };
 
-      console.log('🚀 수학 문제 재생성 요청:', regenerationData);
-
       // 재생성 전 원본 문제 저장 (변경 감지용)
       const originalQuestion = problem.question;
 
@@ -175,7 +161,6 @@ export const useMathBank = () => {
 
           // 문제가 실제로 변경되었는지 확인
           if (updatedProblem && updatedProblem.question !== originalQuestion) {
-            console.log('✅ 수학 문제 재생성 완료!');
             updateState({ worksheetProblems: worksheetDetail.problems || [] });
             clearInterval(checkCompletion);
             alert('✅ 문제 재생성이 완료되었습니다!');
@@ -187,15 +172,13 @@ export const useMathBank = () => {
 
           if (attempts >= maxAttempts) {
             clearInterval(checkCompletion);
-            console.warn('⏰ 재생성 완료 대기 시간 초과');
           }
         } catch (error) {
-          console.error('문제 목록 갱신 실패:', error);
+          // 에러 무시
         }
       }, pollInterval);
 
     } catch (error: any) {
-      console.error('수학 문제 재생성 실패:', error);
       alert(`재생성 실패: ${error.message}`);
     }
   };

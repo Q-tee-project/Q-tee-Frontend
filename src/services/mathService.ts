@@ -1,7 +1,11 @@
-import { Worksheet, MathProblem } from "@/types/math";
-import { Assignment, AssignmentDeployRequest, AssignmentDeploymentResponse } from "@/services/koreanService";
+import { Worksheet, MathProblem } from '@/types/math';
+import {
+  Assignment,
+  AssignmentDeployRequest,
+  AssignmentDeploymentResponse,
+} from '@/services/koreanService';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_MATH_API_URL || "http://localhost:8001"; // Adjust as per your backend setup
+const API_BASE_URL = process.env.NEXT_PUBLIC_MATH_API_URL || 'http://localhost:8001'; // Adjust as per your backend setup
 
 // Type alias for compatibility
 type Problem = MathProblem;
@@ -14,50 +18,58 @@ const getToken = (): string | null => {
 };
 
 export const mathService = {
-  getMathWorksheets: async (skip: number = 0, limit: number = 1000): Promise<{ worksheets: Worksheet[], total: number }> => {
+  getMathWorksheets: async (
+    skip: number = 0,
+    limit: number = 1000,
+  ): Promise<{ worksheets: Worksheet[]; total: number }> => {
     const token = getToken();
     if (!token) {
-      throw new Error("Authentication token not found. Please log in.");
+      throw new Error('Authentication token not found. Please log in.');
     }
 
     // Try multiple endpoint variations
     let response = await fetch(`${API_BASE_URL}/api/worksheets/?skip=${skip}&limit=${limit}`, {
-      method: "GET",
+      method: 'GET',
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
       },
     });
 
     // Try alternative Korean service-style endpoint
     if (!response.ok) {
-      response = await fetch(`${API_BASE_URL}/api/math-generation/worksheets?skip=${skip}&limit=${limit}`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
+      response = await fetch(
+        `${API_BASE_URL}/api/math-generation/worksheets?skip=${skip}&limit=${limit}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
         },
-      });
+      );
     }
 
     // Try simple worksheets endpoint
     if (!response.ok) {
       response = await fetch(`${API_BASE_URL}/api/worksheets/`, {
-        method: "GET",
+        method: 'GET',
         headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
         },
       });
     }
 
     // If math backend doesn't exist yet, return empty worksheets
     if (!response.ok) {
-      console.warn(`Math worksheets API not available (${response.status}). This is expected if the math backend is not yet implemented.`);
+      console.warn(
+        `Math worksheets API not available (${response.status}). This is expected if the math backend is not yet implemented.`,
+      );
       return { worksheets: [], total: 0 };
     }
 
-    let data: { worksheets: Worksheet[], total: number };
+    let data: { worksheets: Worksheet[]; total: number };
     const responseData = await response.json();
 
     // Handle different response formats
@@ -75,35 +87,38 @@ export const mathService = {
 
   getMathWorksheetProblems: async (
     worksheetId: number,
-  ): Promise<{ worksheet: Worksheet; problems: Problem[] }> => { // Updated return type
+  ): Promise<{ worksheet: Worksheet; problems: Problem[] }> => {
+    // Updated return type
     const token = getToken();
     if (!token) {
-      throw new Error("Authentication token not found. Please log in.");
+      throw new Error('Authentication token not found. Please log in.');
     }
 
     // Try multiple endpoint variations
     let response = await fetch(`${API_BASE_URL}/api/worksheets/${worksheetId}`, {
-      method: "GET",
+      method: 'GET',
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
       },
     });
 
     // Try Korean service-style endpoint
     if (!response.ok) {
       response = await fetch(`${API_BASE_URL}/api/math-generation/worksheets/${worksheetId}`, {
-        method: "GET",
+        method: 'GET',
         headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
         },
       });
     }
 
     // If math backend doesn't exist yet, return mock data
     if (!response.ok) {
-      console.warn(`Math worksheet problems API not available (${response.status}). This is expected if the math backend is not yet implemented.`);
+      console.warn(
+        `Math worksheet problems API not available (${response.status}). This is expected if the math backend is not yet implemented.`,
+      );
       // Return mock worksheet and empty problems with correct interface
       const mockWorksheet: Worksheet = {
         id: worksheetId,
@@ -115,7 +130,7 @@ export const mathService = {
         chapter_name: '일차방정식',
         problem_count: 0,
         status: 'completed',
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
       };
       return { worksheet: mockWorksheet, problems: [] };
     }
@@ -128,20 +143,20 @@ export const mathService = {
   deleteMathWorksheet: async (worksheetId: number): Promise<void> => {
     const token = getToken();
     if (!token) {
-      throw new Error("Authentication token not found. Please log in.");
+      throw new Error('Authentication token not found. Please log in.');
     }
 
     const response = await fetch(`${API_BASE_URL}/api/worksheets/${worksheetId}`, {
-      method: "DELETE",
+      method: 'DELETE',
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
       },
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.detail || "Failed to delete Math worksheet.");
+      throw new Error(errorData.detail || 'Failed to delete Math worksheet.');
     }
     console.log(`Deleted Math worksheet: ${worksheetId}`);
   },
@@ -149,42 +164,47 @@ export const mathService = {
   getDeployedAssignments: async (classId: string): Promise<Assignment[]> => {
     const token = getToken();
     if (!token) {
-      throw new Error("Authentication token not found. Please log in.");
+      throw new Error('Authentication token not found. Please log in.');
     }
 
     // Try Korean service-style endpoint first (most likely to work)
-    let response = await fetch(`${API_BASE_URL}/api/assignments/classrooms/${classId}/assignments`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
+    let response = await fetch(
+      `${API_BASE_URL}/api/assignments/classrooms/${classId}/assignments`,
+      {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
       },
-    });
+    );
 
     // If that fails, try math-specific endpoints
     if (!response.ok) {
       response = await fetch(`${API_BASE_URL}/api/assignments?classroom_id=${classId}`, {
-        method: "GET",
+        method: 'GET',
         headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
         },
       });
     }
 
     if (!response.ok) {
       response = await fetch(`${API_BASE_URL}/api/classrooms/${classId}/assignments`, {
-        method: "GET",
+        method: 'GET',
         headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
         },
       });
     }
 
     // If math backend doesn't exist yet, return empty array with helpful message
     if (!response.ok) {
-      console.warn(`Math assignments API not available (${response.status}). This is expected if the math backend is not yet implemented.`);
+      console.warn(
+        `Math assignments API not available (${response.status}). This is expected if the math backend is not yet implemented.`,
+      );
       return []; // Return empty array instead of throwing error
     }
 
@@ -197,14 +217,14 @@ export const mathService = {
   createAssignment: async (worksheetId: number, classroomId: number): Promise<any> => {
     const token = getToken();
     if (!token) {
-      throw new Error("Authentication token not found. Please log in.");
+      throw new Error('Authentication token not found. Please log in.');
     }
 
     const response = await fetch(`${API_BASE_URL}/api/assignments/create`, {
-      method: "POST",
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
         worksheet_id: worksheetId,
@@ -214,40 +234,46 @@ export const mathService = {
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.detail || "과제 생성에 실패했습니다.");
+      throw new Error(errorData.detail || '과제 생성에 실패했습니다.');
     }
 
     return response.json();
   },
 
-  deployAssignment: async (deployRequest: AssignmentDeployRequest): Promise<AssignmentDeploymentResponse[]> => {
+  deployAssignment: async (
+    deployRequest: AssignmentDeployRequest,
+  ): Promise<AssignmentDeploymentResponse[]> => {
     const token = getToken();
     if (!token) {
-      throw new Error("Authentication token not found. Please log in.");
+      throw new Error('Authentication token not found. Please log in.');
     }
 
     // Math service uses /api/assignments/deploy with assignment_id (like Korean service)
     const response = await fetch(`${API_BASE_URL}/api/assignments/deploy`, {
-      method: "POST",
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(deployRequest),
     });
 
     // If math backend doesn't exist yet, simulate success
     if (!response.ok) {
-      console.warn(`Math deployment API not available (${response.status}). This is expected if the math backend is not yet implemented.`);
+      console.warn(
+        `Math deployment API not available (${response.status}). This is expected if the math backend is not yet implemented.`,
+      );
       // Return mock successful deployment response
-      return [{
-        id: Date.now(),
-        assignment_id: deployRequest.assignment_id,
-        student_id: deployRequest.student_ids[0] || 0,
-        classroom_id: deployRequest.classroom_id,
-        status: 'assigned',
-        deployed_at: new Date().toISOString(),
-      }];
+      return [
+        {
+          id: Date.now(),
+          assignment_id: deployRequest.assignment_id,
+          student_id: deployRequest.student_ids[0] || 0,
+          classroom_id: deployRequest.classroom_id,
+          status: 'assigned',
+          deployed_at: new Date().toISOString(),
+        },
+      ];
     }
 
     const data: AssignmentDeploymentResponse[] = await response.json();
@@ -264,37 +290,39 @@ export const mathService = {
 
     // Try Korean service-style endpoint first
     let response = await fetch(`${API_BASE_URL}/api/assignments/student/${studentId}`, {
-      method: "GET",
+      method: 'GET',
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
       },
     });
 
     // Try alternative endpoints
     if (!response.ok) {
       response = await fetch(`${API_BASE_URL}/api/students/${studentId}/assignments`, {
-        method: "GET",
+        method: 'GET',
         headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
         },
       });
     }
 
     if (!response.ok) {
       response = await fetch(`${API_BASE_URL}/api/assignments?student_id=${studentId}`, {
-        method: "GET",
+        method: 'GET',
         headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
         },
       });
     }
 
     // If math backend doesn't exist yet, return empty array
     if (!response.ok) {
-      console.warn(`Math student assignments API not available (${response.status}). This is expected if the math backend is not yet implemented.`);
+      console.warn(
+        `Math student assignments API not available (${response.status}). This is expected if the math backend is not yet implemented.`,
+      );
       return []; // Return empty array instead of throwing error
     }
 
@@ -311,37 +339,45 @@ export const mathService = {
     }
 
     // Try multiple endpoints for getting assignment details
-    let response = await fetch(`${API_BASE_URL}/api/assignments/${assignmentId}/details?student_id=${studentId}`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
+    let response = await fetch(
+      `${API_BASE_URL}/api/assignments/${assignmentId}/details?student_id=${studentId}`,
+      {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
       },
-    });
+    );
 
     if (!response.ok) {
-      response = await fetch(`${API_BASE_URL}/api/assignments/${assignmentId}/student/${studentId}`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
+      response = await fetch(
+        `${API_BASE_URL}/api/assignments/${assignmentId}/student/${studentId}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
         },
-      });
+      );
     }
 
     if (!response.ok) {
       response = await fetch(`${API_BASE_URL}/api/worksheets/${assignmentId}`, {
-        method: "GET",
+        method: 'GET',
         headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
         },
       });
     }
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ detail: "Failed to get assignment detail" }));
-      throw new Error(errorData.detail || "Failed to get assignment detail.");
+      const errorData = await response
+        .json()
+        .catch(() => ({ detail: 'Failed to get assignment detail' }));
+      throw new Error(errorData.detail || 'Failed to get assignment detail.');
     }
 
     const data = await response.json();
@@ -356,20 +392,23 @@ export const mathService = {
       throw new Error('No authentication token found');
     }
 
-    const response = await fetch(`${API_BASE_URL}/api/test-sessions/test-sessions/${sessionId}/submit`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
+    const response = await fetch(
+      `${API_BASE_URL}/api/test-sessions/test-sessions/${sessionId}/submit`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          answers: answers,
+        }),
       },
-      body: JSON.stringify({
-        answers: answers
-      }),
-    });
+    );
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ detail: "Failed to submit test" }));
-      throw new Error(errorData.detail || "Failed to submit test.");
+      const errorData = await response.json().catch(() => ({ detail: 'Failed to submit test' }));
+      throw new Error(errorData.detail || 'Failed to submit test.');
     }
 
     const data = await response.json();
@@ -385,19 +424,19 @@ export const mathService = {
     }
 
     const response = await fetch(`${API_BASE_URL}/api/assignments/${assignmentId}/start`, {
-      method: "POST",
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
-        student_id: studentId
+        student_id: studentId,
       }),
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ detail: "Failed to start test" }));
-      throw new Error(errorData.detail || "Failed to start test.");
+      const errorData = await response.json().catch(() => ({ detail: 'Failed to start test' }));
+      throw new Error(errorData.detail || 'Failed to start test.');
     }
 
     const data = await response.json();
@@ -413,20 +452,20 @@ export const mathService = {
     }
 
     const response = await fetch(`${API_BASE_URL}/api/test-sessions/${sessionId}/answers`, {
-      method: "POST",
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
         problem_id: problemId,
-        answer: answer
+        answer: answer,
       }),
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ detail: "Failed to save answer" }));
-      throw new Error(errorData.detail || "Failed to save answer.");
+      const errorData = await response.json().catch(() => ({ detail: 'Failed to save answer' }));
+      throw new Error(errorData.detail || 'Failed to save answer.');
     }
 
     const data = await response.json();
@@ -441,17 +480,17 @@ export const mathService = {
     }
 
     const response = await fetch(`${API_BASE_URL}/api/worksheets/${worksheetId}`, {
-      method: "PATCH",
+      method: 'PATCH',
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(data),
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.detail || "Failed to update worksheet.");
+      throw new Error(errorData.detail || 'Failed to update worksheet.');
     }
 
     const responseData = await response.json();
@@ -466,17 +505,17 @@ export const mathService = {
     }
 
     const response = await fetch(`${API_BASE_URL}/api/problems/${problemId}`, {
-      method: "PATCH",
+      method: 'PATCH',
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(data),
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.detail || "Failed to update problem.");
+      throw new Error(errorData.detail || 'Failed to update problem.');
     }
 
     const responseData = await response.json();
@@ -491,24 +530,23 @@ export const mathService = {
     }
 
     const response = await fetch(`${API_BASE_URL}/api/problems/regenerate-async`, {
-      method: "POST",
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(data),
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.detail || "Failed to regenerate problem.");
+      throw new Error(errorData.detail || 'Failed to regenerate problem.');
     }
 
     const responseData = await response.json();
     console.log(`Problem regeneration started:`, responseData);
     return responseData;
   },
-
 
   // Get assignment results (grading sessions for an assignment)
   async getAssignmentResults(assignmentId: number): Promise<any[]> {
@@ -517,24 +555,26 @@ export const mathService = {
       throw new Error('No authentication token found');
     }
 
-    const response = await fetch(`${API_BASE_URL}/api/grading/assignments/${assignmentId}/results`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
+    const response = await fetch(
+      `${API_BASE_URL}/api/grading/assignments/${assignmentId}/results`,
+      {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
       },
-    });
+    );
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.detail || "Failed to get assignment results.");
+      throw new Error(errorData.detail || 'Failed to get assignment results.');
     }
 
     const data = await response.json();
-    console.log(`Assignment results:`, data);
+
     return data;
   },
-
 
   // Get detailed grading session results
   async getGradingSessionDetails(sessionId: number): Promise<any> {
@@ -545,16 +585,18 @@ export const mathService = {
 
     // Direct backend call (like Korean service)
     const response = await fetch(`${API_BASE_URL}/api/grading/grading-sessions/${sessionId}`, {
-      method: "GET",
+      method: 'GET',
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
       },
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ detail: "Failed to get grading session details" }));
-      throw new Error(errorData.detail || "Failed to get grading session details.");
+      const errorData = await response
+        .json()
+        .catch(() => ({ detail: 'Failed to get grading session details' }));
+      throw new Error(errorData.detail || 'Failed to get grading session details.');
     }
 
     const data = await response.json();
@@ -563,7 +605,12 @@ export const mathService = {
   },
 
   // Submit answers with handwriting OCR support
-  async submitAnswerWithOCR(sessionId: string, problemId: number, answer: string, handwritingImage?: File): Promise<any> {
+  async submitAnswerWithOCR(
+    sessionId: string,
+    problemId: number,
+    answer: string,
+    handwritingImage?: File,
+  ): Promise<any> {
     const token = getToken();
     if (!token) {
       throw new Error('No authentication token found');
@@ -577,17 +624,20 @@ export const mathService = {
       formData.append('handwriting_image', handwritingImage);
     }
 
-    const response = await fetch(`${API_BASE_URL}/api/test-sessions/test-sessions/${sessionId}/answers/ocr`, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${token}`,
+    const response = await fetch(
+      `${API_BASE_URL}/api/test-sessions/test-sessions/${sessionId}/answers/ocr`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
       },
-      body: formData,
-    });
+    );
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.detail || "Failed to submit answer with OCR.");
+      throw new Error(errorData.detail || 'Failed to submit answer with OCR.');
     }
 
     const data = await response.json();
@@ -599,20 +649,20 @@ export const mathService = {
   async getPendingGradingSessions(): Promise<any[]> {
     const token = getToken();
     if (!token) {
-      throw new Error("Authentication token not found. Please log in.");
+      throw new Error('Authentication token not found. Please log in.');
     }
 
     const response = await fetch(`${API_BASE_URL}/api/grading/grading-sessions/pending`, {
-      method: "GET",
+      method: 'GET',
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
       },
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.detail || "Failed to fetch pending grading sessions.");
+      throw new Error(errorData.detail || 'Failed to fetch pending grading sessions.');
     }
 
     const data = await response.json();
@@ -624,20 +674,23 @@ export const mathService = {
   async approveGradingSession(sessionId: number): Promise<any> {
     const token = getToken();
     if (!token) {
-      throw new Error("Authentication token not found. Please log in.");
+      throw new Error('Authentication token not found. Please log in.');
     }
 
-    const response = await fetch(`${API_BASE_URL}/api/grading/grading-sessions/${sessionId}/approve`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
+    const response = await fetch(
+      `${API_BASE_URL}/api/grading/grading-sessions/${sessionId}/approve`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
       },
-    });
+    );
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.detail || "Failed to approve grading session.");
+      throw new Error(errorData.detail || 'Failed to approve grading session.');
     }
 
     const data = await response.json();
@@ -649,22 +702,27 @@ export const mathService = {
   async updateGradingSession(sessionId: number, gradingData: any): Promise<any> {
     const token = getToken();
     if (!token) {
-      throw new Error("Authentication token not found. Please log in.");
+      throw new Error('Authentication token not found. Please log in.');
     }
 
     // Direct backend call (like Korean service)
-    const response = await fetch(`${API_BASE_URL}/api/grading/grading-sessions/${sessionId}/update`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
+    const response = await fetch(
+      `${API_BASE_URL}/api/grading/grading-sessions/${sessionId}/update`,
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(gradingData),
       },
-      body: JSON.stringify(gradingData),
-    });
+    );
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ detail: "Failed to update grading session" }));
-      throw new Error(errorData.detail || "Failed to update grading session.");
+      const errorData = await response
+        .json()
+        .catch(() => ({ detail: 'Failed to update grading session' }));
+      throw new Error(errorData.detail || 'Failed to update grading session.');
     }
 
     const data = await response.json();
@@ -676,21 +734,26 @@ export const mathService = {
   async getStudentGradingResult(assignmentId: number, studentId: number): Promise<any> {
     const token = getToken();
     if (!token) {
-      throw new Error("Authentication token not found. Please log in.");
+      throw new Error('Authentication token not found. Please log in.');
     }
 
     // Direct backend call (like Korean service)
-    const response = await fetch(`${API_BASE_URL}/api/grading/assignments/${assignmentId}/students/${studentId}/result`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
+    const response = await fetch(
+      `${API_BASE_URL}/api/grading/assignments/${assignmentId}/students/${studentId}/result`,
+      {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
       },
-    });
+    );
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ detail: "Failed to get student grading result" }));
-      throw new Error(errorData.detail || "Failed to get student grading result.");
+      const errorData = await response
+        .json()
+        .catch(() => ({ detail: 'Failed to get student grading result' }));
+      throw new Error(errorData.detail || 'Failed to get student grading result.');
     }
 
     const data = await response.json();
@@ -702,20 +765,25 @@ export const mathService = {
   startAIGrading: async (assignmentId: number): Promise<any> => {
     const token = getToken();
     if (!token) {
-      throw new Error("Authentication token not found. Please log in.");
+      throw new Error('Authentication token not found. Please log in.');
     }
 
-    const response = await fetch(`${API_BASE_URL}/api/grading/assignments/${assignmentId}/start-ai-grading`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
+    const response = await fetch(
+      `${API_BASE_URL}/api/grading/assignments/${assignmentId}/start-ai-grading`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
       },
-    });
+    );
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ detail: "Failed to start AI grading" }));
-      throw new Error(errorData.detail || "Failed to start AI grading.");
+      const errorData = await response
+        .json()
+        .catch(() => ({ detail: 'Failed to start AI grading' }));
+      throw new Error(errorData.detail || 'Failed to start AI grading.');
     }
 
     const data = await response.json();
@@ -727,20 +795,22 @@ export const mathService = {
   getTaskStatus: async (taskId: string): Promise<any> => {
     const token = getToken();
     if (!token) {
-      throw new Error("Authentication token not found. Please log in.");
+      throw new Error('Authentication token not found. Please log in.');
     }
 
     const response = await fetch(`${API_BASE_URL}/api/grading/tasks/${taskId}/status`, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ detail: "Failed to get task status" }));
-      throw new Error(errorData.detail || "Failed to get task status.");
+      const errorData = await response
+        .json()
+        .catch(() => ({ detail: 'Failed to get task status' }));
+      throw new Error(errorData.detail || 'Failed to get task status.');
     }
 
     const data = await response.json();
@@ -751,19 +821,19 @@ export const mathService = {
   downloadExamPDF: async (worksheetId: number): Promise<void> => {
     const token = getToken();
     if (!token) {
-      throw new Error("Authentication token not found. Please log in.");
+      throw new Error('Authentication token not found. Please log in.');
     }
 
     const response = await fetch(`${API_BASE_URL}/api/export/worksheets/${worksheetId}/exam.pdf`, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
       },
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ detail: "PDF 생성 실패" }));
-      throw new Error(errorData.detail || "시험지 PDF 생성에 실패했습니다.");
+      const errorData = await response.json().catch(() => ({ detail: 'PDF 생성 실패' }));
+      throw new Error(errorData.detail || '시험지 PDF 생성에 실패했습니다.');
     }
 
     // Blob으로 변환하여 다운로드
@@ -782,19 +852,22 @@ export const mathService = {
   downloadSolutionPDF: async (worksheetId: number): Promise<void> => {
     const token = getToken();
     if (!token) {
-      throw new Error("Authentication token not found. Please log in.");
+      throw new Error('Authentication token not found. Please log in.');
     }
 
-    const response = await fetch(`${API_BASE_URL}/api/export/worksheets/${worksheetId}/solution.pdf`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
+    const response = await fetch(
+      `${API_BASE_URL}/api/export/worksheets/${worksheetId}/solution.pdf`,
+      {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       },
-    });
+    );
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ detail: "PDF 생성 실패" }));
-      throw new Error(errorData.detail || "해설지 PDF 생성에 실패했습니다.");
+      const errorData = await response.json().catch(() => ({ detail: 'PDF 생성 실패' }));
+      throw new Error(errorData.detail || '해설지 PDF 생성에 실패했습니다.');
     }
 
     // Blob으로 변환하여 다운로드

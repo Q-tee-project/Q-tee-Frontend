@@ -81,7 +81,6 @@ export const WorksheetList: React.FC<WorksheetListProps> = ({
         `선택된 ${selectedWorksheets.length}개의 워크시트를 삭제하시겠습니까?\n\n${worksheetTitles}\n\n이 작업은 되돌릴 수 없습니다.`,
       )
     ) {
-      console.log('🗑️ 일괄 삭제 시작:', selectedWorksheets);
       onBatchDeleteWorksheets(selectedWorksheets);
       setSelectedWorksheets([]); // 선택 초기화
       setClearSelection(true); // 테이블 선택 상태 초기화 트리거
