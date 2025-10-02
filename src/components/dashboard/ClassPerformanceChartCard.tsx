@@ -13,8 +13,22 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
-import { BarChart3, Info, BookOpen as BookIcon, ClipboardList } from 'lucide-react';
-import AssignmentSelectionModal from './AssignmentSelectionModal';
+import { BarChart3, Info, BookOpen as BookIcon, ClipboardList, Calendar as CalendarIcon, Search } from 'lucide-react';
+import { VscSettings } from "react-icons/vsc";
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { Input } from '@/components/ui/input';
+import { format } from 'date-fns';
+import { ko } from 'date-fns/locale';
 
 interface ClassData {
   id: string;
@@ -68,13 +82,52 @@ const ClassPerformanceChartCard = ({
   setIsAssignmentModalOpen,
   studentColorMap,
 }: ClassPerformanceChartCardProps) => {
+  const [startDate, setStartDate] = React.useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = React.useState<Date | undefined>(undefined);
+  const [subjectFilter, setSubjectFilter] = React.useState<string>('전체');
+  const [searchQuery, setSearchQuery] = React.useState<string>('');
+  const [startDatePopoverOpen, setStartDatePopoverOpen] = React.useState(false);
+  const [endDatePopoverOpen, setEndDatePopoverOpen] = React.useState(false);
 
-  // Get color for a specific student
   const getStudentColor = (studentId: number): string | null => {
     return studentColorMap[studentId] || null;
   };
 
-  // Generate chart data for assignments
+  const getFilteredAssignments = () => {
+    let filtered = assignments;
+
+    if (startDate && endDate) {
+      filtered = filtered.filter(assignment => {
+        const assignmentDate = new Date(assignment.dueDate);
+        return assignmentDate >= startDate && assignmentDate <= endDate;
+      });
+    }
+
+    if (subjectFilter !== '전체') {
+      filtered = filtered.filter(assignment => assignment.subject === subjectFilter);
+    }
+
+    if (searchQuery.trim()) {
+      filtered = filtered.filter(assignment => 
+        assignment.title.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    return filtered;
+  };
+
+  const filteredAssignments = getFilteredAssignments();
+
+  const handleStartDateSelect = (date: Date | undefined) => {
+    setStartDate(date);
+    setStartDatePopoverOpen(false);
+  };
+
+  const handleEndDateSelect = (date: Date | undefined) => {
+    setEndDate(date);
+    setEndDatePopoverOpen(false);
+  };
+
   const getAssignmentChartData = React.useCallback(() => {
     return assignments.map((assignment) => {
       const dataPoint: any = {
@@ -83,7 +136,6 @@ const ClassPerformanceChartCard = ({
         subject: assignment.subject,
       };
 
-      // Add selected students' scores
       if (selectedStudents.length > 0 && selectedClass) {
         selectedStudents.forEach((studentId) => {
           const student = students[selectedClass]?.find((s) => s.id === studentId);
@@ -92,13 +144,13 @@ const ClassPerformanceChartCard = ({
             const isAssigned = assignment.assignedStudents?.includes(studentId);
 
             if (!isAssigned) {
-              dataPoint[student.name] = null; // Not assigned, don't show on chart
+              dataPoint[student.name] = null;
               dataPoint[`${student.name}_status`] = 'unassigned';
             } else if (score !== undefined) {
-              dataPoint[student.name] = score; // Actual score
+              dataPoint[student.name] = score;
               dataPoint[`${student.name}_status`] = 'completed';
             } else {
-              dataPoint[student.name] = 0; // Not taken, show as 0
+              dataPoint[student.name] = 0;
               dataPoint[`${student.name}_status`] = 'not_taken';
             }
           }
@@ -108,7 +160,6 @@ const ClassPerformanceChartCard = ({
     });
   }, [assignments, selectedStudents, selectedClass, students]);
 
-  // Filter assignment chart data based on selected assignments
   const assignmentChartData = React.useMemo(() => {
     if (selectedAssignments.length > 0) {
       return selectedAssignments
@@ -122,7 +173,6 @@ const ClassPerformanceChartCard = ({
             subject: assignment.subject,
           };
 
-          // Add selected students' scores
           if (selectedStudents.length > 0 && selectedClass) {
             selectedStudents.forEach((studentId) => {
               const student = students[selectedClass]?.find((s) => s.id === studentId);
@@ -147,7 +197,7 @@ const ClassPerformanceChartCard = ({
         })
         .filter(Boolean);
     }
-    return getAssignmentChartData(); // If no assignments selected, show all
+    return getAssignmentChartData();
   }, [selectedAssignments, assignments, selectedStudents, selectedClass, students, getAssignmentChartData]);
 
   return (
@@ -171,7 +221,6 @@ const ClassPerformanceChartCard = ({
           </div>
         </div>
 
-        {/* Class Selection and Assignment Filter */}
         <div className="flex items-center gap-4">
           <Select value={selectedClass} onValueChange={setSelectedClass}>
             <SelectTrigger className="w-48">
@@ -187,17 +236,14 @@ const ClassPerformanceChartCard = ({
           </Select>
 
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <BookIcon className="h-4 w-4 text-[#0072CE]" />
-              <label className="text-sm font-medium text-gray-700">과제별 차트</label>
-            </div>
-            <AssignmentSelectionModal
-              assignments={assignments}
-              selectedAssignments={selectedAssignments}
-              handleAssignmentSelect={handleAssignmentSelect}
-              isAssignmentModalOpen={isAssignmentModalOpen}
-              setIsAssignmentModalOpen={setIsAssignmentModalOpen}
-            />
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setIsAssignmentModalOpen(true)}
+              className="h-9 w-9"
+            >
+              <VscSettings className="h-4 w-4" />
+            </Button>
           </div>
         </div>
       </CardHeader>
@@ -248,7 +294,6 @@ const ClassPerformanceChartCard = ({
                               </p>
                             );
                           } else if (entry.dataKey !== 'subject' && !entry.dataKey.includes('_status')) {
-                            // Student score
                             const studentName = entry.dataKey;
                             const statusKey = `${studentName}_status`;
                             const status = payload[0].payload[statusKey];
@@ -258,10 +303,10 @@ const ClassPerformanceChartCard = ({
 
                             if (status === 'unassigned') {
                               displayText = '미배포 (-점)';
-                              textColor = '#9ca3af'; // Gray
+                              textColor = '#9ca3af';
                             } else if (status === 'not_taken') {
                               displayText = '미응시 (-점)';
-                              textColor = '#f59e0b'; // Orange
+                              textColor = '#f59e0b';
                             } else {
                               displayText = `${entry.value}점`;
                               textColor = entry.stroke;
@@ -314,9 +359,7 @@ const ClassPerformanceChartCard = ({
             </ComposedChart>
           </ResponsiveContainer>
 
-          {/* Custom Legend */}
           <div className="mt-4 relative z-10">
-            {/* First row: Assignment Average */}
             <div className="flex justify-center gap-6 mb-2">
               <div className="flex items-center gap-2">
                 <div
@@ -329,7 +372,6 @@ const ClassPerformanceChartCard = ({
               </div>
             </div>
 
-            {/* Second row: Selected Students */}
             {selectedStudents.length > 0 && selectedClass && (
               <div className="flex justify-center gap-6">
                 {selectedStudents.map((studentId) => {
@@ -353,6 +395,176 @@ const ClassPerformanceChartCard = ({
           </div>
         </div>
       </CardContent>
+
+      <Dialog open={isAssignmentModalOpen} onOpenChange={setIsAssignmentModalOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              차트 설정
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="p-2 bg-gray-50 rounded-lg">
+              <ul className="text-xs text-gray-600 space-y-0.5">
+                <li>• 기간 설정 시 해당 기간 내의 과제만 표시됩니다</li>
+                <li>• 최대 7개의 과제까지 선택 가능합니다</li>
+              </ul>
+            </div>
+            
+            <div>
+              <label className="text-base font-semibold text-gray-800 mb-3 block">기간 설정</label>
+              <div className="flex items-center gap-2">
+                <div className="flex-1">
+                  <Popover open={startDatePopoverOpen} onOpenChange={setStartDatePopoverOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="w-full flex items-center justify-start gap-2 h-10"
+                      >
+                        <CalendarIcon className="h-4 w-4 text-gray-500" />
+                        <span className="text-sm">
+                          {startDate ? format(startDate, 'yyyy.MM.dd', { locale: ko }) : '시작 날짜'}
+                        </span>
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={startDate}
+                        onSelect={handleStartDateSelect}
+                        initialFocus
+                        locale={ko}
+                        captionLayout="dropdown"
+                        fromYear={2020}
+                        toYear={new Date().getFullYear()}
+                        className="rounded-md border shadow-sm"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                <span className="text-gray-400">-</span>
+
+                <div className="flex-1">
+                  <Popover open={endDatePopoverOpen} onOpenChange={setEndDatePopoverOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="w-full flex items-center justify-start gap-2 h-10"
+                      >
+                        <CalendarIcon className="h-4 w-4 text-gray-500" />
+                        <span className="text-sm">
+                          {endDate ? format(endDate, 'yyyy.MM.dd', { locale: ko }) : '종료 날짜'}
+                        </span>
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={endDate}
+                        onSelect={handleEndDateSelect}
+                        initialFocus
+                        locale={ko}
+                        captionLayout="dropdown"
+                        fromYear={2020}
+                        toYear={new Date().getFullYear()}
+                        className="rounded-md border shadow-sm"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label className="text-base font-semibold text-gray-800 mb-3 block">
+                과제 선택 (최대 7개) 
+                {filteredAssignments.length !== assignments.length && (
+                  <span className="text-xs text-blue-600 ml-2">
+                    ({filteredAssignments.length}개 과제 중)
+                  </span>
+                )}
+              </label>
+
+              <div className="flex gap-2 mb-3">
+                <Select value={subjectFilter} onValueChange={setSubjectFilter}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue placeholder="과목" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="전체">전체</SelectItem>
+                    <SelectItem value="국어">국어</SelectItem>
+                    <SelectItem value="영어">영어</SelectItem>
+                    <SelectItem value="수학">수학</SelectItem>
+                  </SelectContent>
+                </Select>
+                
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    type="text"
+                    placeholder="과제명 검색"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+              </div>
+
+              <div className="max-h-48 overflow-y-auto space-y-2">
+                {filteredAssignments.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <p>선택한 기간에 해당하는 과제가 없습니다.</p>
+                    <p className="text-xs mt-1">다른 기간을 선택해보세요.</p>
+                  </div>
+                ) : (
+                  filteredAssignments.map((assignment) => (
+                    <div 
+                      key={assignment.id} 
+                      className={`p-2 border rounded-md cursor-pointer transition-all hover:shadow-sm ${
+                        selectedAssignments.includes(assignment.id) 
+                          ? 'border-blue-500 bg-blue-50' 
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                      onClick={() => handleAssignmentSelect(assignment.id)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2">
+                            <Checkbox
+                              checked={selectedAssignments.includes(assignment.id)}
+                              disabled={!selectedAssignments.includes(assignment.id) && selectedAssignments.length >= 7}
+                            />
+                            <div>
+                              <h4 className="text-sm font-medium text-gray-900">{assignment.title}</h4>
+                              <p className="text-xs text-gray-500">
+                                {assignment.subject} • 마감: {assignment.dueDate}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {assignment.submitted}/{assignment.total}명
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsAssignmentModalOpen(false)}
+            >
+              닫기
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };
