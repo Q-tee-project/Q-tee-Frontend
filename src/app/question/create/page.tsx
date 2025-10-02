@@ -4,9 +4,9 @@ import React, { useState } from 'react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { PlusCircle } from 'lucide-react';
-import KoreanGenerator from '@/components/subjects/KoreanGenerator';
-import EnglishGenerator from '@/components/subjects/EnglishGenerator';
-import MathGenerator from '@/components/subjects/MathGenerator';
+import KoreanGenerator from '@/components/generator/KoreanGenerator';
+import EnglishGenerator from '@/components/generator/EnglishGenerator';
+import MathGenerator from '@/components/generator/MathGenerator';
 import { QuestionPreview } from '@/components/question/QuestionPreview';
 import { EnglishWorksheetDetail } from '@/components/bank/EnglishWorksheetDetail';
 import { ErrorToast } from '@/components/bank/ErrorToast';
@@ -23,10 +23,7 @@ import { EnglishService } from '@/services/englishService';
 
 const SUBJECTS = ['국어', '영어', '수학'];
 
-
 // 더 이상 변환 필요 없음 - 서버 데이터 직접 사용
-
-
 
 export default function CreatePage() {
   const [subject, setSubject] = useState<string>('');
@@ -267,8 +264,9 @@ export default function CreatePage() {
         englishGeneration.worksheetData as EnglishWorksheetData,
         () => {
           currentGeneration.updateState({
-            errorMessage: '영어 문제지가 성공적으로 저장되었습니다! ✅',
+            errorMessage: null,
           });
+          alert('영어 문제지가 성공적으로 저장되었습니다! ✅');
         },
         (error) => {
           currentGeneration.updateState({ errorMessage: error });
@@ -305,7 +303,7 @@ export default function CreatePage() {
       <div className="flex-1 min-h-0">
         <div className="flex gap-6 h-full">
           <Card
-            className="w-1/3 flex flex-col shadow-sm h-[calc(100vh-200px)]"
+            className="w-1/4 flex flex-col shadow-sm"
             style={{ gap: '0', padding: '0' }}
           >
             <CardHeader
@@ -335,7 +333,7 @@ export default function CreatePage() {
               </div>
 
               {/* 과목별 컴포넌트 렌더링 */}
-              <div className="overflow-y-auto pr-2" style={{ height: 'calc(100vh - 400px)' }}>
+              <div className="overflow-y-auto pr-2">
                 {subject === '국어' && (
                   <KoreanGenerator
                     onGenerate={handleGenerate}
@@ -373,7 +371,7 @@ export default function CreatePage() {
 
           {/* 오른쪽 영역 - 결과 미리보기 자리 */}
           <Card
-            className="flex-1 flex flex-col shadow-sm h-[calc(100vh-200px)]"
+            className="flex-1 flex flex-col shadow-sm"
             style={{ gap: '0', padding: '0' }}
           >
             <CardHeader
@@ -385,138 +383,150 @@ export default function CreatePage() {
             <CardContent className="flex-1 flex flex-col">
               {/* 영어는 EnglishWorksheetDetail 컴포넌트 사용 */}
               {subject === '영어' ? (
-
-                englishGeneration.worksheetData && englishGeneration.worksheetData.questions && englishGeneration.worksheetData.questions.length > 0 ? (
+                englishGeneration.worksheetData &&
+                englishGeneration.worksheetData.questions &&
+                englishGeneration.worksheetData.questions.length > 0 ? (
                   <EnglishWorksheetDetail
                     selectedWorksheet={englishGeneration.worksheetData}
                     worksheetProblems={englishGeneration.worksheetData}
                     worksheetPassages={englishGeneration.worksheetData.passages || []}
-                        showAnswerSheet={showAnswerSheet}
-                        isEditingTitle={isEditingTitle}
-                        editedTitle={englishWorksheetSave.worksheetName || englishGeneration.worksheetData?.worksheet_name || `영어 문제지 ${new Date().toLocaleDateString()}`}
-                        onToggleAnswerSheet={() => setShowAnswerSheet(!showAnswerSheet)}
-                        onEditProblem={() => {}}
-                        onStartEditTitle={() => setIsEditingTitle(true)}
-                        onCancelEditTitle={() => {
-                          setIsEditingTitle(false);
-                          englishWorksheetSave.setWorksheetName(englishWorksheetSave.worksheetName);
-                        }}
-                        onSaveTitle={() => {
-                          // 워크시트 데이터에 제목 반영
-                          if (englishGeneration.worksheetData) {
-                            englishGeneration.updateWorksheetData({
-                              ...englishGeneration.worksheetData,
-                              worksheet_name: englishWorksheetSave.worksheetName
-                            });
-                          }
-                          setIsEditingTitle(false);
-                        }}
-                        onEditedTitleChange={englishWorksheetSave.setWorksheetName}
-                        onRefresh={() => {
-                          // 강제 리렌더링으로 데이터 새로고침
-                          setForceUpdateKey(prev => prev + 1);
-                        }}
-                        mode="generation"
-                        onSaveWorksheet={handleSaveWorksheet}
-                        isSaving={englishWorksheetSave.isSaving}
-                        onUpdateQuestion={(questionId, updatedQuestion, updatedPassage, updatedRelatedQuestions) => {
-                          // 영어 생성 상태의 questions 배열 업데이트
-                          const currentWorksheetData = englishGeneration.worksheetData;
-                          if (currentWorksheetData) {
-                            let updatedQuestions = [...(currentWorksheetData.questions || [])];
+                    showAnswerSheet={showAnswerSheet}
+                    isEditingTitle={isEditingTitle}
+                    editedTitle={
+                      englishWorksheetSave.worksheetName ||
+                      englishGeneration.worksheetData?.worksheet_name ||
+                      `영어 문제지 ${new Date().toLocaleDateString()}`
+                    }
+                    onToggleAnswerSheet={() => setShowAnswerSheet(!showAnswerSheet)}
+                    onEditProblem={() => {}}
+                    onStartEditTitle={() => setIsEditingTitle(true)}
+                    onCancelEditTitle={() => {
+                      setIsEditingTitle(false);
+                      englishWorksheetSave.setWorksheetName(englishWorksheetSave.worksheetName);
+                    }}
+                    onSaveTitle={() => {
+                      // 워크시트 데이터에 제목 반영
+                      if (englishGeneration.worksheetData) {
+                        englishGeneration.updateWorksheetData({
+                          ...englishGeneration.worksheetData,
+                          worksheet_name: englishWorksheetSave.worksheetName,
+                        });
+                      }
+                      setIsEditingTitle(false);
+                    }}
+                    onEditedTitleChange={englishWorksheetSave.setWorksheetName}
+                    onRefresh={() => {
+                      // 강제 리렌더링으로 데이터 새로고침
+                      setForceUpdateKey((prev) => prev + 1);
+                    }}
+                    mode="generation"
+                    onSaveWorksheet={handleSaveWorksheet}
+                    isSaving={englishWorksheetSave.isSaving}
+                    onUpdateQuestion={(
+                      questionId,
+                      updatedQuestion,
+                      updatedPassage,
+                      updatedRelatedQuestions,
+                    ) => {
+                      // 영어 생성 상태의 questions 배열 업데이트
+                      const currentWorksheetData = englishGeneration.worksheetData;
+                      if (currentWorksheetData) {
+                        let updatedQuestions = [...(currentWorksheetData.questions || [])];
 
-                            // 현재 문제 업데이트
+                        // 현재 문제 업데이트
+                        updatedQuestions = updatedQuestions.map((q: any) => {
+                          if (q.question_id === questionId) {
+                            return {
+                              ...q,
+                              ...updatedQuestion,
+                              // 객관식 정답 인덱스 변환 (0-based -> 1-based for UI)
+                              correct_answer:
+                                updatedQuestion.question_type === '객관식' &&
+                                typeof updatedQuestion.correct_answer === 'string' &&
+                                !isNaN(parseInt(updatedQuestion.correct_answer))
+                                  ? (parseInt(updatedQuestion.correct_answer) + 1).toString()
+                                  : updatedQuestion.correct_answer,
+                            };
+                          }
+                          return q;
+                        });
+
+                        // 연계 문제들도 업데이트 (다중 재생성의 경우)
+                        if (updatedRelatedQuestions && updatedRelatedQuestions.length > 0) {
+                          updatedRelatedQuestions.forEach((relatedQ: any) => {
                             updatedQuestions = updatedQuestions.map((q: any) => {
-                              if (q.question_id === questionId) {
+                              if (q.question_id === relatedQ.question_id) {
                                 return {
                                   ...q,
-                                  ...updatedQuestion,
+                                  ...relatedQ,
                                   // 객관식 정답 인덱스 변환 (0-based -> 1-based for UI)
-                                  correct_answer: updatedQuestion.question_type === '객관식' &&
-                                    typeof updatedQuestion.correct_answer === 'string' &&
-                                    !isNaN(parseInt(updatedQuestion.correct_answer))
-                                    ? (parseInt(updatedQuestion.correct_answer) + 1).toString()
-                                    : updatedQuestion.correct_answer
+                                  correct_answer:
+                                    relatedQ.question_type === '객관식' &&
+                                    typeof relatedQ.correct_answer === 'string' &&
+                                    !isNaN(parseInt(relatedQ.correct_answer))
+                                      ? (parseInt(relatedQ.correct_answer) + 1).toString()
+                                      : relatedQ.correct_answer,
                                 };
                               }
                               return q;
                             });
+                          });
+                        }
 
-                            // 연계 문제들도 업데이트 (다중 재생성의 경우)
-                            if (updatedRelatedQuestions && updatedRelatedQuestions.length > 0) {
-                              updatedRelatedQuestions.forEach((relatedQ: any) => {
-                                updatedQuestions = updatedQuestions.map((q: any) => {
-                                  if (q.question_id === relatedQ.question_id) {
-                                    return {
-                                      ...q,
-                                      ...relatedQ,
-                                      // 객관식 정답 인덱스 변환 (0-based -> 1-based for UI)
-                                      correct_answer: relatedQ.question_type === '객관식' &&
-                                        typeof relatedQ.correct_answer === 'string' &&
-                                        !isNaN(parseInt(relatedQ.correct_answer))
-                                        ? (parseInt(relatedQ.correct_answer) + 1).toString()
-                                        : relatedQ.correct_answer
-                                    };
-                                  }
-                                  return q;
-                                });
-                              });
-                            }
+                        // 지문이 업데이트된 경우 passages 배열도 업데이트
+                        let updatedPassages = [...(currentWorksheetData.passages || [])];
+                        if (updatedPassage) {
+                          console.log('🔄 지문 업데이트 중:', {
+                            updatedPassage,
+                            updatedPassageKeys: Object.keys(updatedPassage),
+                            currentPassages: currentWorksheetData.passages,
+                            passageId: updatedPassage.passage_id,
+                            currentPassageIds: currentWorksheetData.passages?.map(
+                              (p) => p.passage_id,
+                            ),
+                          });
 
-                            // 지문이 업데이트된 경우 passages 배열도 업데이트
-                            let updatedPassages = [...(currentWorksheetData.passages || [])];
-                            if (updatedPassage) {
-                              console.log('🔄 지문 업데이트 중:', {
+                          // 기존 지문을 찾아서 업데이트
+                          let passageUpdated = false;
+                          updatedPassages = updatedPassages.map((p: any) => {
+                            if (p.passage_id === updatedPassage.passage_id) {
+                              console.log('✅ 지문 매칭됨 - 업데이트 중:', {
+                                originalPassage: p,
                                 updatedPassage,
-                                updatedPassageKeys: Object.keys(updatedPassage),
-                                currentPassages: currentWorksheetData.passages,
-                                passageId: updatedPassage.passage_id,
-                                currentPassageIds: currentWorksheetData.passages?.map(p => p.passage_id)
                               });
-
-                              // 기존 지문을 찾아서 업데이트
-                              let passageUpdated = false;
-                              updatedPassages = updatedPassages.map((p: any) => {
-                                if (p.passage_id === updatedPassage.passage_id) {
-                                  console.log('✅ 지문 매칭됨 - 업데이트 중:', {
-                                    originalPassage: p,
-                                    updatedPassage
-                                  });
-                                  passageUpdated = true;
-                                  return {
-                                    ...updatedPassage, // 새 지문 데이터로 완전 교체
-                                    id: p.id, // 기존 id만 유지
-                                  };
-                                }
-                                return p;
-                              });
-
-                              if (!passageUpdated) {
-                                console.log('⚠️ 지문 매칭 실패 - ID가 일치하지 않음');
-                              }
+                              passageUpdated = true;
+                              return {
+                                ...updatedPassage, // 새 지문 데이터로 완전 교체
+                                id: p.id, // 기존 id만 유지
+                              };
                             }
+                            return p;
+                          });
 
-                            // WorksheetData 업데이트
-                            englishGeneration.updateWorksheetData({
-                              ...currentWorksheetData,
-                              questions: updatedQuestions,
-                              passages: updatedPassages,
-                            });
-
-                            // 강제 리렌더링
-                            setForceUpdateKey(prev => prev + 1);
+                          if (!passageUpdated) {
+                            console.log('⚠️ 지문 매칭 실패 - ID가 일치하지 않음');
                           }
-                        }}
-                      />
+                        }
+
+                        // WorksheetData 업데이트
+                        englishGeneration.updateWorksheetData({
+                          ...currentWorksheetData,
+                          questions: updatedQuestions,
+                          passages: updatedPassages,
+                        });
+
+                        // 강제 리렌더링
+                        setForceUpdateKey((prev) => prev + 1);
+                      }
+                    }}
+                  />
                 ) : (
                   <div className="flex-1 flex items-center justify-center text-gray-500">
                     {currentGeneration.isGenerating
                       ? '영어 문제를 생성하고 있습니다...'
-                      : '영어 과목을 선택하고 문제를 생성해주세요'
-                    }
+                      : '영어 과목을 선택하고 문제를 생성해주세요'}
                   </div>
                 )
-
               ) : (
                 // 다른 과목은 기존 방식 (forceUpdateKey로 강제 리렌더링)
                 <QuestionPreview

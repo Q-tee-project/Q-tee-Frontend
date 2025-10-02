@@ -1,13 +1,15 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { LaTeXRenderer } from '@/components/LaTeXRenderer';
+import { TikZRenderer } from '@/components/TikZRenderer';
 import { Worksheet, MathProblem, ProblemType } from '@/types/math';
-import { Edit3 } from 'lucide-react';
+import { Edit3, RotateCcw } from 'lucide-react';
+import { ProblemRegenerateDialog } from './ProblemRegenerateDialog';
 
 interface MathWorksheetDetailProps {
   selectedWorksheet: Worksheet | null;
@@ -19,6 +21,7 @@ interface MathWorksheetDetailProps {
   onOpenDistributeDialog: () => void;
   onOpenEditDialog: () => void;
   onEditProblem: (problem: MathProblem) => void;
+  onRegenerateProblem?: (problem: MathProblem, feedback?: string) => void;
   onStartEditTitle: () => void;
   onCancelEditTitle: () => void;
   onSaveTitle: () => void;
@@ -29,8 +32,7 @@ const getProblemTypeInKorean = (type: string): string => {
   switch (type.toLowerCase()) {
     case ProblemType.MULTIPLE_CHOICE:
       return '객관식';
-    case ProblemType.ESSAY:
-      return '서술형';
+
     case ProblemType.SHORT_ANSWER:
       return '단답형';
     default:
@@ -48,11 +50,26 @@ export const MathWorksheetDetail: React.FC<MathWorksheetDetailProps> = ({
   onOpenDistributeDialog,
   onOpenEditDialog,
   onEditProblem,
+  onRegenerateProblem,
   onStartEditTitle,
   onCancelEditTitle,
   onSaveTitle,
   onEditedTitleChange,
 }) => {
+  const [isRegenerateDialogOpen, setIsRegenerateDialogOpen] = useState(false);
+  const [selectedProblemForRegenerate, setSelectedProblemForRegenerate] = useState<MathProblem | null>(null);
+
+  const handleRegenerateClick = (problem: MathProblem) => {
+    setSelectedProblemForRegenerate(problem);
+    setIsRegenerateDialogOpen(true);
+  };
+
+  const handleRegenerateConfirm = (feedback: string) => {
+    if (selectedProblemForRegenerate && onRegenerateProblem) {
+      onRegenerateProblem(selectedProblemForRegenerate, feedback);
+    }
+  };
+
   if (!selectedWorksheet) {
     return (
       <Card className="w-2/3 flex items-center justify-center shadow-sm h-[calc(100vh-200px)]">
@@ -65,6 +82,7 @@ export const MathWorksheetDetail: React.FC<MathWorksheetDetailProps> = ({
   }
 
   return (
+    <>
     <Card className="w-2/3 flex flex-col shadow-sm h-[calc(100vh-200px)]">
       <CardHeader className="flex flex-row items-center py-6 px-6 border-b border-gray-100">
         <div className="flex-1"></div>
@@ -131,20 +149,6 @@ export const MathWorksheetDetail: React.FC<MathWorksheetDetailProps> = ({
               {showAnswerSheet ? '시험지 보기' : '정답 및 해설'}
             </Button>
           )}
-          <Button
-            onClick={onOpenDistributeDialog}
-            variant="outline"
-            className="bg-white/80 backdrop-blur-sm border-[#0072CE]/30 text-[#0072CE] hover:bg-[#0072CE]/10 hover:border-[#0072CE]/50"
-          >
-            문제지 배포
-          </Button>
-          <Button
-            onClick={onOpenEditDialog}
-            variant="outline"
-            className="bg-white/80 backdrop-blur-sm border-[#0072CE]/30 text-[#0072CE] hover:bg-[#0072CE]/10 hover:border-[#0072CE]/50"
-          >
-            문제지 편집
-          </Button>
         </div>
       </CardHeader>
 
@@ -186,24 +190,64 @@ export const MathWorksheetDetail: React.FC<MathWorksheetDetailProps> = ({
                               {problem.difficulty}
                             </span>
                           </div>
-                          <Button
-                            onClick={() => onEditProblem(problem)}
-                            variant="ghost"
-                            size="sm"
-                            className="text-[#0072CE] hover:text-[#0056A3] hover:bg-[#EBF6FF] p-1"
-                            title="문제 편집"
-                          >
-                            <Edit3 className="w-4 h-4" />
-                          </Button>
+                          <div className="flex gap-1">
+                            <Button
+                              onClick={() => onEditProblem(problem)}
+                              variant="ghost"
+                              size="sm"
+                              className="text-[#0072CE] hover:text-[#0056A3] hover:bg-[#EBF6FF] p-1"
+                              title="문제 편집"
+                            >
+                              <Edit3 className="w-4 h-4" />
+                            </Button>
+                            {onRegenerateProblem && (
+                              <Button
+                                onClick={() => handleRegenerateClick(problem)}
+                                variant="ghost"
+                                size="sm"
+                                className="text-green-600 hover:text-green-700 hover:bg-green-50 p-1"
+                                title="문제 재생성"
+                              >
+                                <RotateCcw className="w-4 h-4" />
+                              </Button>
+                            )}
+                          </div>
                         </div>
 
                         <div className="text-base leading-relaxed text-gray-900 mb-4">
-                          <LaTeXRenderer content={problem.question} />
+                          <LaTeXRenderer content={(() => {
+                            let cleanedQuestion = problem.question;
+
+                            // 1. 완전한 TikZ 환경 제거 (백슬래시 있는 경우)
+                            cleanedQuestion = cleanedQuestion.replace(/\\begin\{tikzpicture\}[\s\S]*?\\end\{tikzpicture\}/g, '');
+
+                            // 2. 백슬래시가 없는 깨진 TikZ 코드 제거 (사진처럼)
+                            cleanedQuestion = cleanedQuestion.replace(/\[tikz[^\]]*\][^[]*standalone[^[]*tikz[\s\S]*?;/g, '');
+
+                            // 3. documentclass, usepackage 등 제거
+                            cleanedQuestion = cleanedQuestion
+                              .replace(/\\documentclass\[.*?\]\{.*?\}/g, '')
+                              .replace(/\\usepackage\{.*?\}/g, '')
+                              .replace(/\\begin\{document\}/g, '')
+                              .replace(/\\end\{document\}/g, '');
+
+                            cleanedQuestion = cleanedQuestion.trim();
+
+                            return cleanedQuestion;
+                          })()} />
                         </div>
+
+                        {/* TikZ 그래프 */}
+                        {problem.tikz_code && (
+                          <div className="mb-4">
+                            <TikZRenderer tikzCode={problem.tikz_code} />
+                          </div>
+                        )}
 
                         {problem.choices && problem.choices.length > 0 && (
                           <div className="ml-4 space-y-3">
                             {problem.choices.map((choice: string, choiceIndex: number) => {
+                              const displayChoice = choice.replace(/^[A-E][\.\):\s]+/, '');
                               const optionLabel = String.fromCharCode(65 + choiceIndex);
                               const isCorrect = problem.correct_answer === optionLabel;
                               return (
@@ -225,7 +269,7 @@ export const MathWorksheetDetail: React.FC<MathWorksheetDetailProps> = ({
                                     {showAnswerSheet && isCorrect ? '✓' : optionLabel}
                                   </span>
                                   <div className="flex-1 text-gray-900">
-                                    <LaTeXRenderer content={choice} />
+                                    <LaTeXRenderer content={displayChoice} />
                                   </div>
                                   {showAnswerSheet && isCorrect && (
                                     <span className="text-xs font-medium text-green-700 bg-green-200 px-2 py-1 rounded">
@@ -244,7 +288,9 @@ export const MathWorksheetDetail: React.FC<MathWorksheetDetailProps> = ({
                               <span className="text-sm font-semibold text-blue-800">해설:</span>
                             </div>
                             <div className="text-sm text-blue-800">
-                              <LaTeXRenderer content={problem.explanation || '해설 정보가 없습니다'} />
+                              <LaTeXRenderer
+                                content={problem.explanation || '해설 정보가 없습니다'}
+                              />
                             </div>
                           </div>
                         )}
@@ -258,10 +304,7 @@ export const MathWorksheetDetail: React.FC<MathWorksheetDetailProps> = ({
                                   {showAnswerSheet ? (
                                     <div className="bg-green-100 border border-green-300 rounded px-3 py-2 text-green-800 font-medium">
                                       <LaTeXRenderer
-                                        content={
-                                          problem.correct_answer ||
-                                          '답안 정보가 없습니다'
-                                        }
+                                        content={problem.correct_answer || '답안 정보가 없습니다'}
                                       />
                                     </div>
                                   ) : (
@@ -271,7 +314,9 @@ export const MathWorksheetDetail: React.FC<MathWorksheetDetailProps> = ({
                                 {showAnswerSheet && (
                                   <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
                                     <div className="flex items-center gap-2 mb-2">
-                                      <span className="text-sm font-semibold text-blue-800">해설:</span>
+                                      <span className="text-sm font-semibold text-blue-800">
+                                        해설:
+                                      </span>
                                     </div>
                                     <div className="text-sm text-blue-800">
                                       <LaTeXRenderer
@@ -307,10 +352,7 @@ export const MathWorksheetDetail: React.FC<MathWorksheetDetailProps> = ({
                                     </div>
                                     <div className="text-sm text-blue-900">
                                       <LaTeXRenderer
-                                        content={
-                                          problem.correct_answer ||
-                                          '답안 정보가 없습니다'
-                                        }
+                                        content={problem.correct_answer || '답안 정보가 없습니다'}
                                       />
                                     </div>
                                     <div className="mt-3 pt-3 border-t border-blue-200">
@@ -339,5 +381,14 @@ export const MathWorksheetDetail: React.FC<MathWorksheetDetailProps> = ({
         </ScrollArea>
       </CardContent>
     </Card>
+
+    {/* 재생성 모달 */}
+    <ProblemRegenerateDialog
+      isOpen={isRegenerateDialogOpen}
+      onOpenChange={setIsRegenerateDialogOpen}
+      onConfirm={handleRegenerateConfirm}
+      subject="수학"
+    />
+    </>
   );
 };

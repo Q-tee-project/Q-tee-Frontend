@@ -7,12 +7,13 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
-import { getProducts, MarketProduct } from '@/services/marketApi';
+import { getProducts, MarketProduct, getUserPoints, UserPointResponse } from '@/services/marketApi';
 import TrendyPopularProducts from '@/components/market/TrendyPopularProducts';
 
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 
 // getPopularProducts 함수 (임시)
 const getPopularProducts = async (limit: number): Promise<MarketProduct[]> => {
@@ -35,6 +36,7 @@ export default function MarketPage() {
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState<MarketProduct[]>([]);
   const [popularProducts, setPopularProducts] = useState<MarketProduct[]>([]);
+  const [userPoints, setUserPoints] = useState<UserPointResponse | null>(null);
 
   const [sortType, setSortType] = useState<'latest' | 'rating' | 'sales'>('latest');
   const [searchQuery, setSearchQuery] = useState('');
@@ -69,9 +71,25 @@ export default function MarketPage() {
     }
   };
 
+  // 포인트 로딩 함수
+  const loadUserPoints = async () => {
+    try {
+      const points = await getUserPoints();
+      setUserPoints(points);
+    } catch (error) {
+      console.error('포인트 정보 로드 실패:', error);
+    }
+  };
+
   useEffect(() => {
     loadProducts();
   }, [currentPage, selectedTab, sortType, searchQuery]);
+
+  useEffect(() => {
+    if (userProfile) {
+      loadUserPoints();
+    }
+  }, [userProfile]);
 
   // API에서 이미 필터링/정렬된 데이터를 받아오므로 추가 처리 불필요
   const sortedAndFilteredProducts = products;
@@ -132,13 +150,20 @@ export default function MarketPage() {
           ))}
         </div>
 
-        <div className="flex space-x-4">
-          <button
-            onClick={() => router.push('/market/points')}
-            className="text-sm px-4 py-2 rounded-md bg-[#0072CE] text-white hover:bg-[#005fa3] transition-colors"
-          >
-            포인트
-          </button>
+        <div className="flex space-x-4 items-center">
+          <div className="flex items-center space-x-2">
+            {userPoints && (
+              <Badge variant="secondary" className="bg-orange-100 text-orange-800 border-orange-200">
+                {userPoints.available_points.toLocaleString()}P
+              </Badge>
+            )}
+            <button
+              onClick={() => router.push('/market/points')}
+              className="text-sm px-4 py-2 rounded-md bg-[#0072CE] text-white hover:bg-[#005fa3] transition-colors"
+            >
+              포인트
+            </button>
+          </div>
           <button
             onClick={() => router.push('/market/myMarket')}
             className="text-sm px-4 py-2 rounded-md bg-[#0072CE] text-white hover:bg-[#005fa3] transition-colors"
@@ -243,8 +268,13 @@ export default function MarketPage() {
                   whileHover={{ y: -5, boxShadow: "0 8px 20px rgba(0,0,0,0.08)" }}
                   transition={{ type: "spring", stiffness: 300, damping: 20 }}
                 >
-                  <motion.div 
-                    className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-md h-48 mb-4 flex flex-col items-center justify-center text-gray-700 select-none border border-gray-200 p-4"
+                  <motion.div
+                    className={`rounded-md h-48 mb-4 flex flex-col items-center justify-center text-gray-700 select-none border border-gray-200 p-4 ${
+                      product.subject_type === '국어' ? 'bg-gradient-to-br from-green-50 to-emerald-50' :
+                      product.subject_type === '영어' ? 'bg-gradient-to-br from-rose-50 to-pink-50' :
+                      product.subject_type === '수학' ? 'bg-gradient-to-br from-blue-50 to-indigo-50' :
+                      'bg-gradient-to-br from-gray-50 to-slate-50'
+                    }`}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.1 }}

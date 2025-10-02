@@ -55,10 +55,16 @@ export const KoreanQuestionPreview: React.FC<BaseQuestionPreviewProps> = ({
         {previewQuestions.length > 0 && (
           <div className="p-6 space-y-8">
             {(() => {
-              // 작품별로 문제들을 그룹핑
+              // 지문이 있는 문제와 없는 문제를 분리하되, 전체 순서를 유지
               const workGroups = new Map();
-              previewQuestions.forEach((q) => {
+              const grammarProblems: any[] = [];
+
+              // 문제들을 ID 순서대로 정렬
+              const sortedQuestions = [...previewQuestions].sort((a, b) => a.id - b.id);
+
+              sortedQuestions.forEach((q) => {
                 if (q.source_text && q.source_title && q.source_author) {
+                  // 지문이 있는 문제들 (시, 소설, 비문학 등)
                   const key = `${q.source_title}-${q.source_author}`;
                   if (!workGroups.has(key)) {
                     workGroups.set(key, {
@@ -66,32 +72,55 @@ export const KoreanQuestionPreview: React.FC<BaseQuestionPreviewProps> = ({
                       author: q.source_author,
                       text: q.source_text,
                       problems: [],
+                      firstProblemId: q.id, // 첫 번째 문제 ID로 순서 추적
                     });
                   }
                   workGroups.get(key).problems.push(q);
+                } else {
+                  // 지문이 없는 문제들 (문법 등)
+                  grammarProblems.push(q);
                 }
               });
-              return Array.from(workGroups.values());
-            })().map((work, workIndex) => (
+
+              // 문법 문제들을 firstProblemId로 그룹에 추가
+              if (grammarProblems.length > 0) {
+                grammarProblems.forEach((q) => {
+                  const key = `grammar-${q.id}`;
+                  workGroups.set(key, {
+                    title: null,
+                    author: null,
+                    text: null,
+                    problems: [q],
+                    firstProblemId: q.id,
+                  });
+                });
+              }
+
+              // firstProblemId 순서로 정렬
+              const allGroups = Array.from(workGroups.values()).sort((a, b) => a.firstProblemId - b.firstProblemId);
+              return allGroups;
+            })().map((work: any, workIndex: number) => (
               <div key={workIndex} className="space-y-6">
-                {/* 지문 표시 */}
-                <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-sm font-semibold text-gray-700">
-                      📖 지문 {workIndex + 1}
-                    </span>
-                    <span className="text-sm text-gray-600">
-                      - {work.title} ({work.author})
-                    </span>
+                {/* 지문 표시 (지문이 있는 경우에만) */}
+                {work.text && work.title && work.author && (
+                  <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="text-sm font-semibold text-gray-700">
+                        📖 지문
+                      </span>
+                      <span className="text-sm text-gray-600">
+                        - {work.title} ({work.author})
+                      </span>
+                    </div>
+                    <div className="text-sm leading-relaxed text-gray-800 whitespace-pre-wrap">
+                      {work.text}
+                    </div>
                   </div>
-                  <div className="text-sm leading-relaxed text-gray-800 whitespace-pre-wrap">
-                    {work.text}
-                  </div>
-                </div>
+                )}
 
                 {/* 해당 지문의 문제들 */}
                 <div className="space-y-6">
-                  {work.problems.map((q, problemIndex) => (
+                  {work.problems.map((q: any, problemIndex: number) => (
                     <Card
                       key={q.id}
                       className="animate-fade-in border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200"
@@ -161,7 +190,7 @@ export const KoreanQuestionPreview: React.FC<BaseQuestionPreviewProps> = ({
                               <LaTeXRenderer content={q.title} />
                             </div>
                             {q.options &&
-                              q.options.map((opt, idx) => (
+                              q.options.map((opt: string, idx: number) => (
                                 <div key={idx} className="flex items-start gap-3 mb-3">
                                   <span
                                     className={`flex-shrink-0 w-6 h-6 border-2 ${
@@ -173,7 +202,7 @@ export const KoreanQuestionPreview: React.FC<BaseQuestionPreviewProps> = ({
                                     {String.fromCharCode(65 + idx)}
                                   </span>
                                   <div className="flex-1 text-gray-900">
-                                    <LaTeXRenderer content={opt} />
+                                    <LaTeXRenderer content={opt.replace(/^[①②③④⑤⑥⑦⑧⑨⑩]\s*/, '')} />
                                   </div>
                                   {idx === q.answerIndex && (
                                     <span className="text-xs font-medium text-green-700 bg-green-200 px-2 py-1 rounded">

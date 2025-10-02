@@ -8,14 +8,12 @@ import {
   FiTrash2,
   FiMoreVertical,
   FiUser,
-  FiUsers,
   FiPlus,
-  FiX,
   FiCalendar,
 } from 'react-icons/fi';
 import { useRouter } from 'next/navigation';
 import { IoMailOutline, IoMailOpenOutline } from 'react-icons/io5';
-import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card';
+import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -33,7 +31,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { messageService, MessageResponse, MessageRecipient } from '@/services/messageService';
+import { messageService, MessageRecipient } from '@/services/messageService';
 import {
   Pagination,
   PaginationContent,
@@ -43,7 +41,6 @@ import {
   PaginationPrevious,
 } from '@/components/ui/pagination';
 import { Phone, Mail, User } from 'lucide-react';
-import { IoBookOutline } from 'react-icons/io5';
 import { IoIosClose } from 'react-icons/io';
 
 interface Message {
@@ -255,7 +252,6 @@ export default function MessagePage() {
   const handleProfileClick = async (e: React.MouseEvent, senderId: number) => {
     e.stopPropagation();
     try {
-      // This is a simplified approach. In a real app, you might fetch
       // the full profile from a dedicated endpoint.
       const message = messages.find((m) => m.sender.id === senderId);
       if (message) {

@@ -1,4 +1,3 @@
-
 // Base Worksheet interface
 export interface Worksheet {
   id: number;
@@ -70,7 +69,7 @@ export interface AssignmentDeployRequest {
   student_ids: number[];
 }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_KOREAN_SERVICE_URL || "http://localhost:8004/api"; // Adjust as per your backend setup
+const API_BASE_URL = process.env.NEXT_PUBLIC_KOREAN_SERVICE_URL || 'http://localhost:8004/api'; // Adjust as per your backend setup
 
 const getToken = (): string | null => {
   if (typeof window !== 'undefined') {
@@ -80,54 +79,56 @@ const getToken = (): string | null => {
 };
 
 export const koreanService = {
-
-
-  getKoreanWorksheets: async (skip: number = 0, limit: number = 20): Promise<{ worksheets: KoreanWorksheet[], total: number }> => {
+  getKoreanWorksheets: async (
+    skip: number = 0,
+    limit: number = 1000,
+  ): Promise<{ worksheets: KoreanWorksheet[]; total: number }> => {
     const token = getToken();
     if (!token) {
-      throw new Error("Authentication token not found. Please log in.");
-    }
-
-    const response = await fetch(`${API_BASE_URL}/korean-generation/worksheets?skip=${skip}&limit=${limit}`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
-      },
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.detail || "Failed to fetch Korean worksheets.");
-    }
-
-    const data: { worksheets: KoreanWorksheet[], total: number } = await response.json();
-    console.log(`Fetched Korean worksheets:`, data);
-    return data;
-  },
-
-  getKoreanWorksheetProblems: async (
-    worksheetId: number,
-  ): Promise<{ worksheet: KoreanWorksheet; problems: Problem[] }> => { // Updated return type
-    const token = getToken();
-    if (!token) {
-      throw new Error("Authentication token not found. Please log in.");
+      throw new Error('Authentication token not found. Please log in.');
     }
 
     const response = await fetch(
-      `${API_BASE_URL}/korean-generation/worksheets/${worksheetId}`,
+      `${API_BASE_URL}/korean-generation/worksheets?skip=${skip}&limit=${limit}`,
       {
-        method: "GET",
+        method: 'GET',
         headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
         },
       },
     );
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.detail || "Failed to fetch Korean worksheet problems.");
+      throw new Error(errorData.detail || 'Failed to fetch Korean worksheets.');
+    }
+
+    const data: { worksheets: KoreanWorksheet[]; total: number } = await response.json();
+    console.log(`Fetched Korean worksheets:`, data);
+    return data;
+  },
+
+  getKoreanWorksheetProblems: async (
+    worksheetId: number,
+  ): Promise<{ worksheet: KoreanWorksheet; problems: Problem[] }> => {
+    // Updated return type
+    const token = getToken();
+    if (!token) {
+      throw new Error('Authentication token not found. Please log in.');
+    }
+
+    const response = await fetch(`${API_BASE_URL}/korean-generation/worksheets/${worksheetId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || 'Failed to fetch Korean worksheet problems.');
     }
 
     const data: { worksheet: KoreanWorksheet; problems: Problem[] } = await response.json(); // Updated type
@@ -138,20 +139,20 @@ export const koreanService = {
   deleteKoreanWorksheet: async (worksheetId: number): Promise<void> => {
     const token = getToken();
     if (!token) {
-      throw new Error("Authentication token not found. Please log in.");
+      throw new Error('Authentication token not found. Please log in.');
     }
 
     const response = await fetch(`${API_BASE_URL}/korean-generation/worksheets/${worksheetId}`, {
-      method: "DELETE",
+      method: 'DELETE',
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
       },
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.detail || "Failed to delete Korean worksheet.");
+      throw new Error(errorData.detail || 'Failed to delete Korean worksheet.');
     }
     console.log(`Deleted Korean worksheet: ${worksheetId}`);
   },
@@ -159,20 +160,20 @@ export const koreanService = {
   getDeployedAssignments: async (classId: string): Promise<Assignment[]> => {
     const token = getToken();
     if (!token) {
-      throw new Error("Authentication token not found. Please log in.");
+      throw new Error('Authentication token not found. Please log in.');
     }
 
     const response = await fetch(`${API_BASE_URL}/assignments/classrooms/${classId}/assignments`, {
-      method: "GET",
+      method: 'GET',
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
       },
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.detail || "Failed to fetch deployed assignments.");
+      throw new Error(errorData.detail || 'Failed to fetch deployed assignments.');
     }
 
     const data: Assignment[] = await response.json();
@@ -180,29 +181,58 @@ export const koreanService = {
     return data;
   },
 
-  deployAssignment: async (deployRequest: AssignmentDeployRequest): Promise<AssignmentDeploymentResponse[]> => {
+  deployAssignment: async (
+    deployRequest: AssignmentDeployRequest,
+  ): Promise<AssignmentDeploymentResponse[]> => {
     const token = getToken();
     if (!token) {
-      throw new Error("Authentication token not found. Please log in.");
+      throw new Error('Authentication token not found. Please log in.');
     }
 
     const response = await fetch(`${API_BASE_URL}/assignments/deploy`, {
-      method: "POST",
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(deployRequest),
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.detail || "Failed to deploy assignment.");
+      throw new Error(errorData.detail || 'Failed to deploy assignment.');
     }
 
     const data: AssignmentDeploymentResponse[] = await response.json();
     console.log(`Deployed assignment:`, data);
     return data;
+  },
+
+  // 과제 생성 (배포하지 않고 생성만)
+  createAssignment: async (worksheetId: number, classroomId: number): Promise<any> => {
+    const token = getToken();
+    if (!token) {
+      throw new Error('Authentication token not found. Please log in.');
+    }
+
+    const response = await fetch(`${API_BASE_URL}/assignments/create`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        worksheet_id: worksheetId,
+        classroom_id: classroomId,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || '과제 생성에 실패했습니다.');
+    }
+
+    return response.json();
   },
 
   // Get student assignments (deployed assignments for a specific student)
@@ -213,16 +243,16 @@ export const koreanService = {
     }
 
     const response = await fetch(`${API_BASE_URL}/assignments/student/${studentId}`, {
-      method: "GET",
+      method: 'GET',
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
       },
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.detail || "Failed to get student assignments.");
+      throw new Error(errorData.detail || 'Failed to get student assignments.');
     }
 
     const data: Assignment[] = await response.json();
@@ -237,17 +267,20 @@ export const koreanService = {
       throw new Error('No authentication token found');
     }
 
-    const response = await fetch(`${API_BASE_URL}/assignments/${assignmentId}/student/${studentId}`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
+    const response = await fetch(
+      `${API_BASE_URL}/assignments/${assignmentId}/student/${studentId}`,
+      {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
       },
-    });
+    );
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.detail || "Failed to get assignment detail.");
+      throw new Error(errorData.detail || 'Failed to get assignment detail.');
     }
 
     const data = await response.json();
@@ -263,20 +296,20 @@ export const koreanService = {
     }
 
     const response = await fetch(`${API_BASE_URL}/assignments/${assignmentId}/submit`, {
-      method: "POST",
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
         student_id: studentId,
-        answers: answers
+        answers: answers,
       }),
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.detail || "Failed to submit test.");
+      throw new Error(errorData.detail || 'Failed to submit test.');
     }
 
     const data = await response.json();
@@ -292,23 +325,22 @@ export const koreanService = {
     }
 
     const response = await fetch(`${API_BASE_URL}/grading/assignments/${assignmentId}/results`, {
-      method: "GET",
+      method: 'GET',
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
       },
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.detail || "Failed to get assignment results.");
+      throw new Error(errorData.detail || 'Failed to get assignment results.');
     }
 
     const data = await response.json();
-    console.log(`Assignment results:`, data);
+
     return data;
   },
-
 
   // Get detailed grading session results
   async getGradingSessionDetails(sessionId: number): Promise<any> {
@@ -318,16 +350,16 @@ export const koreanService = {
     }
 
     const response = await fetch(`${API_BASE_URL}/grading/grading-sessions/${sessionId}`, {
-      method: "GET",
+      method: 'GET',
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
       },
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.detail || "Failed to get grading session details.");
+      throw new Error(errorData.detail || 'Failed to get grading session details.');
     }
 
     const data = await response.json();
@@ -344,7 +376,9 @@ export const koreanService = {
 
     // First get assignment results to find the grading session
     const assignmentResults = await this.getAssignmentResults(assignmentId);
-    const resultsArray = Array.isArray(assignmentResults) ? assignmentResults : (assignmentResults as any).results || [];
+    const resultsArray = Array.isArray(assignmentResults)
+      ? assignmentResults
+      : (assignmentResults as any).results || [];
     const studentSession = resultsArray.find((session: any) => session.student_id === studentId);
 
     if (!studentSession) {
@@ -352,7 +386,9 @@ export const koreanService = {
     }
 
     // Get detailed session info
-    const sessionDetails = await this.getGradingSessionDetails(studentSession.grading_session_id || studentSession.id);
+    const sessionDetails = await this.getGradingSessionDetails(
+      studentSession.grading_session_id || studentSession.id,
+    );
     return sessionDetails;
   },
 
@@ -360,21 +396,21 @@ export const koreanService = {
   async updateGradingSession(sessionId: number, gradingData: any): Promise<any> {
     const token = getToken();
     if (!token) {
-      throw new Error("Authentication token not found. Please log in.");
+      throw new Error('Authentication token not found. Please log in.');
     }
 
     const response = await fetch(`${API_BASE_URL}/grading/grading-sessions/${sessionId}/update`, {
-      method: "PUT",
+      method: 'PUT',
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(gradingData),
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.detail || "Failed to update grading session.");
+      throw new Error(errorData.detail || 'Failed to update grading session.');
     }
 
     const data = await response.json();
@@ -389,17 +425,17 @@ export const koreanService = {
     }
 
     const response = await fetch(`${API_BASE_URL}/korean-generation/worksheets/${worksheetId}`, {
-      method: "PATCH",
+      method: 'PATCH',
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(data),
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.detail || "Failed to update worksheet.");
+      throw new Error(errorData.detail || 'Failed to update worksheet.');
     }
 
     const responseData = await response.json();
@@ -414,17 +450,17 @@ export const koreanService = {
     }
 
     const response = await fetch(`${API_BASE_URL}/korean-generation/problems/${problemId}`, {
-      method: "PATCH",
+      method: 'PATCH',
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(data),
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.detail || "Failed to update problem.");
+      throw new Error(errorData.detail || 'Failed to update problem.');
     }
 
     const responseData = await response.json();
@@ -439,17 +475,17 @@ export const koreanService = {
     }
 
     const response = await fetch(`${API_BASE_URL}/korean-generation/problems/regenerate-async`, {
-      method: "POST",
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(data),
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.detail || "Failed to regenerate problem.");
+      throw new Error(errorData.detail || 'Failed to regenerate problem.');
     }
 
     const responseData = await response.json();
@@ -464,16 +500,16 @@ export const koreanService = {
     }
 
     const response = await fetch(`${API_BASE_URL}/korean-generation/tasks/${taskId}`, {
-      method: "GET",
+      method: 'GET',
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
       },
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.detail || "Failed to get task status.");
+      throw new Error(errorData.detail || 'Failed to get task status.');
     }
 
     const responseData = await response.json();

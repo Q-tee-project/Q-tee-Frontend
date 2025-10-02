@@ -173,7 +173,20 @@ export const useKoreanGeneration = () => {
             title: problem.question,
             options: problem.choices ? problem.choices : undefined,
             answerIndex: problem.choices
-              ? problem.choices.findIndex((choice: string) => choice === problem.correct_answer)
+              ? (() => {
+                  // correct_answer가 A, B, C, D 형태인 경우
+                  if (problem.correct_answer && problem.correct_answer.length === 1) {
+                    const answerChar = problem.correct_answer.toUpperCase();
+                    if (answerChar >= 'A' && answerChar <= 'E') {
+                      return answerChar.charCodeAt(0) - 65; // A=0, B=1, C=2, D=3, E=4
+                    }
+                  }
+                  // correct_answer가 선택지와 직접 매칭되는 경우
+                  const foundIndex = problem.choices.findIndex(
+                    (choice: string) => choice === problem.correct_answer,
+                  );
+                  return foundIndex !== -1 ? foundIndex : 0; // 못 찾으면 기본값 0
+                })()
               : undefined,
             correct_answer: problem.correct_answer,
             explanation: problem.explanation,

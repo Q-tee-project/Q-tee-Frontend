@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FaArrowLeft, FaCheckCircle, FaTimesCircle, FaDotCircle } from 'react-icons/fa';
 import { LaTeXRenderer } from '@/components/LaTeXRenderer';
+import { TikZRenderer } from '@/components/TikZRenderer';
 
 interface StudentResultViewProps {
   assignmentId: number;
@@ -387,7 +388,7 @@ export function StudentResultView({
         <h2 className="text-xl font-semibold mb-4">문제별 결과</h2>
 
         {(isEnglish
-          ? sessionDetails.worksheet_data?.questions || []
+          ? problems // 영어의 경우 props로 받은 problems 배열 사용
           : isKorean || problems.length > 0
           ? problems
           : sessionDetails.problem_results || []
@@ -464,10 +465,11 @@ export function StudentResultView({
                           ) : isEnglish ? (
                             <div>
                               {item.question_text && <p>{item.question_text}</p>}
-                              {item.passage && (
+                              {/* 영어 지문 표시 - passage나 example_content 사용 */}
+                              {(item.passage || item.example_content) && (
                                 <div className="bg-gray-50 p-3 rounded mt-2 mb-2">
                                   <p className="text-sm text-gray-700 whitespace-pre-wrap">
-                                    {item.passage}
+                                    {item.passage || item.example_content}
                                   </p>
                                 </div>
                               )}
@@ -475,17 +477,28 @@ export function StudentResultView({
                           ) : (
                             <LaTeXRenderer
                               content={
-                                problemItem.question || item.question || `문제 ${problemNumber}`
+                                (problemItem.question || item.question || `문제 ${problemNumber}`)
+                                  .replace(/\\begin\{tikzpicture\}[\s\S]*?\\end\{tikzpicture\}/g, '')
+                                  .trim()
                               }
                             />
                           )}
                         </div>
+
+                        {/* TikZ 그래프 */}
+                        {((problemItem as any)?.tikz_code || (item as any)?.tikz_code) && (
+                          <div className="mb-4">
+                            <TikZRenderer
+                              tikzCode={(problemItem as any)?.tikz_code || (item as any)?.tikz_code}
+                            />
+                          </div>
+                        )}
                       </div>
 
                       {/* Choices */}
-                      {item.choices && (
+                      {(item.choices || item.question_choices) && (
                         <div className="space-y-2 mb-4">
-                          {item.choices.map((choice: string, choiceIndex: number) => {
+                          {(item.choices || item.question_choices).map((choice: string, choiceIndex: number) => {
                             const choiceNumber = (choiceIndex + 1).toString();
                             const isStudentAnswer = isEnglish
                               ? answerStatus?.studentAnswer === choice
@@ -621,11 +634,14 @@ export function StudentResultView({
 
                       {/* Explanation */}
                       {((isKorean && item.explanation) ||
-                        (!isKorean && answerStatus?.explanation)) && (
+                        (isEnglish && item.explanation) ||
+                        (!isKorean && !isEnglish && answerStatus?.explanation)) && (
                         <div className="mt-4 p-4 bg-blue-50 rounded-lg">
                           <h4 className="font-medium text-blue-900 mb-2">해설</h4>
                           <div className="text-blue-800 text-sm">
                             {isKorean ? (
+                              <p>{item.explanation}</p>
+                            ) : isEnglish ? (
                               <p>{item.explanation}</p>
                             ) : (
                               <LaTeXRenderer content={answerStatus?.explanation || ''} />

@@ -22,7 +22,7 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { Calendar, Users } from 'lucide-react';
-import { IoBookOutline } from 'react-icons/io5';
+
 import { FaRegTrashAlt } from 'react-icons/fa';
 
 interface AssignmentListProps {
@@ -81,49 +81,14 @@ export function AssignmentList({
           assignment.question_type !== undefined || assignment.korean_type !== undefined;
         const isEnglish = assignment.problem_type !== undefined && !isKorean;
 
-        console.log(
-          `🔍 Loading results for assignment ${assignment.id} (${
-            isKorean ? 'Korean' : isEnglish ? 'English' : 'Math'
-          })`,
-        );
-
         if (isKorean) {
           assignmentResultData = await koreanService.getAssignmentResults(assignment.id);
         } else if (isEnglish) {
-          assignmentResultData = await EnglishService.getEnglishAssignmentResults(
-            assignment.id,
-          );
-          // 영어 결과를 표준 형식으로 변환 (student_name으로 student_id 매칭)
-          assignmentResultData = assignmentResultData.map((result: any) => {
-            // student_name으로 student_id 찾기
-            const matchedStudent = classStudents.find(
-              (student) => student.name === result.student_name,
-            );
-            const studentId = matchedStudent ? matchedStudent.id : 0;
-
-            return {
-              id: parseInt(result.id),
-              grading_session_id: result.result_id,
-              student_id: studentId, // 매칭된 student_id 사용
-              student_name: result.student_name,
-              school: '',
-              grade: '',
-              status: 'completed', // 제출 완료로 설정
-              total_score: result.total_score,
-              max_possible_score: result.max_score,
-              correct_count: Math.floor(result.total_score),
-              total_problems: result.max_score,
-              graded_at: result.created_at,
-              submitted_at: result.created_at,
-              graded_by: result.student_name,
-              problem_results: [],
-            };
-          });
+          assignmentResultData = await EnglishService.getEnglishAssignmentResults(assignment.id);
+          // 영어는 네트워크에서 받은 원본 데이터 그대로 사용 (변환하지 않음)
         } else {
           assignmentResultData = await mathService.getAssignmentResults(assignment.id);
         }
-
-        console.log(`📊 Raw API response for assignment ${assignment.id}:`, assignmentResultData);
 
         // API 응답이 배열인지 확인하고 안전하게 처리
         if (Array.isArray(assignmentResultData)) {
@@ -185,14 +150,6 @@ export function AssignmentList({
                       <div className="flex items-center gap-1">
                         <Users className="w-4 h-4" />
                         <span>{results.length}명 배포</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <IoBookOutline className="w-4 h-4" />
-                        <span>
-                          {assignment.problem_type
-                            ? assignment.problem_type
-                            : `${assignment.unit_name} ${assignment.chapter_name}`}
-                        </span>
                       </div>
                     </div>
                     <h4 className="text-lg font-semibold text-gray-900">{assignment.title}</h4>
@@ -281,24 +238,45 @@ export function AssignmentList({
                           </TableRow>
                         ) : (
                           (() => {
-                            // 수학과 국어 모두 results 배열을 직접 사용 (API 응답 구조가 통일됨)
-                            const deployedStudents = Array.isArray(results) ? results : [];
+                            let studentsWithInfo;
 
-                            // 클래스 학생 정보와 매치
-                            const studentsWithInfo = deployedStudents.map((result) => {
-                              const studentInfo = classStudents.find(
-                                (s) => s.id === result.student_id,
-                              );
-                              return {
-                                ...result,
-                                name:
-                                  studentInfo?.name ||
-                                  result.student_name ||
-                                  `학생${result.student_id}`,
-                                school_level: studentInfo?.school_level || 'middle',
-                                grade: studentInfo?.grade || result.grade || '1',
-                              };
-                            });
+                            if (subject === 'english') {
+                              // 영어의 경우: 실제로 배포된 학생들만 표시 (results에 있는 학생들)
+                              const deployedResults = Array.isArray(results) ? results : [];
+
+                              studentsWithInfo = deployedResults.map((result) => {
+                                const studentInfo = classStudents.find(
+                                  (s) => s.id === result.student_id,
+                                );
+                                return {
+                                  ...result,
+                                  name:
+                                    studentInfo?.name ||
+                                    result.student_name ||
+                                    `학생${result.student_id}`,
+                                  school_level: studentInfo?.school_level || 'middle',
+                                  grade: studentInfo?.grade || result.grade || '1',
+                                };
+                              });
+                            } else {
+                              // 수학과 국어: 기존 방식 (results 배열을 직접 사용)
+                              const deployedStudents = Array.isArray(results) ? results : [];
+
+                              studentsWithInfo = deployedStudents.map((result) => {
+                                const studentInfo = classStudents.find(
+                                  (s) => s.id === result.student_id,
+                                );
+                                return {
+                                  ...result,
+                                  name:
+                                    studentInfo?.name ||
+                                    result.student_name ||
+                                    `학생${result.student_id}`,
+                                  school_level: studentInfo?.school_level || 'middle',
+                                  grade: studentInfo?.grade || result.grade || '1',
+                                };
+                              });
+                            }
 
                             if (studentsWithInfo.length === 0) {
                               return (
@@ -319,9 +297,16 @@ export function AssignmentList({
                             return studentsWithInfo.map((studentResult) => {
                               // 상태에 따른 응시 여부 결정 (영어 과제 포함)
                               const hasSubmitted =
-                                studentResult.status === '완료' ||
-                                studentResult.status === '제출완료' ||
-                                studentResult.status === 'completed';
+                                subject === 'english'
+                                  ? !!(
+                                      studentResult.completed_at ||
+                                      studentResult.submitted_at ||
+                                      studentResult.status === '완료' ||
+                                      studentResult.status === 'completed'
+                                    ) // 영어는 completed_at 우선 확인
+                                  : studentResult.status === '완료' ||
+                                    studentResult.status === '제출완료' ||
+                                    studentResult.status === 'completed';
                               const score = hasSubmitted
                                 ? studentResult.score || studentResult.total_score
                                 : null;
@@ -365,8 +350,8 @@ export function AssignmentList({
                                   <TableCell className="text-center p-3">
                                     <Badge
                                       className={`rounded px-2.5 py-1.5 text-sm ${
-                                        hasSubmitted 
-                                          ? 'bg-[#E6F3FF] text-[#0085FF]' 
+                                        hasSubmitted
+                                          ? 'bg-[#E6F3FF] text-[#0085FF]'
                                           : 'bg-[#ffebeb] text-[#f00]'
                                       }`}
                                     >
@@ -398,44 +383,30 @@ export function AssignmentList({
                                         onClick={async (e) => {
                                           e.stopPropagation();
                                           try {
-                                            const token = localStorage.getItem('access_token');
-                                            const response = await fetch(
-                                              `/api/grading/assignments/${assignment.id}/start-ai-grading?subject=math`,
-                                              {
-                                                method: 'POST',
-                                                headers: {
-                                                  Authorization: `Bearer ${token}`,
-                                                  'Content-Type': 'application/json',
-                                                },
-                                              },
+                                            const result = await mathService.startAIGrading(
+                                              assignment.id,
                                             );
-
-                                            if (response.ok) {
-                                              const result = await response.json();
-                                              if (result.task_id) {
-                                                alert(
-                                                  'OCR + AI 채점이 시작되었습니다. 완료 후 결과를 확인하세요.',
-                                                );
-                                                if (onRefresh) {
-                                                  onRefresh(); // Refresh assignment list
-                                                }
-                                              } else {
-                                                alert(
-                                                  result.message ||
-                                                    'OCR 채점을 시작할 수 없습니다.',
-                                                );
+                                            if (result.task_id) {
+                                              alert(
+                                                'OCR + AI 채점이 시작되었습니다. 완료 후 결과를 확인하세요.',
+                                              );
+                                              if (onRefresh) {
+                                                onRefresh(); // Refresh assignment list
                                               }
                                             } else {
-                                              const error = await response.json();
                                               alert(
-                                                `채점 처리 실패: ${
-                                                  error.detail || '알 수 없는 오류'
-                                                }`,
+                                                result.message || 'OCR 채점을 시작할 수 없습니다.',
                                               );
                                             }
                                           } catch (error) {
                                             console.error('OCR grading error:', error);
-                                            alert('채점 처리 중 오류가 발생했습니다.');
+                                            alert(
+                                              `채점 처리 실패: ${
+                                                error instanceof Error
+                                                  ? error.message
+                                                  : '알 수 없는 오류'
+                                              }`,
+                                            );
                                           }
                                         }}
                                       >

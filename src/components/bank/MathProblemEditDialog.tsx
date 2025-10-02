@@ -19,6 +19,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { LaTeXRenderer } from '@/components/LaTeXRenderer';
+import { TikZRenderer } from '@/components/TikZRenderer';
 import { autoConvertToLatex } from '@/utils/mathLatexConverter';
 
 interface MathProblemEditDialogProps {
@@ -35,7 +36,6 @@ interface MathProblemEditDialogProps {
   onFormChange: (field: string, value: string | string[]) => void;
   onChoiceChange: (index: number, value: string) => void;
   onSave: () => void;
-  onRegenerate?: (requirements?: string) => void;
 }
 
 export const MathProblemEditDialog: React.FC<MathProblemEditDialogProps> = ({
@@ -45,18 +45,7 @@ export const MathProblemEditDialog: React.FC<MathProblemEditDialogProps> = ({
   onFormChange,
   onChoiceChange,
   onSave,
-  onRegenerate,
 }) => {
-  const [showRegenerateInput, setShowRegenerateInput] = useState(false);
-  const [regenerateRequirements, setRegenerateRequirements] = useState('');
-
-  const handleRegenerate = () => {
-    if (onRegenerate) {
-      onRegenerate(regenerateRequirements);
-      setShowRegenerateInput(false);
-      setRegenerateRequirements('');
-    }
-  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -179,39 +168,6 @@ export const MathProblemEditDialog: React.FC<MathProblemEditDialogProps> = ({
                   className="font-mono text-sm"
                 />
               </div>
-
-              {/* 재생성 요구사항 입력 */}
-              {showRegenerateInput && (
-                <div className="border-t pt-4">
-                  <label className="block text-sm font-medium mb-1">재생성 요구사항</label>
-                  <Textarea
-                    value={regenerateRequirements}
-                    onChange={(e) => setRegenerateRequirements(e.target.value)}
-                    placeholder="문제 재생성을 위한 구체적인 요구사항을 입력하세요&#10;예: 난이도를 높여주세요, 다른 유형의 수식을 사용해주세요"
-                    rows={3}
-                    className="text-sm"
-                  />
-                  <div className="flex gap-2 mt-2">
-                    <Button
-                      onClick={handleRegenerate}
-                      size="sm"
-                      className="bg-blue-600 hover:bg-blue-700"
-                    >
-                      재생성 실행
-                    </Button>
-                    <Button
-                      onClick={() => {
-                        setShowRegenerateInput(false);
-                        setRegenerateRequirements('');
-                      }}
-                      variant="outline"
-                      size="sm"
-                    >
-                      취소
-                    </Button>
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* 오른쪽 미리보기 영역 */}
@@ -249,7 +205,7 @@ export const MathProblemEditDialog: React.FC<MathProblemEditDialogProps> = ({
                           <LaTeXRenderer
                             content={
                               choice
-                                ? autoConvertToLatex(choice)
+                                ? autoConvertToLatex(choice.replace(/^[A-E][\.\):\s]+/, ''))
                                 : `${String.fromCharCode(65 + index)}번 선택지`
                             }
                           />
@@ -293,26 +249,13 @@ export const MathProblemEditDialog: React.FC<MathProblemEditDialogProps> = ({
           </div>
         </div>
 
-        <DialogFooter className="flex justify-between items-center pt-4 border-t flex-shrink-0">
-          <div className="flex gap-2">
-            {onRegenerate && (
-              <Button
-                variant="outline"
-                onClick={() => setShowRegenerateInput(!showRegenerateInput)}
-                className="text-blue-600 border-blue-200 hover:bg-blue-50"
-              >
-                {showRegenerateInput ? '재생성 취소' : '문제 재생성'}
-              </Button>
-            )}
-          </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
-              취소
-            </Button>
-            <Button onClick={onSave} className="bg-blue-600 hover:bg-blue-700 text-white">
-              저장
-            </Button>
-          </div>
+        <DialogFooter className="flex justify-end items-center pt-4 border-t flex-shrink-0 gap-2">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            취소
+          </Button>
+          <Button onClick={onSave} className="bg-blue-600 hover:bg-blue-700 text-white">
+            저장
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

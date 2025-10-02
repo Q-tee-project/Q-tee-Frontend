@@ -4,6 +4,7 @@ import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { LaTeXRenderer } from '@/components/LaTeXRenderer';
+import { TikZRenderer } from '@/components/TikZRenderer';
 import { Badge } from '@/components/ui/badge';
 
 interface PurchasedWorksheet {
@@ -119,38 +120,50 @@ export const PurchasedMathWorksheetDetail: React.FC<PurchasedMathWorksheetDetail
                       <h3 className="font-medium text-gray-800 mb-3">문제</h3>
                       <div className="bg-gray-50 rounded-lg p-4">
                         <div className="text-gray-700 leading-relaxed">
-                          <LaTeXRenderer content={problem.latex_content || problem.question} />
+                          <LaTeXRenderer
+                            content={(problem.latex_content || problem.question).replace(/\\begin\{tikzpicture\}[\s\S]*?\\end\{tikzpicture\}/g, '').trim()}
+                          />
                         </div>
                       </div>
                     </div>
+
+                    {/* TikZ 그래프 */}
+                    {(problem as any).tikz_code && (
+                      <div className="mb-4">
+                        <TikZRenderer tikzCode={(problem as any).tikz_code} />
+                      </div>
+                    )}
 
                     {/* 객관식 선택지 */}
                     {problem.problem_type === 'multiple_choice' && problem.choices && problem.choices.length > 0 && (
                       <div className="mb-4">
                         <h4 className="font-medium text-gray-800 mb-3">선택지</h4>
                         <div className="space-y-2">
-                          {problem.choices.map((choice, choiceIndex) => (
-                            <div key={choiceIndex} className="flex items-start gap-3">
-                              <div className={`
-                                w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0 mt-0.5
-                                ${showAnswerSheet && problem.correct_answer === String.fromCharCode(65 + choiceIndex)
-                                  ? 'bg-green-100 text-green-700 border-2 border-green-300'
-                                  : 'bg-gray-100 text-gray-600'
-                                }
-                              `}>
-                                {String.fromCharCode(65 + choiceIndex)}
+                          {problem.choices.map((choice, choiceIndex) => {
+                            const displayChoice = choice.replace(/^[A-E][\.\):\s]+/, '');
+                            return (
+                              <div key={choiceIndex} className="flex items-start gap-3">
+                                <div className={`
+                                  w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0 mt-0.5
+                                  ${showAnswerSheet && problem.correct_answer === String.fromCharCode(65 + choiceIndex)
+                                    ? 'bg-green-100 text-green-700 border-2 border-green-300'
+                                    : 'bg-gray-100 text-gray-600'
+                                  }
+                                `}>
+                                  {String.fromCharCode(65 + choiceIndex)}
+                                </div>
+                                <div className={`
+                                  flex-1 py-1 text-gray-700
+                                  ${showAnswerSheet && problem.correct_answer === String.fromCharCode(65 + choiceIndex)
+                                    ? 'font-medium text-green-700'
+                                    : ''
+                                  }
+                                `}>
+                                  <LaTeXRenderer content={displayChoice} />
+                                </div>
                               </div>
-                              <div className={`
-                                flex-1 py-1 text-gray-700
-                                ${showAnswerSheet && problem.correct_answer === String.fromCharCode(65 + choiceIndex)
-                                  ? 'font-medium text-green-700'
-                                  : ''
-                                }
-                              `}>
-                                <LaTeXRenderer content={choice} />
-                              </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       </div>
                     )}

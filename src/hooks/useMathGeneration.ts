@@ -317,6 +317,7 @@ export const useMathGeneration = () => {
               choices: problem.choices,
               backendId: problem.id, // 백엔드 ID는 별도 저장
               problem_type: problemType, // 수정된 문제 유형 추가
+              tikz_code: problem.tikz_code, // TikZ 코드 추가
             };
           },
         );

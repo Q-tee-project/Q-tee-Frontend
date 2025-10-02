@@ -195,6 +195,8 @@ export const useWorksheetEdit = (selectedSubject?: string) => {
           choices: editFormData.choices,
           correct_answer: editFormData.correct_answer,
           explanation: editFormData.explanation,
+          has_diagram: editFormData.has_diagram || (editingProblem as any)?.has_diagram,
+          tikz_code: editFormData.tikz_code || (editingProblem as any)?.tikz_code,
         }
       };
 

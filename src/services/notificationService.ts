@@ -11,7 +11,7 @@ export interface NotificationData {
 }
 
 export interface SSENotification {
-  type: 'new_message';
+  type: 'message';
   id: string;
   data: NotificationData;
   timestamp: string;
@@ -35,6 +35,8 @@ class NotificationService {
       this.disconnect();
     }
 
+    // Uncomment the following code when notification service is implemented:
+    
     const url = `${this.baseUrl}/api/notifications/stream/${userType}/${userId}`;
     console.log('SSE 연결 시도:', url);
 
@@ -59,6 +61,7 @@ class NotificationService {
       console.error('SSE 연결 에러:', error);
       this.handleReconnect(userType, userId);
     };
+    
   }
 
   disconnect(): void {
@@ -133,6 +136,58 @@ class NotificationService {
     }
   }
 
+  async markAsRead(userType: 'teacher' | 'student', userId: number, notificationId: string): Promise<boolean> {
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/api/notifications/stored/${userType}/${userId}/${notificationId}/read`,
+        { method: 'PATCH' }
+      );
+      return response.ok;
+    } catch (error) {
+      console.error(`Failed to mark notification ${notificationId} as read:`, error);
+      return false;
+    }
+  }
+
+  async markAllAsRead(userType: 'teacher' | 'student', userId: number): Promise<boolean> {
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/api/notifications/stored/${userType}/${userId}/read-all`,
+        { method: 'PATCH' }
+      );
+      return response.ok;
+    } catch (error) {
+      console.error('Failed to mark all notifications as read:', error);
+      return false;
+    }
+  }
+
+  async deleteNotificationsByType(userType: 'teacher' | 'student', userId: number, notificationType: string): Promise<boolean> {
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/api/notifications/stored/${userType}/${userId}/type/${notificationType}`,
+        { method: 'DELETE' }
+      );
+      return response.ok;
+    } catch (error) {
+      console.error(`Failed to delete ${notificationType} notifications:`, error);
+      return false;
+    }
+  }
+
+  async deleteNotification(userType: 'teacher' | 'student', userId: number, notificationType: string, notificationId: string): Promise<boolean> {
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/api/notifications/stored/${userType}/${userId}/${notificationType}/${notificationId}`,
+        { method: 'DELETE' }
+      );
+      return response.ok;
+    } catch (error) {
+      console.error(`Failed to delete notification ${notificationId}:`, error);
+      return false;
+    }
+  }
+
   async sendTestNotification(userType: 'teacher' | 'student', userId: number): Promise<boolean> {
     try {
       const response = await fetch(
@@ -147,7 +202,9 @@ class NotificationService {
   }
 
   isConnected(): boolean {
-    return this.eventSource !== null && this.eventSource.readyState === EventSource.OPEN;
+    // TODO: Return false until notification service is implemented
+    return false;
+    // return this.eventSource !== null && this.eventSource.readyState === EventSource.OPEN;
   }
 }
 

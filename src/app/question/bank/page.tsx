@@ -14,7 +14,6 @@ import { KoreanWorksheetDetail } from '@/components/bank/KoreanWorksheetDetail';
 import { EnglishWorksheetDetail } from '@/components/bank/EnglishWorksheetDetail';
 import { MathProblemEditDialog } from '@/components/bank/MathProblemEditDialog';
 import { KoreanProblemEditDialog } from '@/components/bank/KoreanProblemEditDialog';
-import { EnglishProblemEditDialog } from '@/components/bank/EnglishProblemEditDialog';
 import { DistributionDialog } from '@/components/bank/DistributionDialog';
 import { ErrorToast } from '@/components/bank/ErrorToast';
 import { LoadingOverlay } from '@/components/bank/LoadingOverlay';
@@ -152,25 +151,30 @@ export default function BankPage() {
                 onOpenDistributeDialog={() => setIsDistributeDialogOpen(true)}
                 onOpenEditDialog={() => setIsEditDialogOpen(true)}
                 onEditProblem={handleEditProblem}
+                onRegenerateProblem={currentBank.handleRegenerateProblem}
                 onStartEditTitle={() => {
-                  const currentTitle = selectedSubject === '영어'
-                    ? (currentBank.selectedWorksheet as any)?.worksheet_name || ''
-                    : (currentBank.selectedWorksheet as any)?.title || '';
+                  const currentTitle =
+                    selectedSubject === '영어'
+                      ? (currentBank.selectedWorksheet as any)?.worksheet_name || ''
+                      : (currentBank.selectedWorksheet as any)?.title || '';
                   handleStartEditTitle(currentTitle);
                 }}
                 onCancelEditTitle={handleCancelEditTitle}
                 onSaveTitle={() => {
                   if (currentBank.selectedWorksheet) {
-                    const worksheetId = selectedSubject === '영어'
-                      ? (currentBank.selectedWorksheet as any).worksheet_id
-                      : (currentBank.selectedWorksheet as any).id;
+                    const worksheetId =
+                      selectedSubject === '영어'
+                        ? (currentBank.selectedWorksheet as any).worksheet_id
+                        : (currentBank.selectedWorksheet as any).id;
                     handleSaveTitle(worksheetId, currentBank.loadWorksheets);
                   }
                 }}
                 onEditedTitleChange={handleEditedTitleChange}
                 onRefresh={() => {
                   if (currentBank.selectedWorksheet) {
-                    const worksheetId = (currentBank.selectedWorksheet as any).worksheet_id || (currentBank.selectedWorksheet as any).id;
+                    const worksheetId =
+                      (currentBank.selectedWorksheet as any).worksheet_id ||
+                      (currentBank.selectedWorksheet as any).id;
                     if (worksheetId) {
                       currentBank.handleWorksheetSelect(currentBank.selectedWorksheet as any);
                     }
@@ -218,24 +222,6 @@ export default function BankPage() {
         />
       ) : selectedSubject === '국어' ? (
         <KoreanProblemEditDialog
-          isOpen={isEditDialogOpen}
-          onOpenChange={setIsEditDialogOpen}
-          editFormData={editFormData}
-          onFormChange={handleEditFormChange}
-          onChoiceChange={handleChoiceChange}
-          onSave={() =>
-            handleSaveProblem(async () => {
-              if (currentBank.selectedWorksheet) {
-                await currentBank.loadWorksheets();
-              }
-            })
-          }
-          onRegenerate={(requirements) => {
-            handleRegenerateProblem(requirements);
-          }}
-        />
-      ) : selectedSubject === '영어' ? (
-        <EnglishProblemEditDialog
           isOpen={isEditDialogOpen}
           onOpenChange={setIsEditDialogOpen}
           editFormData={editFormData}

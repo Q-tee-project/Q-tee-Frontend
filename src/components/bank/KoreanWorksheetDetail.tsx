@@ -1,13 +1,14 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { LaTeXRenderer } from '@/components/LaTeXRenderer';
 import { KoreanWorksheet, KoreanProblem } from '@/types/korean';
-import { Edit3 } from 'lucide-react';
+import { Edit3, RotateCcw } from 'lucide-react';
+import { ProblemRegenerateDialog } from './ProblemRegenerateDialog';
 
 interface KoreanWorksheetDetailProps {
   selectedWorksheet: KoreanWorksheet | null;
@@ -19,6 +20,7 @@ interface KoreanWorksheetDetailProps {
   onOpenDistributeDialog: () => void;
   onOpenEditDialog: () => void;
   onEditProblem: (problem: KoreanProblem) => void;
+  onRegenerateProblem?: (problem: KoreanProblem, feedback?: string) => void;
   onStartEditTitle: () => void;
   onCancelEditTitle: () => void;
   onSaveTitle: () => void;
@@ -48,11 +50,26 @@ export const KoreanWorksheetDetail: React.FC<KoreanWorksheetDetailProps> = ({
   onOpenDistributeDialog,
   onOpenEditDialog,
   onEditProblem,
+  onRegenerateProblem,
   onStartEditTitle,
   onCancelEditTitle,
   onSaveTitle,
   onEditedTitleChange,
 }) => {
+  const [isRegenerateDialogOpen, setIsRegenerateDialogOpen] = useState(false);
+  const [selectedProblemForRegenerate, setSelectedProblemForRegenerate] = useState<KoreanProblem | null>(null);
+
+  const handleRegenerateClick = (problem: KoreanProblem) => {
+    setSelectedProblemForRegenerate(problem);
+    setIsRegenerateDialogOpen(true);
+  };
+
+  const handleRegenerateConfirm = (feedback: string) => {
+    if (selectedProblemForRegenerate && onRegenerateProblem) {
+      onRegenerateProblem(selectedProblemForRegenerate, feedback);
+    }
+  };
+
   if (!selectedWorksheet) {
     return (
       <Card className="w-2/3 flex items-center justify-center shadow-sm h-[calc(100vh-200px)]">
@@ -65,6 +82,7 @@ export const KoreanWorksheetDetail: React.FC<KoreanWorksheetDetailProps> = ({
   }
 
   return (
+    <>
     <Card className="w-2/3 flex flex-col shadow-sm h-[calc(100vh-200px)]">
       <CardHeader className="flex flex-row items-center py-6 px-6 border-b border-gray-100">
         <div className="flex-1"></div>
@@ -131,20 +149,6 @@ export const KoreanWorksheetDetail: React.FC<KoreanWorksheetDetailProps> = ({
               {showAnswerSheet ? '시험지 보기' : '정답 및 해설'}
             </Button>
           )}
-          <Button
-            onClick={onOpenDistributeDialog}
-            variant="outline"
-            className="bg-white/80 backdrop-blur-sm border-[#0072CE]/30 text-[#0072CE] hover:bg-[#0072CE]/10 hover:border-[#0072CE]/50"
-          >
-            문제지 배포
-          </Button>
-          <Button
-            onClick={onOpenEditDialog}
-            variant="outline"
-            className="bg-white/80 backdrop-blur-sm border-[#0072CE]/30 text-[#0072CE] hover:bg-[#0072CE]/10 hover:border-[#0072CE]/50"
-          >
-            문제지 편집
-          </Button>
         </div>
       </CardHeader>
 
@@ -157,10 +161,16 @@ export const KoreanWorksheetDetail: React.FC<KoreanWorksheetDetailProps> = ({
           ) : (
             <div className="p-6 space-y-8">
               {(() => {
-                // 작품별로 문제들을 그룹핑
+                // 지문이 있는 문제와 없는 문제를 분리하되, 전체 순서를 유지
                 const workGroups = new Map();
-                worksheetProblems.forEach((problem: any) => {
+                const grammarProblems: any[] = [];
+
+                // 문제들을 sequence_order 순서대로 정렬
+                const sortedProblems = [...worksheetProblems].sort((a, b) => a.sequence_order - b.sequence_order);
+
+                sortedProblems.forEach((problem: any) => {
                   if (problem.source_text && problem.source_title && problem.source_author) {
+                    // 지문이 있는 문제들 (시, 소설, 비문학 등)
                     const key = `${problem.source_title}-${problem.source_author}`;
                     if (!workGroups.has(key)) {
                       workGroups.set(key, {
@@ -168,28 +178,52 @@ export const KoreanWorksheetDetail: React.FC<KoreanWorksheetDetailProps> = ({
                         author: problem.source_author,
                         text: problem.source_text,
                         problems: [],
+                        firstProblemOrder: problem.sequence_order, // 첫 번째 문제 순서로 추적
                       });
                     }
                     workGroups.get(key).problems.push(problem);
+                  } else {
+                    // 지문이 없는 문제들 (문법 등)
+                    grammarProblems.push(problem);
                   }
                 });
-                return Array.from(workGroups.values());
+
+                // 문법 문제들을 firstProblemOrder로 그룹에 추가
+                if (grammarProblems.length > 0) {
+                  grammarProblems.forEach((problem) => {
+                    const key = `grammar-${problem.sequence_order}`;
+                    workGroups.set(key, {
+                      title: null,
+                      author: null,
+                      text: null,
+                      problems: [problem],
+                      firstProblemOrder: problem.sequence_order,
+                    });
+                  });
+                }
+
+                // firstProblemOrder 순서로 정렬
+                const allGroups = Array.from(workGroups.values()).sort((a, b) => a.firstProblemOrder - b.firstProblemOrder);
+                return allGroups;
               })().map((work: any, workIndex: number) => (
                 <div key={workIndex} className="space-y-6">
-                  {/* 지문 표시 */}
-                  <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                    <div className="flex items-center gap-2 mb-3">
-                      <span className="text-sm font-semibold text-gray-700">
-                        📖 지문 {workIndex + 1}
-                      </span>
-                      <span className="text-sm text-gray-600">
-                        - {work.title} ({work.author})
-                      </span>
+                  {/* 지문 표시 (지문이 있는 경우에만) */}
+                  {work.text && work.title && work.author && (
+                    <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="text-sm font-semibold text-gray-700">
+                          📖 지문 {workIndex + 1}
+                        </span>
+                        <span className="text-sm text-gray-600">
+                          - {work.title} ({work.author})
+                        </span>
+                      </div>
+                      <div className="text-sm leading-relaxed text-gray-800 whitespace-pre-wrap">
+                        {work.text}
+                      </div>
                     </div>
-                    <div className="text-sm leading-relaxed text-gray-800 whitespace-pre-wrap">
-                      {work.text}
-                    </div>
-                  </div>
+                  )}
+
 
                   {/* 해당 지문의 문제들 */}
                   <div className="space-y-8">
@@ -223,15 +257,28 @@ export const KoreanWorksheetDetail: React.FC<KoreanWorksheetDetailProps> = ({
                                     {problem.difficulty}
                                   </span>
                                 </div>
-                                <Button
-                                  onClick={() => onEditProblem(problem)}
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-[#0072CE] hover:text-[#0056A3] hover:bg-[#EBF6FF] p-1"
-                                  title="문제 편집"
-                                >
-                                  <Edit3 className="w-4 h-4" />
-                                </Button>
+                                <div className="flex gap-1">
+                                  <Button
+                                    onClick={() => onEditProblem(problem)}
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-[#0072CE] hover:text-[#0056A3] hover:bg-[#EBF6FF] p-1"
+                                    title="문제 편집"
+                                  >
+                                    <Edit3 className="w-4 h-4" />
+                                  </Button>
+                                  {onRegenerateProblem && (
+                                    <Button
+                                      onClick={() => handleRegenerateClick(problem)}
+                                      variant="ghost"
+                                      size="sm"
+                                      className="text-green-600 hover:text-green-700 hover:bg-green-50 p-1"
+                                      title="문제 재생성"
+                                    >
+                                      <RotateCcw className="w-4 h-4" />
+                                    </Button>
+                                  )}
+                                </div>
                               </div>
 
                               <div className="text-base leading-relaxed text-gray-900 mb-4">
@@ -262,7 +309,7 @@ export const KoreanWorksheetDetail: React.FC<KoreanWorksheetDetailProps> = ({
                                           {showAnswerSheet && isCorrect ? '✓' : optionLabel}
                                         </span>
                                         <div className="flex-1 text-gray-900">
-                                          <LaTeXRenderer content={choice} />
+                                          <LaTeXRenderer content={choice.replace(/^[①②③④⑤⑥⑦⑧⑨⑩]\s*/, '')} />
                                         </div>
                                         {showAnswerSheet && isCorrect && (
                                           <span className="text-xs font-medium text-green-700 bg-green-200 px-2 py-1 rounded">
@@ -391,5 +438,14 @@ export const KoreanWorksheetDetail: React.FC<KoreanWorksheetDetailProps> = ({
         </ScrollArea>
       </CardContent>
     </Card>
+
+    {/* 재생성 모달 */}
+    <ProblemRegenerateDialog
+      isOpen={isRegenerateDialogOpen}
+      onOpenChange={setIsRegenerateDialogOpen}
+      onConfirm={handleRegenerateConfirm}
+      subject="국어"
+    />
+    </>
   );
 };

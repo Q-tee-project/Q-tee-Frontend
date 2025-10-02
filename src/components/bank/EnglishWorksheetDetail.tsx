@@ -123,7 +123,7 @@ const RegenerationPreviewModal: React.FC<RegenerationPreviewModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[95vw] w-full max-h-[90vh] flex flex-col">
+      <DialogContent className="max-w-[98vw] w-full max-h-[95vh] flex flex-col">
         <DialogHeader className="flex-row items-center justify-between pr-6">
           <DialogTitle>재생성 결과 비교</DialogTitle>
           <div className="flex items-center gap-4">
@@ -182,6 +182,11 @@ interface EditFormData {
   passage_content?: any;
   original_content?: any;
   korean_translation?: any;
+  passageId?: number;
+  passageContent?: any;
+  hasTitle?: boolean;
+  hasParagraphs?: boolean;
+  hasContent?: boolean;
 }
 
 export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
@@ -260,9 +265,6 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
       passage_content: deepCopy(passage.passage_content),
       original_content: deepCopy(passage.original_content),
       korean_translation: deepCopy(passage.korean_translation),
-    });
-
-    console.log('📝 지문 편집 시작:', {
       passageId: passage.passage_id,
       passageContent: passage.passage_content,
       hasTitle: !!passage.passage_content?.title,
@@ -415,21 +417,44 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
       const sanitizedQuestions = questionsToSend.map(q => sanitizeQuestionData(q));
       const sanitizedPassage = currentPassage ? sanitizePassageData(currentPassage) : null;
 
-      console.log('🚀 재생성 요청 보내는 데이터:', {
-        questions: sanitizedQuestions,
-        passage: sanitizedPassage,
-        passageId: sanitizedPassage?.passage_id,
-        passageType: sanitizedPassage?.passage_type,
-        formData: regenerationFormData
-      });
-
-      response = await EnglishService.regenerateEnglishQuestionFromData(
+      // 비동기 재생성 시작
+      const asyncResponse = await EnglishService.regenerateEnglishQuestionFromData(
         sanitizedQuestions,
         sanitizedPassage,
         regenerationFormData as EnglishRegenerationRequest
       );
 
-      if (response && (response as any).success === true) {
+
+      // 폴링으로 작업 완료 대기
+      let taskCompleted = false;
+      let pollCount = 0;
+      const maxPollCount = 60; // 최대 2분 대기
+
+      while (!taskCompleted && pollCount < maxPollCount) {
+        await new Promise(resolve => setTimeout(resolve, 2000)); // 2초 대기
+
+        try {
+          const taskStatus = await EnglishService.getRegenerationTaskStatus(asyncResponse.task_id);
+
+          if (taskStatus.state === 'SUCCESS' && taskStatus.result) {
+            response = taskStatus.result;
+            taskCompleted = true;
+            break;
+          } else if (taskStatus.state === 'FAILURE') {
+            throw new Error(taskStatus.error || '재생성 작업이 실패했습니다.');
+          }
+        } catch (pollError) {
+          // 폴링 오류는 무시하고 계속 시도
+        }
+
+        pollCount++;
+      }
+
+      if (!taskCompleted) {
+        throw new Error('재생성 작업이 시간 초과되었습니다. 다시 시도해주세요.');
+      }
+
+      if (response && (response as any).status === 'success') {
         const originalQuestion = selectedQuestionForRegeneration;
         const originalPassage = originalQuestion.question_passage_id
           ? passages.find(p => p.passage_id === originalQuestion.question_passage_id)
@@ -442,13 +467,6 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
         const regeneratedQuestions = response.regenerated_questions || [];
         const mainRegeneratedQuestion = regeneratedQuestions.find((q: EnglishQuestion) => q.question_id === originalQuestion.question_id) || regeneratedQuestions[0];
         const relatedRegeneratedQuestions = regeneratedQuestions.filter((q: EnglishQuestion) => q.question_id !== originalQuestion.question_id);
-
-        console.log('🔄 재생성 결과 미리보기 데이터 설정:', {
-          originalPassage: originalPassage,
-          regeneratedPassage: response.regenerated_passage,
-          hasRegeneratedPassage: !!response.regenerated_passage,
-          regeneratedPassageContent: response.regenerated_passage?.passage_content
-        });
 
         // 재생성된 지문을 EnglishPassage 타입에 맞게 변환
         const regeneratedPassage: EnglishPassage | null = response.regenerated_passage ? {
@@ -479,8 +497,6 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
         alert(`재생성 실패: ${response?.message || '알 수 없는 오류'}`);
       }
     } catch (error: any) {
-      console.error('🚨 재생성 함수에서 에러 발생:', error);
-      console.error('🚨 에러 스택:', error.stack);
       alert(`재생성 실패: ${error.message}`);
     } finally {
       setIsRegenerating(false);
@@ -603,28 +619,6 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
           )}
 
           {/* 뱅크 모드: 배포 및 편집 버튼 */}
-          {mode === 'bank' && (
-            <>
-              {onOpenDistributeDialog && (
-                <Button
-                  onClick={onOpenDistributeDialog}
-                  variant="outline"
-                  className="bg-white/80 backdrop-blur-sm border-[#0072CE]/30 text-[#0072CE] hover:bg-[#0072CE]/10 hover:border-[#0072CE]/50"
-                >
-                  문제지 배포
-                </Button>
-              )}
-              {onOpenEditDialog && (
-                <Button
-                  onClick={onOpenEditDialog}
-                  variant="outline"
-                  className="bg-white/80 backdrop-blur-sm border-[#0072CE]/30 text-[#0072CE] hover:bg-[#0072CE]/10 hover:border-[#0072CE]/50"
-                >
-                  문제지 편집
-                </Button>
-              )}
-            </>
-          )}
         </div>
       </HeaderWrapper>
 
@@ -765,13 +759,6 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
         onClose={() => setIsRegenerationPreviewModalOpen(false)}
         onApply={async () => {
           if (!previewData || !selectedWorksheet) return;
-
-          console.log('🔄 재생성 결과 적용 중:', {
-            mode,
-            regeneratedQuestion: previewData.regenerated.question,
-            regeneratedPassage: previewData.regenerated.passage,
-            regeneratedRelatedQuestions: previewData.regenerated.relatedQuestions
-          });
 
           try {
             if (mode === 'generation' && onUpdateQuestion) {
