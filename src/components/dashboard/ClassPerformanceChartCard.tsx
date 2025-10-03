@@ -814,9 +814,9 @@ const ClassPerformanceChartCard = React.memo(({
                     <p className="text-xs mt-1">다른 기간을 선택해보세요.</p>
                   </div>
                 ) : (
-                  filteredAssignments.map((assignment) => (
+                  filteredAssignments.map((assignment, index) => (
                     <div 
-                      key={assignment.id} 
+                      key={`${assignment.id}-${index}`} 
                       className={`p-2 border rounded-md cursor-pointer transition-all hover:shadow-sm ${
                         selectedAssignments.includes(assignment.id) 
                           ? 'border-blue-500 bg-blue-50' 
