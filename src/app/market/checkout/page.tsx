@@ -197,7 +197,7 @@ function CheckoutPageContent() {
           {/* 버튼 */}
           <div className="px-6 pb-6 space-y-3">
             <motion.button
-              onClick={() => router.push('/market/purchaseList')}
+              onClick={() => router.push('/market/purchases')}
               className="w-full py-3 rounded-xl font-semibold bg-[#0072CE] text-white shadow-md hover:brightness-110 transition"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
