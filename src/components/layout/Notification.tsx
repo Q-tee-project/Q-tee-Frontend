@@ -376,7 +376,7 @@ export default function NotificationPanel({
 
         case 'market_sale':
           // 마켓 관련 알림 -> market/myMarket
-          router.push('/market/myMarket');
+          router.push('/market/my');
           break;
 
         case 'class_approval_request':

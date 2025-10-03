@@ -4,9 +4,9 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { FiCheckCircle, FiXCircle } from 'react-icons/fi';
 import { motion } from 'framer-motion';
-import { useEffect } from 'react';
+import { useEffect, Suspense } from 'react';
 
-export default function CheckoutPage() {
+function CheckoutPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -197,7 +197,7 @@ export default function CheckoutPage() {
           {/* 버튼 */}
           <div className="px-6 pb-6 space-y-3">
             <motion.button
-              onClick={() => router.push('/market/purchaseList')}
+              onClick={() => router.push('/market/purchases')}
               className="w-full py-3 rounded-xl font-semibold bg-[#0072CE] text-white shadow-md hover:brightness-110 transition"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
@@ -222,5 +222,13 @@ export default function CheckoutPage() {
         </Card>
       </motion.div>
     </motion.main>
+  );
+}
+
+export default function CheckoutPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div>Loading...</div></div>}>
+      <CheckoutPageContent />
+    </Suspense>
   );
 }

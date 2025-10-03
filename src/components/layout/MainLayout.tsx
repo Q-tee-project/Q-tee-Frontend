@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, memo } from 'react';
 import Sidebar from './Sidebar';
 import FixedNotificationIcon from './FixedNotificationIcon';
 
@@ -8,7 +8,7 @@ interface MainLayoutProps {
   children: React.ReactNode;
 }
 
-export default function MainLayout({ children }: MainLayoutProps) {
+function MainLayout({ children }: MainLayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
@@ -26,3 +26,5 @@ export default function MainLayout({ children }: MainLayoutProps) {
     </div>
   );
 }
+
+export default memo(MainLayout);

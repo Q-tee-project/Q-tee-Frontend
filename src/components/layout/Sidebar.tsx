@@ -26,7 +26,7 @@ const Sidebar = ({ onToggle }: SidebarProps) => {
 
   // Teacher 메뉴
   const teacherMenuItems = [
-    { icon: <RxDashboard />, text: '대시보드', path: '/dashboard/teacher' },
+    { icon: <RxDashboard />, text: '대시보드', path: '/teacher' },
     { icon: <MdOutlineEmail />, text: '메일', path: '/message' },
     { icon: <FiClipboard />, text: '문제함', path: '/question/bank' },
     { icon: <FiEdit />, text: '문제 생성', path: '/question/create' },
@@ -36,7 +36,7 @@ const Sidebar = ({ onToggle }: SidebarProps) => {
 
   // Student 메뉴
   const studentMenuItems = [
-    { icon: <RxDashboard />, text: '대시보드', path: '/dashboard/student' },
+    { icon: <RxDashboard />, text: '대시보드', path: '/student' },
     { icon: <MdOutlineEmail />, text: '메일', path: '/message' },
     { icon: <FiBook />, text: '과제 풀이', path: '/test' },
     { icon: <FiHome />, text: '내 클래스', path: '/class' },
