@@ -10,11 +10,13 @@ import MathGenerator from '@/components/generator/MathGenerator';
 import { QuestionPreview } from '@/components/question/QuestionPreview';
 import { EnglishWorksheetDetail } from '@/components/bank/EnglishWorksheetDetail';
 import { ErrorToast } from '@/components/bank/ErrorToast';
-import { useKoreanGeneration } from '@/hooks/useKoreanGeneration';
-import { useMathGeneration } from '@/hooks/useMathGeneration';
-import { useEnglishGeneration } from '@/hooks/useEnglishGeneration';
-import { useWorksheetSave } from '@/hooks/useWorksheetSave';
-import { useEnglishWorksheetSave } from '@/hooks/useEnglishWorksheetSave';
+import {
+  useKoreanGeneration,
+  useMathGeneration,
+  useEnglishGeneration,
+  useWorksheetSave,
+  useEnglishWorksheetSave
+} from '@/hooks';
 import { EnglishWorksheetData } from '@/types/english';
 
 // 타입 별칭

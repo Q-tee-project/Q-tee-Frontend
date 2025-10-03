@@ -3,9 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { FileText } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { useMathBank } from '@/hooks/useMathBank';
-import { useKoreanBank } from '@/hooks/useKoreanBank';
-import { useEnglishBank } from '@/hooks/useEnglishBank';
+import { useMathBank, useKoreanBank, useEnglishBank } from '@/hooks';
 import { useWorksheetEdit } from '@/hooks/bank/useWorksheetEdit';
 import { useDistribution } from '@/hooks/bank/useDistribution';
 import { WorksheetList } from '@/components/bank/WorksheetList';

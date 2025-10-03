@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { koreanService } from '@/services/koreanService';
 import { KoreanWorksheet, Problem } from '@/services/koreanService'; // Import Problem interface
-import { useBankState } from './useBankState';
+import { useBankState } from '../common/useBankState';
 
 export const useKoreanBank = () => {
   const {

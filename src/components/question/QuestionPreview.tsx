@@ -2,7 +2,7 @@ import React from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { LaTeXRenderer } from '@/components/LaTeXRenderer';
 import { TikZRenderer } from '@/components/TikZRenderer';
-import { PreviewQuestion } from '@/hooks/useProblemGeneration';
+import { PreviewQuestion } from '@/hooks';
 
 interface QuestionPreviewProps {
   previewQuestions: PreviewQuestion[];

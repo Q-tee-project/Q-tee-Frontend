@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import { useProblemGeneration, PreviewQuestion } from './useProblemGeneration';
+import { useProblemGeneration, PreviewQuestion } from '../common/useProblemGeneration';
 import { EnglishService } from '@/services/englishService';
 import { EnglishWorksheetGeneratorFormData, EnglishAsyncResponse, EnglishTaskStatus, EnglishWorksheetData, EnglishPassage, EnglishQuestion } from '@/types/english';
 

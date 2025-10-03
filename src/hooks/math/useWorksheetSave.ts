@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { PreviewQuestion } from './useProblemGeneration';
+import { PreviewQuestion } from '../common/useProblemGeneration';
 
 export const useWorksheetSave = () => {
   const [worksheetName, setWorksheetName] = useState('');
