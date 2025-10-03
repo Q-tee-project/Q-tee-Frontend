@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { mathService } from '@/services/mathService';
 import { koreanService } from '@/services/koreanService';
 import { useAuth } from '@/contexts/AuthContext';
@@ -20,7 +20,7 @@ import { StudentResultView } from '@/components/test/StudentResultView';
 import { EnglishService } from '@/services/englishService';
 import { useSearchParams } from 'next/navigation';
 
-export default function TestPage() {
+function TestPageContent() {
   const { userProfile } = useAuth();
   const searchParams = useSearchParams();
   const [worksheets, setWorksheets] = useState<(Worksheet | KoreanWorksheet)[]>([]);
@@ -902,5 +902,13 @@ export default function TestPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function TestPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div>Loading...</div></div>}>
+      <TestPageContent />
+    </Suspense>
   );
 }

@@ -4,9 +4,9 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { FiCheckCircle, FiXCircle } from 'react-icons/fi';
 import { motion } from 'framer-motion';
-import { useEffect } from 'react';
+import { useEffect, Suspense } from 'react';
 
-export default function CheckoutPage() {
+function CheckoutPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -222,5 +222,13 @@ export default function CheckoutPage() {
         </Card>
       </motion.div>
     </motion.main>
+  );
+}
+
+export default function CheckoutPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div>Loading...</div></div>}>
+      <CheckoutPageContent />
+    </Suspense>
   );
 }
