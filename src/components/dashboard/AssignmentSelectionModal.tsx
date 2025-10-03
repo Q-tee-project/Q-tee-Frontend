@@ -80,7 +80,7 @@ const AssignmentSelectionModal = ({
               >
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-900">
+                    <p className="text-sm font-medium text-gray-900 break-words overflow-hidden">
                       {assignment.title}
                     </p>
                     <p className="text-xs text-gray-500">

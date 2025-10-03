@@ -418,8 +418,8 @@ const ClassPerformanceChartCard = ({
           </div>
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="relative h-[32rem] bg-white rounded-lg p-4">
+      <CardContent className="flex flex-col flex-1">
+        <div className="relative flex-1 bg-white rounded-lg p-4" style={{ minHeight: '32rem' }}>
           {assignmentChartData.length === 0 ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
@@ -440,8 +440,6 @@ const ClassPerformanceChartCard = ({
           ) : (
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart
-                width={500}
-                height={400}
                 data={assignmentChartData}
                 margin={{
                   top: 20,

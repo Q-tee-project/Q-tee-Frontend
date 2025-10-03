@@ -160,7 +160,7 @@ export function AssignmentList({
                         <span>{results.length}명 배포</span>
                       </div>
                     </div>
-                    <h4 className="text-lg font-semibold text-gray-900">{assignment.title}</h4>
+                    <h4 className="text-lg font-semibold text-gray-900 break-words overflow-hidden">{assignment.title}</h4>
                   </div>
                 </div>
               </AccordionTrigger>
