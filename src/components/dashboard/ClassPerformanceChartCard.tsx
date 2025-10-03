@@ -68,7 +68,7 @@ interface ClassPerformanceChartCardProps {
   studentColorMap: Record<number, string>;
 }
 
-const ClassPerformanceChartCard = ({
+const ClassPerformanceChartCard = React.memo(({
   selectedClass,
   setSelectedClass,
   classes,
@@ -443,8 +443,8 @@ const ClassPerformanceChartCard = ({
                 data={assignmentChartData}
                 margin={{
                   top: 20,
-                  right: 80,
-                  bottom: 80,
+                  right: 20,
+                  bottom: 100,
                   left: 20,
                 }}
                 style={{ backgroundColor: 'white' }}
@@ -644,39 +644,43 @@ const ClassPerformanceChartCard = ({
             </ResponsiveContainer>
           )}
 
-          <div className="mt-4 relative z-10">
-            <div className="flex justify-center gap-6 mb-2">
+          <div className="mt-2 relative z-10 px-4 overflow-hidden">
+            <div className="flex justify-center gap-4 flex-wrap">
               <div className="flex items-center gap-2">
                 <div
-                  className="w-3 h-3 rounded-sm"
+                  className="w-3 h-3 rounded-sm flex-shrink-0"
                   style={{
                     backgroundColor: '#60a5fa',
                   }}
                 ></div>
                 <span className="text-sm text-blue-600 font-medium">과제평균</span>
               </div>
-            </div>
 
-            {selectedStudents.length > 0 && selectedClass && (
-              <div className="flex justify-center gap-6">
-                {selectedStudents.map((studentId) => {
-                  const student = students[selectedClass]?.find((s) => s.id === studentId);
-                  if (!student) return null;
-                  const color = getStudentColor(studentId);
-                  return (
-                    <div key={studentId} className="flex items-center gap-2">
-                      <div
-                        className="w-3 h-3 rounded-sm"
-                        style={{ backgroundColor: color || '#9ca3af' }}
-                      ></div>
-                      <span className="text-sm" style={{ color: color || '#9ca3af' }}>
-                        {student.name}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+              {selectedStudents.length > 0 && selectedClass && (
+                <>
+                  {selectedStudents.map((studentId) => {
+                    const student = students[selectedClass]?.find((s) => s.id === studentId);
+                    if (!student) return null;
+                    const color = getStudentColor(studentId);
+                    return (
+                      <div key={studentId} className="flex items-center gap-2">
+                        <div
+                          className="w-3 h-3 rounded-sm flex-shrink-0"
+                          style={{ backgroundColor: color || '#9ca3af' }}
+                        ></div>
+                        <span 
+                          className="text-sm truncate max-w-[80px] block" 
+                          style={{ color: color || '#9ca3af' }}
+                          title={student.name}
+                        >
+                          {student.name}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </>
+              )}
+            </div>
           </div>
         </div>
       </CardContent>
@@ -852,6 +856,6 @@ const ClassPerformanceChartCard = ({
       </Dialog>
     </Card>
   );
-};
+});
 
 export default ClassPerformanceChartCard;

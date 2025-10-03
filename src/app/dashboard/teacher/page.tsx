@@ -41,7 +41,7 @@ interface AssignmentData {
   assignedStudents?: number[];
 }
 
-const TeacherDashboard = () => {
+const TeacherDashboard = React.memo(() => {
   const { userProfile } = useAuth();
   
   // State management
@@ -446,7 +446,7 @@ const TeacherDashboard = () => {
     }
   }, [realClasses]);
 
-  // 실제 과제 데이터 로드 (선택된 클래스의 배포된 과제만)
+  // 실제 과제 데이터 로드 (선택된 클래스의 배포된 과제만) - 최적화된 버전
   const loadRealAssignments = React.useCallback(async (selectedClassId?: string) => {
     try {
       setIsLoadingAssignments(true);
@@ -457,26 +457,35 @@ const TeacherDashboard = () => {
         ? realClasses.filter(cls => cls.id === selectedClassId)
         : realClasses;
       
-      for (const classroom of classesToProcess) {
+      // 모든 클래스의 과제를 병렬로 로드
+      const classPromises = classesToProcess.map(async (classroom) => {
         try {
-          // 국어 과제 로드
-          let koreanAssignmentsData: AssignmentData[] = [];
-          try {
-            const koreanAssignments = await retryApiCall(() => koreanService.getDeployedAssignments(classroom.id.toString()));
+          // 국어, 영어, 수학 과제를 병렬로 로드
+          const [koreanAssignments, englishAssignments, mathAssignments] = await Promise.allSettled([
+            retryApiCall(() => koreanService.getDeployedAssignments(classroom.id.toString())),
+            retryApiCall(() => EnglishService.getDeployedAssignments(classroom.id.toString())),
+            retryApiCall(() => mathService.getDeployedAssignments(classroom.id.toString()))
+          ]);
+
+          // 각 과목별 과제 데이터 처리
+          const processAssignments = async (assignments: any[], subject: 'korean' | 'english' | 'math') => {
+            if (!assignments || assignments.length === 0) return [];
             
-            koreanAssignmentsData = await Promise.all(
-              koreanAssignments.map(async (assignment) => {
-                const studentScores = await getAssignmentStudentScores(assignment.id, 'korean');
-                const assignedStudents = await getAssignedStudents(assignment.id, 'korean');
+            return Promise.all(
+              assignments.map(async (assignment) => {
+                const [studentScores, assignedStudents] = await Promise.all([
+                  getAssignmentStudentScores(assignment.id, subject),
+                  getAssignedStudents(assignment.id, subject)
+                ]);
                 
                 const averageScore = calculateAverageScore(studentScores);
                 const submittedCount = Object.keys(studentScores).length;
                 const totalAssignedStudents = assignedStudents.length;
                 
-                const assignmentData = {
+                return {
                   id: assignment.id.toString(),
                   title: assignment.title,
-                  subject: '국어',
+                  subject: subject === 'korean' ? '국어' : subject === 'english' ? '영어' : '수학',
                   dueDate: assignment.created_at ? new Date(assignment.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
                   submitted: submittedCount,
                   total: totalAssignedStudents,
@@ -484,87 +493,26 @@ const TeacherDashboard = () => {
                   studentScores: studentScores,
                   assignedStudents: assignedStudents
                 };
-                
-                return assignmentData;
               })
             );
-          } catch (error) {
-            koreanAssignmentsData = [];
-          }
-          
-          // 영어 과제 로드
-          let englishAssignmentsData: AssignmentData[] = [];
-          try {
-            const englishAssignments = await retryApiCall(() => EnglishService.getDeployedAssignments(classroom.id.toString()));
-            
-            englishAssignmentsData = await Promise.all(
-              englishAssignments.map(async (assignment) => {
-                const studentScores = await getAssignmentStudentScores(assignment.id, 'english');
-                const assignedStudents = await getAssignedStudents(assignment.id, 'english');
-                
-                const averageScore = calculateAverageScore(studentScores);
-                const submittedCount = Object.keys(studentScores).length;
-                const totalAssignedStudents = assignedStudents.length;
-                
-                const assignmentData = {
-                  id: assignment.id.toString(),
-                  title: assignment.title,
-                  subject: '영어',
-                  dueDate: assignment.created_at ? new Date(assignment.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-                  submitted: submittedCount,
-                  total: totalAssignedStudents,
-                  averageScore: averageScore,
-                  studentScores: studentScores,
-                  assignedStudents: assignedStudents
-                };
-                
-                return assignmentData;
-              })
-            );
-          } catch (error) {
-            englishAssignmentsData = [];
-          }
-          
-          // 수학 과제 로드
-          let mathAssignmentsData: AssignmentData[] = [];
-          try {
-            const mathAssignments = await retryApiCall(() => mathService.getDeployedAssignments(classroom.id.toString()));
-            
-            mathAssignmentsData = await Promise.all(
-              mathAssignments.map(async (assignment) => {
-                const studentScores = await getAssignmentStudentScores(assignment.id, 'math');
-                const assignedStudents = await getAssignedStudents(assignment.id, 'math');
-                
-                const averageScore = calculateAverageScore(studentScores);
-                const submittedCount = Object.keys(studentScores).length;
-                const totalAssignedStudents = assignedStudents.length;
-                
-                const assignmentData = {
-                  id: assignment.id.toString(),
-                  title: assignment.title,
-                  subject: '수학',
-                  dueDate: assignment.created_at ? new Date(assignment.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-                  submitted: submittedCount,
-                  total: totalAssignedStudents,
-                  averageScore: averageScore,
-                  studentScores: studentScores,
-                  assignedStudents: assignedStudents
-                };
-                
-                return assignmentData;
-              })
-            );
-          } catch (error) {
-            mathAssignmentsData = [];
-          }
-          
-          assignmentsData.push(...koreanAssignmentsData, ...englishAssignmentsData, ...mathAssignmentsData);
+          };
+
+          const [koreanData, englishData, mathData] = await Promise.all([
+            koreanAssignments.status === 'fulfilled' ? processAssignments(koreanAssignments.value, 'korean') : [],
+            englishAssignments.status === 'fulfilled' ? processAssignments(englishAssignments.value, 'english') : [],
+            mathAssignments.status === 'fulfilled' ? processAssignments(mathAssignments.value, 'math') : []
+          ]);
+
+          return [...koreanData, ...englishData, ...mathData];
         } catch (error) {
-          // 에러 무시
+          return [];
         }
-      }
+      });
+
+      const results = await Promise.all(classPromises);
+      const allAssignments = results.flat();
       
-      setRealAssignments(assignmentsData);
+      setRealAssignments(allAssignments);
     } catch (error) {
       setRealAssignments([]);
     } finally {
@@ -582,96 +530,91 @@ const TeacherDashboard = () => {
   const [isLoadingStats, setIsLoadingStats] = React.useState(true);
   const [apiErrors, setApiErrors] = React.useState<Set<string>>(new Set());
 
-  // 실제 통계 데이터 로드
+  // 실제 통계 데이터 로드 - 최적화된 버전
   const loadRealStats = React.useCallback(async () => {
     try {
       setIsLoadingStats(true);
-      setApiErrors(new Set()); // 오류 상태 초기화
+      setApiErrors(new Set());
       
       // 1. 전체 클래스 수 (내가 생성한 클래스)
       let myClasses: any[] = [];
       try {
         myClasses = await classroomService.getMyClassrooms();
       } catch (error) {
-        // 클래스 조회 실패 시 빈 배열로 설정
         myClasses = [];
       }
       const totalClasses = myClasses.length;
       
-      // 2. 전체 학생 수 (내 클래스들의 학생 합계)
-      let totalStudents = 0;
-      for (const classroom of myClasses) {
-        try {
-          const students = await classroomService.getClassroomStudents(classroom.id);
-          totalStudents += students.length;
-        } catch (error) {
-          // 에러 무시
-        }
-      }
-      
-      // 3. 활성 과제 수 (국어 + 영어 + 수학 배포된 과제)
-      let activeAssignments = 0;
-      for (const classroom of myClasses) {
-        // 국어 과제
-        try {
-          const koreanAssignments = await retryApiCall(() => koreanService.getDeployedAssignments(classroom.id.toString()));
-          activeAssignments += koreanAssignments ? koreanAssignments.length : 0;
-        } catch (error) {
-          // 국어 과제 조회 실패 시 무시
-        }
+      // 2. 전체 학생 수와 활성 과제 수를 병렬로 계산
+      const [totalStudents, activeAssignments] = await Promise.all([
+        // 학생 수 계산
+        (async () => {
+          let students = 0;
+          const studentPromises = myClasses.map(async (classroom) => {
+            try {
+              const classStudents = await classroomService.getClassroomStudents(classroom.id);
+              return classStudents.length;
+            } catch (error) {
+              return 0;
+            }
+          });
+          const studentCounts = await Promise.all(studentPromises);
+          students = studentCounts.reduce((sum, count) => sum + count, 0);
+          return students;
+        })(),
         
-        // 영어 과제
+        // 활성 과제 수 계산
+        (async () => {
+          let assignments = 0;
+          const assignmentPromises = myClasses.map(async (classroom) => {
+            try {
+              const [koreanAssignments, englishAssignments, mathAssignments] = await Promise.allSettled([
+                retryApiCall(() => koreanService.getDeployedAssignments(classroom.id.toString())),
+                retryApiCall(() => EnglishService.getDeployedAssignments(classroom.id.toString())),
+                retryApiCall(() => mathService.getDeployedAssignments(classroom.id.toString()))
+              ]);
+              
+              let classAssignments = 0;
+              if (koreanAssignments.status === 'fulfilled') classAssignments += koreanAssignments.value?.length || 0;
+              if (englishAssignments.status === 'fulfilled') classAssignments += englishAssignments.value?.length || 0;
+              if (mathAssignments.status === 'fulfilled') classAssignments += mathAssignments.value?.length || 0;
+              
+              return classAssignments;
+            } catch (error) {
+              return 0;
+            }
+          });
+          const assignmentCounts = await Promise.all(assignmentPromises);
+          assignments = assignmentCounts.reduce((sum, count) => sum + count, 0);
+          return assignments;
+        })()
+      ]);
+      
+      // 3. 전체 문제 수를 병렬로 계산
+      const totalProblems = await (async () => {
         try {
-          const englishAssignments = await retryApiCall(() => EnglishService.getDeployedAssignments(classroom.id.toString()));
-          activeAssignments += englishAssignments ? englishAssignments.length : 0;
+          const [koreanWorksheets, englishWorksheets, mathWorksheets] = await Promise.allSettled([
+            retryApiCall(() => koreanService.getKoreanWorksheets()),
+            retryApiCall(() => EnglishService.getEnglishWorksheets()),
+            retryApiCall(() => mathService.getMathWorksheets())
+          ]);
+          
+          let problems = 0;
+          if (koreanWorksheets.status === 'fulfilled' && koreanWorksheets.value?.worksheets) {
+            problems += koreanWorksheets.value.worksheets.length;
+          }
+          if (englishWorksheets.status === 'fulfilled' && Array.isArray(englishWorksheets.value)) {
+            problems += englishWorksheets.value.length;
+          }
+          if (mathWorksheets.status === 'fulfilled' && mathWorksheets.value?.worksheets) {
+            problems += mathWorksheets.value.worksheets.length;
+          }
+          
+          return problems;
         } catch (error) {
-          // 영어 과제 조회 실패 시 무시
+          return 0;
         }
-        
-        // 수학 과제
-        try {
-          const mathAssignments = await retryApiCall(() => mathService.getDeployedAssignments(classroom.id.toString()));
-          activeAssignments += mathAssignments ? mathAssignments.length : 0;
-        } catch (error) {
-          // 수학 과제 조회 실패 시 무시
-        }
-      }
-      
-      // 4. 전체 문제 수 (문제 보관함의 실제 저장된 문제 개수만 조회)
-      let totalProblems = 0;
-      let savedProblems = 0;
-      
-      // 각 과목별로 워크시트 개수만 카운트 (문제 보관함 = 워크시트 리스트)
-      try {
-        const koreanWorksheets = await retryApiCall(() => koreanService.getKoreanWorksheets());
-        if (koreanWorksheets && koreanWorksheets.worksheets && Array.isArray(koreanWorksheets.worksheets)) {
-          savedProblems += koreanWorksheets.worksheets.length;
-        }
-      } catch (error) {
-        // 에러 무시
-      }
-      
-      // 영어 문제 보관함에서 저장된 워크시트 개수
-      try {
-        const englishWorksheets = await retryApiCall(() => EnglishService.getEnglishWorksheets());
-        if (englishWorksheets && Array.isArray(englishWorksheets)) {
-          savedProblems += englishWorksheets.length;
-        }
-      } catch (error) {
-        // 에러 무시
-      }
-      
-      // 수학 문제 보관함에서 저장된 워크시트 개수
-      try {
-        const mathWorksheets = await retryApiCall(() => mathService.getMathWorksheets());
-        if (mathWorksheets && mathWorksheets.worksheets && Array.isArray(mathWorksheets.worksheets)) {
-          savedProblems += mathWorksheets.worksheets.length;
-        }
-      } catch (error) {
-        // 에러 무시
-      }
-      
-      totalProblems = savedProblems;
+      })();
       
       setRealStats({
         totalClasses,
@@ -681,7 +624,6 @@ const TeacherDashboard = () => {
       });
       
     } catch (error) {
-      // 기본값 설정
       setRealStats({
         totalClasses: 0,
         totalStudents: 0,
@@ -721,13 +663,26 @@ const TeacherDashboard = () => {
     return realStats;
   }, [realStats]);
 
-  // Initialize
+  // Initialize - 병렬 로딩으로 최적화
   React.useEffect(() => {
-    loadMarketStats();
-    loadMarketProducts();
-    loadRealClasses();
-    loadRealStats(); // 실제 통계 데이터 로드
-  }, [loadMarketStats, loadMarketProducts, loadRealClasses, loadRealStats]);
+    const initializeData = async () => {
+      // 마켓 데이터와 클래스 데이터를 병렬로 로드
+      await Promise.all([
+        loadMarketStats(),
+        loadMarketProducts(),
+        loadRealClasses()
+      ]);
+    };
+    
+    initializeData();
+  }, [loadMarketStats, loadMarketProducts, loadRealClasses]);
+  
+  // 클래스 데이터 로드 후 통계 데이터 로드
+  React.useEffect(() => {
+    if (realClasses.length > 0) {
+      loadRealStats();
+    }
+  }, [realClasses.length, loadRealStats]);
 
   // 클래스 데이터가 로드되면 학생 데이터만 로드 (과제는 선택된 클래스에서만)
   React.useEffect(() => {
@@ -815,6 +770,6 @@ const TeacherDashboard = () => {
       )}
     </div>
   );
-};
+});
 
 export default TeacherDashboard;

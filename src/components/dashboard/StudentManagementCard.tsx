@@ -29,7 +29,7 @@ interface StudentManagementCardProps {
   getStudentColor: (studentId: number) => string | null;
 }
 
-const StudentManagementCard = ({
+const StudentManagementCard = React.memo(({
   selectedClass,
   classes,
   students,
@@ -256,6 +256,6 @@ const StudentManagementCard = ({
       </CardContent>
     </Card>
   );
-};
+});
 
 export default StudentManagementCard;
