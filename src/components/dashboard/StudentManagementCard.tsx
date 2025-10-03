@@ -183,61 +183,76 @@ const StudentManagementCard = React.memo(({
                 전체 학생 목록
               </h4>
               <div className="flex-1 p-4 pt-3 overflow-y-auto">
-                <div className="space-y-3">
-                  {currentClassStudents
-                    ?.sort((a, b) => a.id - b.id)
-                    ?.map((student, index) => {
-                      const isSelected = selectedStudents.includes(student.id);
-                      const canSelect = !isSelected && selectedStudents.length < 3;
+                {currentClassStudents && currentClassStudents.length > 0 ? (
+                  <div className="space-y-3">
+                    {currentClassStudents
+                      ?.sort((a, b) => a.id - b.id)
+                      ?.map((student, index) => {
+                        const isSelected = selectedStudents.includes(student.id);
+                        const canSelect = !isSelected && selectedStudents.length < 3;
 
-                      return (
-                        <div
-                          key={student.id}
-                          onClick={() =>
-                            canSelect ? handleStudentSelect(student.id) : undefined
-                          }
-                          className={`p-3 rounded-lg border transition-colors ${
-                            isSelected
-                              ? 'text-gray-500 cursor-not-allowed'
-                              : canSelect
-                              ? 'bg-white border-gray-200 cursor-pointer'
-                              : 'bg-white border-gray-200 opacity-50 cursor-not-allowed'
-                          }`}
-                          style={{
-                            backgroundColor: isSelected ? '#f9fafb' : 'white',
-                            borderColor: isSelected ? '#e5e7eb' : '#e5e7eb',
-                          }}
-                          onMouseEnter={(e) => {
-                            if (canSelect) {
-                              e.currentTarget.style.backgroundColor = '#f0fdf4';
-                              e.currentTarget.style.borderColor = '#bbf7d0';
+                        return (
+                          <div
+                            key={student.id}
+                            onClick={() =>
+                              canSelect ? handleStudentSelect(student.id) : undefined
                             }
-                          }}
-                          onMouseLeave={(e) => {
-                            if (canSelect) {
-                              e.currentTarget.style.backgroundColor = 'white';
-                              e.currentTarget.style.borderColor = '#e5e7eb';
-                            } else if (isSelected) {
-                              e.currentTarget.style.backgroundColor = '#f9fafb';
-                              e.currentTarget.style.borderColor = '#e5e7eb';
-                            }
-                          }}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center flex-1 min-w-0">
-                              <h4
-                                className={`text-sm font-medium break-words overflow-hidden ${
-                                  isSelected ? 'text-gray-500' : 'text-gray-900'
-                                }`}
-                              >
-                                {student.name}
-                              </h4>
+                            className={`p-3 rounded-lg border transition-colors ${
+                              isSelected
+                                ? 'text-gray-500 cursor-not-allowed'
+                                : canSelect
+                                ? 'bg-white border-gray-200 cursor-pointer'
+                                : 'bg-white border-gray-200 opacity-50 cursor-not-allowed'
+                            }`}
+                            style={{
+                              backgroundColor: isSelected ? '#f9fafb' : 'white',
+                              borderColor: isSelected ? '#e5e7eb' : '#e5e7eb',
+                            }}
+                            onMouseEnter={(e) => {
+                              if (canSelect) {
+                                e.currentTarget.style.backgroundColor = '#f0fdf4';
+                                e.currentTarget.style.borderColor = '#bbf7d0';
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              if (canSelect) {
+                                e.currentTarget.style.backgroundColor = 'white';
+                                e.currentTarget.style.borderColor = '#e5e7eb';
+                              } else if (isSelected) {
+                                e.currentTarget.style.backgroundColor = '#f9fafb';
+                                e.currentTarget.style.borderColor = '#e5e7eb';
+                              }
+                            }}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center flex-1 min-w-0">
+                                <h4
+                                  className={`text-sm font-medium break-words overflow-hidden ${
+                                    isSelected ? 'text-gray-500' : 'text-gray-900'
+                                  }`}
+                                >
+                                  {student.name}
+                                </h4>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      );
-                    })}
-                </div>
+                        );
+                      })}
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center">
+                      <Users className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                      <p className="text-gray-500 text-sm mb-1">등록된 학생이 없습니다</p>
+                      <p className="text-gray-400 text-xs">
+                        학생을 클래스에 초대하면
+                      </p>
+                      <p className="text-gray-400 text-xs">
+                        여기에 표시됩니다
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           ) : (
