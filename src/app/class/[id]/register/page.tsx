@@ -2,7 +2,7 @@
 
 import React, { use, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { FaArrowLeft } from "react-icons/fa6";
+import { FaArrowLeft } from 'react-icons/fa6';
 import { UserPlus } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Input } from '@/components/ui/input';
@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { classroomService, StudentJoinRequest } from '@/services/authService';
+import { StudentJoinRequest } from '@/services/authService';
 
 interface RegisterPageProps {
   params: Promise<{
@@ -51,8 +51,13 @@ export default function RegisterPage({ params }: RegisterPageProps) {
   // 폼 제출 핸들러
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!formData.name.trim() || !formData.email.trim() || !formData.phone.trim() || !formData.parent_phone.trim()) {
+
+    if (
+      !formData.name.trim() ||
+      !formData.email.trim() ||
+      !formData.phone.trim() ||
+      !formData.parent_phone.trim()
+    ) {
       setError('모든 필드를 입력해주세요.');
       return;
     }
@@ -61,7 +66,7 @@ export default function RegisterPage({ params }: RegisterPageProps) {
     try {
       // 백엔드 API 호출하지 않고 로컬 상태만 관리
       // (실제로는 학생이 코드를 입력할 때까지 대기)
-      
+
       // 로컬 상태에 "초대 완료" 상태로 추가
       const invitedRequest: StudentJoinRequest = {
         id: Date.now(), // 임시 ID
@@ -90,19 +95,23 @@ export default function RegisterPage({ params }: RegisterPageProps) {
           teacher_id: 0,
           is_active: true,
           created_at: new Date().toISOString(),
-        }
+        },
       };
 
       // localStorage에 초대 완료 상태 저장
-      const existingInvites = JSON.parse(localStorage.getItem(`invited_students_${classId}`) || '[]');
+      const existingInvites = JSON.parse(
+        localStorage.getItem(`invited_students_${classId}`) || '[]',
+      );
       existingInvites.push(invitedRequest);
       localStorage.setItem(`invited_students_${classId}`, JSON.stringify(existingInvites));
-      
+
       // 등록 성공 후 승인 대기 탭으로 이동
       router.push(`/class/${classId}?tab=approval`);
-      
+
       // TODO: 나중에 학생이 코드를 입력하면 실제 백엔드 API 호출
-      console.log('학생이 초대 완료 상태로 등록되었습니다. 학생이 코드를 입력할 때까지 대기합니다.');
+      console.log(
+        '학생이 초대 완료 상태로 등록되었습니다. 학생이 코드를 입력할 때까지 대기합니다.',
+      );
     } catch (error: any) {
       console.error('학생 등록 실패:', error);
       setError(error?.message || '학생 등록에 실패했습니다.');
@@ -140,9 +149,7 @@ export default function RegisterPage({ params }: RegisterPageProps) {
                 <FaArrowLeft className="h-5 w-5" />
               </button>
 
-              <h1 className="text-xl font-semibold text-gray-900">
-                학생 등록하기
-              </h1>
+              <h1 className="text-xl font-semibold text-gray-900">학생 등록하기</h1>
             </div>
 
             {/* 본문 영역 - 등록 폼 */}
@@ -156,7 +163,10 @@ export default function RegisterPage({ params }: RegisterPageProps) {
 
               {/* 학생 이름 */}
               <div>
-                <label htmlFor="studentName" className="block text-sm font-medium text-gray-700 mb-2">
+                <label
+                  htmlFor="studentName"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   학생 이름 <span className="text-red-500">*</span>
                 </label>
                 <Input
@@ -198,7 +208,10 @@ export default function RegisterPage({ params }: RegisterPageProps) {
 
               {/* 학부모 연락처 */}
               <div>
-                <label htmlFor="parentPhone" className="block text-sm font-medium text-gray-700 mb-2">
+                <label
+                  htmlFor="parentPhone"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   학부모 연락처 <span className="text-red-500">*</span>
                 </label>
                 <Input

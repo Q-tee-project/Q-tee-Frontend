@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { FiShoppingCart, FiArrowLeft, FiUser, FiCalendar, FiBook, FiDownload } from 'react-icons/fi';
+import { FiShoppingCart, FiArrowLeft, FiUser, FiCalendar, FiBook } from 'react-icons/fi';
 import { useRouter, useParams } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
@@ -95,7 +95,7 @@ export default function PurchasedWorksheetPage() {
       korean: PurchasedKoreanWorksheetDetail as React.FC<PurchasedKoreanWorksheetDetailProps>,
       english: PurchasedEnglishWorksheetDetail as React.FC<PurchasedEnglishWorksheetDetailProps>,
     }),
-    []
+    [],
   );
 
   // 구매한 워크시트 정보 로드
@@ -107,12 +107,15 @@ export default function PurchasedWorksheetPage() {
         throw new Error('로그인이 필요합니다.');
       }
 
-      const response = await fetch(`http://localhost:8005/market/purchased/${purchaseId}/worksheet`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const response = await fetch(
+        `http://localhost:8005/market/purchased/${purchaseId}/worksheet`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        },
+      );
 
       if (!response.ok) {
         throw new Error('워크시트를 불러올 수 없습니다.');
@@ -123,59 +126,63 @@ export default function PurchasedWorksheetPage() {
 
       // 워크시트 문제들 로드 (각 서비스별로 다른 API 호출)
       if (worksheetData.service === 'math') {
-        const worksheetId = worksheetData.copied_worksheet_id || worksheetData.original_worksheet_id;
-        console.log(`[DEBUG] 수학 문제 로드 시도: worksheet_id=${worksheetId} (copied_id=${worksheetData.copied_worksheet_id}, original_id=${worksheetData.original_worksheet_id})`);
+        const worksheetId =
+          worksheetData.copied_worksheet_id || worksheetData.original_worksheet_id;
 
-        const problemsResponse = await fetch(`http://localhost:8001/api/worksheets/${worksheetId}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        console.log(`[DEBUG] 수학 API 응답 상태: ${problemsResponse.status} ${problemsResponse.statusText}`);
+        const problemsResponse = await fetch(
+          `http://localhost:8001/api/worksheets/${worksheetId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          },
+        );
 
         if (problemsResponse.ok) {
           const data = await problemsResponse.json();
-          console.log(`[DEBUG] 수학 문제 데이터:`, data);
+
           const mathProblems: Problem[] = data.problems || [];
           setProblems(mathProblems);
         } else {
           const errorText = await problemsResponse.text();
-          console.error(`[DEBUG] 수학 API 오류:`, errorText);
         }
       } else if (worksheetData.service === 'korean') {
         // 복사된 워크시트 ID 사용 (copied_worksheet_id가 있으면 사용, 없으면 original_worksheet_id 사용)
-        const worksheetId = worksheetData.copied_worksheet_id || worksheetData.original_worksheet_id;
-        console.log(`[DEBUG] 국어 문제 로드 시도: worksheet_id=${worksheetId} (copied_id=${worksheetData.copied_worksheet_id}, original_id=${worksheetData.original_worksheet_id})`);
+        const worksheetId =
+          worksheetData.copied_worksheet_id || worksheetData.original_worksheet_id;
 
-        const problemsResponse = await fetch(`http://localhost:8004/api/korean-generation/worksheets/${worksheetId}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        console.log(`[DEBUG] 국어 API 응답 상태: ${problemsResponse.status} ${problemsResponse.statusText}`);
+        const problemsResponse = await fetch(
+          `http://localhost:8004/api/korean-generation/worksheets/${worksheetId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          },
+        );
 
         if (problemsResponse.ok) {
           const data = await problemsResponse.json();
-          console.log(`[DEBUG] 국어 문제 데이터:`, data);
+
           const koreanProblems: Problem[] = data.problems || [];
           setProblems(koreanProblems);
         } else {
           const errorText = await problemsResponse.text();
-          console.error(`[DEBUG] 국어 API 오류:`, errorText);
         }
       } else if (worksheetData.service === 'english') {
         // 복사된 워크시트 ID 사용
-        const worksheetId = worksheetData.copied_worksheet_id || worksheetData.original_worksheet_id;
-        const problemsResponse = await fetch(`http://localhost:8002/market/worksheets/${worksheetId}/problems`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
+        const worksheetId =
+          worksheetData.copied_worksheet_id || worksheetData.original_worksheet_id;
+        const problemsResponse = await fetch(
+          `http://localhost:8002/market/worksheets/${worksheetId}/problems`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          },
+        );
 
         if (problemsResponse.ok) {
           const data = await problemsResponse.json();
@@ -183,11 +190,16 @@ export default function PurchasedWorksheetPage() {
           const englishProblems: EnglishProblemFromAPI[] = data.problems || [];
           setProblems(englishProblems);
         } else {
-          const errorText = await problemsResponse.text();
-          console.error(`영어 API 오류:`, errorText);
+          if (problemsResponse.status === 404) {
+            setError('구매한 문제지를 찾을 수 없습니다. 원본 데이터가 삭제되었을 수 있습니다.');
+          } else {
+            const errorText = await problemsResponse.text();
+            console.error(`영어 API 오류:`, errorText);
+            setError('문제 데이터를 불러오는 데 실패했습니다.');
+          }
+          setProblems([]); // 에러 발생 시 문제 목록 초기화
         }
       }
-
     } catch (error) {
       console.error('구매한 워크시트 로드 실패:', error);
       setError('구매한 워크시트를 불러오는데 실패했습니다.');
@@ -204,10 +216,14 @@ export default function PurchasedWorksheetPage() {
 
   const getServiceName = (service: string) => {
     switch (service) {
-      case 'math': return '수학';
-      case 'korean': return '국어';
-      case 'english': return '영어';
-      default: return service;
+      case 'math':
+        return '수학';
+      case 'korean':
+        return '국어';
+      case 'english':
+        return '영어';
+      default:
+        return service;
     }
   };
 
@@ -293,18 +309,6 @@ export default function PurchasedWorksheetPage() {
                 >
                   {showAnswerSheet ? '문제지 보기' : '정답지 보기'}
                 </Button>
-
-                <Button
-                  onClick={() => {
-                    // PDF 다운로드 기능 구현 예정
-                    alert('PDF 다운로드 기능은 개발 중입니다.');
-                  }}
-                  className="w-full flex items-center gap-2"
-                  variant="outline"
-                >
-                  <FiDownload className="w-4 h-4" />
-                  PDF 다운로드
-                </Button>
               </div>
             </CardContent>
           </Card>
@@ -338,21 +342,6 @@ export default function PurchasedWorksheetPage() {
                     showAnswerSheet={showAnswerSheet}
                     onToggleAnswerSheet={() => setShowAnswerSheet(!showAnswerSheet)}
                   />
-                );
-              default:
-                return (
-                  <Card className="flex-1 shadow-sm">
-                    <CardHeader className="py-3 px-6 border-b border-gray-100">
-                      <CardTitle className="text-lg font-medium">
-                        문제 목록 ({problems.length}문제)
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-0">
-                      <div className="text-center py-8 text-gray-500">
-                        이 과목은 아직 지원되지 않습니다.
-                      </div>
-                    </CardContent>
-                  </Card>
                 );
             }
           })()}

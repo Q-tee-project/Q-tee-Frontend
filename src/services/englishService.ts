@@ -30,9 +30,9 @@ type EnglishLLMResponseAndRequest = EnglishWorksheetData;
 
 // 영어 과제 배포 요청 (백엔드 API와 일치)
 export interface EnglishAssignmentDeployRequest {
-  assignment_id: number;     // 영어 워크시트 ID (백엔드에서는 assignment_id로 요구)
-  classroom_id: number;      // 클래스룸 ID
-  student_ids: number[];     // 학생 ID 목록
+  assignment_id: number; // 영어 워크시트 ID (백엔드에서는 assignment_id로 요구)
+  classroom_id: number; // 클래스룸 ID
+  student_ids: number[]; // 학생 ID 목록
 }
 
 const ENGLISH_API_BASE = 'http://localhost:8002/api/english';
@@ -56,9 +56,7 @@ export interface EnglishAssignmentResult {
 
 export class EnglishService {
   // 영어 문제 생성 (비동기 처리로 변경)
-  static async generateEnglishProblems(
-    formData: EnglishFormData,
-  ): Promise<EnglishAsyncResponse> {
+  static async generateEnglishProblems(formData: EnglishFormData): Promise<EnglishAsyncResponse> {
     const currentUser = JSON.parse(localStorage.getItem('user_profile') || '{}');
     const userId = currentUser?.id;
 
@@ -86,14 +84,11 @@ export class EnglishService {
     const currentUser = JSON.parse(localStorage.getItem('user_profile') || '{}');
     const userId = currentUser?.id;
 
-    console.log('📚 영어 워크시트 API 호출 - userId:', userId);
-
     if (!userId) {
       throw new Error('로그인이 필요합니다.');
     }
 
-    const apiUrl = `${ENGLISH_API_BASE}/worksheets?user_id=${userId}&limit=100`;
-    console.log('📚 영어 워크시트 API URL:', apiUrl);
+    const apiUrl = `${ENGLISH_API_BASE}/worksheets?user_id=${userId}&limit=1000`;
 
     const response = await fetch(apiUrl);
 
@@ -103,15 +98,12 @@ export class EnglishService {
     }
 
     const data = await response.json();
-    console.log('📚 영어 워크시트 원시 데이터:', data);
-    console.log('📚 영어 워크시트 반환 데이터:', data || []);
+
     return data || [];
   }
 
   // 영어 워크시트 상세 정보 가져오기
-  static async getEnglishWorksheetDetail(
-    worksheetId: number,
-  ): Promise<EnglishWorksheetDetail> {
+  static async getEnglishWorksheetDetail(worksheetId: number): Promise<EnglishWorksheetDetail> {
     const currentUser = JSON.parse(localStorage.getItem('user_profile') || '{}');
     const userId = currentUser?.id;
 
@@ -314,7 +306,7 @@ export class EnglishService {
 
   // 영어 워크시트 일괄 삭제
   static async batchDeleteEnglishWorksheets(
-    worksheetIds: number[]
+    worksheetIds: number[],
   ): Promise<{ success: boolean; message: string; deleted_count: number }> {
     const currentUser = JSON.parse(localStorage.getItem('user_profile') || '{}');
     const userId = currentUser?.id;
@@ -327,16 +319,13 @@ export class EnglishService {
       throw new Error('삭제할 워크시트 ID가 필요합니다.');
     }
 
-    const response = await fetch(
-      `${ENGLISH_API_BASE}/worksheets/batch?user_id=${userId}`,
-      {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ worksheet_ids: worksheetIds }),
+    const response = await fetch(`${ENGLISH_API_BASE}/worksheets/batch?user_id=${userId}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
       },
-    );
+      body: JSON.stringify({ worksheet_ids: worksheetIds }),
+    });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
@@ -347,7 +336,7 @@ export class EnglishService {
     return {
       success: true,
       message: result.message || `${worksheetIds.length}개의 워크시트가 삭제되었습니다.`,
-      deleted_count: result.deleted_count || worksheetIds.length
+      deleted_count: result.deleted_count || worksheetIds.length,
     };
   }
 
@@ -364,7 +353,7 @@ export class EnglishService {
     }
 
     const response = await fetch(
-      `${ENGLISH_API_BASE}/worksheets/${worksheetId}/questions/${questionId}/regeneration-info?user_id=${userId}`
+      `${ENGLISH_API_BASE}/worksheets/${worksheetId}/questions/${questionId}/regeneration-info?user_id=${userId}`,
     );
 
     if (!response.ok) {
@@ -433,16 +422,13 @@ export class EnglishService {
       formData: regenerationRequest,
     };
 
-    const response = await fetch(
-      `${ENGLISH_API_BASE}/questions/regenerate?user_id=${userId}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
+    const response = await fetch(`${ENGLISH_API_BASE}/questions/regenerate?user_id=${userId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
       },
-    );
+      body: JSON.stringify(requestBody),
+    });
 
     if (!response.ok) {
       let errorMessage = `English API Error: ${response.status}`;
@@ -453,7 +439,7 @@ export class EnglishService {
           statusText: response.statusText,
           url: response.url,
           requestBody: requestBody,
-          errorData: errorData
+          errorData: errorData,
         });
         errorMessage += ` - ${errorData}`;
       } catch (e) {
@@ -534,7 +520,9 @@ export class EnglishService {
       return JSON.parse(responseText);
     } catch (e) {
       console.error('📤 JSON 파싱 실패. 응답 내용:', responseText);
-      throw new Error(`Unexpected response format. Expected JSON but got: ${responseText.substring(0, 200)}...`);
+      throw new Error(
+        `Unexpected response format. Expected JSON but got: ${responseText.substring(0, 200)}...`,
+      );
     }
   }
 
@@ -549,7 +537,7 @@ export class EnglishService {
       },
       body: JSON.stringify({
         worksheet_id: worksheetId,
-        classroom_id: classroomId
+        classroom_id: classroomId,
       }),
     });
 
@@ -575,7 +563,9 @@ export class EnglishService {
       return JSON.parse(responseText);
     } catch (e) {
       console.error('📝 JSON 파싱 실패. 응답 내용:', responseText);
-      throw new Error(`Unexpected response format. Expected JSON but got: ${responseText.substring(0, 200)}...`);
+      throw new Error(
+        `Unexpected response format. Expected JSON but got: ${responseText.substring(0, 200)}...`,
+      );
     }
   }
 
@@ -591,9 +581,7 @@ export class EnglishService {
     let response;
 
     // 국어/수학과 동일한 방식: 클래스룸의 모든 과제 가져오기
-    response = await fetch(
-      `${ENGLISH_API_BASE}/assignments/classrooms/${classId}/assignments`
-    );
+    response = await fetch(`${ENGLISH_API_BASE}/assignments/classrooms/${classId}/assignments`);
 
     if (!response.ok) {
       throw new Error(`English API Error: ${response.status}`);
@@ -613,7 +601,7 @@ export class EnglishService {
     }
 
     const response = await fetch(
-      `${ENGLISH_API_BASE}/assignments/${assignmentId}/student/${studentId}?user_id=${userId}`
+      `${ENGLISH_API_BASE}/assignments/${assignmentId}/student/${studentId}?user_id=${userId}`,
     );
 
     if (!response.ok) {
@@ -633,7 +621,7 @@ export class EnglishService {
     }
 
     const response = await fetch(
-      `${ENGLISH_API_BASE}/assignments/student/${studentId}?user_id=${userId}`
+      `${ENGLISH_API_BASE}/assignments/student/${studentId}?user_id=${userId}`,
     );
 
     if (!response.ok) {
@@ -645,7 +633,11 @@ export class EnglishService {
   }
 
   // 영어 과제 제출
-  static async submitTest(assignmentId: number, studentId: number, answers: Record<number, string>): Promise<any> {
+  static async submitTest(
+    assignmentId: number,
+    studentId: number,
+    answers: Record<number, string>,
+  ): Promise<any> {
     const currentUser = JSON.parse(localStorage.getItem('user_profile') || '{}');
     const userId = currentUser?.id;
 
@@ -657,7 +649,7 @@ export class EnglishService {
       assignment_id: assignmentId,
       student_id: studentId,
       answers: answers,
-      user_id: userId
+      user_id: userId,
     };
 
     console.log('📤 영어 과제 제출 데이터:', submissionData);
@@ -722,7 +714,7 @@ export class EnglishService {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
       });
 
@@ -831,7 +823,7 @@ export class EnglishService {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(gradingData),
       });

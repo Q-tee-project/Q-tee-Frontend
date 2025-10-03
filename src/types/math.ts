@@ -32,6 +32,7 @@ export interface MathProblem {
   has_diagram?: boolean;
   diagram_type?: string;
   diagram_elements?: any;
+  tikz_code?: string;
 }
 
 export interface MathFormData {

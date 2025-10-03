@@ -4,15 +4,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { ChevronDown, GraduationCap, User, AlertCircle, Mail, Lock, Check } from 'lucide-react';
+import { ChevronDown, Check } from 'lucide-react';
 import { FaChalkboardTeacher, FaUserGraduate } from 'react-icons/fa';
 import { authService } from '@/services/authService';
 import { BasicInfoForm, AccountInfoForm, StudentInfoForm, StepNavigation } from '@/components/join';

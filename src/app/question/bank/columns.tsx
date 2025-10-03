@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 
 type AnyWorksheet = Worksheet | KoreanWorksheet | EnglishWorksheet;
 
-export const columns: ColumnDef<AnyWorksheet>[] = [
+export const columns: ColumnDef<AnyWorksheet, unknown>[] = [
   {
     id: 'select',
     header: ({ table }) => (
@@ -37,22 +37,23 @@ export const columns: ColumnDef<AnyWorksheet>[] = [
     minSize: 50,
   },
   {
-    accessorKey: 'school_level',
+    id: 'school_level',
+    accessorFn: (worksheet) => ('school_level' in worksheet ? worksheet.school_level : '-'),
     header: () => <div className="text-center">학교</div>,
     cell: ({ row }) => {
-      const worksheet = row.original;
+      const schoolLevel = row.getValue('school_level') as string;
       return (
         <div className="flex justify-center">
           <Badge
             className="rounded-[4px]"
             style={{
-              backgroundColor: worksheet.school_level === '고등학교' ? '#FFF5E9' : '#E6F3FF',
-              color: worksheet.school_level === '고등학교' ? '#FF9F2D' : '#0085FF',
+              backgroundColor: schoolLevel === '고등학교' ? '#FFF5E9' : '#E6F3FF',
+              color: schoolLevel === '고등학교' ? '#FF9F2D' : '#0085FF',
               padding: '5px 10px',
               fontSize: '14px',
             }}
           >
-            {worksheet.school_level}
+            {schoolLevel}
           </Badge>
         </div>
       );
@@ -61,10 +62,11 @@ export const columns: ColumnDef<AnyWorksheet>[] = [
     minSize: 100,
   },
   {
-    accessorKey: 'grade',
+    id: 'grade',
+    accessorFn: (worksheet) => ('grade' in worksheet ? `${worksheet.grade}학년` : '-'),
     header: () => <div className="text-center">학년</div>,
     cell: ({ row }) => {
-      const worksheet = row.original;
+      const grade = row.getValue('grade') as string;
       return (
         <div className="flex justify-center">
           <Badge
@@ -76,7 +78,7 @@ export const columns: ColumnDef<AnyWorksheet>[] = [
               fontSize: '14px',
             }}
           >
-            {worksheet.grade}학년
+            {grade}
           </Badge>
         </div>
       );
@@ -85,15 +87,16 @@ export const columns: ColumnDef<AnyWorksheet>[] = [
     minSize: 100,
   },
   {
-    accessorKey: 'title',
+    id: 'title',
+    accessorFn: (worksheet) =>
+      'title' in worksheet
+        ? worksheet.title
+        : 'worksheet_name' in worksheet
+        ? worksheet.worksheet_name
+        : '제목 없음',
     header: () => <div className="text-center">제목</div>,
     cell: ({ row }) => {
-      const worksheet = row.original;
-      // 영어 워크시트는 worksheet_name을 사용할 수 있음
-      const title = worksheet.title ||
-                   ('worksheet_name' in worksheet ? worksheet.worksheet_name : null) ||
-                   '제목 없음';
-
+      const title = row.getValue('title') as string;
       return (
         <div className="text-sm font-medium text-gray-900 truncate max-w-xs text-center">
           {title}
@@ -105,19 +108,20 @@ export const columns: ColumnDef<AnyWorksheet>[] = [
   },
   {
     id: 'type_info',
+    accessorFn: (worksheet) =>
+      'unit_name' in worksheet
+        ? worksheet.unit_name
+        : 'korean_type' in worksheet
+        ? worksheet.korean_type
+        : 'problem_type' in worksheet
+        ? worksheet.problem_type
+        : '-',
     header: () => <div className="text-center">문제 유형</div>,
     cell: ({ row }) => {
-      const worksheet = row.original;
-      // 과목별로 다른 필드 사용
-      const typeInfo =
-        'unit_name' in worksheet ? worksheet.unit_name :
-        'korean_type' in worksheet ? worksheet.korean_type :
-        'problem_type' in worksheet ? worksheet.problem_type :
-        '-';
-
+      const typeInfo = row.getValue('type_info') as string;
       return (
         <div className="text-center">
-          <span className="text-sm text-gray-500">{typeInfo as string}</span>
+          <span className="text-sm text-gray-500">{typeInfo}</span>
         </div>
       );
     },
@@ -125,7 +129,8 @@ export const columns: ColumnDef<AnyWorksheet>[] = [
     minSize: 150,
   },
   {
-    accessorKey: 'created_at',
+    id: 'created_at',
+    accessorFn: (worksheet) => ('created_at' in worksheet ? worksheet.created_at : new Date()),
     header: () => <div className="text-center">생성일</div>,
     cell: ({ row }) => {
       const date = new Date(row.getValue('created_at'));

@@ -4,10 +4,13 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/table';
 import { IoSearch } from "react-icons/io5";
+import { Trash2 } from 'lucide-react';
 import { classroomService } from '@/services/authService';
 import type { StudentProfile } from '@/services/authService';
+import { SchoolInfoBadges } from './common/SchoolBadges';
 
 
 interface StudentManagementTabProps {
@@ -42,6 +45,7 @@ export function StudentManagementTab({ classId, refreshTrigger }: StudentManagem
 
   const loadStudents = async () => {
     setIsLoading(true);
+    setError('');
     try {
       const studentList = await classroomService.getClassroomStudents(parseInt(classId));
       setStudents(studentList);
@@ -50,6 +54,20 @@ export function StudentManagementTab({ classId, refreshTrigger }: StudentManagem
       setError('학생 목록을 불러오는데 실패했습니다.');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleDeleteStudent = async (studentId: number, studentName: string) => {
+    if (window.confirm(`정말로 '${studentName}' 학생을 클래스에서 삭제하시겠습니까?`)) {
+      try {
+        await classroomService.removeStudentFromClassroom(parseInt(classId), studentId);
+        alert('학생이 성공적으로 삭제되었습니다.');
+        loadStudents(); // 목록 새로고침
+      } catch (err) {
+        console.error('학생 삭제 실패:', err);
+        setError('학생 삭제에 실패했습니다. 다시 시도해주세요.');
+        alert('학생 삭제에 실패했습니다.');
+      }
     }
   };
 
@@ -82,9 +100,9 @@ export function StudentManagementTab({ classId, refreshTrigger }: StudentManagem
               검색 초기화
             </button>
           )}
-          <button 
+          <button
             onClick={() => router.push(`/class/${classId}/register`)}
-            className="bg-[#0072CE] hover:opacity-90 ml-4 flex items-center gap-2 text-white px-4 py-2 rounded-lg transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-[#ffffff] text-[#000000] border border-[#000000] rounded-md hover:bg-[#f0f0f0] transition-colors"
           >
             학생 등록
           </button>
@@ -144,6 +162,9 @@ export function StudentManagementTab({ classId, refreshTrigger }: StudentManagem
                 <TableHead className="text-center text-base font-bold text-[#666]">
                   가입일
                 </TableHead>
+                <TableHead className="text-center text-base font-bold text-[#666]">
+                  삭제
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody className="bg-white divide-y divide-gray-200">
@@ -151,20 +172,10 @@ export function StudentManagementTab({ classId, refreshTrigger }: StudentManagem
                 <TableRow key={student.id} className="hover:bg-gray-50">
                   <TableCell className="whitespace-nowrap">
                     <div className="flex items-center justify-center">
-                      <div className="flex gap-2">
-                        <Badge
-                          className={`text-sm border-none px-3 py-1.5 min-w-[60px] text-center ${
-                            student.school_level === 'middle' 
-                              ? 'bg-[#E6F3FF] text-[#0085FF]' 
-                              : 'bg-[#FFF5E9] text-[#FF9F2D]'
-                          }`}
-                        >
-                          {student.school_level === 'middle' ? '중학교' : '고등학교'}
-                        </Badge>
-                        <Badge className="text-sm border-none px-3 py-1.5 min-w-[60px] text-center bg-[#f5f5f5] text-[#999999]">
-                          {student.grade}학년
-                        </Badge>
-                      </div>
+                      <SchoolInfoBadges
+                        schoolLevel={student.school_level}
+                        grade={student.grade}
+                      />
                     </div>
                   </TableCell>
                   <TableCell className="text-center text-sm text-gray-600 font-medium">
@@ -181,6 +192,16 @@ export function StudentManagementTab({ classId, refreshTrigger }: StudentManagem
                   </TableCell>
                   <TableCell className="text-center text-sm text-gray-600">
                     {new Date(student.created_at).toLocaleDateString('ko-KR')}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDeleteStudent(student.id, student.name)}
+                      className="text-gray-500 hover:text-red-600"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}

@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { classroomService } from '@/services/authService';
 import type { StudentJoinRequest } from '@/services/authService';
 import { IoIosClose } from "react-icons/io";
+import { SchoolInfoBadges } from './common/SchoolBadges';
 
 interface ApprovalTabProps {
   classId: string;
@@ -34,29 +35,8 @@ export function ApprovalTab({ classId, onStudentApproved }: ApprovalTabProps) {
     setIsLoading(true);
     try {
       const requests = await classroomService.getPendingJoinRequests();
-      
-      // localStorage에서 초대 완료 상태의 학생들 가져오기
-      const invitedStudents = JSON.parse(localStorage.getItem(`invited_students_${classId}`) || '[]');
-      
-      // 중복 제거: 같은 이메일을 가진 학생이 있으면 백엔드 요청을 우선시
-      const mergedRequests = [...invitedStudents];
-      
-      requests.forEach(backendRequest => {
-        const existingIndex = mergedRequests.findIndex(
-          invited => invited.student.email === backendRequest.student.email
-        );
-        
-        if (existingIndex !== -1) {
-          // 기존 초대 완료 항목을 백엔드 요청으로 교체
-          mergedRequests[existingIndex] = backendRequest;
-        } else {
-          // 새로운 항목 추가
-          mergedRequests.push(backendRequest);
-        }
-      });
-      
-      setPendingRequests(mergedRequests);
-      setSelectedApprovals(Array(mergedRequests.length).fill(false));
+      setPendingRequests(requests);
+      setSelectedApprovals(Array(requests.length).fill(false));
     } catch (error: any) {
       console.error('승인 대기 목록 로드 실패:', error);
       setError('승인 대기 목록을 불러오는데 실패했습니다.');
@@ -91,22 +71,13 @@ export function ApprovalTab({ classId, onStudentApproved }: ApprovalTabProps) {
     try {
       const status = approvalAction === 'approve' ? 'approved' : 'rejected';
       await classroomService.approveJoinRequest(approvingRequest.id, status);
-      
-      // localStorage에서 해당 학생 제거 (초대 완료 상태였다면)
-      const invitedStudents = JSON.parse(localStorage.getItem(`invited_students_${classId}`) || '[]');
-      const updatedInvitedStudents = invitedStudents.filter(
-        (invited: any) => invited.student.email !== approvingRequest.student.email
-      );
-      localStorage.setItem(`invited_students_${classId}`, JSON.stringify(updatedInvitedStudents));
-      
-      // 목록 새로고침
+
       await loadPendingRequests();
-      
-      // 승인된 경우 부모 컴포넌트에 알림
+
       if (approvalAction === 'approve' && onStudentApproved) {
         onStudentApproved();
       }
-      
+
       setIsApprovalModalOpen(false);
       setApprovingRequest(null);
     } catch (error: any) {
@@ -116,38 +87,27 @@ export function ApprovalTab({ classId, onStudentApproved }: ApprovalTabProps) {
   };
 
   const handleBatchApproval = async (action: 'approve' | 'reject') => {
-    // "초대 완료" 상태가 아닌 항목들만 필터링
-    const selectedRequests = pendingRequests.filter((request, index) => 
+    const selectedRequests = pendingRequests.filter((request, index) =>
       selectedApprovals[index] && request.status !== 'invited'
     );
-    
+
     if (selectedRequests.length === 0) return;
 
     try {
       const status = action === 'approve' ? 'approved' : 'rejected';
-      
-      // 선택된 모든 요청을 처리
+
       await Promise.all(
-        selectedRequests.map(request => 
+        selectedRequests.map(request =>
           classroomService.approveJoinRequest(request.id, status)
         )
       );
-      
-      // localStorage에서 처리된 학생들 제거
-      const invitedStudents = JSON.parse(localStorage.getItem(`invited_students_${classId}`) || '[]');
-      const updatedInvitedStudents = invitedStudents.filter(
-        (invited: any) => !selectedRequests.some(request => request.student.email === invited.student.email)
-      );
-      localStorage.setItem(`invited_students_${classId}`, JSON.stringify(updatedInvitedStudents));
-      
-      // 목록 새로고침
+
       await loadPendingRequests();
-      
-      // 승인된 경우 부모 컴포넌트에 알림
+
       if (action === 'approve' && onStudentApproved) {
         onStudentApproved();
       }
-      
+
     } catch (error: any) {
       console.error('일괄 처리 실패:', error);
       setError(error?.message || '일괄 처리에 실패했습니다.');
@@ -165,14 +125,14 @@ export function ApprovalTab({ classId, onStudentApproved }: ApprovalTabProps) {
           <button
             onClick={() => handleBatchApproval('approve')}
             disabled={!selectedApprovals.some(selected => selected)}
-            className="flex items-center gap-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed bg-[#E8FFE8] text-[#04AA04] border-none px-3 py-1.5"
+            className="flex items-center gap-2 px-4 py-2 bg-[#ffffff] text-[#000000] border border-[#000000] rounded-md hover:bg-[#f0f0f0] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             일괄 승인
           </button>
           <button
             onClick={() => handleBatchApproval('reject')}
             disabled={!selectedApprovals.some(selected => selected)}
-            className="flex items-center gap-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed bg-[#FFEEEE] text-[#FF0004] border-none px-3 py-1.5"
+            className="flex items-center gap-2 px-4 py-2 bg-[#ffffff] text-[#000000] border border-[#000000] rounded-md hover:bg-[#f0f0f0] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             일괄 거절
           </button>
@@ -256,20 +216,10 @@ export function ApprovalTab({ classId, onStudentApproved }: ApprovalTabProps) {
                   </TableCell>
                   <TableCell className="whitespace-nowrap p-3">
                     <div className="flex items-center justify-center">
-                      <div className="flex gap-2">
-                        <Badge
-                          className={`text-sm border-none px-3 py-1.5 min-w-[60px] text-center ${
-                            request.student.school_level === 'middle' 
-                              ? 'bg-[#E6F3FF] text-[#0085FF]' 
-                              : 'bg-[#FFF5E9] text-[#FF9F2D]'
-                          }`}
-                        >
-                          {request.student.school_level === 'middle' ? '중학교' : '고등학교'}
-                        </Badge>
-                        <Badge className="text-sm border-none px-3 py-1.5 min-w-[60px] text-center bg-[#f5f5f5] text-[#999999]">
-                          {request.student.grade}학년
-                        </Badge>
-                      </div>
+                      <SchoolInfoBadges
+                        schoolLevel={request.student.school_level}
+                        grade={request.student.grade}
+                      />
                     </div>
                   </TableCell>
                   <TableCell className="text-center text-sm text-gray-600 p-3">

@@ -38,31 +38,14 @@ async function apiRequest<T>(
     ...options,
   };
 
-  console.log('🌐 DEBUG Request:', {
-    url,
-    method: config.method || 'GET',
-    headers: config.headers,
-    body: config.body,
-  });
-
   try {
-    console.log('🌐 Making fetch request to:', url);
     const response = await fetch(url, config);
-    console.log('🌐 Response received:', {
-      status: response.status,
-      statusText: response.statusText,
-      ok: response.ok,
-      headers: Object.fromEntries(response.headers.entries()),
-    });
 
     if (!response.ok) {
-      // 401 에러 (토큰 만료)인 경우 자동 로그아웃 처리
       if (response.status === 401 && onTokenExpired) {
-        console.log('🚨 Token expired, logging out...');
         onTokenExpired();
       }
 
-      // Try to get the error response body
       let errorMessage = `API 요청 실패: ${response.status}`;
       try {
         const errorBody = await response.text();
@@ -73,11 +56,12 @@ async function apiRequest<T>(
       throw new ApiError(response.status, errorMessage);
     }
 
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error('🌐 API Request Error:', error);
+    if (response.status === 204) {
+      return {} as T; // 204 No Content의 경우, 빈 객체를 반환
+    }
 
+    return response.json();
+  } catch (error) {
     if (error instanceof ApiError) {
       throw error;
     }
@@ -92,7 +76,9 @@ async function apiRequest<T>(
 
 // 인증 API 호출 함수
 async function authApiRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+  // Dynamic import to avoid circular dependency
+  const { tokenStorage } = await import('@/services/authService');
+  const token = tokenStorage.getToken();
 
   const authOptions: RequestInit = {
     ...options,

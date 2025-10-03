@@ -183,12 +183,12 @@ export default function ClassDetailPage({ params }: ClassDetailPageProps) {
           <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-6 flex flex-col gap-6">
             {/* 이전으로 돌아가기 및 클래스명 */}
             <div className="flex items-center">
-              <button
+              <Button
                 onClick={() => router.push('/class/create')}
                 className="mr-4 p-2 rounded-md text-gray-400 hover:text-gray-600 transition-colors duration-200 bg-[#f5f5f5] rounded-full cursor-pointer"
               >
                 <FaArrowLeft className="h-5 w-5" />
-              </button>
+              </Button>
 
               <h1 className="text-xl font-semibold text-gray-900">
                 {isLoading
@@ -203,9 +203,9 @@ export default function ClassDetailPage({ params }: ClassDetailPageProps) {
               {/* 클래스 정보 수정 버튼 */}
               <button
                 onClick={handleEditModalOpen}
-                className="ml-3 p-2 rounded-md hover:text-gray-600 transition-colors duration-200 text-[#666666] cursor-pointer"
+                className="ml-3 p-2 rounded-md transition-colors duration-200 cursor-pointer bg-[#ffffff] hover:bg-[#f0f0f0]"
               >
-                <HiOutlinePencilSquare className="h-5 w-5" />
+                <HiOutlinePencilSquare className="h-5 w-5 text-[#000000]" />
               </button>
             </div>
 
@@ -216,10 +216,10 @@ export default function ClassDetailPage({ params }: ClassDetailPageProps) {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`border-b-2 font-medium text-sm px-5 py-2.5 ${
+                    className={`border-b-2 font-medium text-sm px-5 py-2.5 bg-[#ffffff] text-[#000000] hover:bg-[#ffffff] ${
                       activeTab === tab.id
-                        ? 'border-blue-500 text-blue-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                        ? 'border-black'
+                        : 'border-transparent hover:border-gray-300'
                     }`}
                   >
                     {tab.label}
@@ -237,10 +237,16 @@ export default function ClassDetailPage({ params }: ClassDetailPageProps) {
             <div className="flex flex-col gap-5">
               {activeTab === 'assignment' && <AssignmentTab classId={parseInt(classId)} />}
               {activeTab === 'student' && (
-                <StudentManagementTab classId={classId.toString()} refreshTrigger={studentRefreshTrigger} />
+                <StudentManagementTab
+                  classId={classId.toString()}
+                  refreshTrigger={studentRefreshTrigger}
+                />
               )}
               {activeTab === 'approval' && (
-                <StudentApprovalTab classId={classId.toString()} onStudentApproved={handleStudentApproved} />
+                <StudentApprovalTab
+                  classId={classId.toString()}
+                  onStudentApproved={handleStudentApproved}
+                />
               )}
             </div>
           </div>
@@ -253,12 +259,12 @@ export default function ClassDetailPage({ params }: ClassDetailPageProps) {
           <DialogHeader>
             <div className="flex justify-between items-center">
               <DialogTitle>클래스 정보 수정</DialogTitle>
-              <button
+              <Button
                 onClick={() => setIsEditModalOpen(false)}
                 className="text-gray-400 hover:text-gray-600 bg-none border-none cursor-pointer p-0 w-6 h-6 flex items-center justify-center"
               >
                 <IoIosClose />
-              </button>
+              </Button>
             </div>
           </DialogHeader>
 
@@ -326,7 +332,7 @@ export default function ClassDetailPage({ params }: ClassDetailPageProps) {
 
               {/* 삭제하기 버튼 */}
               <div className="border-b border-[#D1D1D1] pb-4">
-                <button
+                <Button
                   onClick={() => {
                     setIsEditModalOpen(false);
                     setIsDeleteModalOpen(true);
@@ -334,24 +340,24 @@ export default function ClassDetailPage({ params }: ClassDetailPageProps) {
                   className="bg-[#EAEAEA] text-[#0072CE] rounded px-3.5 py-1.5 border-none cursor-pointer text-sm font-medium"
                 >
                   삭제하기
-                </button>
+                </Button>
               </div>
             </div>
           </div>
 
           <DialogFooter className="flex gap-4">
-            <button
+            <Button
               onClick={() => setIsEditModalOpen(false)}
               className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 flex-1"
             >
               취소
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={handleUpdateClass}
               className="px-4 py-2 rounded-md transition-colors flex-1 bg-[#0072CE] text-white"
             >
               수정하기
-            </button>
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -362,12 +368,12 @@ export default function ClassDetailPage({ params }: ClassDetailPageProps) {
           <DialogHeader>
             <div className="flex justify-between items-center">
               <DialogTitle>클래스 삭제</DialogTitle>
-              <button
+              <Button
                 onClick={() => setIsDeleteModalOpen(false)}
                 className="text-gray-400 hover:text-gray-600 bg-none border-none cursor-pointer p-0 w-6 h-6 flex items-center justify-center"
               >
                 <IoIosClose />
-              </button>
+              </Button>
             </div>
           </DialogHeader>
 
@@ -382,18 +388,18 @@ export default function ClassDetailPage({ params }: ClassDetailPageProps) {
           </div>
 
           <DialogFooter className="flex gap-4">
-            <button
+            <Button
               onClick={() => setIsDeleteModalOpen(false)}
               className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 flex-1"
             >
               취소
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={handleDeleteClass}
               className="px-4 py-2 rounded-md transition-colors flex-1 bg-red-600 text-white"
             >
               삭제하기
-            </button>
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

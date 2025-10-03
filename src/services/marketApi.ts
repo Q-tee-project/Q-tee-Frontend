@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { tokenStorage } from './authService';
 
 const MARKET_API_BASE_URL = process.env.NEXT_PUBLIC_MARKET_API_URL || 'http://localhost:8005';
 
@@ -11,7 +12,7 @@ const marketApi = axios.create({
 
 // 요청 인터셉터 (인증 토큰 추가)
 marketApi.interceptors.request.use((config) => {
-  const token = localStorage.getItem('access_token');
+  const token = tokenStorage.getToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -281,32 +282,20 @@ export interface MarketStats {
 
 export const getMarketStats = async (): Promise<MarketStats> => {
   try {
-    // 먼저 전용 통계 API를 시도
     const response = await marketApi.get('/market/stats');
-    console.log('마켓 통계 API 응답:', response.data);
     return response.data;
   } catch (error) {
-    console.warn('마켓 통계 API 실패, 상품 데이터로 계산 시도:', error);
-    
-    // 통계 API가 실패하면 실제 상품 데이터를 가져와서 계산
     try {
       const products = await getProducts();
-      console.log('가져온 상품 데이터:', products);
-      
-      const stats: MarketStats = {
+      return {
         total_products: products.length,
         total_sales: products.reduce((sum, product) => sum + product.purchase_count, 0),
-        average_rating: products.length > 0 
-          ? products.reduce((sum, product) => sum + product.satisfaction_rate, 0) / products.length 
+        average_rating: products.length > 0
+          ? products.reduce((sum, product) => sum + product.satisfaction_rate, 0) / products.length
           : 0,
         total_revenue: products.reduce((sum, product) => sum + product.total_revenue, 0),
       };
-      
-      console.log('계산된 마켓 통계:', stats);
-      return stats;
     } catch (fallbackError) {
-      console.error('상품 데이터로 통계 계산도 실패:', fallbackError);
-      // 최종 실패 시 기본값 반환
       return {
         total_products: 0,
         total_sales: 0,
@@ -354,49 +343,39 @@ function normalizeWorksheet(worksheet: Worksheet, service: 'korean' | 'math' | '
 
 // 사용자 worksheet 목록 조회 (상품 등록용)
 export const getUserWorksheets = async (service: 'korean' | 'math' | 'english', userId?: number): Promise<NormalizedWorksheet[]> => {
-  const token = localStorage.getItem('access_token');
+  const token = tokenStorage.getToken();
   const headers = { Authorization: `Bearer ${token}` };
 
-  try {
-    let response;
-    let rawWorksheets: Worksheet[];
+  let response;
+  let rawWorksheets: Worksheet[];
 
-    switch (service) {
-      case 'korean':
-        response = await axios.get(`${KOREAN_API_BASE_URL}/api/korean-generation/worksheets`, { headers });
-        console.log('Korean worksheets response:', response.data);
-        rawWorksheets = response.data.worksheets || response.data || [];
-        break;
+  switch (service) {
+    case 'korean':
+      response = await axios.get(`${KOREAN_API_BASE_URL}/api/korean-generation/worksheets`, { headers });
+      rawWorksheets = response.data.worksheets || response.data || [];
+      break;
 
-      case 'math':
-        response = await axios.get(`${MATH_API_BASE_URL}/api/worksheets`, { headers });
-        console.log('Math worksheets response:', response.data);
-        rawWorksheets = response.data.worksheets || response.data || [];
-        break;
+    case 'math':
+      response = await axios.get(`${MATH_API_BASE_URL}/api/worksheets`, { headers });
+      rawWorksheets = response.data.worksheets || response.data || [];
+      break;
 
-      case 'english':
-        if (!userId) {
-          throw new Error('English service requires user_id parameter');
-        }
-        response = await axios.get(`${ENGLISH_API_BASE_URL}/api/english/worksheets`, {
-          headers,
-          params: { user_id: userId }
-        });
-        console.log('English worksheets response:', response.data);
-        rawWorksheets = response.data || [];
-        break;
+    case 'english':
+      if (!userId) {
+        throw new Error('English service requires user_id parameter');
+      }
+      response = await axios.get(`${ENGLISH_API_BASE_URL}/api/english/worksheets`, {
+        headers,
+        params: { user_id: userId }
+      });
+      rawWorksheets = response.data || [];
+      break;
 
-      default:
-        throw new Error(`Unknown service: ${service}`);
-    }
-
-    // 모든 워크시트를 정규화하여 반환
-    return rawWorksheets.map(worksheet => normalizeWorksheet(worksheet, service));
-
-  } catch (error: any) {
-    console.error(`Failed to fetch ${service} worksheets:`, error);
-    throw error;
+    default:
+      throw new Error(`Unknown service: ${service}`);
   }
+
+  return rawWorksheets.map(worksheet => normalizeWorksheet(worksheet, service));
 };
 
 // Worksheet 상세 정보 조회 (상품 등록 시 검증용)
@@ -422,9 +401,10 @@ export const getWorksheetDetail = async (
       break;
   }
 
+  const token = tokenStorage.getToken();
   const response = await axios.get(`${baseUrl}${endpoint}`, {
     headers: {
-      Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+      Authorization: `Bearer ${token}`,
     },
   });
   return response.data;

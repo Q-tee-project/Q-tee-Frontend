@@ -1,0 +1,618 @@
+'use client';
+
+import React, { useMemo } from 'react';
+
+interface TikZRendererProps {
+  tikzCode: string;
+  className?: string;
+}
+
+interface Coordinate {
+  x: number;
+  y: number;
+}
+
+interface FunctionPlot {
+  expression: string;
+  domain: { min: number; max: number };
+  color: string;
+  style: string;
+}
+
+interface ParsedData {
+  xMin: number;
+  xMax: number;
+  yMin: number;
+  yMax: number;
+  scale: number;
+  coordinates: Map<string, Coordinate>;
+  points: Array<{ coord: Coordinate; color: string; label: string; labelPos: string }>;
+  lines: Array<{ points: Coordinate[]; style: string; color: string; isCycle: boolean }>;
+  filledAreas: Array<{ points: Coordinate[]; color: string; opacity: number }>;
+  functionPlots: Array<FunctionPlot>;
+  labels: Array<{ coord: Coordinate; text: string; color: string }>;
+}
+
+export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className = '' }) => {
+  // LaTeX 수식을 일반 텍스트로 변환하는 헬퍼 함수
+  const cleanLatexLabel = (label: string): string => {
+    if (!label) return '';
+    // $A$, $B$ 등의 LaTeX 수식에서 내용만 추출
+    return label
+      .replace(/\$/g, '')
+      .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '$1/$2')
+      .trim();
+  };
+
+  const parsedData = useMemo(() => {
+    if (!tikzCode) return null;
+
+    const data: ParsedData = {
+      xMin: -5,
+      xMax: 5,
+      yMin: -5,
+      yMax: 5,
+      scale: 1,
+      coordinates: new Map(),
+      points: [],
+      lines: [],
+      filledAreas: [],
+      functionPlots: [],
+      labels: [],
+    };
+
+    // Scale 파싱
+    const scaleMatch = tikzCode.match(/scale=([\d.]+)/);
+    if (scaleMatch) data.scale = parseFloat(scaleMatch[1]);
+
+    // 축 범위 파싱
+    const xAxisMatch = tikzCode.match(
+      /\\draw\[->.*?\]\s*\(([-\d.]+),([-\d.]+)\)\s*--\s*\(([-\d.]+),([-\d.]+)\)\s*node\[right\]/,
+    );
+    const yAxisMatch = tikzCode.match(
+      /\\draw\[->.*?\]\s*\(([-\d.]+),([-\d.]+)\)\s*--\s*\(([-\d.]+),([-\d.]+)\)\s*node\[(?:above|top)\]/,
+    );
+
+    if (xAxisMatch) {
+      data.xMin = Math.floor(parseFloat(xAxisMatch[1]));
+      data.xMax = Math.ceil(parseFloat(xAxisMatch[3]));
+    }
+    if (yAxisMatch) {
+      data.yMin = Math.floor(parseFloat(yAxisMatch[2]));
+      data.yMax = Math.ceil(parseFloat(yAxisMatch[4]));
+    }
+
+    // Coordinate 정의 파싱: \coordinate (A) at (x,y);
+    const coordMatches = tikzCode.matchAll(
+      /\\coordinate\s*\((\w+)\)\s*at\s*\(([-\d.]+),([-\d.]+)\)/g,
+    );
+    for (const match of coordMatches) {
+      const [, name, x, y] = match;
+      data.coordinates.set(name, { x: parseFloat(x), y: parseFloat(y) });
+    }
+
+    // Helper: 좌표 이름이나 숫자를 Coordinate로 변환
+    const resolveCoord = (coordStr: string): Coordinate | null => {
+      coordStr = coordStr.trim();
+
+      // (x,y) 형식 - 공백 허용
+      const directMatch = coordStr.match(/\(([-\d.]+)\s*,\s*([-\d.]+)\)/);
+      if (directMatch) {
+        return { x: parseFloat(directMatch[1]), y: parseFloat(directMatch[2]) };
+      }
+
+      // 좌표 이름 (A, B, C 등)
+      const nameMatch = coordStr.match(/\((\w+)\)/);
+      if (nameMatch) {
+        return data.coordinates.get(nameMatch[1]) || null;
+      }
+
+      // 이름만 (괄호 없이)
+      if (/^\w+$/.test(coordStr)) {
+        return data.coordinates.get(coordStr) || null;
+      }
+
+      return null;
+    };
+
+    // Filled areas 파싱: \filldraw[color!opacity] (A) -- (B) -- (C) -- cycle;
+    const filledMatches = tikzCode.matchAll(/\\filldraw\[([\w!]+)\]\s*(.*?);/g);
+    for (const match of filledMatches) {
+      const [, colorSpec, pathStr] = match;
+
+      // circle인 경우 skip (점으로 처리)
+      if (pathStr.includes('circle')) continue;
+
+      // 색상과 투명도 - TikZ 그대로 사용
+      let color = colorSpec.includes('!') ? colorSpec.split('!')[0] : colorSpec;
+      let opacity = colorSpec.includes('!') ? parseInt(colorSpec.split('!')[1]) / 100 : 0.3;
+
+      // 경로에서 좌표 추출
+      const coordParts = pathStr.split('--').map((s) => s.trim());
+      const points: Coordinate[] = [];
+
+      for (const part of coordParts) {
+        if (part === 'cycle') break;
+        const coord = resolveCoord(part);
+        if (coord) points.push(coord);
+      }
+
+      if (points.length >= 3) {
+        data.filledAreas.push({ points, color, opacity });
+      }
+    }
+
+    // Lines 파싱: \draw[style] (A) -- (B) -- (C) -- cycle;
+    const lineMatches = tikzCode.matchAll(/\\draw\[([^\]]+)\]\s*(.*?);/g);
+    for (const match of lineMatches) {
+      const [, styleStr, pathStr] = match;
+
+      // 축은 skip
+      if (styleStr.includes('->')) continue;
+
+      // plot, grid, foreach는 skip
+      if (pathStr.includes('plot') || pathStr.includes('grid') || pathStr.includes('foreach')) continue;
+
+      const style = styleStr.includes('dashed') ? 'dashed' : 'solid';
+
+      // 색상 추출 - TikZ 그대로 사용
+      let color = 'black';
+      const colorMatch = styleStr.match(/\b(blue|red|green|gray|orange|purple|brown|pink|cyan|magenta|yellow)\b/);
+      if (colorMatch) color = colorMatch[1];
+
+      // 경로에서 좌표 추출
+      const coordParts = pathStr.split('--').map((s) => s.trim());
+      const points: Coordinate[] = [];
+      let isCycle = false;
+
+      for (const part of coordParts) {
+        if (part === 'cycle' || part.includes('cycle')) {
+          isCycle = true;
+          break;
+        }
+        const coord = resolveCoord(part);
+        if (coord) points.push(coord);
+      }
+
+      if (points.length >= 2) {
+        data.lines.push({ points, style, color, isCycle });
+      }
+    }
+
+    // Points 파싱: \filldraw[blue] (3,4) circle (2.5pt) node[above right] {A};
+    const pointMatches = tikzCode.matchAll(
+      /\\filldraw(?:\[(\w+)\])?\s*\(([^)]+)\)\s*circle\s*\([^)]+\)(?:\s*node\[([^\]]+)\]\s*\{([^}]+)\})?/g,
+    );
+    for (const match of pointMatches) {
+      const [, colorSpec, coordStr, labelPos, label] = match;
+
+      const coord = resolveCoord(`(${coordStr})`);
+      if (!coord) continue;
+
+      // 색상 - TikZ 그대로 사용
+      const color = colorSpec || 'black';
+
+      data.points.push({
+        coord,
+        color,
+        label: label || '',
+        labelPos: labelPos || 'above',
+      });
+    }
+
+    // Function plots 파싱: \draw[domain=1.2:5, smooth, variable=\x, blue, thick] plot ({\x}, {-6/\x});
+    // 또는: \draw[thick, blue, domain=0:2.5] plot (\x, {3*\x});
+    const functionMatches = tikzCode.matchAll(
+      /\\draw\[([^\]]+)\]\s*plot\s*\((?:\{)?\\x(?:\})?,\s*\{([^}]+)\}\)/g,
+    );
+    for (const match of functionMatches) {
+      const [, styleStr, yExpr] = match;
+
+      // 도메인 파싱
+      const domainMatch = styleStr.match(/domain=([\d.]+):([\d.]+)/);
+      const domain = domainMatch
+        ? { min: parseFloat(domainMatch[1]), max: parseFloat(domainMatch[2]) }
+        : { min: data.xMin, max: data.xMax };
+
+      // 스타일 파싱
+      const style = styleStr.includes('dashed') ? 'dashed' : 'solid';
+
+      // 색상 추출 - TikZ 그대로 사용
+      let color = 'black';
+      const colorMatch = styleStr.match(/\b(blue|red|green|gray|orange|purple|brown|pink|cyan|magenta|yellow)\b/);
+      if (colorMatch) color = colorMatch[1];
+
+      data.functionPlots.push({
+        expression: yExpr.replace(/\\x/g, 'x'),
+        domain,
+        color,
+        style,
+      });
+    }
+
+    // Labels 파싱: \node[blue] at (4, -2.5) {$y=\frac{a}{x}$};
+    const labelMatches = tikzCode.matchAll(/\\node\[([^\]]*)\]\s*at\s*\(([^)]+)\)\s*\{([^}]+)\}/g);
+    for (const match of labelMatches) {
+      const [, colorSpec, coordStr, text] = match;
+
+      const coord = resolveCoord(`(${coordStr})`);
+      if (!coord) continue;
+
+      // 원점 O 라벨 필터링 (O, $O$ 등)
+      const cleanedText = cleanLatexLabel(text);
+      if (coord.x === 0 && coord.y === 0 && (cleanedText === 'O' || cleanedText === 'o')) {
+        continue;
+      }
+
+      // 색상 추출 - TikZ 그대로 사용
+      let color = 'black';
+      const colorMatch = colorSpec.match(/\b(blue|red|green|gray|orange|purple|brown|pink|cyan|magenta|yellow)\b/);
+      if (colorMatch) color = colorMatch[1];
+
+      data.labels.push({ coord, text: cleanedText, color });
+    }
+
+    return data;
+  }, [tikzCode]);
+
+  if (!tikzCode || !parsedData) return null;
+
+  const { xMin, xMax, yMin, yMax, coordinates, points, lines, filledAreas, functionPlots, labels } =
+    parsedData;
+
+  // SVG 좌표계 설정 (1/4 크기로 축소)
+  const svgWidth = 300;
+  const svgHeight = 300;
+  const padding = 30;
+  const graphWidth = svgWidth - 2 * padding;
+  const graphHeight = svgHeight - 2 * padding;
+
+  // 좌표 변환 함수
+  const toSvgX = (x: number) => padding + ((x - xMin) / (xMax - xMin)) * graphWidth;
+  const toSvgY = (y: number) => svgHeight - padding - ((y - yMin) / (yMax - yMin)) * graphHeight;
+
+  // 함수 표현식 평가
+  const evaluateExpression = (expr: string, x: number): number | null => {
+    try {
+      // {-6/\x} 형식을 JavaScript 표현식으로 변환
+      const jsExpr = expr.replace(/x/g, `(${x})`);
+      return eval(jsExpr);
+    } catch {
+      return null;
+    }
+  };
+
+  // 축 범위에 따라 적절한 눈금 간격 계산
+  const calculateStep = (min: number, max: number): number => {
+    const range = max - min;
+    if (range <= 10) return 1;
+    if (range <= 20) return 2;
+    if (range <= 50) return 5;
+    if (range <= 100) return 10;
+    return Math.ceil(range / 10);
+  };
+
+  const xStep = calculateStep(xMin, xMax);
+  const yStep = calculateStep(yMin, yMax);
+
+  // 색상 팔레트
+  const colors = {
+    grid: '#d1d5db',
+    axis: '#1f2937',
+    tick: '#6b7280',
+    label: '#374151',
+    blue: '#2563eb',
+    red: '#dc2626',
+    green: '#16a34a',
+    gray: '#9ca3af',
+    black: '#000000',
+  };
+
+  return (
+    <div className={`tikz-renderer my-6 ${className}`}>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex justify-center">
+        <svg width={svgWidth} height={svgHeight} className="bg-white">
+          {/* 그리드 라인 */}
+          <g>
+            {Array.from({ length: Math.floor((xMax - xMin) / xStep) + 1 }, (_, i) => {
+              const x = xMin + i * xStep;
+              return x !== 0 ? (
+                <line
+                  key={`grid-v-${i}`}
+                  x1={toSvgX(x)}
+                  y1={padding}
+                  x2={toSvgX(x)}
+                  y2={svgHeight - padding}
+                  stroke={colors.grid}
+                  strokeWidth="1"
+                  strokeDasharray="2 2"
+                />
+              ) : null;
+            })}
+            {Array.from({ length: Math.floor((yMax - yMin) / yStep) + 1 }, (_, i) => {
+              const y = yMin + i * yStep;
+              return y !== 0 ? (
+                <line
+                  key={`grid-h-${i}`}
+                  x1={padding}
+                  y1={toSvgY(y)}
+                  x2={svgWidth - padding}
+                  y2={toSvgY(y)}
+                  stroke={colors.grid}
+                  strokeWidth="1"
+                  strokeDasharray="2 2"
+                />
+              ) : null;
+            })}
+          </g>
+
+          {/* 화살표 정의 */}
+          <defs>
+            <marker
+              id="arrowX"
+              markerWidth="8"
+              markerHeight="8"
+              refX="7"
+              refY="3"
+              orient="auto"
+              markerUnits="strokeWidth"
+            >
+              <path d="M0,0 L0,6 L7,3 z" fill={colors.axis} />
+            </marker>
+            <marker
+              id="arrowY"
+              markerWidth="8"
+              markerHeight="8"
+              refX="7"
+              refY="3"
+              orient="auto"
+              markerUnits="strokeWidth"
+            >
+              <path d="M0,0 L0,6 L7,3 z" fill={colors.axis} />
+            </marker>
+          </defs>
+
+          {/* X축 */}
+          <line
+            x1={toSvgX(xMin)}
+            y1={toSvgY(0)}
+            x2={toSvgX(xMax)}
+            y2={toSvgY(0)}
+            stroke={colors.axis}
+            strokeWidth="1.5"
+            markerEnd="url(#arrowX)"
+          />
+
+          {/* Y축 */}
+          <line
+            x1={toSvgX(0)}
+            y1={toSvgY(yMin)}
+            x2={toSvgX(0)}
+            y2={toSvgY(yMax)}
+            stroke={colors.axis}
+            strokeWidth="1.5"
+            markerEnd="url(#arrowY)"
+          />
+
+          {/* 축 라벨 */}
+          <text
+            x={toSvgX(xMax) + 15}
+            y={toSvgY(0) + 5}
+            fontSize="16"
+            fill={colors.label}
+            fontFamily="system-ui, -apple-system, sans-serif"
+            fontStyle="italic"
+          >
+            x
+          </text>
+          <text
+            x={toSvgX(0) + 5}
+            y={toSvgY(yMax) - 10}
+            fontSize="16"
+            fill={colors.label}
+            fontFamily="system-ui, -apple-system, sans-serif"
+            fontStyle="italic"
+          >
+            y
+          </text>
+
+          {/* 원점 (0,0) */}
+          <circle
+            cx={toSvgX(0)}
+            cy={toSvgY(0)}
+            r="4"
+            fill={colors.gray}
+            stroke="white"
+            strokeWidth="1"
+          />
+
+          {/* Filled areas (색칠된 영역) */}
+          {filledAreas.map((area, idx) => {
+            const pathData =
+              area.points
+                .map((p, i) => `${i === 0 ? 'M' : 'L'} ${toSvgX(p.x)} ${toSvgY(p.y)}`)
+                .join(' ') + ' Z';
+
+            return (
+              <path
+                key={`fill-${idx}`}
+                d={pathData}
+                fill={colors[area.color as keyof typeof colors] || area.color}
+                opacity={area.opacity}
+              />
+            );
+          })}
+
+          {/* Lines (선, 도형) */}
+          {lines.map((line, idx) => {
+            const pathData =
+              line.points
+                .map((p, i) => `${i === 0 ? 'M' : 'L'} ${toSvgX(p.x)} ${toSvgY(p.y)}`)
+                .join(' ') + (line.isCycle ? ' Z' : '');
+
+            return (
+              <path
+                key={`line-${idx}`}
+                d={pathData}
+                stroke={colors[line.color as keyof typeof colors] || line.color}
+                strokeWidth={2}
+                strokeDasharray={line.style === 'dashed' ? '5 3' : undefined}
+                fill="none"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            );
+          })}
+
+          {/* Function plots (함수 그래프) */}
+          {functionPlots.map((func, idx) => {
+            const allPoints: Array<{ x: number; y: number }> = [];
+            const step = (func.domain.max - func.domain.min) / 200;
+            const yThreshold = Math.abs(yMax - yMin) * 0.8; // y축 범위의 80%
+
+            for (let x = func.domain.min; x <= func.domain.max; x += step) {
+              const y = evaluateExpression(func.expression, x);
+              if (y !== null && !isNaN(y) && isFinite(y)) {
+                allPoints.push({ x, y });
+              }
+            }
+
+            // 불연속 지점에서 path 분리
+            const segments: Array<Array<{ x: number; y: number }>> = [];
+            let currentSegment: Array<{ x: number; y: number }> = [];
+
+            for (let i = 0; i < allPoints.length; i++) {
+              const point = allPoints[i];
+
+              // y값이 화면 범위를 크게 벗어나면 skip
+              if (Math.abs(point.y) > yThreshold) {
+                if (currentSegment.length > 0) {
+                  segments.push(currentSegment);
+                  currentSegment = [];
+                }
+                continue;
+              }
+
+              // 이전 점과 y값 차이가 너무 크면 불연속으로 간주
+              if (currentSegment.length > 0) {
+                const prevPoint = currentSegment[currentSegment.length - 1];
+                const yDiff = Math.abs(point.y - prevPoint.y);
+                if (yDiff > yThreshold) {
+                  segments.push(currentSegment);
+                  currentSegment = [];
+                }
+              }
+
+              currentSegment.push(point);
+            }
+
+            if (currentSegment.length > 0) {
+              segments.push(currentSegment);
+            }
+
+            return segments.map((segment, segIdx) => {
+              if (segment.length === 0) return null;
+
+              const pathData = segment
+                .map((p, i) => `${i === 0 ? 'M' : 'L'} ${toSvgX(p.x)} ${toSvgY(p.y)}`)
+                .join(' ');
+
+              return (
+                <path
+                  key={`func-${idx}-seg-${segIdx}`}
+                  d={pathData}
+                  stroke={colors[func.color as keyof typeof colors] || func.color}
+                  strokeWidth={2.5}
+                  strokeDasharray={func.style === 'dashed' ? '5 3' : undefined}
+                  fill="none"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              );
+            });
+          })}
+
+          {/* Points (점) */}
+          {points.map((point, idx) => {
+            const svgX = toSvgX(point.coord.x);
+            const svgY = toSvgY(point.coord.y);
+
+            // 라벨 위치 계산 (above, below, left, right, 조합 지원)
+            let labelX = svgX;
+            let labelY = svgY - 12; // 기본값: above
+            let textAnchor: 'start' | 'middle' | 'end' = 'middle';
+
+            const pos = point.labelPos.toLowerCase();
+
+            // 수직 위치
+            if (pos.includes('below')) {
+              labelY = svgY + 18;
+            } else if (pos.includes('above')) {
+              labelY = svgY - 12;
+            }
+
+            // 수평 위치
+            if (pos.includes('right')) {
+              labelX = svgX + 8;
+              textAnchor = 'start';
+            } else if (pos.includes('left')) {
+              labelX = svgX - 8;
+              textAnchor = 'end';
+            }
+
+            // LaTeX 수식에서 텍스트만 추출
+            const displayLabel = cleanLatexLabel(point.label);
+
+            return (
+              <g key={`point-${idx}`}>
+                <circle
+                  cx={svgX}
+                  cy={svgY}
+                  r="4"
+                  fill={colors[point.color as keyof typeof colors] || point.color}
+                  stroke="white"
+                  strokeWidth="1"
+                />
+                {displayLabel && (
+                  <text
+                    x={labelX}
+                    y={labelY}
+                    fontSize="13"
+                    fill={colors.label}
+                    textAnchor={textAnchor}
+                    fontWeight="500"
+                    fontFamily="system-ui, -apple-system, sans-serif"
+                  >
+                    {displayLabel}
+                  </text>
+                )}
+              </g>
+            );
+          })}
+
+          {/* Labels (함수 라벨 등) */}
+          {labels.map((label, idx) => {
+            const svgX = toSvgX(label.coord.x);
+            const svgY = toSvgY(label.coord.y);
+
+            return (
+              <text
+                key={`label-${idx}`}
+                x={svgX}
+                y={svgY}
+                fontSize="14"
+                fill={colors[label.color as keyof typeof colors] || label.color}
+                textAnchor="middle"
+                fontFamily="system-ui, -apple-system, sans-serif"
+                fontStyle="italic"
+                fontWeight="500"
+              >
+                {label.text}
+              </text>
+            );
+          })}
+        </svg>
+      </div>
+    </div>
+  );
+};

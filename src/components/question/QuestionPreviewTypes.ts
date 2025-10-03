@@ -1,4 +1,4 @@
-import { PreviewQuestion } from '@/hooks/useProblemGeneration';
+import { PreviewQuestion } from '@/hooks';
 
 export interface BaseQuestionPreviewProps {
   previewQuestions: PreviewQuestion[];

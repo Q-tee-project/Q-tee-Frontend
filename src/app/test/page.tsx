@@ -1,28 +1,17 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Image from 'next/image';
 import { mathService } from '@/services/mathService';
 import { koreanService } from '@/services/koreanService';
 import { useAuth } from '@/contexts/AuthContext';
-import { LaTeXRenderer } from '@/components/LaTeXRenderer';
 import { Worksheet, MathProblem, ProblemType, Subject } from '@/types/math';
 import { KoreanWorksheet, KoreanProblem } from '@/types/korean';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+
 import { CheckCircle } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { ScratchpadModal } from '@/components/ScratchpadModal';
-import { Input } from '@/components/ui/input';
-import { IoSearch } from 'react-icons/io5';
 import { AssignmentList } from '@/components/test/AssignmentList';
 import { TestInterface } from '@/components/test/TestInterface';
 import { KoreanTestInterface } from '@/components/test/KoreanTestInterface';
@@ -85,7 +74,7 @@ export default function TestPage() {
     const assignmentTitle = searchParams.get('assignmentTitle');
     const subject = searchParams.get('subject');
     const viewResult = searchParams.get('viewResult');
-    
+
     if (assignmentId && assignmentTitle && worksheets.length > 0) {
       // 과목이 지정된 경우 해당 과목으로 변경
       if (subject && subject !== selectedSubject) {
@@ -93,25 +82,29 @@ export default function TestPage() {
         setSelectedSubject(subject);
         return; // 과목이 변경되면 loadWorksheets가 다시 호출됨
       }
-      
+
       // 해당 과제 찾기
-      const targetWorksheet = worksheets.find(w => 
-        w.id.toString() === assignmentId && w.title === assignmentTitle
+      const targetWorksheet = worksheets.find(
+        (w) => w.id.toString() === assignmentId && w.title === assignmentTitle,
       );
-      
+
       if (targetWorksheet) {
         console.log('🎯 URL 파라미터로 과제 자동 선택:', targetWorksheet);
         console.log('🎯 viewResult 파라미터:', viewResult);
-        
+
         // 채점 완료된 과제인 경우 결과 보기 모드로 설정
         if (viewResult === 'true') {
           console.log('🎯 결과 보기 모드로 자동 설정');
           setShowStudentResult(true);
         }
-        
+
         handleWorksheetSelect(targetWorksheet);
       } else {
-        console.log('🎯 과제를 찾을 수 없음:', { assignmentId, assignmentTitle, availableWorksheets: worksheets.map(w => ({ id: w.id, title: w.title })) });
+        console.log('🎯 과제를 찾을 수 없음:', {
+          assignmentId,
+          assignmentTitle,
+          availableWorksheets: worksheets.map((w) => ({ id: w.id, title: w.title })),
+        });
       }
     }
   }, [worksheets, searchParams, selectedSubject]);
@@ -168,54 +161,104 @@ export default function TestPage() {
       }
 
       // 과제 데이터를 워크시트 형식으로 변환
-      const worksheetData = assignmentData.map((assignment: any) => {
-        if (selectedSubject === '국어') {
-          return {
-            id: assignment.assignment_id,
-            title: assignment.title,
-            unit_name: assignment.unit_name || assignment.korean_type || '',
-            chapter_name: assignment.chapter_name || assignment.korean_type || '',
-            korean_type: assignment.korean_type || '소설',
-            problem_count: assignment.problem_count,
-            status: assignment.status,
-            deployed_at: assignment.deployed_at,
-            created_at: assignment.deployed_at,
-            school_level: '중학교', // 기본값
-            grade: 1, // 기본값
-            subject: selectedSubject, // 과목 정보 추가
-          } as KoreanWorksheet;
-        } else if (selectedSubject === '영어') {
-          return {
-            id: assignment.assignment?.id || assignment.assignment_id,
-            title: assignment.assignment?.title || assignment.title,
-            unit_name: assignment.assignment?.problem_type || '',
-            chapter_name: assignment.assignment?.problem_type || '',
-            problem_count: assignment.assignment?.total_questions || assignment.total_questions,
-            status: assignment.deployment?.status || assignment.status,
-            deployed_at: assignment.deployment?.deployed_at || assignment.deployed_at,
-            created_at: assignment.assignment?.created_at || assignment.created_at,
-            school_level: '중학교', // 기본값
-            grade: 1, // 기본값
-            semester: 1, // 기본값
-            subject: selectedSubject, // 과목 정보 추가
-          } as Worksheet;
-        } else {
-          return {
-            id: assignment.assignment_id,
-            title: assignment.title,
-            unit_name: assignment.unit_name || assignment.korean_type || '',
-            chapter_name: assignment.chapter_name || assignment.korean_type || '',
-            problem_count: assignment.problem_count,
-            status: assignment.status,
-            deployed_at: assignment.deployed_at,
-            created_at: assignment.deployed_at,
-            school_level: '중학교', // 기본값
-            grade: 1, // 기본값
-            semester: 1, // 기본값
-            subject: selectedSubject, // 과목 정보 추가
-          } as Worksheet;
-        }
-      });
+      const worksheetData = await Promise.all(
+        assignmentData.map(async (assignment: any) => {
+          let score: number | undefined = undefined;
+
+          // 응시 완료된 과제인 경우 점수 정보 가져오기
+          if (assignment.status === 'completed' || assignment.status === 'submitted') {
+            try {
+              const assignmentId = assignment.assignment?.id || assignment.assignment_id;
+              let results;
+
+              if (selectedSubject === Subject.MATH) {
+                results = await mathService.getAssignmentResults(assignmentId);
+              } else if (selectedSubject === '국어') {
+                results = await koreanService.getAssignmentResults(assignmentId);
+              } else if (selectedSubject === '영어') {
+                results = await EnglishService.getEnglishAssignmentResults(assignmentId);
+              }
+
+              // results에서 현재 학생의 점수 찾기
+              let resultsArray = results;
+
+              // results가 객체이고 results 필드를 가진 경우 추출
+              if (results && typeof results === 'object' && 'results' in results) {
+                resultsArray = (results as any).results;
+              }
+
+              if (resultsArray && Array.isArray(resultsArray)) {
+                // student_id가 다양한 형식으로 올 수 있으므로 유연하게 비교
+                const myResult = resultsArray.find((r: any) => {
+                  const resultStudentId = r.student_id || r.graded_by;
+                  return (
+                    resultStudentId === userProfile.id ||
+                    resultStudentId === userProfile.id.toString() ||
+                    parseInt(String(resultStudentId)) === userProfile.id
+                  );
+                });
+
+                if (myResult) {
+                  // total_score 또는 score 필드에서 점수 가져오기
+                  score = myResult.total_score ?? myResult.score;
+                }
+              }
+            } catch (error) {
+              console.error('점수 정보 로드 실패:', error);
+            }
+          }
+
+          if (selectedSubject === '국어') {
+            return {
+              id: assignment.assignment_id,
+              title: assignment.title,
+              unit_name: assignment.unit_name || assignment.korean_type || '',
+              chapter_name: assignment.chapter_name || assignment.korean_type || '',
+              korean_type: assignment.korean_type || '소설',
+              problem_count: assignment.problem_count,
+              status: assignment.status,
+              deployed_at: assignment.deployed_at,
+              created_at: assignment.deployed_at,
+              school_level: '중학교', // 기본값
+              grade: 1, // 기본값
+              subject: selectedSubject, // 과목 정보 추가
+              score, // 점수 추가
+            } as KoreanWorksheet;
+          } else if (selectedSubject === '영어') {
+            return {
+              id: assignment.assignment?.id || assignment.assignment_id,
+              title: assignment.assignment?.title || assignment.title,
+              unit_name: assignment.assignment?.problem_type || '',
+              chapter_name: assignment.assignment?.problem_type || '',
+              problem_count: assignment.assignment?.total_questions || assignment.total_questions,
+              status: assignment.deployment?.status || assignment.status,
+              deployed_at: assignment.deployment?.deployed_at || assignment.deployed_at,
+              created_at: assignment.assignment?.created_at || assignment.created_at,
+              school_level: '중학교', // 기본값
+              grade: 1, // 기본값
+              semester: 1, // 기본값
+              subject: selectedSubject, // 과목 정보 추가
+              score, // 점수 추가
+            } as Worksheet;
+          } else {
+            return {
+              id: assignment.assignment_id,
+              title: assignment.title,
+              unit_name: assignment.unit_name || assignment.korean_type || '',
+              chapter_name: assignment.chapter_name || assignment.korean_type || '',
+              problem_count: assignment.problem_count,
+              status: assignment.status,
+              deployed_at: assignment.deployed_at,
+              created_at: assignment.deployed_at,
+              school_level: '중학교', // 기본값
+              grade: 1, // 기본값
+              semester: 1, // 기본값
+              subject: selectedSubject, // 과목 정보 추가
+              score, // 점수 추가
+            } as Worksheet;
+          }
+        }),
+      );
 
       console.log('📋 변환된 워크시트 데이터:', worksheetData);
 
@@ -270,8 +313,7 @@ export default function TestPage() {
           setError('영어 서버에 연결할 수 없습니다. 서버가 실행 중인지 확인해주세요.');
           return;
         }
-      }
-      else {
+      } else {
         console.log('📚 지원하지 않는 과목:', selectedSubject);
         setError('해당 과목은 아직 지원되지 않습니다.');
         return;
@@ -342,7 +384,8 @@ export default function TestPage() {
     setSelectedWorksheet(worksheet);
 
     // Check if this is a completed assignment (completed 또는 submitted 상태)
-    const isCompleted = (worksheet as any).status === 'completed' || (worksheet as any).status === 'submitted';
+    const isCompleted =
+      (worksheet as any).status === 'completed' || (worksheet as any).status === 'submitted';
     console.log('📝 응시 완료 여부:', isCompleted);
 
     if (isCompleted && userProfile) {
@@ -496,7 +539,9 @@ export default function TestPage() {
     // 모든 문제를 풀어야만 제출 가능하도록 변경
     if (answeredCount < totalProblems) {
       alert(
-        `모든 문제를 풀어야 제출할 수 있습니다.\n현재 ${answeredCount}/${totalProblems}개 문제를 풀었습니다.\n남은 문제: ${totalProblems - answeredCount}개`
+        `모든 문제를 풀어야 제출할 수 있습니다.\n현재 ${answeredCount}/${totalProblems}개 문제를 풀었습니다.\n남은 문제: ${
+          totalProblems - answeredCount
+        }개`,
       );
       return;
     }
@@ -613,7 +658,9 @@ export default function TestPage() {
             worksheets={filteredWorksheets as Worksheet[]}
             selectedWorksheet={selectedWorksheet as Worksheet}
             worksheetProblems={worksheetProblems as MathProblem[]}
-            worksheetEnglishProblems={selectedSubject === '영어' ? worksheetProblems as any[] : []}
+            worksheetEnglishProblems={
+              selectedSubject === '영어' ? (worksheetProblems as any[]) : []
+            }
             isTestStarted={isTestStarted}
             answers={answers}
             currentProblemIndex={currentProblemIndex}
@@ -661,7 +708,8 @@ export default function TestPage() {
                 <div className="text-gray-500 text-sm mb-4">
                   문제 수: {worksheetProblems.length}개 | 제한 시간: 60분
                 </div>
-                {((selectedWorksheet as any).status === 'completed' || (selectedWorksheet as any).status === 'submitted') ? (
+                {(selectedWorksheet as any).status === 'completed' ||
+                (selectedWorksheet as any).status === 'submitted' ? (
                   <div className="text-orange-600 text-sm mb-6">
                     이미 완료된 과제입니다. 결과를 확인하려면 과제를 다시 클릭하세요.
                   </div>
@@ -670,16 +718,19 @@ export default function TestPage() {
                     "과제 시작하기" 버튼을 눌러 과제를 시작하세요
                   </div>
                 )}
-                {worksheetProblems.length > 0 && (selectedWorksheet as any).status !== 'completed' && (selectedWorksheet as any).status !== 'submitted' && (
-                  <Button
-                    onClick={startTest}
-                    disabled={isLoading}
-                    className="bg-[#0072CE] hover:bg-[#0056A3] text-white"
-                  >
-                    {isLoading ? '시작 중...' : '문제 풀기'}
-                  </Button>
-                )}
-                {((selectedWorksheet as any).status === 'completed' || (selectedWorksheet as any).status === 'submitted') && (
+                {worksheetProblems.length > 0 &&
+                  (selectedWorksheet as any).status !== 'completed' &&
+                  (selectedWorksheet as any).status !== 'submitted' && (
+                    <Button
+                      onClick={startTest}
+                      disabled={isLoading}
+                      className="bg-[#0072CE] hover:bg-[#0056A3] text-white"
+                    >
+                      {isLoading ? '시작 중...' : '문제 풀기'}
+                    </Button>
+                  )}
+                {((selectedWorksheet as any).status === 'completed' ||
+                  (selectedWorksheet as any).status === 'submitted') && (
                   <Button
                     onClick={() => handleWorksheetSelect(selectedWorksheet)}
                     className="bg-green-600 hover:bg-green-700 text-white"
@@ -838,7 +889,6 @@ export default function TestPage() {
           problemNumber={currentProblem.sequence_order}
         />
       )}
-
 
       {/* 로딩 오버레이 */}
       {isLoading && (
