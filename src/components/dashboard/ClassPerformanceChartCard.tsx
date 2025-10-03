@@ -210,20 +210,20 @@ const ClassPerformanceChartCard = ({
             });
 
             if (!isAssigned) {
-              // 미배포: -1로 표시하여 차트에서 구분 가능하게 함
-              dataPoint[student.name] = -1;
+              // 미배포: 0으로 표시하여 차트에 표시되지만 평균에는 영향 없음
+              dataPoint[student.name] = 0;
               dataPoint[`${student.name}_status`] = 'unassigned';
-              console.log(`학생 ${student.name}: 과제 미배포 (-1로 표시)`);
+              console.log(`학생 ${student.name}: 과제 미배포 (0으로 표시)`);
             } else if (score !== undefined && score !== null) {
               // 응시 완료: 실제 점수 표시
               dataPoint[student.name] = score;
               dataPoint[`${student.name}_status`] = 'completed';
               console.log(`학생 ${student.name}: ${score}점`);
             } else {
-              // 미응시/미제출: -2로 표시하여 차트에서 구분 가능하게 함
-              dataPoint[student.name] = -2;
+              // 미응시/미제출: 0으로 표시하여 차트에 표시되지만 평균에는 영향 없음
+              dataPoint[student.name] = 0;
               dataPoint[`${student.name}_status`] = 'not_taken';
-              console.log(`학생 ${student.name}: 미응시 (-2로 표시)`);
+              console.log(`학생 ${student.name}: 미응시 (0으로 표시)`);
             }
           } else {
             console.log(`학생 ${studentId} 데이터 없음:`, { 
@@ -301,20 +301,20 @@ const ClassPerformanceChartCard = ({
                 });
 
               if (!isAssigned) {
-                // 미배포: -1로 표시하여 차트에서 구분 가능하게 함
-                dataPoint[student.name] = -1;
+                // 미배포: 0으로 표시하여 차트에 표시되지만 평균에는 영향 없음
+                dataPoint[student.name] = 0;
                 dataPoint[`${student.name}_status`] = 'unassigned';
-                console.log(`❌ 학생 ${student.name}: 과제 미배포 (-1로 표시)`);
+                console.log(`❌ 학생 ${student.name}: 과제 미배포 (0으로 표시)`);
               } else if (score !== undefined && score !== null) {
                 // 응시 완료: 실제 점수 표시
                 dataPoint[student.name] = score;
                 dataPoint[`${student.name}_status`] = 'completed';
                 console.log(`✅ 학생 ${student.name}: ${score}점`);
               } else {
-                // 미응시/미제출: -2로 표시하여 차트에서 구분 가능하게 함
-                dataPoint[student.name] = -2;
+                // 미응시/미제출: 0으로 표시하여 차트에 표시되지만 평균에는 영향 없음
+                dataPoint[student.name] = 0;
                 dataPoint[`${student.name}_status`] = 'not_taken';
-                console.log(`⏳ 학생 ${student.name}: 미응시 (-2로 표시)`);
+                console.log(`⏳ 학생 ${student.name}: 미응시 (0으로 표시)`);
               }
               } else {
                 console.log(`⚠️ 학생 ${studentId} 데이터 없음:`, { 
@@ -419,7 +419,7 @@ const ClassPerformanceChartCard = ({
         </div>
       </CardHeader>
       <CardContent>
-        <div className="relative h-[28rem] bg-white rounded-lg p-4">
+        <div className="relative h-[32rem] bg-white rounded-lg p-4">
           {assignmentChartData.length === 0 ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
@@ -446,7 +446,7 @@ const ClassPerformanceChartCard = ({
                 margin={{
                   top: 20,
                   right: 80,
-                  bottom: 40,
+                  bottom: 80,
                   left: 20,
                 }}
                 style={{ backgroundColor: 'white' }}
@@ -455,17 +455,42 @@ const ClassPerformanceChartCard = ({
               <XAxis
                 dataKey="name"
                 type="category"
-                tick={{ fontSize: 11 }}
+                tick={{ 
+                  fontSize: 10,
+                  textAnchor: 'middle',
+                  dominantBaseline: 'hanging'
+                }}
                 tickLine={false}
                 axisLine={false}
-                tickMargin={10}
+                tickMargin={15}
                 interval={0}
-                angle={-45}
+                angle={-30}
                 textAnchor="end"
                 domain={['dataMin', 'dataMax']}
-                height={80}
+                height={120}
+                tickFormatter={(value) => {
+                  // 긴 텍스트를 줄바꿈으로 처리
+                  if (value.length > 12) {
+                    const words = value.split(' ');
+                    const lines = [];
+                    let currentLine = '';
+                    
+                    for (const word of words) {
+                      if ((currentLine + word).length > 12) {
+                        if (currentLine) lines.push(currentLine.trim());
+                        currentLine = word + ' ';
+                      } else {
+                        currentLine += word + ' ';
+                      }
+                    }
+                    if (currentLine) lines.push(currentLine.trim());
+                    
+                    return lines.length > 2 ? lines.slice(0, 2).join('\n') + '...' : lines.join('\n');
+                  }
+                  return value;
+                }}
               />
-              <YAxis domain={[-3, 100]} />
+              <YAxis domain={[0, 100]} />
               <Tooltip
                 content={({ active, payload }) => {
                   if (active && payload && payload.length) {
@@ -499,18 +524,18 @@ const ClassPerformanceChartCard = ({
                             let displayText = '';
                             let textColor = entry.stroke;
 
-                            if (status === 'unassigned' || score === -1) {
+                            if (status === 'unassigned') {
                               displayText = '미배포';
                               textColor = '#9ca3af';
-                            } else if (status === 'not_taken' || score === -2) {
+                            } else if (status === 'not_taken') {
                               displayText = '미응시';
-                              textColor = '#f59e0b';
+                              textColor = '#ef4444';
                             } else if (status === 'completed' && score !== null && score !== undefined && score >= 0) {
                               displayText = `${score}점`;
                               textColor = entry.stroke;
                             } else {
                               displayText = '미응시';
-                              textColor = '#f59e0b';
+                              textColor = '#ef4444';
                             }
 
                             return (
@@ -564,45 +589,49 @@ const ClassPerformanceChartCard = ({
                       dot={(props) => {
                         const { cx, cy, payload } = props;
                         const value = payload[student.name];
+                        const status = payload[`${student.name}_status`];
                         
-                        // 음수 값들에 대한 특별한 처리
-                        if (value === -1) {
+                        // 모든 값에 대해 점 표시 (0점도 포함)
+                        if (value !== null && value !== undefined) {
+                          let dotColor = color || '#9ca3af';
+                          let dotRadius = 4;
+                          
+                          // 상태에 따른 색상 및 크기 조정
+                          if (status === 'unassigned') {
+                            dotColor = '#9ca3af'; // 회색
+                            dotRadius = 3;
+                          } else if (status === 'not_taken') {
+                            dotColor = '#ef4444'; // 빨간색
+                            dotRadius = 3;
+                          } else if (status === 'completed') {
+                            dotColor = color || '#9ca3af'; // 학생 색상
+                            dotRadius = 4;
+                          }
+                          
                           return (
                             <circle
-                              key={`${student.name}-unassigned-${cx}-${cy}`}
+                              key={`${student.name}-${status}-${cx}-${cy}`}
                               cx={cx}
                               cy={cy}
-                              r={4}
-                              fill="#9ca3af"
-                              stroke="#9ca3af"
-                              strokeWidth={2}
-                            />
-                          );
-                        } else if (value === -2) {
-                          return (
-                            <circle
-                              key={`${student.name}-not-taken-${cx}-${cy}`}
-                              cx={cx}
-                              cy={cy}
-                              r={4}
-                              fill="#f59e0b"
-                              stroke="#f59e0b"
-                              strokeWidth={2}
-                            />
-                          );
-                        } else {
-                          return (
-                            <circle
-                              key={`${student.name}-completed-${cx}-${cy}`}
-                              cx={cx}
-                              cy={cy}
-                              r={4}
-                              fill={color || '#9ca3af'}
-                              stroke={color || '#9ca3af'}
+                              r={dotRadius}
+                              fill={dotColor}
+                              stroke={dotColor}
                               strokeWidth={2}
                             />
                           );
                         }
+                        
+                        // 값이 없는 경우 투명한 점
+                        return (
+                          <circle
+                            key={`${student.name}-hidden-${cx}-${cy}`}
+                            cx={cx}
+                            cy={cy}
+                            r={0}
+                            fill="transparent"
+                            stroke="transparent"
+                          />
+                        );
                       }}
                       activeDot={{ 
                         r: 6,

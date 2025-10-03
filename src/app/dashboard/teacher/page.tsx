@@ -760,7 +760,7 @@ const TeacherDashboard = () => {
         icon={<RxDashboard />}
         title={`${userProfile?.name || 'user'} 대시보드`}
         variant="default"
-        description="수업 현황과 학생 관리를 확인하세요"
+        description="수업 현황과 마켓 관리를 확인하세요"
       />
 
       {/* Tab Navigation */}
