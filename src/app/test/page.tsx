@@ -161,54 +161,104 @@ export default function TestPage() {
       }
 
       // 과제 데이터를 워크시트 형식으로 변환
-      const worksheetData = assignmentData.map((assignment: any) => {
-        if (selectedSubject === '국어') {
-          return {
-            id: assignment.assignment_id,
-            title: assignment.title,
-            unit_name: assignment.unit_name || assignment.korean_type || '',
-            chapter_name: assignment.chapter_name || assignment.korean_type || '',
-            korean_type: assignment.korean_type || '소설',
-            problem_count: assignment.problem_count,
-            status: assignment.status,
-            deployed_at: assignment.deployed_at,
-            created_at: assignment.deployed_at,
-            school_level: '중학교', // 기본값
-            grade: 1, // 기본값
-            subject: selectedSubject, // 과목 정보 추가
-          } as KoreanWorksheet;
-        } else if (selectedSubject === '영어') {
-          return {
-            id: assignment.assignment?.id || assignment.assignment_id,
-            title: assignment.assignment?.title || assignment.title,
-            unit_name: assignment.assignment?.problem_type || '',
-            chapter_name: assignment.assignment?.problem_type || '',
-            problem_count: assignment.assignment?.total_questions || assignment.total_questions,
-            status: assignment.deployment?.status || assignment.status,
-            deployed_at: assignment.deployment?.deployed_at || assignment.deployed_at,
-            created_at: assignment.assignment?.created_at || assignment.created_at,
-            school_level: '중학교', // 기본값
-            grade: 1, // 기본값
-            semester: 1, // 기본값
-            subject: selectedSubject, // 과목 정보 추가
-          } as Worksheet;
-        } else {
-          return {
-            id: assignment.assignment_id,
-            title: assignment.title,
-            unit_name: assignment.unit_name || assignment.korean_type || '',
-            chapter_name: assignment.chapter_name || assignment.korean_type || '',
-            problem_count: assignment.problem_count,
-            status: assignment.status,
-            deployed_at: assignment.deployed_at,
-            created_at: assignment.deployed_at,
-            school_level: '중학교', // 기본값
-            grade: 1, // 기본값
-            semester: 1, // 기본값
-            subject: selectedSubject, // 과목 정보 추가
-          } as Worksheet;
-        }
-      });
+      const worksheetData = await Promise.all(
+        assignmentData.map(async (assignment: any) => {
+          let score: number | undefined = undefined;
+
+          // 응시 완료된 과제인 경우 점수 정보 가져오기
+          if (assignment.status === 'completed' || assignment.status === 'submitted') {
+            try {
+              const assignmentId = assignment.assignment?.id || assignment.assignment_id;
+              let results;
+
+              if (selectedSubject === Subject.MATH) {
+                results = await mathService.getAssignmentResults(assignmentId);
+              } else if (selectedSubject === '국어') {
+                results = await koreanService.getAssignmentResults(assignmentId);
+              } else if (selectedSubject === '영어') {
+                results = await EnglishService.getEnglishAssignmentResults(assignmentId);
+              }
+
+              // results에서 현재 학생의 점수 찾기
+              let resultsArray = results;
+
+              // results가 객체이고 results 필드를 가진 경우 추출
+              if (results && typeof results === 'object' && 'results' in results) {
+                resultsArray = (results as any).results;
+              }
+
+              if (resultsArray && Array.isArray(resultsArray)) {
+                // student_id가 다양한 형식으로 올 수 있으므로 유연하게 비교
+                const myResult = resultsArray.find((r: any) => {
+                  const resultStudentId = r.student_id || r.graded_by;
+                  return (
+                    resultStudentId === userProfile.id ||
+                    resultStudentId === userProfile.id.toString() ||
+                    parseInt(String(resultStudentId)) === userProfile.id
+                  );
+                });
+
+                if (myResult) {
+                  // total_score 또는 score 필드에서 점수 가져오기
+                  score = myResult.total_score ?? myResult.score;
+                }
+              }
+            } catch (error) {
+              console.error('점수 정보 로드 실패:', error);
+            }
+          }
+
+          if (selectedSubject === '국어') {
+            return {
+              id: assignment.assignment_id,
+              title: assignment.title,
+              unit_name: assignment.unit_name || assignment.korean_type || '',
+              chapter_name: assignment.chapter_name || assignment.korean_type || '',
+              korean_type: assignment.korean_type || '소설',
+              problem_count: assignment.problem_count,
+              status: assignment.status,
+              deployed_at: assignment.deployed_at,
+              created_at: assignment.deployed_at,
+              school_level: '중학교', // 기본값
+              grade: 1, // 기본값
+              subject: selectedSubject, // 과목 정보 추가
+              score, // 점수 추가
+            } as KoreanWorksheet;
+          } else if (selectedSubject === '영어') {
+            return {
+              id: assignment.assignment?.id || assignment.assignment_id,
+              title: assignment.assignment?.title || assignment.title,
+              unit_name: assignment.assignment?.problem_type || '',
+              chapter_name: assignment.assignment?.problem_type || '',
+              problem_count: assignment.assignment?.total_questions || assignment.total_questions,
+              status: assignment.deployment?.status || assignment.status,
+              deployed_at: assignment.deployment?.deployed_at || assignment.deployed_at,
+              created_at: assignment.assignment?.created_at || assignment.created_at,
+              school_level: '중학교', // 기본값
+              grade: 1, // 기본값
+              semester: 1, // 기본값
+              subject: selectedSubject, // 과목 정보 추가
+              score, // 점수 추가
+            } as Worksheet;
+          } else {
+            return {
+              id: assignment.assignment_id,
+              title: assignment.title,
+              unit_name: assignment.unit_name || assignment.korean_type || '',
+              chapter_name: assignment.chapter_name || assignment.korean_type || '',
+              problem_count: assignment.problem_count,
+              status: assignment.status,
+              deployed_at: assignment.deployed_at,
+              created_at: assignment.deployed_at,
+              school_level: '중학교', // 기본값
+              grade: 1, // 기본값
+              semester: 1, // 기본값
+              subject: selectedSubject, // 과목 정보 추가
+              score, // 점수 추가
+            } as Worksheet;
+          }
+        }),
+      );
 
       console.log('📋 변환된 워크시트 데이터:', worksheetData);
 
