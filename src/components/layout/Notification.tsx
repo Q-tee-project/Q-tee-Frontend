@@ -12,18 +12,25 @@ import { useNotification } from '@/contexts/NotificationContext';
 import { SSENotification } from '@/services/notificationService';
 
 // 알림 타입 정의
-type TeacherNotificationType =
-  | 'assignment_created'
-  | 'assignment_submitted'
+type NotificationType =
   | 'message'
+  | 'problem_generation'
+  | 'problem_regeneration'
+  | 'problem_generation_failed'
+  | 'problem_regeneration_failed'
+  | 'assignment_submitted'
+  | 'assignment_deployed'
+  | 'class_join_request'
+  | 'class_approved'
+  | 'grading_updated'
   | 'market_sale'
-  | 'class_approval_request';
-type StudentNotificationType =
+  | 'market_new_product'
+  // 레거시 타입 (하위 호환성)
+  | 'assignment_created'
   | 'assignment_distributed'
   | 'grading_completed'
-  | 'message'
+  | 'class_approval_request'
   | 'class_approval_completed';
-type NotificationType = TeacherNotificationType | StudentNotificationType;
 
 interface Notification {
   id: string;
@@ -72,12 +79,35 @@ export default function NotificationPanel({
     NotificationType,
     { label: string; icon: React.ReactNode; color: string; bgColor: string }
   > = {
-    // 선생님 알림 타입
-    assignment_created: {
-      label: '과제 생성 완료',
+    message: {
+      label: '쪽지 알림',
+      icon: <FiSend size={12} style={{ transform: 'translate(-1px, 1px)' }} />,
+      color: '#FE4C4F',
+      bgColor: 'rgba(254, 76, 79, 0.1)',
+    },
+    problem_generation: {
+      label: '문제 생성 완료',
       icon: <FiCheck size={12} />,
       color: '#2AC951',
       bgColor: 'rgba(42, 201, 81, 0.1)',
+    },
+    problem_regeneration: {
+      label: '문제 재생성 완료',
+      icon: <FiCheck size={12} />,
+      color: '#2AC951',
+      bgColor: 'rgba(42, 201, 81, 0.1)',
+    },
+    problem_generation_failed: {
+      label: '문제 생성 실패',
+      icon: <MdOutlineNotificationImportant size={12} />,
+      color: '#FE4C4F',
+      bgColor: 'rgba(254, 76, 79, 0.1)',
+    },
+    problem_regeneration_failed: {
+      label: '문제 재생성 실패',
+      icon: <MdOutlineNotificationImportant size={12} />,
+      color: '#FE4C4F',
+      bgColor: 'rgba(254, 76, 79, 0.1)',
     },
     assignment_submitted: {
       label: '과제 제출 알림',
@@ -85,26 +115,49 @@ export default function NotificationPanel({
       color: '#2294E6',
       bgColor: 'rgba(34, 148, 230, 0.1)',
     },
-    message: {
-      label: '쪽지 알림',
-      icon: <FiSend size={12} style={{ transform: 'translate(-1px, 1px)' }} />,
-      color: '#FE4C4F',
-      bgColor: 'rgba(254, 76, 79, 0.1)',
+    assignment_deployed: {
+      label: '과제 배포 알림',
+      icon: <FiBookOpen size={12} />,
+      color: '#2294E6',
+      bgColor: 'rgba(34, 148, 230, 0.1)',
     },
-    market_sale: {
-      label: '마켓플레이스 판매',
-      icon: <FiShoppingCart size={12} />,
-      color: '#D4732E',
-      bgColor: 'rgba(212, 115, 46, 0.1)',
-    },
-    class_approval_request: {
-      label: '클래스 승인 신청',
+    class_join_request: {
+      label: '클래스 가입 요청',
       icon: <RiGroupLine size={12} />,
       color: '#A946FF',
       bgColor: 'rgba(169, 70, 255, 0.1)',
     },
-
-    // 학생 알림 타입
+    class_approved: {
+      label: '클래스 승인 완료',
+      icon: <RiGroupLine size={12} />,
+      color: '#A946FF',
+      bgColor: 'rgba(169, 70, 255, 0.1)',
+    },
+    grading_updated: {
+      label: '채점 수정 알림',
+      icon: <FiCheck size={12} />,
+      color: '#2AC951',
+      bgColor: 'rgba(42, 201, 81, 0.1)',
+    },
+    market_sale: {
+      label: '마켓 판매 알림',
+      icon: <FiShoppingCart size={12} />,
+      color: '#D4732E',
+      bgColor: 'rgba(212, 115, 46, 0.1)',
+    },
+    market_new_product: {
+      label: '마켓 신상품 알림',
+      icon: <FiShoppingCart size={12} />,
+      color: '#D4732E',
+      bgColor: 'rgba(212, 115, 46, 0.1)',
+    },
+    // 레거시 타입 (하위 호환성)
+    assignment_created: {
+      label: '과제 생성 완료',
+      icon: <FiCheck size={12} />,
+      color: '#2AC951',
+      bgColor: 'rgba(42, 201, 81, 0.1)',
+    },
     assignment_distributed: {
       label: '과제 배포 알림',
       icon: <FiBookOpen size={12} />,
@@ -116,6 +169,12 @@ export default function NotificationPanel({
       icon: <FiCheck size={12} />,
       color: '#2AC951',
       bgColor: 'rgba(42, 201, 81, 0.1)',
+    },
+    class_approval_request: {
+      label: '클래스 승인 신청',
+      icon: <RiGroupLine size={12} />,
+      color: '#A946FF',
+      bgColor: 'rgba(169, 70, 255, 0.1)',
     },
     class_approval_completed: {
       label: '클래스 승인 완료',
@@ -246,21 +305,119 @@ export default function NotificationPanel({
 
   const [expandedTypes, setExpandedTypes] = React.useState<Set<NotificationType>>(new Set());
 
-  // SSE 메시지 알림을 UI 형태로 변환하는 함수
-  const convertSSEMessageToUI = (sseNotification: SSENotification): Notification => {
-    return {
+  // SSE 알림을 UI 형태로 변환하는 함수
+  const convertSSEToUI = (sseNotification: SSENotification): Notification => {
+    const baseNotification = {
       id: sseNotification.id,
       type: sseNotification.type as NotificationType,
-      title: `${sseNotification.data.sender_name} ${
-        sseNotification.data.sender_type === 'teacher' ? '선생님' : '학생'
-      }`,
-      content: sseNotification.data.preview,
       createdAt: sseNotification.timestamp,
       isRead: sseNotification.read,
-      userId: sseNotification.data.sender_id.toString(),
-      relatedId: sseNotification.data.message_id.toString(),
       priority: 'medium' as const,
     };
+
+    switch (sseNotification.type) {
+      case 'message':
+        return {
+          ...baseNotification,
+          title: `${sseNotification.data.sender_name} ${
+            sseNotification.data.sender_type === 'teacher' ? '선생님' : '학생'
+          }`,
+          content: sseNotification.data.preview,
+          userId: sseNotification.data.sender_id.toString(),
+          relatedId: sseNotification.data.message_id.toString(),
+        };
+
+      case 'problem_generation':
+      case 'problem_regeneration':
+        return {
+          ...baseNotification,
+          title: `${sseNotification.data.subject} 문제 ${
+            sseNotification.type === 'problem_generation' ? '생성' : '재생성'
+          } 완료`,
+          content: `${sseNotification.data.worksheet_title} (${sseNotification.data.problem_count}문제)`,
+          relatedId: sseNotification.data.worksheet_id.toString(),
+          priority: 'high' as const,
+        };
+
+      case 'problem_generation_failed':
+      case 'problem_regeneration_failed':
+        return {
+          ...baseNotification,
+          title: `${sseNotification.data.subject} 문제 ${
+            sseNotification.type === 'problem_generation_failed' ? '생성' : '재생성'
+          } 실패`,
+          content: sseNotification.data.error_message || '문제 생성에 실패했습니다',
+          relatedId: sseNotification.data.worksheet_id.toString(),
+          priority: 'high' as const,
+        };
+
+      case 'assignment_submitted':
+        return {
+          ...baseNotification,
+          title: '과제 제출 완료',
+          content: `${sseNotification.data.student_name} 학생이 ${sseNotification.data.assignment_title} 과제를 제출했습니다`,
+          relatedId: sseNotification.data.class_id.toString(),
+          priority: 'high' as const,
+        };
+
+      case 'assignment_deployed':
+        return {
+          ...baseNotification,
+          title: '과제 배포 알림',
+          content: `${sseNotification.data.assignment_title} 과제가 배포되었습니다`,
+          relatedId: sseNotification.data.assignment_id.toString(),
+          priority: 'high' as const,
+        };
+
+      case 'class_join_request':
+        return {
+          ...baseNotification,
+          title: '클래스 가입 요청',
+          content: `${sseNotification.data.student_name} 학생이 ${sseNotification.data.class_name} 클래스 가입을 신청했습니다`,
+          relatedId: sseNotification.data.class_id.toString(),
+        };
+
+      case 'class_approved':
+        return {
+          ...baseNotification,
+          title: '클래스 승인 완료',
+          content: `${sseNotification.data.class_name} 클래스 가입이 승인되었습니다`,
+          relatedId: sseNotification.data.class_id.toString(),
+          priority: 'high' as const,
+        };
+
+      case 'grading_updated':
+        return {
+          ...baseNotification,
+          title: '채점 수정 알림',
+          content: `${sseNotification.data.assignment_title} 과제의 채점이 수정되었습니다 (${sseNotification.data.score}점)`,
+          relatedId: sseNotification.data.assignment_id.toString(),
+          priority: 'high' as const,
+        };
+
+      case 'market_sale':
+        return {
+          ...baseNotification,
+          title: '마켓 판매 알림',
+          content: `${sseNotification.data.product_title}이(가) 판매되었습니다 (${sseNotification.data.amount}원)`,
+          relatedId: sseNotification.data.product_id.toString(),
+        };
+
+      case 'market_new_product':
+        return {
+          ...baseNotification,
+          title: '마켓 신상품 알림',
+          content: `${sseNotification.data.seller_name}님이 새 상품을 등록했습니다: ${sseNotification.data.product_title}`,
+          relatedId: sseNotification.data.product_id.toString(),
+        };
+
+      default:
+        return {
+          ...baseNotification,
+          title: '새 알림',
+          content: JSON.stringify(sseNotification.data),
+        };
+    }
   };
 
   // SSE 알림 데이터 가져오기
@@ -274,20 +431,19 @@ export default function NotificationPanel({
 
   // SSE 알림을 UI 알림으로 변환
   React.useEffect(() => {
-    // SSE에서 받은 메시지 알림들만 필터링하여 변환
-    const messageNotifications = sseNotifications
-      .filter((sse) => sse.type === 'message')
-      .map(convertSSEMessageToUI);
+    // SSE에서 받은 모든 알림들을 변환
+    const convertedNotifications = sseNotifications.map(convertSSEToUI);
 
-    // 기존 mock 데이터와 병합 (다른 알림 타입들은 유지)
+    // 기존 mock 데이터와 병합 (SSE에 없는 알림 타입만 유지)
+    const sseNotificationTypes = new Set(sseNotifications.map((n) => n.type));
     const otherMockNotifications =
       userType === 'teacher'
-        ? teacherNotifications.filter((n) => n.type !== 'message')
+        ? teacherNotifications.filter((n) => !sseNotificationTypes.has(n.type))
         : userType === 'student'
-        ? studentNotifications.filter((n) => n.type !== 'message')
+        ? studentNotifications.filter((n) => !sseNotificationTypes.has(n.type))
         : [];
 
-    const allNotifications = [...messageNotifications, ...otherMockNotifications];
+    const allNotifications = [...convertedNotifications, ...otherMockNotifications];
     setNotifications(allNotifications);
   }, [sseNotifications, userType, teacherNotifications, studentNotifications]);
 
@@ -357,48 +513,47 @@ export default function NotificationPanel({
 
       // 알림 타입별 페이지 이동
       switch (notification.type) {
+        case 'message':
+          router.push('/message');
+          break;
+
+        case 'problem_generation':
+        case 'problem_regeneration':
+        case 'problem_generation_failed':
+        case 'problem_regeneration_failed':
         case 'assignment_created':
-          // 과제 생성 완료 알림 -> question/bank
           router.push('/question/bank');
           break;
 
         case 'assignment_submitted':
-          // 과제 제출 알림 -> class/[id] (제출한 학생이 속한 클래스 상세 페이지)
-          // relatedId에서 클래스 ID를 추출 (예: "assignment-submitted-456-class-1" -> "1")
           const classId = notification.relatedId?.split('-').pop() || '1';
           router.push(`/class/${classId}`);
           break;
 
-        case 'message':
-          // 쪽지 알림 -> message/page.tsx
-          router.push('/message');
+        case 'assignment_deployed':
+        case 'assignment_distributed':
+        case 'grading_completed':
+        case 'grading_updated':
+          router.push('/test');
           break;
 
-        case 'market_sale':
-          // 마켓 관련 알림 -> market/myMarket
-          router.push('/market/my');
-          break;
-
+        case 'class_join_request':
         case 'class_approval_request':
-          // 승인 신청 알림 -> class/[id] (승인 대기 탭)
-          // relatedId에서 클래스 ID를 추출 (예: "class-approval-request-abc-class-1" -> "1")
           const approvalClassId = notification.relatedId?.split('-').pop() || '1';
           router.push(`/class/${approvalClassId}?tab=approval`);
           break;
 
-        case 'assignment_distributed':
-          // 학생용 과제 배포 알림 -> test 페이지
-          router.push('/test');
-          break;
-
-        case 'grading_completed':
-          // 학생용 채점 완료 알림 -> test 페이지
-          router.push('/test');
-          break;
-
+        case 'class_approved':
         case 'class_approval_completed':
-          // 학생용 클래스 승인 완료 알림 -> class 페이지
           router.push('/class');
+          break;
+
+        case 'market_sale':
+          router.push('/market/my');
+          break;
+
+        case 'market_new_product':
+          router.push('/market');
           break;
 
         default:
@@ -528,16 +683,23 @@ export default function NotificationPanel({
                 return acc;
               },
               {
-                // 선생님 알림 타입
-                assignment_created: [],
-                assignment_submitted: [],
                 message: [],
+                problem_generation: [],
+                problem_regeneration: [],
+                problem_generation_failed: [],
+                problem_regeneration_failed: [],
+                assignment_submitted: [],
+                assignment_deployed: [],
+                class_join_request: [],
+                class_approved: [],
+                grading_updated: [],
                 market_sale: [],
-                class_approval_request: [],
-
-                // 학생 알림 타입
+                market_new_product: [],
+                // 레거시 타입
+                assignment_created: [],
                 assignment_distributed: [],
                 grading_completed: [],
+                class_approval_request: [],
                 class_approval_completed: [],
               },
             );

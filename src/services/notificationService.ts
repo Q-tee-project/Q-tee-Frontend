@@ -1,6 +1,22 @@
 'use client';
 
-export interface NotificationData {
+// 알림 타입 정의
+export type NotificationType =
+  | 'message'
+  | 'problem_generation'
+  | 'problem_regeneration'
+  | 'problem_generation_failed'
+  | 'problem_regeneration_failed'
+  | 'assignment_submitted'
+  | 'assignment_deployed'
+  | 'class_join_request'
+  | 'class_approved'
+  | 'grading_updated'
+  | 'market_sale'
+  | 'market_new_product';
+
+// 각 알림 타입별 데이터 인터페이스
+export interface MessageNotificationData {
   message_id: number;
   sender_id: number;
   sender_name: string;
@@ -10,8 +26,107 @@ export interface NotificationData {
   classroom_id?: number;
 }
 
+export interface ProblemGenerationData {
+  task_id: string;
+  subject: 'math' | 'korean' | 'english';
+  worksheet_id: number;
+  worksheet_title: string;
+  problem_count: number;
+  success: boolean;
+  error_message?: string;
+}
+
+export interface ProblemRegenerationData {
+  task_id: string;
+  subject: 'math' | 'korean' | 'english';
+  worksheet_id: number;
+  worksheet_title: string;
+  problem_number: number;
+  success: boolean;
+  error_message?: string;
+}
+
+export interface AssignmentSubmittedData {
+  assignment_id: number;
+  assignment_title: string;
+  student_id: number;
+  student_name: string;
+  classroom_id: number;
+  classroom_name: string;
+  subject: 'math' | 'korean' | 'english';
+}
+
+export interface AssignmentDeployedData {
+  assignment_id: number;
+  assignment_title: string;
+  teacher_id: number;
+  teacher_name: string;
+  classroom_id: number;
+  classroom_name: string;
+  subject: 'math' | 'korean' | 'english';
+  due_date?: string;
+}
+
+export interface ClassJoinRequestData {
+  student_id: number;
+  student_name: string;
+  student_grade: number;
+  student_school_level: 'middle' | 'high';
+  classroom_id: number;
+  classroom_name: string;
+}
+
+export interface ClassApprovedData {
+  classroom_id: number;
+  classroom_name: string;
+  teacher_id: number;
+  teacher_name: string;
+}
+
+export interface GradingUpdatedData {
+  assignment_id: number;
+  assignment_title: string;
+  teacher_id: number;
+  teacher_name: string;
+  classroom_id: number;
+  classroom_name: string;
+  subject: 'math' | 'korean' | 'english';
+  old_score?: number;
+  new_score: number;
+}
+
+export interface MarketSaleData {
+  product_id: number;
+  product_title: string;
+  buyer_id: number;
+  buyer_name: string;
+  price: number;
+}
+
+export interface MarketNewProductData {
+  product_id: number;
+  product_title: string;
+  author_id: number;
+  author_name: string;
+  subject: 'math' | 'korean' | 'english';
+  price: number;
+}
+
+// Union type for all notification data
+export type NotificationData =
+  | MessageNotificationData
+  | ProblemGenerationData
+  | ProblemRegenerationData
+  | AssignmentSubmittedData
+  | AssignmentDeployedData
+  | ClassJoinRequestData
+  | ClassApprovedData
+  | GradingUpdatedData
+  | MarketSaleData
+  | MarketNewProductData;
+
 export interface SSENotification {
-  type: 'message';
+  type: NotificationType;
   id: string;
   data: NotificationData;
   timestamp: string;
@@ -197,6 +312,177 @@ class NotificationService {
       return response.ok;
     } catch (error) {
       console.error('테스트 알림 전송 실패:', error);
+      return false;
+    }
+  }
+
+  async sendProblemGenerationNotification(
+    data: ProblemGenerationData & { receiver_id: number; receiver_type: 'teacher' | 'student' }
+  ): Promise<boolean> {
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/api/notifications/problem/generation`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        }
+      );
+      return response.ok;
+    } catch (error) {
+      console.error('문제 생성 알림 전송 실패:', error);
+      return false;
+    }
+  }
+
+  async sendProblemRegenerationNotification(
+    data: ProblemRegenerationData & { receiver_id: number; receiver_type: 'teacher' | 'student' }
+  ): Promise<boolean> {
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/api/notifications/problem/regeneration`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        }
+      );
+      return response.ok;
+    } catch (error) {
+      console.error('문제 재생성 알림 전송 실패:', error);
+      return false;
+    }
+  }
+
+  async sendAssignmentSubmittedNotification(
+    data: AssignmentSubmittedData & { receiver_id: number; receiver_type: 'teacher' }
+  ): Promise<boolean> {
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/api/notifications/assignment/submitted`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        }
+      );
+      return response.ok;
+    } catch (error) {
+      console.error('과제 제출 알림 전송 실패:', error);
+      return false;
+    }
+  }
+
+  async sendAssignmentDeployedNotification(
+    data: AssignmentDeployedData & { receiver_id: number; receiver_type: 'student' }
+  ): Promise<boolean> {
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/api/notifications/assignment/deployed`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        }
+      );
+      return response.ok;
+    } catch (error) {
+      console.error('과제 배포 알림 전송 실패:', error);
+      return false;
+    }
+  }
+
+  async sendClassJoinRequestNotification(
+    data: ClassJoinRequestData & { receiver_id: number; receiver_type: 'teacher' }
+  ): Promise<boolean> {
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/api/notifications/class/join-request`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        }
+      );
+      return response.ok;
+    } catch (error) {
+      console.error('클래스 가입 요청 알림 전송 실패:', error);
+      return false;
+    }
+  }
+
+  async sendClassApprovedNotification(
+    data: ClassApprovedData & { receiver_id: number; receiver_type: 'student' }
+  ): Promise<boolean> {
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/api/notifications/class/approved`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        }
+      );
+      return response.ok;
+    } catch (error) {
+      console.error('클래스 승인 알림 전송 실패:', error);
+      return false;
+    }
+  }
+
+  async sendGradingUpdatedNotification(
+    data: GradingUpdatedData & { receiver_id: number; receiver_type: 'student' }
+  ): Promise<boolean> {
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/api/notifications/grading/updated`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        }
+      );
+      return response.ok;
+    } catch (error) {
+      console.error('채점 수정 알림 전송 실패:', error);
+      return false;
+    }
+  }
+
+  async sendMarketSaleNotification(
+    data: MarketSaleData & { receiver_id: number; receiver_type: 'teacher' | 'student' }
+  ): Promise<boolean> {
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/api/notifications/market/sale`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        }
+      );
+      return response.ok;
+    } catch (error) {
+      console.error('마켓 판매 알림 전송 실패:', error);
+      return false;
+    }
+  }
+
+  async sendMarketNewProductNotification(
+    data: MarketNewProductData & { receiver_id: number; receiver_type: 'teacher' | 'student' }
+  ): Promise<boolean> {
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/api/notifications/market/new-product`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        }
+      );
+      return response.ok;
+    } catch (error) {
+      console.error('마켓 신상품 알림 전송 실패:', error);
       return false;
     }
   }
