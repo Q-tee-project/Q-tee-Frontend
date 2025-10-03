@@ -6,15 +6,15 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { useMathBank, useKoreanBank, useEnglishBank } from '@/hooks';
 import { useWorksheetEdit } from '@/hooks/bank/useWorksheetEdit';
 import { useDistribution } from '@/hooks/bank/useDistribution';
-import { WorksheetList } from '@/components/bank/WorksheetList';
-import { MathWorksheetDetail } from '@/components/bank/MathWorksheetDetail';
-import { KoreanWorksheetDetail } from '@/components/bank/KoreanWorksheetDetail';
-import { EnglishWorksheetDetail } from '@/components/bank/EnglishWorksheetDetail';
-import { MathProblemEditDialog } from '@/components/bank/MathProblemEditDialog';
-import { KoreanProblemEditDialog } from '@/components/bank/KoreanProblemEditDialog';
-import { DistributionDialog } from '@/components/bank/DistributionDialog';
-import { ErrorToast } from '@/components/bank/ErrorToast';
-import { LoadingOverlay } from '@/components/bank/LoadingOverlay';
+import { WorksheetList } from '@/components/bank/common/WorksheetList';
+import { MathWorksheetDetail } from '@/components/bank/math/MathWorksheetDetail';
+import { KoreanWorksheetDetail } from '@/components/bank/korean/KoreanWorksheetDetail';
+import { EnglishWorksheetDetail } from '@/components/bank/english/EnglishWorksheetDetail';
+import { MathProblemEditDialog } from '@/components/bank/math/MathProblemEditDialog';
+import { KoreanProblemEditDialog } from '@/components/bank/korean/KoreanProblemEditDialog';
+import { DistributionDialog } from '@/components/bank/common/DistributionDialog';
+import { ErrorToast } from '@/components/bank/common/ErrorToast';
+import { LoadingOverlay } from '@/components/bank/common/LoadingOverlay';
 
 // 과목별 컴포넌트 타입 정의 - 각 컴포넌트가 받는 실제 props에 맞춤
 interface WorksheetDetailProps<T = any, P = any> {

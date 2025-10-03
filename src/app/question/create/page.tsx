@@ -8,8 +8,8 @@ import KoreanGenerator from '@/components/generator/KoreanGenerator';
 import EnglishGenerator from '@/components/generator/EnglishGenerator';
 import MathGenerator from '@/components/generator/MathGenerator';
 import { QuestionPreview } from '@/components/question/QuestionPreview';
-import { EnglishWorksheetDetail } from '@/components/bank/EnglishWorksheetDetail';
-import { ErrorToast } from '@/components/bank/ErrorToast';
+import { EnglishWorksheetDetail } from '@/components/bank/english/EnglishWorksheetDetail';
+import { ErrorToast } from '@/components/bank/common/ErrorToast';
 import {
   useKoreanGeneration,
   useMathGeneration,
