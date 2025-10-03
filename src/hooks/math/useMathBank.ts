@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { mathService } from '@/services/mathService';
 import { Worksheet, MathProblem } from '@/types/math';
-import { useBankState } from './useBankState';
+import { useBankState } from '../common/useBankState';
 
 export const useMathBank = () => {
   const {

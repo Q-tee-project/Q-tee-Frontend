@@ -9,7 +9,7 @@ import { LaTeXRenderer } from '@/components/LaTeXRenderer';
 import { TikZRenderer } from '@/components/TikZRenderer';
 import { Worksheet, MathProblem, ProblemType } from '@/types/math';
 import { Edit3, RotateCcw } from 'lucide-react';
-import { ProblemRegenerateDialog } from './ProblemRegenerateDialog';
+import { ProblemRegenerateDialog } from '../common/ProblemRegenerateDialog';
 
 interface MathWorksheetDetailProps {
   selectedWorksheet: Worksheet | null;

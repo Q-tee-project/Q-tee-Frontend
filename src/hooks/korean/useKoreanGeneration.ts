@@ -1,4 +1,7 @@
-import { useProblemGeneration, PreviewQuestion } from './useProblemGeneration';
+import { useProblemGeneration, PreviewQuestion } from '../common/useProblemGeneration';
+import { getCurrentUserId, apiRequest, pollTaskStatus, fetchWorksheet } from '../common/useGenerationHelpers';
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_KOREAN_SERVICE_URL || 'http://localhost:8004';
 
 export const useKoreanGeneration = () => {
   const {
@@ -22,134 +25,49 @@ export const useKoreanGeneration = () => {
         isGenerating: true,
         generationProgress: 0,
         previewQuestions: [],
+        lastGenerationData: requestData,
       });
 
-      console.log('🚀 국어 문제 생성 요청 데이터:', requestData);
+      const userId = getCurrentUserId();
+      const url = `${API_BASE_URL}/api/korean-generation/generate?user_id=${userId}`;
+      const data = await apiRequest(url, {
+        method: 'POST',
+        body: JSON.stringify(requestData),
+      });
 
-      // 현재 로그인한 사용자 정보 가져오기
-      const currentUser = JSON.parse(localStorage.getItem('user_profile') || '{}');
-      const userId = currentUser?.id;
-
-      if (!userId) {
-        throw new Error('로그인이 필요합니다.');
-      }
-
-      // 생성 데이터 저장 (재생성에 사용)
-      updateState({ lastGenerationData: requestData });
-
-      // 국어 문제 생성 API 호출 (Bearer 토큰 포함)
-      const token = localStorage.getItem('access_token');
-      const response = await fetch(
-        `http://localhost:8004/api/korean-generation/generate?user_id=${userId}`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          body: JSON.stringify(requestData),
+      await pollTaskStatus({
+        taskId: data.task_id,
+        apiBaseUrl: API_BASE_URL,
+        taskEndpoint: '/api/korean-generation/tasks',
+        onProgress: (progress) => updateState({ generationProgress: progress }),
+        onSuccess: async (result) => {
+          if (result?.worksheet_id) {
+            await fetchWorksheetResult(result.worksheet_id);
+          } else {
+            updateState({
+              errorMessage: '문제 생성은 완료되었지만 결과를 불러올 수 없습니다.',
+              isGenerating: false,
+            });
+          }
         },
-      );
-
-      if (!response.ok) {
-        const errorData = await response.text();
-        console.error('❌ API 응답 오류:', response.status, errorData);
-        throw new Error(`국어 문제 생성 요청 실패: ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      // 진행 상황 폴링
-      await pollTaskStatus(data.task_id, 'korean');
+        onError: (error) => updateState({ errorMessage: error, isGenerating: false }),
+      });
     } catch (error) {
-      console.error('국어 문제 생성 오류:', error);
       updateState({
-        errorMessage: '국어 문제 생성 중 오류가 발생했습니다. 다시 시도해주세요.',
+        errorMessage: error instanceof Error ? error.message : '국어 문제 생성 중 오류가 발생했습니다.',
         isGenerating: false,
       });
     }
   };
 
-  // 태스크 상태 폴링
-  const pollTaskStatus = async (taskId: string, subject_type: string = 'korean') => {
-    let attempts = 0;
-    const maxAttempts = 600; // 10분 최대 대기 (600초)
-
-    const poll = async () => {
-      try {
-        const apiUrl = `http://localhost:8004/api/korean-generation/tasks/${taskId}`;
-        const token = localStorage.getItem('access_token');
-        const response = await fetch(apiUrl, {
-          headers: {
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-        });
-        const data = await response.json();
-
-        console.log('📊 태스크 상태:', data);
-
-        if (data.status === 'PROGRESS') {
-          updateState({
-            generationProgress: Math.round((data.current / data.total) * 100),
-          });
-        } else if (data.status === 'SUCCESS') {
-          console.log('✅ 문제 생성 성공:', data.result);
-          // 성공 시 워크시트 상세 조회
-          if (data.result && data.result.worksheet_id) {
-            await fetchWorksheetResult(data.result.worksheet_id, subject_type);
-          } else {
-            console.error('❌ 성공했지만 worksheet_id가 없음:', data);
-            updateState({
-              errorMessage:
-                '문제 생성은 완료되었지만 결과를 불러올 수 없습니다. 다시 시도해주세요.',
-            });
-          }
-          return;
-        } else if (data.status === 'FAILURE') {
-          console.error('❌ 문제 생성 실패:', data.error);
-          throw new Error(data.error || '문제 생성 실패');
-        }
-
-        attempts++;
-        if (attempts < maxAttempts) {
-          setTimeout(poll, 1000); // 1초 후 재시도
-        } else {
-          throw new Error('문제 생성 시간 초과');
-        }
-      } catch (error) {
-        console.error('태스크 상태 확인 오류:', error);
-        updateState({
-          errorMessage: '문제 생성 중 오류가 발생했습니다. 다시 시도해주세요.',
-          isGenerating: false,
-        });
-      }
-    };
-
-    await poll();
-  };
-
   // 워크시트 결과 조회
-  const fetchWorksheetResult = async (worksheetId: number, subject_type: string = 'korean') => {
+  const fetchWorksheetResult = async (worksheetId: number) => {
     try {
-      // 현재 로그인한 사용자 정보 가져오기
-      const currentUser = JSON.parse(localStorage.getItem('user_profile') || '{}');
-      const userId = currentUser?.id;
-
-      if (!userId) {
-        throw new Error('로그인이 필요합니다.');
-      }
-
-      const apiUrl = `http://localhost:8004/api/korean-generation/worksheets/${worksheetId}?user_id=${userId}`;
-      const token = localStorage.getItem('access_token');
-      const response = await fetch(apiUrl, {
-        headers: {
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
+      const data = await fetchWorksheet({
+        worksheetId,
+        apiBaseUrl: API_BASE_URL,
+        worksheetEndpoint: '/api/korean-generation/worksheets',
       });
-      const data = await response.json();
-
-      console.log('🔍 워크시트 조회 결과:', data);
-      console.log(`📊 받은 문제 개수: ${data.problems?.length || 0}`);
 
       // 원본 문제 데이터 상세 출력
       if (data.problems && Array.isArray(data.problems)) {

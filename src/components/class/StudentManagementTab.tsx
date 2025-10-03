@@ -10,6 +10,7 @@ import { IoSearch } from "react-icons/io5";
 import { Trash2 } from 'lucide-react';
 import { classroomService } from '@/services/authService';
 import type { StudentProfile } from '@/services/authService';
+import { SchoolInfoBadges } from './common/SchoolBadges';
 
 
 interface StudentManagementTabProps {
@@ -171,20 +172,10 @@ export function StudentManagementTab({ classId, refreshTrigger }: StudentManagem
                 <TableRow key={student.id} className="hover:bg-gray-50">
                   <TableCell className="whitespace-nowrap">
                     <div className="flex items-center justify-center">
-                      <div className="flex gap-2">
-                        <Badge
-                          className={`text-sm border-none px-3 py-1.5 min-w-[60px] text-center ${
-                            student.school_level === 'middle' 
-                              ? 'bg-[#E6F3FF] text-[#0085FF]' 
-                              : 'bg-[#FFF5E9] text-[#FF9F2D]'
-                          }`}
-                        >
-                          {student.school_level === 'middle' ? '중학교' : '고등학교'}
-                        </Badge>
-                        <Badge className="text-sm border-none px-3 py-1.5 min-w-[60px] text-center bg-[#f5f5f5] text-[#999999]">
-                          {student.grade}학년
-                        </Badge>
-                      </div>
+                      <SchoolInfoBadges
+                        schoolLevel={student.school_level}
+                        grade={student.grade}
+                      />
                     </div>
                   </TableCell>
                   <TableCell className="text-center text-sm text-gray-600 font-medium">

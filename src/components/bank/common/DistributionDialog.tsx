@@ -11,13 +11,13 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 
-interface MockClass {
+interface ClassData {
   id: string;
   name: string;
   studentCount: number;
 }
 
-interface MockRecipient {
+interface Recipient {
   id: string;
   name: string;
   school: string;
@@ -29,26 +29,19 @@ interface MockRecipient {
 interface DistributionDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
+  classes?: ClassData[];
   selectedClasses: string[];
   selectedRecipients: string[];
-  filteredRecipients: MockRecipient[];
+  filteredRecipients: Recipient[];
   onClassSelect: (classId: string) => void;
   onRecipientSelect: (recipientId: string) => void;
   onDistribute: () => void;
 }
 
-const mockClasses: MockClass[] = [
-  { id: '1', name: '1반', studentCount: 5 },
-  { id: '2', name: '2반', studentCount: 0 },
-  { id: '3', name: '3반', studentCount: 0 },
-  { id: '4', name: '4반', studentCount: 0 },
-  { id: '5', name: '5반', studentCount: 0 },
-  { id: '6', name: '6반', studentCount: 0 },
-];
-
 export const DistributionDialog: React.FC<DistributionDialogProps> = ({
   isOpen,
   onOpenChange,
+  classes = [],
   selectedClasses,
   selectedRecipients,
   filteredRecipients,
@@ -68,7 +61,7 @@ export const DistributionDialog: React.FC<DistributionDialogProps> = ({
             <h3 className="text-sm font-medium text-gray-900 mb-3">클래스 목록</h3>
             <div className="border border-gray-200 rounded-lg overflow-hidden">
               <div className="max-h-80 overflow-y-auto">
-                {mockClasses.map((cls) => {
+                {classes.map((cls) => {
                   const isSelected = selectedClasses.includes(cls.id);
                   const hasStudents = cls.studentCount > 0;
 

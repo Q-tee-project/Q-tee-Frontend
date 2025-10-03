@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { EnglishService } from '@/services/englishService';
 import { EnglishWorksheetData, EnglishQuestion } from '@/types/english';
 
-import { useBankState } from './useBankState';
+import { useBankState } from '../common/useBankState';
 
 // 타입 별칭 (기존 코드 호환성)
 type EnglishWorksheet = EnglishWorksheetData;
