@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Users, Info, X } from 'lucide-react';
-import { FaRegCircleCheck } from 'react-icons/fa6';
 
 interface ClassData {
   id: string;
@@ -234,11 +233,6 @@ const StudentManagementCard = ({
                                 {student.name}
                               </h4>
                             </div>
-                            {isSelected && (
-                              <div className="flex items-center text-green-600">
-                                <FaRegCircleCheck className="h-4 w-4" />
-                              </div>
-                            )}
                           </div>
                         </div>
                       );

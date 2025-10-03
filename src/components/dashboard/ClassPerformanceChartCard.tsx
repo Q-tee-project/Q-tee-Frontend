@@ -13,8 +13,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
-import { BarChart3, Info, BookOpen as BookIcon, ClipboardList, Calendar as CalendarIcon, Search } from 'lucide-react';
-import { VscSettings } from "react-icons/vsc";
+import { BarChart3, Info, BookOpen as BookIcon, ClipboardList, Calendar as CalendarIcon, Search, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -129,7 +128,43 @@ const ClassPerformanceChartCard = ({
   };
 
   const getAssignmentChartData = React.useCallback(() => {
+    console.log('📊 차트 데이터 생성 시작...');
+    console.log('📚 과제 데이터 개수:', assignments.length);
+    console.log('👥 선택된 학생 개수:', selectedStudents.length);
+    console.log('👥 선택된 학생 ID들:', selectedStudents);
+    console.log('🏫 선택된 클래스:', selectedClass);
+    console.log('👥 학생 데이터 클래스 수:', Object.keys(students).length);
+    
+    // 선택된 학생들의 상세 정보 확인
+    if (selectedClass && students[selectedClass]) {
+      console.log('👥 선택된 클래스의 학생들:', students[selectedClass]);
+      selectedStudents.forEach(studentId => {
+        const student = students[selectedClass].find(s => s.id === studentId);
+        console.log(`👤 선택된 학생 ${studentId}:`, student);
+      });
+    }
+    
+    console.log('📚 과제 데이터 상세:', assignments.map(a => ({
+      id: a.id,
+      title: a.title,
+      subject: a.subject,
+      averageScore: a.averageScore,
+      studentScores: a.studentScores,
+      assignedStudents: a.assignedStudents
+    })));
+    
+    console.log('👥 선택된 학생 상세:', selectedStudents);
+    console.log('👥 학생 데이터 상세:', students);
+    
     return assignments.map((assignment) => {
+      console.log(`📝 과제 ${assignment.title} 차트 데이터 생성 중...`);
+      console.log(`📊 과제 점수 데이터:`, assignment.studentScores);
+      console.log(`📊 과제 점수 데이터 타입:`, typeof assignment.studentScores);
+      console.log(`📊 과제 점수 데이터 키들:`, assignment.studentScores ? Object.keys(assignment.studentScores) : '없음');
+      console.log(`👥 배정된 학생:`, assignment.assignedStudents);
+      console.log(`👥 배정된 학생 타입:`, typeof assignment.assignedStudents);
+      console.log(`👥 배정된 학생 길이:`, Array.isArray(assignment.assignedStudents) ? assignment.assignedStudents.length : '배열이 아님');
+      
       const dataPoint: any = {
         name: assignment.title,
         averageScore: assignment.averageScore,
@@ -137,35 +172,89 @@ const ClassPerformanceChartCard = ({
       };
 
       if (selectedStudents.length > 0 && selectedClass) {
+        console.log(`👥 선택된 학생 ${selectedStudents.length}명 처리 중...`);
+        console.log(`🏫 현재 클래스 ${selectedClass}의 학생들:`, students[selectedClass]);
+        
         selectedStudents.forEach((studentId) => {
           const student = students[selectedClass]?.find((s) => s.id === studentId);
-          if (student && assignment.studentScores) {
-            const score = assignment.studentScores[studentId];
+          console.log(`👤 학생 ${studentId} 처리 중:`, student);
+          console.log(`🔍 학생 ${studentId} 검색 결과:`, {
+            studentId,
+            student,
+            studentsInClass: students[selectedClass],
+            foundStudent: students[selectedClass]?.find(s => s.id === studentId)
+          });
+          
+          if (student) {
+            // 학생이 존재하는 경우, 점수 데이터와 배정 상태 확인
+            const score = assignment.studentScores?.[studentId];
             const isAssigned = assignment.assignedStudents?.includes(studentId);
+            
+            console.log(`📊 학생 ${student.name} 점수 정보:`, {
+              score,
+              isAssigned,
+              studentId,
+              hasScore: score !== undefined,
+              studentScoresKeys: assignment.studentScores ? Object.keys(assignment.studentScores) : '없음',
+              assignedStudentsArray: assignment.assignedStudents
+            });
+            
+            console.log(`🔍 학생 ${student.name} 상세 분석:`, {
+              studentId,
+              studentIdType: typeof studentId,
+              score,
+              scoreType: typeof score,
+              isAssigned,
+              hasStudentScores: !!assignment.studentScores,
+              studentScoresValue: assignment.studentScores?.[studentId]
+            });
 
             if (!isAssigned) {
-              dataPoint[student.name] = null;
+              // 미배포: -1로 표시하여 차트에서 구분 가능하게 함
+              dataPoint[student.name] = -1;
               dataPoint[`${student.name}_status`] = 'unassigned';
-            } else if (score !== undefined) {
+              console.log(`학생 ${student.name}: 과제 미배포 (-1로 표시)`);
+            } else if (score !== undefined && score !== null) {
+              // 응시 완료: 실제 점수 표시
               dataPoint[student.name] = score;
               dataPoint[`${student.name}_status`] = 'completed';
+              console.log(`학생 ${student.name}: ${score}점`);
             } else {
-              dataPoint[student.name] = 0;
+              // 미응시/미제출: -2로 표시하여 차트에서 구분 가능하게 함
+              dataPoint[student.name] = -2;
               dataPoint[`${student.name}_status`] = 'not_taken';
+              console.log(`학생 ${student.name}: 미응시 (-2로 표시)`);
             }
+          } else {
+            console.log(`학생 ${studentId} 데이터 없음:`, { 
+              student, 
+              hasScores: !!assignment.studentScores,
+              selectedClass,
+              studentsInClass: students[selectedClass]
+            });
           }
         });
       }
+      
+
       return dataPoint;
     });
   }, [assignments, selectedStudents, selectedClass, students]);
 
   const assignmentChartData = React.useMemo(() => {
+
     if (selectedAssignments.length > 0) {
-      return selectedAssignments
+
+      const filteredData = selectedAssignments
         .map((assignmentId) => {
           const assignment = assignments.find((a) => a.id === assignmentId);
-          if (!assignment) return null;
+
+          
+          if (!assignment) {
+
+            return null;
+          }
+
 
           const dataPoint: any = {
             name: assignment.title,
@@ -174,30 +263,112 @@ const ClassPerformanceChartCard = ({
           };
 
           if (selectedStudents.length > 0 && selectedClass) {
+            console.log(`👥 선택된 학생 ${selectedStudents.length}명 처리 중...`);
+            console.log(`🏫 현재 클래스 ${selectedClass}의 학생들:`, students[selectedClass]);
+            
             selectedStudents.forEach((studentId) => {
               const student = students[selectedClass]?.find((s) => s.id === studentId);
-              if (student && assignment.studentScores) {
-                const score = assignment.studentScores[studentId];
+              console.log(`👤 학생 ${studentId} 처리 중:`, student);
+              console.log(`🔍 학생 ${studentId} 검색 결과:`, {
+                studentId,
+                student,
+                studentsInClass: students[selectedClass],
+                foundStudent: students[selectedClass]?.find(s => s.id === studentId)
+              });
+              
+              if (student) {
+                // 학생이 존재하는 경우, 점수 데이터와 배정 상태 확인
+                const score = assignment.studentScores?.[studentId];
                 const isAssigned = assignment.assignedStudents?.includes(studentId);
+                
+                console.log(`📊 학생 ${student.name} 점수 정보:`, {
+                  score,
+                  isAssigned,
+                  studentId,
+                  hasScore: score !== undefined,
+                  studentScores: assignment.studentScores,
+                  assignedStudents: assignment.assignedStudents
+                });
+                
+                console.log(`🔍 학생 ${student.name} 상세 분석:`, {
+                  studentId,
+                  studentIdType: typeof studentId,
+                  score,
+                  scoreType: typeof score,
+                  isAssigned,
+                  hasStudentScores: !!assignment.studentScores,
+                  studentScoresValue: assignment.studentScores?.[studentId]
+                });
 
-                if (!isAssigned) {
-                  dataPoint[student.name] = null;
-                  dataPoint[`${student.name}_status`] = 'unassigned';
-                } else if (score !== undefined) {
-                  dataPoint[student.name] = score;
-                  dataPoint[`${student.name}_status`] = 'completed';
-                } else {
-                  dataPoint[student.name] = 0;
-                  dataPoint[`${student.name}_status`] = 'not_taken';
-                }
+              if (!isAssigned) {
+                // 미배포: -1로 표시하여 차트에서 구분 가능하게 함
+                dataPoint[student.name] = -1;
+                dataPoint[`${student.name}_status`] = 'unassigned';
+                console.log(`❌ 학생 ${student.name}: 과제 미배포 (-1로 표시)`);
+              } else if (score !== undefined && score !== null) {
+                // 응시 완료: 실제 점수 표시
+                dataPoint[student.name] = score;
+                dataPoint[`${student.name}_status`] = 'completed';
+                console.log(`✅ 학생 ${student.name}: ${score}점`);
+              } else {
+                // 미응시/미제출: -2로 표시하여 차트에서 구분 가능하게 함
+                dataPoint[student.name] = -2;
+                dataPoint[`${student.name}_status`] = 'not_taken';
+                console.log(`⏳ 학생 ${student.name}: 미응시 (-2로 표시)`);
+              }
+              } else {
+                console.log(`⚠️ 학생 ${studentId} 데이터 없음:`, { 
+                  student, 
+                  hasScores: !!assignment.studentScores,
+                  selectedClass,
+                  studentsInClass: students[selectedClass]
+                });
               }
             });
           }
+          
+          console.log(`📋 선택된 과제 ${assignment.title} 최종 차트 데이터:`, dataPoint);
           return dataPoint;
         })
         .filter(Boolean);
+      
+      console.log('📊 선택된 과제 차트 데이터 완성:', filteredData);
+      console.log('📊 선택된 과제 차트 데이터 상세:', filteredData.map(d => {
+        const studentData: any = {};
+        selectedStudents.forEach(studentId => {
+          const student = students[selectedClass]?.find(s => s.id === studentId);
+          if (student) {
+            studentData[student.name] = (d as any)[student.name];
+            studentData[`${student.name}_status`] = (d as any)[`${student.name}_status`];
+          }
+        });
+        return {
+          name: d.name,
+          averageScore: d.averageScore,
+          ...studentData
+        };
+      }));
+      return filteredData;
     }
-    return getAssignmentChartData();
+    
+    console.log('📊 전체 과제 차트 데이터 사용');
+    const allData = getAssignmentChartData();
+    console.log('📊 전체 과제 차트 데이터 상세:', allData.map(d => {
+      const studentData: any = {};
+      selectedStudents.forEach(studentId => {
+        const student = students[selectedClass]?.find(s => s.id === studentId);
+        if (student) {
+          studentData[student.name] = (d as any)[student.name];
+          studentData[`${student.name}_status`] = (d as any)[`${student.name}_status`];
+        }
+      });
+      return {
+        name: d.name,
+        averageScore: d.averageScore,
+        ...studentData
+      };
+    }));
+    return allData;
   }, [selectedAssignments, assignments, selectedStudents, selectedClass, students, getAssignmentChartData]);
 
   return (
@@ -242,26 +413,44 @@ const ClassPerformanceChartCard = ({
               onClick={() => setIsAssignmentModalOpen(true)}
               className="h-9 w-9"
             >
-              <VscSettings className="h-4 w-4" />
+              <Settings className="h-4 w-4" />
             </Button>
           </div>
         </div>
       </CardHeader>
       <CardContent>
         <div className="relative h-[28rem] bg-white rounded-lg p-4">
-          <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart
-              width={500}
-              height={400}
-              data={assignmentChartData}
-              margin={{
-                top: 20,
-                right: 80,
-                bottom: 40,
-                left: 20,
-              }}
-              style={{ backgroundColor: 'white' }}
-            >
+          {assignmentChartData.length === 0 ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center">
+                <BarChart3 className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">표시할 과제가 없습니다</h3>
+                <p className="text-gray-500 mb-4">
+                  {selectedAssignments.length === 0 
+                    ? "과제를 선택하거나 새로운 과제를 생성해주세요."
+                    : "선택된 과제에 대한 데이터가 없습니다."
+                  }
+                </p>
+                <div className="text-sm text-gray-400">
+                  <p>• 과제를 배포하고 학생들이 응시하면</p>
+                  <p>• 여기에 성적 차트가 표시됩니다</p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart
+                width={500}
+                height={400}
+                data={assignmentChartData}
+                margin={{
+                  top: 20,
+                  right: 80,
+                  bottom: 40,
+                  left: 20,
+                }}
+                style={{ backgroundColor: 'white' }}
+              >
               <CartesianGrid stroke="#f5f5f5" />
               <XAxis
                 dataKey="name"
@@ -276,10 +465,12 @@ const ClassPerformanceChartCard = ({
                 domain={['dataMin', 'dataMax']}
                 height={80}
               />
-              <YAxis domain={[0, 100]} />
+              <YAxis domain={[-3, 100]} />
               <Tooltip
                 content={({ active, payload }) => {
                   if (active && payload && payload.length) {
+                    console.log('🖱️ 툴팁 표시:', payload[0].payload);
+                    
                     return (
                       <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
                         <p className="text-sm font-medium mb-1">{payload[0].payload.name}</p>
@@ -290,26 +481,36 @@ const ClassPerformanceChartCard = ({
                           if (entry.dataKey === 'averageScore') {
                             return (
                               <p key={index} className="text-sm text-blue-600 font-semibold">
-                                과제 평균: {entry.value}점
+                                 과제 평균: {entry.value}점
                               </p>
                             );
                           } else if (entry.dataKey !== 'subject' && !entry.dataKey.includes('_status')) {
                             const studentName = entry.dataKey;
                             const statusKey = `${studentName}_status`;
                             const status = payload[0].payload[statusKey];
+                            const score = entry.value;
+
+                            console.log(`학생 ${studentName} 툴팁 정보:`, {
+                              score,
+                              status,
+                              dataKey: entry.dataKey
+                            });
 
                             let displayText = '';
                             let textColor = entry.stroke;
 
-                            if (status === 'unassigned') {
-                              displayText = '미배포 (-점)';
+                            if (status === 'unassigned' || score === -1) {
+                              displayText = '미배포';
                               textColor = '#9ca3af';
-                            } else if (status === 'not_taken') {
-                              displayText = '미응시 (-점)';
+                            } else if (status === 'not_taken' || score === -2) {
+                              displayText = '미응시';
                               textColor = '#f59e0b';
-                            } else {
-                              displayText = `${entry.value}점`;
+                            } else if (status === 'completed' && score !== null && score !== undefined && score >= 0) {
+                              displayText = `${score}점`;
                               textColor = entry.stroke;
+                            } else {
+                              displayText = '미응시';
+                              textColor = '#f59e0b';
                             }
 
                             return (
@@ -339,10 +540,20 @@ const ClassPerformanceChartCard = ({
                 selectedClass &&
                 selectedStudents.map((studentId) => {
                   const student = students[selectedClass]?.find((s) => s.id === studentId);
-                  if (!student) return null;
+                  console.log(`📈 학생 ${studentId} Line 차트 생성:`, student);
+                  console.log(`🔍 Line 차트 생성 시 학생 검색:`, {
+                    studentId,
+                    student,
+                    selectedClass,
+                    studentsInClass: students[selectedClass],
+                    foundStudent: students[selectedClass]?.find(s => s.id === studentId)
+                  });
+                  
+                  if (!student) {
+                    return null;
+                  }
 
                   const color = getStudentColor(studentId);
-
                   return (
                     <Line
                       key={studentId}
@@ -350,14 +561,61 @@ const ClassPerformanceChartCard = ({
                       dataKey={student.name}
                       stroke={color || '#9ca3af'}
                       strokeWidth={2}
-                      dot={{ r: 4, strokeWidth: 2 }}
-                      activeDot={{ r: 6 }}
-                      connectNulls={true}
+                      dot={(props) => {
+                        const { cx, cy, payload } = props;
+                        const value = payload[student.name];
+                        
+                        // 음수 값들에 대한 특별한 처리
+                        if (value === -1) {
+                          return (
+                            <circle
+                              key={`${student.name}-unassigned-${cx}-${cy}`}
+                              cx={cx}
+                              cy={cy}
+                              r={4}
+                              fill="#9ca3af"
+                              stroke="#9ca3af"
+                              strokeWidth={2}
+                            />
+                          );
+                        } else if (value === -2) {
+                          return (
+                            <circle
+                              key={`${student.name}-not-taken-${cx}-${cy}`}
+                              cx={cx}
+                              cy={cy}
+                              r={4}
+                              fill="#f59e0b"
+                              stroke="#f59e0b"
+                              strokeWidth={2}
+                            />
+                          );
+                        } else {
+                          return (
+                            <circle
+                              key={`${student.name}-completed-${cx}-${cy}`}
+                              cx={cx}
+                              cy={cy}
+                              r={4}
+                              fill={color || '#9ca3af'}
+                              stroke={color || '#9ca3af'}
+                              strokeWidth={2}
+                            />
+                          );
+                        }
+                      }}
+                      activeDot={{ 
+                        r: 6,
+                        fill: color || '#9ca3af',
+                        stroke: color || '#9ca3af'
+                      }}
+                      connectNulls={false}
                     />
                   );
                 })}
-            </ComposedChart>
-          </ResponsiveContainer>
+              </ComposedChart>
+            </ResponsiveContainer>
+          )}
 
           <div className="mt-4 relative z-10">
             <div className="flex justify-center gap-6 mb-2">

@@ -177,7 +177,7 @@ const MarketSalesChartCard = ({
                                 <div className="space-y-1">
                                   <div className="flex justify-between items-center">
                                     <span className="text-xs text-gray-600 font-medium">수입</span>
-                                    <span className="text-sm font-bold text-green-600">₩{revenue?.toLocaleString()}</span>
+                                    <span className="text-sm font-bold text-green-600">{revenue?.toLocaleString()}P</span>
                                   </div>
                                   <div className="flex justify-between items-center">
                                     <span className="text-xs text-gray-600 font-medium">판매량</span>
