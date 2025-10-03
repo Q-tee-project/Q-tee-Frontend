@@ -40,6 +40,7 @@ interface ClassManagementTabProps {
   studentColors: string[];
   isLoadingClasses: boolean;
   isLoadingStats: boolean;
+  isLoadingAssignments: boolean;
   lastClassSyncTime: Date | null;
   isRefreshing: boolean;
   isAssignmentModalOpen: boolean;
@@ -69,6 +70,7 @@ const ClassManagementTab: React.FC<ClassManagementTabProps> = ({
   studentColors,
   isLoadingClasses,
   isLoadingStats,
+  isLoadingAssignments,
   lastClassSyncTime,
   isRefreshing,
   isAssignmentModalOpen,
@@ -83,7 +85,6 @@ const ClassManagementTab: React.FC<ClassManagementTabProps> = ({
 }) => {
   return (
     <div className="space-y-6">
-      {/* Class Management Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-gray-900">클래스 관리</h2>
         <div className="flex items-center gap-3">
@@ -123,6 +124,7 @@ const ClassManagementTab: React.FC<ClassManagementTabProps> = ({
             isAssignmentModalOpen={isAssignmentModalOpen}
             setIsAssignmentModalOpen={onAssignmentModalToggle}
             studentColorMap={studentColorMap}
+            isLoadingAssignments={isLoadingAssignments}
           />
           <StudentManagementCard
             selectedClass={selectedClass}

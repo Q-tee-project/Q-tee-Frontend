@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { Suspense } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { RxDashboard } from 'react-icons/rx';
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -12,8 +12,10 @@ import { EnglishService } from '@/services/englishService';
 
 // Import dashboard components
 import TabNavigation from '@/components/dashboard/TabNavigation';
-import MarketManagementTab from '@/components/dashboard/MarketManagementTab';
-import ClassManagementTab from '@/components/dashboard/ClassManagementTab';
+
+// Lazy load heavy components
+const MarketManagementTab = React.lazy(() => import('@/components/dashboard/MarketManagementTab'));
+const ClassManagementTab = React.lazy(() => import('@/components/dashboard/ClassManagementTab'));
 
 // Type Definitions
 interface ClassData {
@@ -529,6 +531,31 @@ const TeacherDashboard = React.memo(() => {
   });
   const [isLoadingStats, setIsLoadingStats] = React.useState(true);
   const [apiErrors, setApiErrors] = React.useState<Set<string>>(new Set());
+  
+  // API 캐싱을 위한 상태
+  const [apiCache, setApiCache] = React.useState<Map<string, { data: any; timestamp: number }>>(new Map());
+  const CACHE_DURATION = 30000; // 30초 캐시
+
+  // 캐시된 API 호출 함수
+  const cachedApiCall = React.useCallback(async <T,>(
+    key: string,
+    apiCall: () => Promise<T>
+  ): Promise<T> => {
+    const cached = apiCache.get(key);
+    const now = Date.now();
+    
+    if (cached && (now - cached.timestamp) < CACHE_DURATION) {
+      return cached.data;
+    }
+    
+    try {
+      const data = await apiCall();
+      setApiCache(prev => new Map(prev).set(key, { data, timestamp: now }));
+      return data;
+    } catch (error) {
+      throw error;
+    }
+  }, [apiCache, CACHE_DURATION]);
 
   // 실제 통계 데이터 로드 - 최적화된 버전
   const loadRealStats = React.useCallback(async () => {
@@ -658,10 +685,32 @@ const TeacherDashboard = React.memo(() => {
     }
   }, [loadRealAssignments, selectedClass]);
 
-  // Calculate period stats (폴백용)
+  // Calculate period stats (폴백용) - 메모이제이션 강화
   const periodStats = React.useMemo(() => {
-    return realStats;
-  }, [realStats]);
+    return {
+      totalClasses: realStats.totalClasses,
+      totalStudents: realStats.totalStudents,
+      activeAssignments: realStats.activeAssignments,
+      totalProblems: realStats.totalProblems,
+    };
+  }, [realStats.totalClasses, realStats.totalStudents, realStats.activeAssignments, realStats.totalProblems]);
+
+  // 선택된 학생 정보 메모이제이션
+  const selectedStudentsInfo = React.useMemo(() => {
+    if (!selectedClass || !realStudents[selectedClass]) return [];
+    return selectedStudents.map(studentId => {
+      const student = realStudents[selectedClass].find(s => s.id === studentId);
+      return student ? { id: studentId, name: student.name, color: getStudentColor(studentId) } : null;
+    }).filter(Boolean);
+  }, [selectedClass, selectedStudents, realStudents, getStudentColor]);
+
+  // 클래스 선택 옵션 메모이제이션
+  const classOptions = React.useMemo(() => {
+    return realClasses.map(cls => ({
+      value: cls.id,
+      label: cls.name
+    }));
+  }, [realClasses]);
 
   // Initialize - 병렬 로딩으로 최적화
   React.useEffect(() => {
@@ -726,47 +775,82 @@ const TeacherDashboard = React.memo(() => {
 
       {/* Market Management Tab */}
       {selectedTab === '마켓 관리' && (
-        <MarketManagementTab
-          marketStats={marketStats}
-          isLoadingMarketStats={isLoadingMarketStats}
-          marketProducts={marketProducts}
-          selectedProducts={selectedProducts}
-          isLoadingProducts={isLoadingProducts}
-          lastSyncTime={lastSyncTime}
-          onRefresh={() => {
-            loadMarketStats();
-            loadMarketProducts();
-          }}
-          onProductSelect={handleProductSelect}
-          getRecentProducts={getRecentProducts}
-        />
+        <Suspense fallback={
+          <div className="space-y-6">
+            <div className="animate-pulse">
+              <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="bg-gray-200 rounded-lg h-32"></div>
+                ))}
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="bg-gray-200 rounded-lg h-96 lg:col-span-2"></div>
+                <div className="bg-gray-200 rounded-lg h-96"></div>
+              </div>
+            </div>
+          </div>
+        }>
+          <MarketManagementTab
+            marketStats={marketStats}
+            isLoadingMarketStats={isLoadingMarketStats}
+            marketProducts={marketProducts}
+            selectedProducts={selectedProducts}
+            isLoadingProducts={isLoadingProducts}
+            lastSyncTime={lastSyncTime}
+            onRefresh={() => {
+              loadMarketStats();
+              loadMarketProducts();
+            }}
+            onProductSelect={handleProductSelect}
+            getRecentProducts={getRecentProducts}
+          />
+        </Suspense>
       )}
 
       {/* Class Management Tab */}
       {selectedTab === '클래스 관리' && (
-        <ClassManagementTab
-          realClasses={realClasses}
-          realStudents={realStudents}
-          realAssignments={realAssignments}
-          selectedClass={selectedClass}
-          selectedStudents={selectedStudents}
-          selectedAssignments={selectedAssignments}
-          studentColorMap={studentColorMap}
-          studentColors={studentColors}
-          isLoadingClasses={isLoadingClasses}
-          isLoadingStats={isLoadingStats}
-          lastClassSyncTime={lastClassSyncTime}
-          isRefreshing={isRefreshing}
-          isAssignmentModalOpen={isAssignmentModalOpen}
-          periodStats={periodStats}
-          onRefresh={handleRefresh}
-          onClassSelect={setSelectedClass}
-          onStudentSelect={handleStudentSelect}
-          onAssignmentSelect={handleAssignmentSelect}
-          onAssignmentModalToggle={setIsAssignmentModalOpen}
-          onStudentColorMapChange={setStudentColorMap}
-          getStudentColor={getStudentColor}
-        />
+        <Suspense fallback={
+          <div className="space-y-6">
+            <div className="animate-pulse">
+              <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="bg-gray-200 rounded-lg h-32"></div>
+                ))}
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="bg-gray-200 rounded-lg h-96 lg:col-span-2"></div>
+                <div className="bg-gray-200 rounded-lg h-96"></div>
+              </div>
+            </div>
+          </div>
+        }>
+          <ClassManagementTab
+            realClasses={realClasses}
+            realStudents={realStudents}
+            realAssignments={realAssignments}
+            selectedClass={selectedClass}
+            selectedStudents={selectedStudents}
+            selectedAssignments={selectedAssignments}
+            studentColorMap={studentColorMap}
+            studentColors={studentColors}
+            isLoadingClasses={isLoadingClasses}
+            isLoadingStats={isLoadingStats}
+            isLoadingAssignments={isLoadingAssignments}
+            lastClassSyncTime={lastClassSyncTime}
+            isRefreshing={isRefreshing}
+            isAssignmentModalOpen={isAssignmentModalOpen}
+            periodStats={periodStats}
+            onRefresh={handleRefresh}
+            onClassSelect={setSelectedClass}
+            onStudentSelect={handleStudentSelect}
+            onAssignmentSelect={handleAssignmentSelect}
+            onAssignmentModalToggle={setIsAssignmentModalOpen}
+            onStudentColorMapChange={setStudentColorMap}
+            getStudentColor={getStudentColor}
+          />
+        </Suspense>
       )}
     </div>
   );

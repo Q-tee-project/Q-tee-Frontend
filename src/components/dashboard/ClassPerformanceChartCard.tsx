@@ -66,6 +66,7 @@ interface ClassPerformanceChartCardProps {
   isAssignmentModalOpen: boolean;
   setIsAssignmentModalOpen: (isOpen: boolean) => void;
   studentColorMap: Record<number, string>;
+  isLoadingAssignments?: boolean;
 }
 
 const ClassPerformanceChartCard = React.memo(({
@@ -80,6 +81,7 @@ const ClassPerformanceChartCard = React.memo(({
   isAssignmentModalOpen,
   setIsAssignmentModalOpen,
   studentColorMap,
+  isLoadingAssignments = false,
 }: ClassPerformanceChartCardProps) => {
   const [startDate, setStartDate] = React.useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = React.useState<Date | undefined>(undefined);
@@ -420,7 +422,11 @@ const ClassPerformanceChartCard = React.memo(({
       </CardHeader>
       <CardContent className="flex flex-col flex-1">
         <div className="relative flex-1 bg-white rounded-lg p-4" style={{ minHeight: '32rem' }}>
-          {assignmentChartData.length === 0 ? (
+          {isLoadingAssignments ? (
+            <div className="animate-pulse h-full flex items-center justify-center">
+              <div className="bg-gray-200 rounded-lg w-full h-full"></div>
+            </div>
+          ) : assignmentChartData.length === 0 ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
                 <BarChart3 className="w-16 h-16 text-gray-300 mx-auto mb-4" />
