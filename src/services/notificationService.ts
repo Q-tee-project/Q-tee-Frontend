@@ -51,48 +51,38 @@ export interface AssignmentSubmittedData {
   assignment_title: string;
   student_id: number;
   student_name: string;
-  classroom_id: number;
-  classroom_name: string;
-  subject: 'math' | 'korean' | 'english';
+  class_id: number;
+  class_name: string;
+  submitted_at: string;
 }
 
 export interface AssignmentDeployedData {
   assignment_id: number;
   assignment_title: string;
-  teacher_id: number;
-  teacher_name: string;
-  classroom_id: number;
-  classroom_name: string;
-  subject: 'math' | 'korean' | 'english';
+  class_id: number;
+  class_name: string;
   due_date?: string;
 }
 
 export interface ClassJoinRequestData {
   student_id: number;
   student_name: string;
-  student_grade: number;
-  student_school_level: 'middle' | 'high';
-  classroom_id: number;
-  classroom_name: string;
+  class_id: number;
+  class_name: string;
+  message?: string;
 }
 
 export interface ClassApprovedData {
-  classroom_id: number;
-  classroom_name: string;
-  teacher_id: number;
+  class_id: number;
+  class_name: string;
   teacher_name: string;
 }
 
 export interface GradingUpdatedData {
   assignment_id: number;
   assignment_title: string;
-  teacher_id: number;
-  teacher_name: string;
-  classroom_id: number;
-  classroom_name: string;
-  subject: 'math' | 'korean' | 'english';
-  old_score?: number;
-  new_score: number;
+  score: number;
+  feedback?: string;
 }
 
 export interface MarketSaleData {
@@ -100,16 +90,13 @@ export interface MarketSaleData {
   product_title: string;
   buyer_id: number;
   buyer_name: string;
-  price: number;
+  amount: number;
 }
 
 export interface MarketNewProductData {
   product_id: number;
   product_title: string;
-  author_id: number;
-  author_name: string;
-  subject: 'math' | 'korean' | 'english';
-  price: number;
+  seller_name: string;
 }
 
 // Union type for all notification data
