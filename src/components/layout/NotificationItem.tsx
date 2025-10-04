@@ -32,6 +32,24 @@ export function NotificationItem({
   const meta = notificationTypeMeta[notification.type];
   const colors = colorClassMap[meta.colorClass];
 
+  // 시간 포맷 함수
+  const formatTimestamp = (timestamp: string) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffInMs = now.getTime() - date.getTime();
+    const diffInMinutes = Math.floor(diffInMs / 60000);
+    const diffInHours = Math.floor(diffInMs / 3600000);
+    const diffInDays = Math.floor(diffInMs / 86400000);
+
+    if (diffInMinutes < 1) return '방금 전';
+    if (diffInMinutes < 60) return `${diffInMinutes}분 전`;
+    if (diffInHours < 24) return `${diffInHours}시간 전`;
+    if (diffInDays < 7) return `${diffInDays}일 전`;
+
+    // 7일 이상이면 날짜 표시
+    return date.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' });
+  };
+
   return (
     <div className="flex items-center justify-between gap-4 p-4 cursor-pointer" onClick={onClick}>
       {/* 좌측 아이콘과 배지 */}
@@ -47,9 +65,14 @@ export function NotificationItem({
 
       {/* 중앙 텍스트 */}
       <div className="flex flex-col items-start flex-1 gap-1 min-w-0 max-w-80">
-        <span className="text-sm font-semibold text-white leading-tight w-full overflow-hidden text-ellipsis whitespace-nowrap">
-          {notification.title}
-        </span>
+        <div className="flex items-center justify-between w-full gap-2">
+          <span className="text-sm font-semibold text-white leading-tight overflow-hidden text-ellipsis whitespace-nowrap">
+            {notification.title}
+          </span>
+          <span className="text-xs text-gray-400 whitespace-nowrap shrink-0">
+            {formatTimestamp(notification.createdAt)}
+          </span>
+        </div>
         <span className="text-xs text-gray-300 leading-snug w-full overflow-hidden text-ellipsis line-clamp-2 break-words">
           {notification.content
             ? notification.content.length > 40

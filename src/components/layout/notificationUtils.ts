@@ -14,6 +14,16 @@ import {
 import { Notification } from './NotificationItem';
 import { NotificationType } from './notificationConfig';
 
+// 과목명 변환 함수
+const getSubjectName = (subject: string): string => {
+  const subjectMap: { [key: string]: string } = {
+    math: '수학',
+    korean: '국어',
+    english: '영어',
+  };
+  return subjectMap[subject] || subject;
+};
+
 // SSE 알림을 UI 형태로 변환하는 함수
 export const convertSSEToUI = (sseNotification: SSENotification): Notification => {
   const baseNotification = {
@@ -40,7 +50,7 @@ export const convertSSEToUI = (sseNotification: SSENotification): Notification =
       const data = sseNotification.data as ProblemGenerationData;
       return {
         ...baseNotification,
-        title: `${data.subject} 문제 생성 완료`,
+        title: `${getSubjectName(data.subject)} 문제 생성 완료`,
         content: `${data.worksheet_title} (${data.problem_count}문제)`,
         relatedId: data.worksheet_id.toString(),
         priority: 'high' as const,
@@ -51,7 +61,7 @@ export const convertSSEToUI = (sseNotification: SSENotification): Notification =
       const data = sseNotification.data as ProblemRegenerationData;
       return {
         ...baseNotification,
-        title: `${data.subject} 문제 재생성 완료`,
+        title: `${getSubjectName(data.subject)} 문제 재생성 완료`,
         content: `${data.worksheet_title} (문제 ${data.problem_number})`,
         relatedId: data.worksheet_id.toString(),
         priority: 'high' as const,
@@ -62,7 +72,7 @@ export const convertSSEToUI = (sseNotification: SSENotification): Notification =
       const data = sseNotification.data as ProblemGenerationData;
       return {
         ...baseNotification,
-        title: `${data.subject} 문제 생성 실패`,
+        title: `${getSubjectName(data.subject)} 문제 생성 실패`,
         content: data.error_message || '문제 생성에 실패했습니다',
         relatedId: data.worksheet_id.toString(),
         priority: 'high' as const,
@@ -73,7 +83,7 @@ export const convertSSEToUI = (sseNotification: SSENotification): Notification =
       const data = sseNotification.data as ProblemRegenerationData;
       return {
         ...baseNotification,
-        title: `${data.subject} 문제 재생성 실패`,
+        title: `${getSubjectName(data.subject)} 문제 재생성 실패`,
         content: data.error_message || '문제 재생성에 실패했습니다',
         relatedId: data.worksheet_id.toString(),
         priority: 'high' as const,
@@ -86,7 +96,7 @@ export const convertSSEToUI = (sseNotification: SSENotification): Notification =
         ...baseNotification,
         title: '과제 제출 완료',
         content: `${data.student_name} 학생이 ${data.assignment_title} 과제를 제출했습니다`,
-        relatedId: data.classroom_id.toString(),
+        relatedId: data.class_id.toString(),
         priority: 'high' as const,
       };
     }
@@ -107,8 +117,8 @@ export const convertSSEToUI = (sseNotification: SSENotification): Notification =
       return {
         ...baseNotification,
         title: '클래스 가입 요청',
-        content: `${data.student_name} 학생이 ${data.classroom_name} 클래스 가입을 신청했습니다`,
-        relatedId: data.classroom_id.toString(),
+        content: `${data.student_name} 학생이 ${data.class_name} 클래스 가입을 신청했습니다`,
+        relatedId: data.class_id.toString(),
       };
     }
 
@@ -117,8 +127,8 @@ export const convertSSEToUI = (sseNotification: SSENotification): Notification =
       return {
         ...baseNotification,
         title: '클래스 승인 완료',
-        content: `${data.classroom_name} 클래스 가입이 승인되었습니다`,
-        relatedId: data.classroom_id.toString(),
+        content: `${data.class_name} 클래스 가입이 승인되었습니다`,
+        relatedId: data.class_id.toString(),
         priority: 'high' as const,
       };
     }
@@ -128,7 +138,7 @@ export const convertSSEToUI = (sseNotification: SSENotification): Notification =
       return {
         ...baseNotification,
         title: '채점 수정 알림',
-        content: `${data.assignment_title} 과제의 채점이 수정되었습니다 (${data.new_score}점)`,
+        content: `${data.assignment_title} 과제의 채점이 수정되었습니다 (${data.score}점)`,
         relatedId: data.assignment_id.toString(),
         priority: 'high' as const,
       };
@@ -139,7 +149,7 @@ export const convertSSEToUI = (sseNotification: SSENotification): Notification =
       return {
         ...baseNotification,
         title: '마켓 판매 알림',
-        content: `${data.product_title}이(가) 판매되었습니다 (${data.price}원)`,
+        content: `${data.product_title}이(가) 판매되었습니다 (${data.amount}P)`,
         relatedId: data.product_id.toString(),
       };
     }
@@ -149,7 +159,7 @@ export const convertSSEToUI = (sseNotification: SSENotification): Notification =
       return {
         ...baseNotification,
         title: '마켓 신상품 알림',
-        content: `${data.author_name}님이 새 상품을 등록했습니다: ${data.product_title}`,
+        content: `${data.seller_name}님이 새 상품을 등록했습니다: ${data.product_title}`,
         relatedId: data.product_id.toString(),
       };
     }
