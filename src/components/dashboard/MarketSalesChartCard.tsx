@@ -36,6 +36,8 @@ const MarketSalesChartCard = ({
   marketProducts,
   getRecentProducts,
 }: MarketSalesChartCardProps) => {
+
+
   const chartData = React.useMemo(() => {
     const baseData = [
       { name: '1월' },
@@ -48,9 +50,13 @@ const MarketSalesChartCard = ({
       { name: '8월' },
       { name: '9월' },
       { name: '10월' },
+      { name: '11월' },
+      { name: '12월' },
     ];
 
-    return baseData.map((month, index) => {
+    const filteredData = baseData;
+
+    return filteredData.map((month, index) => {
       const monthData: any = { ...month };
 
       const productsToShow =
@@ -103,26 +109,7 @@ const MarketSalesChartCard = ({
           </div>
         </div>
 
-        {/* Period Selection */}
-        <div className="flex items-center gap-4">
-          <Select defaultValue="all">
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder="기간 선택" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">전체 기간</SelectItem>
-              <SelectItem value="6months">최근 6개월</SelectItem>
-              <SelectItem value="3months">최근 3개월</SelectItem>
-            </SelectContent>
-          </Select>
 
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <CalendarIcon className="h-4 w-4 text-[#0072CE]" />
-              <label className="text-sm font-medium text-gray-700">기간별 차트</label>
-            </div>
-          </div>
-        </div>
       </CardHeader>
       <CardContent className="p-0">
         <div className="relative h-[28rem] bg-white rounded-lg p-4">
@@ -166,7 +153,7 @@ const MarketSalesChartCard = ({
                                 <div className="space-y-1">
                                   <div className="flex justify-between items-center">
                                     <span className="text-xs text-gray-600 font-medium">수입</span>
-                                    <span className="text-sm font-bold text-green-600">₩{revenue?.toLocaleString()}</span>
+                                    <span className="text-sm font-bold text-green-600">{revenue?.toLocaleString()}P</span>
                                   </div>
                                   <div className="flex justify-between items-center">
                                     <span className="text-xs text-gray-600 font-medium">판매량</span>

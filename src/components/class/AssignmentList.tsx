@@ -152,7 +152,7 @@ export function AssignmentList({
                         <span>{results.length}명 배포</span>
                       </div>
                     </div>
-                    <h4 className="text-lg font-semibold text-gray-900">{assignment.title}</h4>
+                    <h4 className="text-lg font-semibold text-gray-900 break-words overflow-hidden">{assignment.title}</h4>
                   </div>
                 </div>
               </AccordionTrigger>
@@ -362,7 +362,9 @@ export function AssignmentList({
                                     <span className="text-sm text-[#666666]">
                                       {hasSubmitted && score !== null && score !== undefined
                                         ? `${score}점`
-                                        : '0점'}
+                                        : hasSubmitted 
+                                          ? '0점'
+                                          : '미응시'}
                                     </span>
                                   </TableCell>
                                   <TableCell className="text-center text-sm text-[#666666] p-3">

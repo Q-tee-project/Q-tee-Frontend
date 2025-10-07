@@ -30,21 +30,19 @@ export const useWorksheetEdit = (selectedSubject?: string) => {
   const handleEditProblem = (problem: AnyProblem) => {
     setEditingProblem(problem);
 
-    // 영어 문제 처리
     if (selectedSubject === '영어') {
       const englishProblem = problem as EnglishQuestion;
       setEditFormData({
         question: englishProblem.question_text || '',
         problem_type: englishProblem.question_type || '객관식',
         difficulty: englishProblem.question_difficulty || '중',
-        choices: englishProblem.question_choices && englishProblem.question_choices.length > 0
+        choices: englishProblem.question_choices?.length > 0
           ? englishProblem.question_choices
           : ['', '', '', ''],
         correct_answer: String(englishProblem.correct_answer) || '',
         explanation: englishProblem.explanation || '',
       });
     } else {
-      // 기존 국어/수학 문제 처리
       setEditFormData({
         question: (problem as any).question,
         problem_type:
@@ -52,7 +50,7 @@ export const useWorksheetEdit = (selectedSubject?: string) => {
           (problem as any).korean_type ||
           'multiple_choice',
         difficulty: (problem as any).difficulty,
-        choices: (problem as any).choices && (problem as any).choices.length > 0 ? (problem as any).choices : ['', '', '', ''],
+        choices: (problem as any).choices?.length > 0 ? (problem as any).choices : ['', '', '', ''],
         correct_answer: (problem as any).correct_answer || '',
         explanation: (problem as any).explanation || '',
       });
@@ -84,34 +82,21 @@ export const useWorksheetEdit = (selectedSubject?: string) => {
           : editFormData.explanation,
       };
 
-      // 과목에 따라 적절한 서비스 사용
       if (selectedSubject === '국어') {
-        // 국어는 현재 워크시트 업데이트 사용
         await koreanService.updateProblem((editingProblem as any).id, updateData);
       } else if (selectedSubject === '수학') {
         await mathService.updateProblem((editingProblem as any).id, updateData);
       } else if (selectedSubject === '영어') {
-        // 영어 문제는 question_id 사용하고 다른 필드명 사용
-        const englishProblem = editingProblem as EnglishQuestion;
-        const englishUpdateData = {
-          question_text: updateData.question,
-          question_type: updateData.problem_type,
-          question_difficulty: updateData.difficulty,
-          question_choices: updateData.choices,
-          correct_answer: updateData.correct_answer,
-          explanation: updateData.explanation,
-        };
-        // 워크시트 ID와 문제 ID가 필요하므로 현재는 지원하지 않음
         throw new Error('영어 문제 편집은 현재 지원되지 않습니다.');
       } else {
         throw new Error('지원되지 않는 과목입니다.');
       }
+
       onSuccess();
       setIsEditDialogOpen(false);
       setEditingProblem(null);
       alert('문제가 성공적으로 업데이트되었습니다.');
     } catch (error: any) {
-      console.error('문제 업데이트 실패:', error);
       alert(`업데이트 실패: ${error.message}`);
     }
   };
@@ -133,14 +118,14 @@ export const useWorksheetEdit = (selectedSubject?: string) => {
   };
 
   const handleStartEditTitle = (currentTitle: string) => {
-    setOriginalTitle(currentTitle); // 원래 제목 저장
+    setOriginalTitle(currentTitle);
     setEditedTitle(currentTitle);
     setIsEditingTitle(true);
   };
 
   const handleCancelEditTitle = () => {
     setIsEditingTitle(false);
-    setEditedTitle(originalTitle); // 취소 시 원래 제목으로 복원
+    setEditedTitle(originalTitle);
   };
 
   const handleSaveTitle = async (worksheetId: number, onSuccess: () => void) => {
@@ -150,7 +135,6 @@ export const useWorksheetEdit = (selectedSubject?: string) => {
     }
 
     try {
-      // 과목에 따라 적절한 서비스 사용
       if (selectedSubject === '국어') {
         await koreanService.updateKoreanWorksheet(worksheetId, {
           title: editedTitle.trim(),
@@ -170,7 +154,6 @@ export const useWorksheetEdit = (selectedSubject?: string) => {
       setEditedTitle('');
       alert('타이틀이 성공적으로 업데이트되었습니다.');
     } catch (error: any) {
-      console.error('타이틀 업데이트 실패:', error);
       alert(`타이틀 업데이트 실패: ${error.message}`);
     }
   };
@@ -195,14 +178,13 @@ export const useWorksheetEdit = (selectedSubject?: string) => {
           choices: editFormData.choices,
           correct_answer: editFormData.correct_answer,
           explanation: editFormData.explanation,
-          has_diagram: editFormData.has_diagram || (editingProblem as any)?.has_diagram,
-          tikz_code: editFormData.tikz_code || (editingProblem as any)?.tikz_code,
+          has_diagram: (editingProblem as any)?.has_diagram,
+          tikz_code: (editingProblem as any)?.tikz_code,
         }
       };
 
       let taskResponse;
 
-      // 국어와 수학만 처리 (Celery 통해 비동기 처리)
       if (selectedSubject === '국어') {
         taskResponse = await koreanService.regenerateProblemAsync(regenerateData);
       } else if (selectedSubject === '수학') {
@@ -213,15 +195,12 @@ export const useWorksheetEdit = (selectedSubject?: string) => {
       }
 
       if (taskResponse?.task_id) {
-        // Celery 작업 상태 폴링
         const pollResult = await pollTaskStatus(taskResponse.task_id);
 
         if (pollResult.success && pollResult.result) {
-          // 폼 데이터를 재생성된 문제로 업데이트 (수학인 경우 LaTeX 변환 포함)
           let processedResult = pollResult.result;
 
           if (selectedSubject === '수학') {
-            const { autoConvertToLatex } = await import('@/utils/mathLatexConverter');
             processedResult = {
               ...pollResult.result,
               question: pollResult.result.question
@@ -255,14 +234,12 @@ export const useWorksheetEdit = (selectedSubject?: string) => {
         }
       }
     } catch (error: any) {
-      console.error('문제 재생성 실패:', error);
       alert(`재생성 실패: ${error.message || '서버 오류가 발생했습니다.'}`);
     } finally {
       setIsRegenerating(false);
     }
   };
 
-  // Celery 작업 상태를 폴링하는 함수 (기존 문제 생성과 동일한 타임아웃 설정)
   const pollTaskStatus = async (taskId: string, maxRetries = 300, interval = 2000) => {
     for (let i = 0; i < maxRetries; i++) {
       try {
@@ -280,10 +257,9 @@ export const useWorksheetEdit = (selectedSubject?: string) => {
           return { success: false, error: statusResponse.error || '작업이 실패했습니다.' };
         }
 
-        // 아직 진행 중이면 잠시 대기
         await new Promise(resolve => setTimeout(resolve, interval));
       } catch (error) {
-        console.error('작업 상태 확인 중 오류:', error);
+        // Continue polling
       }
     }
 

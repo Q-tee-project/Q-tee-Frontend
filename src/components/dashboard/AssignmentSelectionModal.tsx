@@ -66,7 +66,10 @@ const AssignmentSelectionModal = ({
             {assignments.map((assignment) => (
               <div
                 key={assignment.id}
-                onClick={() => handleAssignmentSelect(assignment.id)}
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleAssignmentSelect(assignment.id);
+                }}
                 className={`p-3 rounded-lg border cursor-pointer transition-all duration-200 ${
                   selectedAssignments.includes(assignment.id)
                     ? 'bg-[#0072CE]/10 border-[#0072CE]/50'
@@ -80,7 +83,7 @@ const AssignmentSelectionModal = ({
               >
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-900">
+                    <p className="text-sm font-medium text-gray-900 break-words overflow-hidden">
                       {assignment.title}
                     </p>
                     <p className="text-xs text-gray-500">
