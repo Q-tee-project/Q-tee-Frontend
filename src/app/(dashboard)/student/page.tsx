@@ -5,306 +5,263 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { RxDashboard } from 'react-icons/rx';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { studentClassService } from '@/services/authService';
 import { mathService } from '@/services/mathService';
 import { koreanService } from '@/services/koreanService';
 import { EnglishService } from '@/services/englishService';
-import { studentClassService } from '@/services/authService';
+
+// Import dashboard components
 import ClassAverage from '@/components/dashboard/student/ClassAverage';
 import SubjectAverage from '@/components/dashboard/student/SubjectAverage';
 import PendingAssignmentsList from '@/components/dashboard/student/PendingAssignmentsList';
 import GradedAssignmentsList from '@/components/dashboard/student/GradedAssignmentsList';
 
+// Type Definitions
+interface ClassData {
+  id: string;
+  name: string;
+  createdAt: string;
+}
+
+interface DetailedAssignmentData {
+  id: string;
+  title: string;
+  subject: '국어' | '영어' | '수학';
+  dueDate: string;
+  status: 'completed' | 'pending';
+  myScore?: number;
+  averageScore?: number;
+  problem_count?: number;
+  raw_id: number;
+  raw_subject: 'korean' | 'english' | 'math';
+}
+
 const StudentDashboard = () => {
   const { userProfile } = useAuth();
   const router = useRouter();
-  const [selectedClassForAssignments, setSelectedClassForAssignments] = React.useState(''); // 과제별용
-  const [selectedClassForSubjects, setSelectedClassForSubjects] = React.useState(''); // 과목별용
-  const [dashboardAssignments, setDashboardAssignments] = React.useState<any[]>([]);
-  const [isLoadingAssignments, setIsLoadingAssignments] = React.useState(false);
-  const [classes, setClasses] = React.useState<any[]>([]);
+
+  // State management
+  const [selectedClass, setSelectedClass] = React.useState('');
+  
+  // Data states
+  const [realClasses, setRealClasses] = React.useState<ClassData[]>([]);
+  const [allAssignments, setAllAssignments] = React.useState<DetailedAssignmentData[]>([]);
+  const [unsubmittedAssignments, setUnsubmittedAssignments] = React.useState<DetailedAssignmentData[]>([]);
+  const [gradedAssignments, setGradedAssignments] = React.useState<DetailedAssignmentData[]>([]);
+  
+  // Chart data states
+  const [lineChartData, setLineChartData] = React.useState<any[]>([]);
+  const [radarData, setRadarData] = React.useState<any[]>([]);
+
+  // Loading states
   const [isLoadingClasses, setIsLoadingClasses] = React.useState(true);
+  const [isLoadingAssignments, setIsLoadingAssignments] = React.useState(true);
 
-  // 컴포넌트 메모이제이션
-  const MemoClassAverage = React.useMemo(() => React.memo(ClassAverage), []);
-  const MemoSubjectAverage = React.useMemo(() => React.memo(SubjectAverage), []);
-
-  // 상태 업데이트 콜백
-  const handleSetClassForAssignments = React.useCallback((val: string) => {
-    setSelectedClassForAssignments(val);
-  }, []);
-  const handleSetClassForSubjects = React.useCallback((val: string) => {
-    setSelectedClassForSubjects(val);
-  }, []);
-
-  // 클래스 목록 로딩
-  React.useEffect(() => {
-    const fetchClasses = async () => {
-      if (userProfile?.id) {
-        try {
-          setIsLoadingClasses(true);
-          const fetchedClasses = await studentClassService.getMyClasses();
-          
-          // 가입일(created_at) 기준으로 오름차순 정렬
-          const sortedClasses = [...fetchedClasses].sort((a, b) => 
-            new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-          );
-
-          setClasses(sortedClasses);
-
-          if (sortedClasses.length > 0) {
-            const firstClassId = sortedClasses[0].id.toString();
-            setSelectedClassForAssignments(firstClassId);
-            setSelectedClassForSubjects(firstClassId);
-          }
-        } catch (error) {
-          console.error('Failed to fetch classes:', error);
-        } finally {
-          setIsLoadingClasses(false);
-        }
-      }
-    };
-    fetchClasses();
-  }, [userProfile]);
-
-
-  // 클래스별 레이더 차트 데이터 생성
-  const getRadarData = (classId: string) => {
-    const classData: Record<string, any> = {
-      '1': {
-        국어: { 클래스평균: 85, 내점수: 40 },
-        영어: { 클래스평균: 60, 내점수: 92 },
-        수학: { 클래스평균: 82, 내점수: 75 },
-      },
-      '2': {
-        국어: { 클래스평균: 78, 내점수: 45 },
-        영어: { 클래스평균: 72, 내점수: 88 },
-        수학: { 클래스평균: 85, 내점수: 70 },
-      },
-      '3': {
-        국어: { 클래스평균: 90, 내점수: 35 },
-        영어: { 클래스평균: 65, 내점수: 95 },
-        수학: { 클래스평균: 88, 내점수: 80 },
-      },
-      '4': {
-        국어: { 클래스평균: 82, 내점수: 50 },
-        영어: { 클래스평균: 70, 내점수: 85 },
-        수학: { 클래스평균: 75, 내점수: 65 },
-      },
-      '5': {
-        국어: { 클래스평균: 88, 내점수: 42 },
-        영어: { 클래스평균: 68, 내점수: 90 },
-        수학: { 클래스평균: 80, 내점수: 72 },
-      },
-    };
-
-    const currentClassData = classData[classId] || classData['1'];
-    
-    return [
-      {
-        subject: '국어',
-        클래스평균: currentClassData.국어.클래스평균,
-        내점수: currentClassData.국어.내점수,
-        fullMark: 100,
-      },
-      {
-        subject: '영어',
-        클래스평균: currentClassData.영어.클래스평균,
-        내점수: currentClassData.영어.내점수,
-        fullMark: 100,
-      },
-      {
-        subject: '수학',
-        클래스평균: currentClassData.수학.클래스평균,
-        내점수: currentClassData.수학.내점수,
-        fullMark: 100,
-      },
-    ];
-  };
-
-  const radarData = React.useMemo(() => getRadarData(selectedClassForSubjects), [selectedClassForSubjects]);
-
-  const submittedAssignmentsForModal = React.useMemo(() => {
-    return dashboardAssignments
-      .filter(assignment => {
-        // 응시 완료 상태 필터
-        const status = assignment.status?.toLowerCase();
-        const isSubmitted = status === 'completed' ||
-                            status === 'submitted' ||
-                            status === '응시' ||
-                            status === 'graded' ||
-                            status === 'finished';
-        
-        if (!isSubmitted) {
-          return false;
-        }
-
-        // 클래스별 필터
-        if (assignment.subject === '영어') {
-          return true; // 영어 과제는 classroom_id가 없으므로 항상 포함
-        }
-        
-        // 클래스가 선택되지 않았거나, classroom_id가 없으면 모든 과제 포함
-        if (!selectedClassForAssignments || !assignment.classroom_id) {
-          return true;
-        }
-        
-        return assignment.classroom_id?.toString() === selectedClassForAssignments;
-      })
-      .map(assignment => ({
-        id: assignment.id,
-        name: assignment.title,
-        subject: assignment.subject,
-        dueDate: assignment.deployed_at,
-        submittedCount: 0,
-        totalCount: 0,
-        myScore: Math.floor(Math.random() * 51) + 50,
-        classAverageScore: Math.floor(Math.random() * 51) + 50,
+  // Load classes
+  const loadRealClasses = React.useCallback(async () => {
+    if (!userProfile?.id) return;
+    try {
+      setIsLoadingClasses(true);
+      const classrooms = await studentClassService.getMyClasses();
+      const classData: ClassData[] = classrooms.map((classroom: any) => ({
+        id: classroom.id.toString(),
+        name: classroom.name,
+        createdAt: classroom.created_at,
       }));
-  }, [dashboardAssignments, selectedClassForAssignments]);
-
-  // 차트 데이터
-  const defaultChartData = [
-    { name: '1월', 클래스평균: 85, 내점수: 78 },
-    { name: '2월', 클래스평균: 88, 내점수: 82 },
-    { name: '3월', 클래스평균: 82, 내점수: 75 },
-    { name: '4월', 클래스평균: 90, 내점수: 85 },
-    { name: '5월', 클래스평균: 87, 내점수: 80 },
-    { name: '6월', 클래스평균: 92, 내점수: 88 },
-    { name: '7월', 클래스평균: 92, 내점수: 88 },
-    { name: '8월', 클래스평균: 92, 내점수: 88 },
-    { name: '9월', 클래스평균: 92, 내점수: 88 },
-    { name: '10월', 클래스평균: 65, 내점수: 70 },
-    { name: '11월', 클래스평균: 92, 내점수: 50 },
-    { name: '12월', 클래스평균: 60, 내점수: 88 },
-  ];
-
-  const composedChartData = React.useMemo(() => defaultChartData, []);
-
-  // 과제 데이터 로딩
-  React.useEffect(() => {
-    if (userProfile?.id) {
-      loadDashboardAssignments();
+      setRealClasses(classData);
+      if (classData.length > 0) {
+        const sortedClasses = [...classData].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        setSelectedClass(sortedClasses[0].id);
+      }
+    } catch (error) {
+      console.error('Failed to fetch classes:', error);
+      setRealClasses([]);
+    } finally {
+      setIsLoadingClasses(false);
     }
   }, [userProfile]);
 
-  const loadDashboardAssignments = async () => {
-    if (!userProfile?.id) return;
+  React.useEffect(() => {
+    loadRealClasses();
+  }, [loadRealClasses]);
+
+  const retryApiCall = React.useCallback(async <T,>(apiCall: () => Promise<T>, maxRetries = 1, delay = 500): Promise<T> => {
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        return await apiCall();
+      } catch (error) {
+        if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+          throw error;
+        }
+        if (i === maxRetries - 1) {
+          throw error;
+        }
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+    throw new Error('모든 재시도가 실패했습니다');
+  }, []);
+
+  const calculateAverageScore = React.useCallback((studentScores: Record<number, number>): number => {
+    const scores = Object.values(studentScores).filter(score => 
+      score !== undefined && score !== null && !isNaN(score) && score >= 0 && score <= 100
+    );
     
+    if (scores.length === 0) {
+      return 0;
+    }
+    
+    const average = scores.reduce((sum, score) => sum + score, 0) / scores.length;
+    return Math.round(average * 10) / 10;
+  }, []);
+
+  const loadRealAssignments = React.useCallback(async (classId: string) => {
+    if (!userProfile?.id) return;
     setIsLoadingAssignments(true);
     try {
-      const allAssignments: any[] = [];
-      
-      // 수학 과제
-      try {
-        const mathAssignments = await mathService.getStudentAssignments(userProfile.id);
-        allAssignments.push(...mathAssignments.map((assignment: any) => ({
-          ...assignment,
-          subject: '수학',
-          id: `math-${assignment.assignment_id}`,
-          title: assignment.title,
-          problem_count: assignment.problem_count,
-          status: assignment.status,
-          deployed_at: assignment.deployed_at,
-        })));
-      } catch (error) {
-        console.log('수학 과제 로드 실패:', error);
-      }
+      const processAssignments = async (assignments: any[], subject: 'korean' | 'english' | 'math'): Promise<DetailedAssignmentData[]> => {
+        if (!assignments || assignments.length === 0) return [];
+        
+        return Promise.all(
+          assignments.map(async (assignment) => {
+            let results: any[] = [];
+            try {
+                if (subject === 'korean') {
+                    const response = await koreanService.getAssignmentResults(assignment.id);
+                    if (Array.isArray(response)) results = response;
+                    else if (response && Array.isArray((response as any).results)) results = (response as any).results;
+                } else if (subject === 'english') {
+                    const response = await EnglishService.getEnglishAssignmentResults(assignment.id);
+                    if (Array.isArray(response)) results = response;
+                    else if (response && Array.isArray((response as any).results)) results = (response as any).results;
+                } else if (subject === 'math') {
+                    const response = await mathService.getAssignmentResults(assignment.id);
+                    if (Array.isArray(response)) results = response;
+                    else if (response && Array.isArray((response as any).results)) results = (response as any).results;
+                }
+            } catch (e) {
+                results = [];
+            }
 
-      // 국어 과제
-      try {
-        const koreanAssignments = await koreanService.getStudentAssignments(userProfile.id);
-        allAssignments.push(...koreanAssignments.map((assignment: any) => ({
-          ...assignment,
-          subject: '국어',
-          id: `korean-${assignment.assignment_id}`,
-          title: assignment.title,
-          problem_count: assignment.problem_count,
-          status: assignment.status,
-          deployed_at: assignment.deployed_at,
-        })));
-      } catch (error) {
-        console.log('국어 과제 로드 실패:', error);
-      }
+            const myResult = results.find(r => (r.student_id || r.studentId || r.user_id || r.userId) === userProfile.id);
+            const hasTaken = myResult !== undefined;
 
-      // 영어 과제
-      try {
-        const englishAssignments = await EnglishService.getStudentAssignments(userProfile.id);
-        allAssignments.push(...englishAssignments.map((assignment: any) => ({
-          ...assignment,
-          subject: '영어',
-          id: `english-${assignment.assignment?.id || assignment.assignment_id}`, // 고유 ID 생성
-          title: assignment.assignment?.title || assignment.title,
-          problem_count: assignment.assignment?.total_questions || assignment.total_questions,
-          status: assignment.deployment?.status || assignment.status,
-          deployed_at: assignment.deployment?.deployed_at || assignment.deployed_at,
-        })));
-      } catch (error) {
-        console.log('영어 과제 로드 실패:', error);
-      }
+            const studentScores: Record<number, number> = {};
+            results.forEach((result) => {
+                const studentId = result.student_id || result.studentId || result.user_id || result.userId;
+                const score = result.score || result.total_score || result.totalScore || result.points || result.point;
+                if (studentId && score !== undefined && score !== null) {
+                    const numericScore = Number(score);
+                    if (!isNaN(numericScore) && numericScore >= 0 && numericScore <= 100) {
+                        studentScores[studentId] = numericScore;
+                    }
+                }
+            });
 
-      setDashboardAssignments(allAssignments);
+            const myScore = studentScores[userProfile.id];
+            const averageScore = calculateAverageScore(studentScores);
+            
+            return {
+              id: `${subject}-${assignment.id}`,
+              raw_id: assignment.id,
+              raw_subject: subject,
+              title: assignment.title,
+              subject: subject === 'korean' ? '국어' : subject === 'english' ? '영어' : '수학',
+              dueDate: assignment.created_at ? new Date(assignment.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+              status: hasTaken ? 'completed' : 'pending',
+              myScore: myScore,
+              averageScore: averageScore,
+              problem_count: assignment.problem_count || 0,
+            } as DetailedAssignmentData;
+          })
+        );
+      };
+
+      const [koreanAssignments, englishAssignments, mathAssignments] = await Promise.allSettled([
+        retryApiCall(() => koreanService.getDeployedAssignments(classId)),
+        retryApiCall(() => EnglishService.getDeployedAssignments(classId)),
+        retryApiCall(() => mathService.getDeployedAssignments(classId))
+      ]);
+
+      const koreanData = koreanAssignments.status === 'fulfilled' ? await processAssignments(koreanAssignments.value, 'korean') : [];
+      const englishData = englishAssignments.status === 'fulfilled' ? await processAssignments(englishAssignments.value, 'english') : [];
+      const mathData = mathAssignments.status === 'fulfilled' ? await processAssignments(mathAssignments.value, 'math') : [];
+
+      setAllAssignments([...koreanData, ...englishData, ...mathData]);
     } catch (error) {
-      console.error('과제 로드 실패:', error);
-    }
-    finally {
+      console.error('Failed to load assignments:', error);
+      setAllAssignments([]);
+    } finally {
       setIsLoadingAssignments(false);
     }
-  };
+  }, [userProfile, retryApiCall, calculateAverageScore]);
 
-  // 과제 상태별 분류
-  const unsubmittedAssignments = dashboardAssignments.filter(assignment => {
-    const status = assignment.status?.toLowerCase();
-    
-    // 미응시 상태들
-    const isUnsubmitted = status === 'deployed' || 
-           status === 'assigned' || 
-           status === '미응시' ||
-           status === 'not_started' ||
-           status === 'pending' ||
-           status === 'active' ||
-           status === 'available' ||
-           !status;
-    
-    return isUnsubmitted;
-  });
+  React.useEffect(() => {
+    if (selectedClass) {
+      loadRealAssignments(selectedClass);
+    }
+  }, [selectedClass, loadRealAssignments]);
 
-  const gradedAssignments = dashboardAssignments.filter(assignment => {
-    const status = assignment.status?.toLowerCase();
-    return status === 'completed' || 
-           status === 'submitted' || 
-           status === '응시' ||
-           status === 'graded' ||
-           status === 'finished';
-  });
-
-
-  // 과제 클릭 핸들러
-  const handleAssignmentClick = (assignment: any) => {
-    const assignmentId = assignment.assignment_id || assignment.id;
-    const assignmentTitle = assignment.title;
-    const subject = assignment.subject;
-    
-    // 과제 상태에 따라 viewResult 파라미터 설정
-    const status = assignment.status?.toLowerCase();
-    const isCompleted = status === 'completed' || status === 'submitted' || status === 'graded' || status === 'finished' || status === '응시';
-    
-    const params = new URLSearchParams({
-      assignmentId: assignmentId.toString(),
-      assignmentTitle: assignmentTitle,
-      subject: subject
+  React.useEffect(() => {
+    const graded = allAssignments.filter(a => {
+      const status = a.status?.toLowerCase();
+      return status === 'completed' || status === 'submitted' || status === '응시' || status === 'graded' || status === 'finished';
+    });
+    const unsubmitted = allAssignments.filter(a => {
+        const status = a.status?.toLowerCase();
+        const pendingStatuses = ['deployed', 'assigned', '미응시', 'not_started', 'pending'];
+        return pendingStatuses.includes(status) || !status;
     });
     
-    if (isCompleted) {
+    setGradedAssignments(graded);
+    setUnsubmittedAssignments(unsubmitted);
+
+    const sortedGraded = [...graded].sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+    setLineChartData(
+      sortedGraded.map(a => ({
+        name: a.title,
+        '클래스평균': a.averageScore,
+        '내점수': a.myScore,
+      }))
+    );
+
+    const subjects: ('국어' | '영어' | '수학')[] = ['국어', '영어', '수학'];
+    const radarChartData = subjects.map(subject => {
+      const subjectAssignments = graded.filter(a => a.subject === subject);
+      let myTotalScore = 0;
+      let classTotalScore = 0;
+      
+      if (subjectAssignments.length > 0) {
+        myTotalScore = subjectAssignments.reduce((sum, a) => sum + (a.myScore || 0), 0) / subjectAssignments.length;
+        classTotalScore = subjectAssignments.reduce((sum, a) => sum + (a.averageScore || 0), 0) / subjectAssignments.length;
+      }
+
+      return {
+        subject: subject,
+        '클래스평균': Math.round(classTotalScore * 10) / 10,
+        '내점수': Math.round(myTotalScore * 10) / 10,
+        fullMark: 100,
+      };
+    });
+    setRadarData(radarChartData);
+  }, [allAssignments]);
+
+  const handleAssignmentClick = (assignment: any) => {
+    const params = new URLSearchParams({
+      assignmentId: assignment.raw_id.toString(),
+      assignmentTitle: assignment.title,
+      subject: assignment.raw_subject,
+    });
+    
+    if (assignment.status === 'completed') {
       params.append('viewResult', 'true');
     }
     
     router.push(`/test?${params.toString()}`);
   };
 
-
-
   return (
-    <div className="flex flex-col" style={{ padding: '20px', display: 'flex', gap: '20px' }}>
+    <div className="flex flex-col p-5 space-y-6">
       <PageHeader
         icon={<RxDashboard />}
         title={`${userProfile?.name || '학생'}님의 대시보드`}
@@ -312,51 +269,60 @@ const StudentDashboard = () => {
         description="나의 학습 현황과 성적을 확인하세요"
       />
 
-      {/* Main Dashboard Layout */}
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-5 gap-6 h-full">
-        
-        {/* Left Section */}
         <div className="lg:col-span-3 grid grid-rows-2 gap-6">
-          
-          {/* Left Top - 클래스별 과제별 전체 평균과 내 평균 */}
-          <MemoClassAverage
-            selectedClass={selectedClassForAssignments}
-            setSelectedClass={handleSetClassForAssignments}
-            chartData={composedChartData}
-            classes={classes}
-            assignments={submittedAssignmentsForModal}
+          <ClassAverage
+            selectedClass={selectedClass}
+            setSelectedClass={setSelectedClass}
+            classes={realClasses.map(c => ({ id: c.id, name: c.name }))}
+            assignments={allAssignments.map(a => ({
+              id: a.id,
+              name: a.title,
+              subject: a.subject,
+              dueDate: a.dueDate,
+              myScore: a.myScore,
+              classAverageScore: a.averageScore,
+              submittedCount: 0, // Not available
+              totalCount: 0, // Not available
+            }))}
           />
-
-          {/* Left Bottom - Two Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            
-            {/* Assignment Not Submitted */}
             <PendingAssignmentsList
-              unsubmittedAssignments={unsubmittedAssignments}
+              unsubmittedAssignments={unsubmittedAssignments.map(a => ({
+                id: a.id,
+                title: a.title,
+                subject: a.subject,
+                problem_count: a.problem_count || 0,
+                status: a.status,
+                deployed_at: a.dueDate,
+              }))}
               isLoadingAssignments={isLoadingAssignments}
               onAssignmentClick={handleAssignmentClick}
             />
-
-            {/* Assignment Graded */}
             <GradedAssignmentsList
-              gradedAssignments={gradedAssignments}
+              gradedAssignments={gradedAssignments.map(a => ({
+                id: a.id,
+                title: a.title,
+                subject: a.subject,
+                problem_count: a.problem_count || 0,
+                status: a.status,
+                score: a.myScore,
+                deployed_at: a.dueDate,
+              }))}
               isLoadingAssignments={isLoadingAssignments}
               onAssignmentClick={handleAssignmentClick}
             />
           </div>
         </div>
-
-        {/* Right Section */}
         <div className="lg:col-span-2">
-          <MemoSubjectAverage
-            selectedClass={selectedClassForSubjects}
-            setSelectedClass={handleSetClassForSubjects}
+          <SubjectAverage
+            selectedClass={selectedClass}
+            setSelectedClass={setSelectedClass}
             radarData={radarData}
-            classes={classes}
+            classes={realClasses.map(c => ({ id: c.id, name: c.name }))}
           />
         </div>
       </div>
-
     </div>
   );
 };
