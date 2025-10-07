@@ -207,4 +207,10 @@ export const koreanService = {
   getTaskStatus: async (taskId: string): Promise<any> => {
     return apiRequest(`/korean-generation/tasks/${taskId}`);
   },
+
+  deleteAssignment: async (assignmentId: number): Promise<{ message: string }> => {
+    return apiRequest(`/assignments/${assignmentId}`, {
+      method: 'DELETE',
+    });
+  },
 };

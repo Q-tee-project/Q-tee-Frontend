@@ -3,7 +3,3 @@ export { BasicInfoForm } from './BasicInfoForm';
 export { AccountInfoForm } from './AccountInfoForm';
 export { StudentInfoForm } from './StudentInfoForm';
 export { StepNavigation } from './StepNavigation';
-export { JoinBackgroundAnimation } from './JoinBackgroundAnimation';
-export { JoinUserTypeSelection } from './JoinUserTypeSelection';
-export { JoinScrollContainer } from './JoinScrollContainer';
-export { JoinLoginLink } from './JoinLoginLink';

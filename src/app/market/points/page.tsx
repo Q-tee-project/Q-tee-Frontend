@@ -11,13 +11,14 @@ import { getUserPoints, chargePoints, getPointTransactions, UserPointResponse, P
 interface ChargeOption {
   amount: number;
   label: string;
+  bonus?: number;
 }
 
 const CHARGE_OPTIONS: ChargeOption[] = [
   { amount: 10000, label: '10,000P' },
-  { amount: 30000, label: '30,000P' },
-  { amount: 50000, label: '50,000P' },
-  { amount: 100000, label: '100,000P' },
+  { amount: 30000, label: '30,000P', bonus: 3000 },
+  { amount: 50000, label: '50,000P', bonus: 7000 },
+  { amount: 100000, label: '100,000P', bonus: 20000 },
 ];
 
 export default function PointsPage() {
@@ -168,6 +169,9 @@ export default function PointsPage() {
                     } ${charging ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
                     <div>{option.label}</div>
+                    {option.bonus && (
+                      <div className="text-xs text-green-600">+{option.bonus.toLocaleString()}P 보너스</div>
+                    )}
                   </button>
                 ))}
               </div>

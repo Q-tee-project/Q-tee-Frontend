@@ -252,7 +252,7 @@ export function AssignmentList({
                         >
                           {isCompleted ? '응시' : '미응시'}
                         </Badge>
-                        {isCompleted && (worksheet as any).score !== undefined && (worksheet as any).score !== null && (
+                        {isCompleted && (worksheet as any).score !== undefined && (
                           <Badge className="bg-green-100 text-green-700 text-xs font-semibold">
                             {(worksheet as any).score}점
                           </Badge>
