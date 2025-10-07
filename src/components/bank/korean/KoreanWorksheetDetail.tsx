@@ -54,6 +54,37 @@ export const KoreanWorksheetDetail: React.FC<KoreanWorksheetDetailProps> = ({
   const [selectedProblemForRegenerate, setSelectedProblemForRegenerate] =
     useState<KoreanProblem | null>(null);
 
+  const renderFormattedText = (text: string | undefined | null) => {
+    if (!text) return null;
+
+    const parseLine = (line: string): React.ReactNode => {
+      // Regex to find **bold** or <u>underline</u> tags, non-greedy
+      const regex = /(\*\*.*?\*\*|<[uU]>.*?<\/[uU]>)/g;
+      const parts = line.split(regex).filter(Boolean);
+
+      return parts.map((part, index) => {
+        if (part.startsWith('**') && part.endsWith('**')) {
+          const content = part.slice(2, -2);
+          // Recursively call parseLine for the content to handle nesting
+          return <strong key={index}>{parseLine(content)}</strong>;
+        }
+        if (part.toLowerCase().startsWith('<u>') && part.toLowerCase().endsWith('</u>')) {
+          const content = part.slice(3, -4);
+          // Recursively call parseLine for the content to handle nesting
+          return <u key={index}>{parseLine(content)}</u>;
+        }
+        return part; // Plain text part
+      });
+    };
+
+    return text.split('\n').map((line, lineIndex, arr) => (
+      <React.Fragment key={lineIndex}>
+        {parseLine(line)}
+        {lineIndex < arr.length - 1 && <br />}
+      </React.Fragment>
+    ));
+  };
+
   const handleRegenerateClick = (problem: KoreanProblem) => {
     setSelectedProblemForRegenerate(problem);
     setIsRegenerateDialogOpen(true);
@@ -217,8 +248,8 @@ export const KoreanWorksheetDetail: React.FC<KoreanWorksheetDetailProps> = ({
                             - {work.title} ({work.author})
                           </span>
                         </div>
-                        <div className="text-sm leading-relaxed text-gray-800 whitespace-pre-wrap">
-                          {work.text}
+                        <div className="text-sm leading-relaxed text-gray-800">
+                          {renderFormattedText(work.text)}
                         </div>
                       </div>
                     )}
@@ -280,7 +311,7 @@ export const KoreanWorksheetDetail: React.FC<KoreanWorksheetDetailProps> = ({
                                 </div>
 
                                 <div className="text-base leading-relaxed text-gray-900 mb-4">
-                                  <LaTeXRenderer content={problem.question} />
+                                  {renderFormattedText(problem.question)}
                                 </div>
 
                                 {problem.choices && problem.choices.length > 0 && (
@@ -307,9 +338,7 @@ export const KoreanWorksheetDetail: React.FC<KoreanWorksheetDetailProps> = ({
                                             {showAnswerSheet && isCorrect ? '✓' : optionLabel}
                                           </span>
                                           <div className="flex-1 text-gray-900">
-                                            <LaTeXRenderer
-                                              content={choice.replace(/^[①②③④⑤⑥⑦⑧⑨⑩]\s*/, '')}
-                                            />
+                                            {renderFormattedText(choice.replace(/^[①②③④⑤⑥⑦⑧⑨⑩]\s*/, ''))}
                                           </div>
                                           {showAnswerSheet && isCorrect && (
                                             <span className="text-xs font-medium text-green-700 bg-green-200 px-2 py-1 rounded">
@@ -332,9 +361,7 @@ export const KoreanWorksheetDetail: React.FC<KoreanWorksheetDetailProps> = ({
                                         </span>
                                       </div>
                                       <div className="text-sm text-blue-800">
-                                        <LaTeXRenderer
-                                          content={problem.explanation || '해설 정보가 없습니다'}
-                                        />
+                                        {renderFormattedText(problem.explanation || '해설 정보가 없습니다')}
                                       </div>
                                     </div>
                                   )}
@@ -347,11 +374,7 @@ export const KoreanWorksheetDetail: React.FC<KoreanWorksheetDetailProps> = ({
                                           <span className="text-gray-700">답:</span>
                                           {showAnswerSheet ? (
                                             <div className="bg-green-100 border border-green-300 rounded px-3 py-2 text-green-800 font-medium">
-                                              <LaTeXRenderer
-                                                content={
-                                                  problem.correct_answer || '답안 정보가 없습니다'
-                                                }
-                                              />
+                                              {renderFormattedText(problem.correct_answer || '답안 정보가 없습니다')}
                                             </div>
                                           ) : (
                                             <div className="border-b-2 border-gray-300 flex-1 h-8"></div>
@@ -365,11 +388,7 @@ export const KoreanWorksheetDetail: React.FC<KoreanWorksheetDetailProps> = ({
                                               </span>
                                             </div>
                                             <div className="text-sm text-blue-800">
-                                              <LaTeXRenderer
-                                                content={
-                                                  problem.explanation || '해설 정보가 없습니다'
-                                                }
-                                              />
+                                              {renderFormattedText(problem.explanation || '해설 정보가 없습니다')}
                                             </div>
                                           </div>
                                         )}
@@ -399,22 +418,14 @@ export const KoreanWorksheetDetail: React.FC<KoreanWorksheetDetailProps> = ({
                                               </span>
                                             </div>
                                             <div className="text-sm text-blue-900">
-                                              <LaTeXRenderer
-                                                content={
-                                                  problem.correct_answer || '답안 정보가 없습니다'
-                                                }
-                                              />
+                                              {renderFormattedText(problem.correct_answer || '답안 정보가 없습니다')}
                                             </div>
                                             <div className="mt-3 pt-3 border-t border-blue-200">
                                               <span className="text-sm font-semibold text-blue-800">
                                                 해설:
                                               </span>
                                               <div className="text-sm text-blue-800 mt-1">
-                                                <LaTeXRenderer
-                                                  content={
-                                                    problem.explanation || '해설 정보가 없습니다'
-                                                  }
-                                                />
+                                                {renderFormattedText(problem.explanation || '해설 정보가 없습니다')}
                                               </div>
                                             </div>
                                           </div>
