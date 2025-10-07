@@ -83,12 +83,8 @@ const ClassPerformanceChartCard = React.memo(({
   studentColorMap,
   isLoadingAssignments = false,
 }: ClassPerformanceChartCardProps) => {
-  const [startDate, setStartDate] = React.useState<Date | undefined>(undefined);
-  const [endDate, setEndDate] = React.useState<Date | undefined>(undefined);
   const [subjectFilter, setSubjectFilter] = React.useState<string>('전체');
   const [searchQuery, setSearchQuery] = React.useState<string>('');
-  const [startDatePopoverOpen, setStartDatePopoverOpen] = React.useState(false);
-  const [endDatePopoverOpen, setEndDatePopoverOpen] = React.useState(false);
 
   const getStudentColor = (studentId: number): string | null => {
     return studentColorMap[studentId] || null;
@@ -96,13 +92,6 @@ const ClassPerformanceChartCard = React.memo(({
 
   const getFilteredAssignments = () => {
     let filtered = assignments;
-
-    if (startDate && endDate) {
-      filtered = filtered.filter(assignment => {
-        const assignmentDate = new Date(assignment.dueDate);
-        return assignmentDate >= startDate && assignmentDate <= endDate;
-      });
-    }
 
     if (subjectFilter !== '전체') {
       filtered = filtered.filter(assignment => assignment.subject === subjectFilter);
@@ -119,15 +108,7 @@ const ClassPerformanceChartCard = React.memo(({
 
   const filteredAssignments = getFilteredAssignments();
 
-  const handleStartDateSelect = (date: Date | undefined) => {
-    setStartDate(date);
-    setStartDatePopoverOpen(false);
-  };
 
-  const handleEndDateSelect = (date: Date | undefined) => {
-    setEndDate(date);
-    setEndDatePopoverOpen(false);
-  };
 
   const getAssignmentChartData = React.useCallback(() => {
     console.log('📊 차트 데이터 생성 시작...');
@@ -216,8 +197,8 @@ const ClassPerformanceChartCard = React.memo(({
               dataPoint[student.name] = 0;
               dataPoint[`${student.name}_status`] = 'unassigned';
               console.log(`학생 ${student.name}: 과제 미배포 (0으로 표시)`);
-            } else if (score !== undefined && score !== null) {
-              // 응시 완료: 실제 점수 표시
+            } else if (score !== undefined && score !== null && score >= 0) {
+              // 응시 완료: 실제 점수 표시 (0점 포함)
               dataPoint[student.name] = score;
               dataPoint[`${student.name}_status`] = 'completed';
               console.log(`학생 ${student.name}: ${score}점`);
@@ -307,8 +288,8 @@ const ClassPerformanceChartCard = React.memo(({
                 dataPoint[student.name] = 0;
                 dataPoint[`${student.name}_status`] = 'unassigned';
                 console.log(`❌ 학생 ${student.name}: 과제 미배포 (0으로 표시)`);
-              } else if (score !== undefined && score !== null) {
-                // 응시 완료: 실제 점수 표시
+              } else if (score !== undefined && score !== null && score >= 0) {
+                // 응시 완료: 실제 점수 표시 (0점 포함)
                 dataPoint[student.name] = score;
                 dataPoint[`${student.name}_status`] = 'completed';
                 console.log(`✅ 학생 ${student.name}: ${score}점`);
@@ -567,7 +548,7 @@ const ClassPerformanceChartCard = React.memo(({
               />
               {selectedStudents.length > 0 &&
                 selectedClass &&
-                selectedStudents.map((studentId) => {
+                selectedStudents.map((studentId, studentIndex) => {
                   const student = students[selectedClass]?.find((s) => s.id === studentId);
                   console.log(`📈 학생 ${studentId} Line 차트 생성:`, student);
                   console.log(`🔍 Line 차트 생성 시 학생 검색:`, {
@@ -585,13 +566,13 @@ const ClassPerformanceChartCard = React.memo(({
                   const color = getStudentColor(studentId);
                   return (
                     <Line
-                      key={studentId}
+                      key={`${studentId}-${studentIndex}`}
                       type="linear"
                       dataKey={student.name}
                       stroke={color || '#9ca3af'}
                       strokeWidth={2}
                       dot={(props) => {
-                        const { cx, cy, payload } = props;
+                        const { cx, cy, payload, index } = props;
                         const value = payload[student.name];
                         const status = payload[`${student.name}_status`];
                         
@@ -614,7 +595,7 @@ const ClassPerformanceChartCard = React.memo(({
                           
                           return (
                             <circle
-                              key={`${student.name}-${status}-${cx}-${cy}`}
+                              key={`${studentId}-${studentIndex}-${index}-${status}-${cx}-${cy}-${Date.now()}`}
                               cx={cx}
                               cy={cy}
                               r={dotRadius}
@@ -628,7 +609,7 @@ const ClassPerformanceChartCard = React.memo(({
                         // 값이 없는 경우 투명한 점
                         return (
                           <circle
-                            key={`${student.name}-hidden-${cx}-${cy}`}
+                            key={`${studentId}-${studentIndex}-${index}-hidden-${cx}-${cy}-${Date.now()}`}
                             cx={cx}
                             cy={cy}
                             r={0}
@@ -704,84 +685,15 @@ const ClassPerformanceChartCard = React.memo(({
           <div className="space-y-4">
             <div className="p-2 bg-gray-50 rounded-lg">
               <ul className="text-xs text-gray-600 space-y-0.5">
-                <li>• 기간 설정 시 해당 기간 내의 과제만 표시됩니다</li>
                 <li>• 최대 7개의 과제까지 선택 가능합니다</li>
               </ul>
             </div>
             
-            <div>
-              <label className="text-base font-semibold text-gray-800 mb-3 block">기간 설정</label>
-              <div className="flex items-center gap-2">
-                <div className="flex-1">
-                  <Popover open={startDatePopoverOpen} onOpenChange={setStartDatePopoverOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="w-full flex items-center justify-start gap-2 h-10"
-                      >
-                        <CalendarIcon className="h-4 w-4 text-gray-500" />
-                        <span className="text-sm">
-                          {startDate ? format(startDate, 'yyyy.MM.dd', { locale: ko }) : '시작 날짜'}
-                        </span>
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={startDate}
-                        onSelect={handleStartDateSelect}
-                        initialFocus
-                        locale={ko}
-                        captionLayout="dropdown"
-                        fromYear={2020}
-                        toYear={new Date().getFullYear()}
-                        className="rounded-md border shadow-sm"
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
 
-                <span className="text-gray-400">-</span>
-
-                <div className="flex-1">
-                  <Popover open={endDatePopoverOpen} onOpenChange={setEndDatePopoverOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="w-full flex items-center justify-start gap-2 h-10"
-                      >
-                        <CalendarIcon className="h-4 w-4 text-gray-500" />
-                        <span className="text-sm">
-                          {endDate ? format(endDate, 'yyyy.MM.dd', { locale: ko }) : '종료 날짜'}
-                        </span>
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={endDate}
-                        onSelect={handleEndDateSelect}
-                        initialFocus
-                        locale={ko}
-                        captionLayout="dropdown"
-                        fromYear={2020}
-                        toYear={new Date().getFullYear()}
-                        className="rounded-md border shadow-sm"
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              </div>
-            </div>
 
             <div>
               <label className="text-base font-semibold text-gray-800 mb-3 block">
                 과제 선택 (최대 7개) 
-                {filteredAssignments.length !== assignments.length && (
-                  <span className="text-xs text-blue-600 ml-2">
-                    ({filteredAssignments.length}개 과제 중)
-                  </span>
-                )}
               </label>
 
               <div className="flex gap-2 mb-3">
@@ -824,7 +736,10 @@ const ClassPerformanceChartCard = React.memo(({
                           ? 'border-blue-500 bg-blue-50' 
                           : 'border-gray-200 hover:border-gray-300'
                       }`}
-                      onClick={() => handleAssignmentSelect(assignment.id)}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleAssignmentSelect(assignment.id);
+                      }}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
@@ -832,6 +747,7 @@ const ClassPerformanceChartCard = React.memo(({
                             <Checkbox
                               checked={selectedAssignments.includes(assignment.id)}
                               disabled={!selectedAssignments.includes(assignment.id) && selectedAssignments.length >= 7}
+                              onClick={(e) => e.stopPropagation()}
                             />
                             <div>
                               <h4 className="text-sm font-medium text-gray-900">{assignment.title}</h4>

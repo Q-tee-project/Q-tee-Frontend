@@ -173,44 +173,61 @@ export function StudentResultView({
     if (!sessionDetails) return null;
 
     if (isKorean) {
+      // Korean 과제의 경우 - problem_results에서만 찾기 (multiple_choice_answers 제거)
       const problemResult = sessionDetails.problem_results?.find(
         (pr: any) => pr.problem_id?.toString() === problemId || pr.id?.toString() === problemId,
       );
 
+      let studentAnswer = problemResult?.user_answer || problemResult?.student_answer;
+
       const problem = problems.find((p) => p.id.toString() === problemId);
+
       if (!problem) {
         return null;
       }
 
-      const studentAnswer = problemResult?.user_answer || '(답안 없음)';
-      const rawCorrectAnswer = problemResult?.correct_answer || problem.correct_answer;
+      if (!studentAnswer) {
+        return {
+          isCorrect: false,
+          studentAnswer: '(답안 없음)',
+          correctAnswer: problem.correct_answer,
+          studentAnswerText: '(답안 없음)',
+          correctAnswerText: problem.correct_answer,
+        };
+      }
 
-      const normalize = (answer: string) => {
-        if (!answer || !problem.choices || typeof answer !== 'string') return answer;
-        const upperAnswer = answer.toUpperCase();
-        if (['A', 'B', 'C', 'D', 'E'].includes(upperAnswer)) {
-          return upperAnswer;
+      // 선생님이 수정한 정답이 있다면 그것을 사용, 없다면 원본 정답 사용
+      const actualCorrectAnswer = problemResult?.correct_answer || problem.correct_answer;
+      const isCorrect = problemResult?.is_correct !== undefined
+        ? problemResult.is_correct
+        : studentAnswer === actualCorrectAnswer;
+
+      // Extract choice number from answer text
+      const extractChoiceNumber = (answerText: string) => {
+        const numberMatch = answerText.match(/^(\d+)번?\./);
+        if (numberMatch) {
+          return numberMatch[1];
         }
-        const choiceIndex = problem.choices.findIndex((c: string) => c === answer);
-        if (choiceIndex !== -1) {
-          return String.fromCharCode(65 + choiceIndex);
+
+        if (problem.choices) {
+          const choiceIndex = problem.choices.findIndex((choice: string) => choice === answerText);
+          if (choiceIndex !== -1) {
+            return (choiceIndex + 1).toString();
+          }
         }
-        return answer; // fallback
+
+        return answerText;
       };
 
-      const normalizedCorrectAnswer = normalize(rawCorrectAnswer);
-
-      const isCorrect =
-        problemResult?.is_correct !== undefined
-          ? problemResult.is_correct
-          : studentAnswer === normalizedCorrectAnswer;
+      const studentAnswerNumber = extractChoiceNumber(studentAnswer);
+      const correctAnswerNumber = extractChoiceNumber(actualCorrectAnswer);
 
       return {
         isCorrect,
-        studentAnswer: studentAnswer,
-        correctAnswer: normalizedCorrectAnswer,
+        studentAnswer: studentAnswerNumber,
+        correctAnswer: correctAnswerNumber,
         studentAnswerText: studentAnswer,
-        correctAnswerText: rawCorrectAnswer,
+        correctAnswerText: actualCorrectAnswer,
       };
     } else if (isEnglish) {
       // English 과제의 경우
@@ -308,37 +325,6 @@ export function StudentResultView({
     }
 
     return totalScore;
-  };
-
-  const renderFormattedText = (text: string | undefined | null) => {
-    if (!text) return null;
-
-    const parseLine = (line: string): React.ReactNode => {
-      // Regex to find **bold** or <u>underline</u> tags, non-greedy
-      const regex = /(\*\*.*?\*\*|<[uU]>.*?<\/[uU]>)/g;
-      const parts = line.split(regex).filter(Boolean);
-
-      return parts.map((part, index) => {
-        if (part.startsWith('**') && part.endsWith('**')) {
-          const content = part.slice(2, -2);
-          // Recursively call parseLine for the content to handle nesting
-          return <strong key={index}>{parseLine(content)}</strong>;
-        }
-        if (part.toLowerCase().startsWith('<u>') && part.toLowerCase().endsWith('</u>')) {
-          const content = part.slice(3, -4);
-          // Recursively call parseLine for the content to handle nesting
-          return <u key={index}>{parseLine(content)}</u>;
-        }
-        return part; // Plain text part
-      });
-    };
-
-    return text.split('\n').map((line, lineIndex, arr) => (
-      <React.Fragment key={lineIndex}>
-        {parseLine(line)}
-        {lineIndex < arr.length - 1 && <br />}
-      </React.Fragment>
-    ));
   };
 
   if (isLoading) {
@@ -465,8 +451,8 @@ export function StudentResultView({
                             )}
                             {item.source_author && <span> - {item.source_author}</span>}
                           </div>
-                          <div className="text-sm leading-relaxed">
-                            {renderFormattedText(item.source_text)}
+                          <div className="text-sm leading-relaxed whitespace-pre-wrap">
+                            {item.source_text}
                           </div>
                         </div>
                       )}
@@ -475,7 +461,7 @@ export function StudentResultView({
                       <div className="mb-4">
                         <div className="text-gray-900 font-medium">
                           {isKorean ? (
-                            <div>{renderFormattedText(item.question)}</div>
+                            <p>{item.question}</p>
                           ) : isEnglish ? (
                             <div>
                               {item.question_text && <p>{item.question_text}</p>}
@@ -513,9 +499,13 @@ export function StudentResultView({
                       {(item.choices || item.question_choices) && (
                         <div className="space-y-2 mb-4">
                           {(item.choices || item.question_choices).map((choice: string, choiceIndex: number) => {
-                            const choiceLetter = String.fromCharCode(65 + choiceIndex); // A, B, C...
-                            const isStudentAnswer = answerStatus?.studentAnswer === choiceLetter;
-                            const isCorrectAnswer = answerStatus?.correctAnswer === choiceLetter;
+                            const choiceNumber = (choiceIndex + 1).toString();
+                            const isStudentAnswer = isEnglish
+                              ? answerStatus?.studentAnswer === choice
+                              : answerStatus?.studentAnswer === choiceNumber;
+                            const isCorrectAnswer = isEnglish
+                              ? answerStatus?.correctAnswer === choice
+                              : answerStatus?.correctAnswer === choiceNumber;
 
                             let choiceStyle = 'p-3 rounded-lg border ';
                             if (isCorrectAnswer) {
@@ -530,6 +520,7 @@ export function StudentResultView({
                               <div key={choiceIndex} className={choiceStyle}>
                                 <div className="flex items-center gap-3">
                                   <div className="flex items-center gap-2">
+                                    <span className="font-medium">{choiceNumber}.</span>
                                     {isStudentAnswer && (
                                       <FaDotCircle
                                         className="text-blue-600 text-sm"
@@ -545,7 +536,7 @@ export function StudentResultView({
                                   </div>
                                   <div className="flex-1">
                                     {isKorean ? (
-                                      <span>{renderFormattedText(choice)}</span>
+                                      <span>{choice}</span>
                                     ) : isEnglish ? (
                                       <span>{choice}</span>
                                     ) : (
@@ -611,7 +602,7 @@ export function StudentResultView({
                                   학생 답안:{' '}
                                   <strong>
                                     {isKorean
-                                      ? answerStatus.studentAnswer
+                                      ? `${answerStatus.studentAnswer}번`
                                       : isEnglish
                                       ? answerStatus.studentAnswer || '(답안 없음)'
                                       : answerStatus.studentAnswer}
@@ -626,7 +617,7 @@ export function StudentResultView({
                                     : '정답:'}{' '}
                                   <strong>
                                     {isKorean
-                                      ? answerStatus.correctAnswer
+                                      ? `${answerStatus.correctAnswer}번`
                                       : answerStatus.correctAnswer}
                                   </strong>
                                 </span>
@@ -649,7 +640,7 @@ export function StudentResultView({
                           <h4 className="font-medium text-blue-900 mb-2">해설</h4>
                           <div className="text-blue-800 text-sm">
                             {isKorean ? (
-                              <div>{renderFormattedText(item.explanation)}</div>
+                              <p>{item.explanation}</p>
                             ) : isEnglish ? (
                               <p>{item.explanation}</p>
                             ) : (

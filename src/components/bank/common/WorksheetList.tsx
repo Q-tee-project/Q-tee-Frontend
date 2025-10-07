@@ -3,8 +3,8 @@
 import React, { useState, useCallback } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { DataTable } from '@/app/(workspace)/question/bank/data-table';
-import { columns } from '@/app/(workspace)/question/bank/columns';
+import { DataTable } from '@/app/question/bank/data-table';
+import { columns } from '@/app/question/bank/columns';
 import { Worksheet, Subject } from '@/types/math';
 import { KoreanWorksheet } from '@/types/korean';
 import { EnglishWorksheetData } from '@/types/english';

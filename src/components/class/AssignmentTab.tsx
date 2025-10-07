@@ -66,28 +66,6 @@ export function AssignmentTab({ classId }: AssignmentTabProps) {
     setIsDeployModalOpen(true);
   };
 
-  const handleDeleteAssignment = async (assignment: Assignment) => {
-    if (!confirm(`"${assignment.title}" 과제를 삭제하시겠습니까?`)) {
-      return;
-    }
-
-    try {
-      if (activeSubject === 'korean') {
-        await koreanService.deleteAssignment(assignment.id);
-      } else if (activeSubject === 'math') {
-        await mathService.deleteAssignment(assignment.id);
-      } else if (activeSubject === 'english') {
-        await EnglishService.deleteAssignment(assignment.id);
-      }
-
-      alert('과제가 삭제되었습니다.');
-      loadAssignments();
-    } catch (error) {
-      console.error('Failed to delete assignment:', error);
-      alert('과제 삭제에 실패했습니다.');
-    }
-  };
-
   const subjectTabs = [
     { id: 'korean' as const, label: '국어' },
     { id: 'english' as const, label: '영어' },
@@ -177,7 +155,6 @@ export function AssignmentTab({ classId }: AssignmentTabProps) {
           assignments={filteredAssignments}
           onSelectAssignment={setSelectedAssignment}
           onDeployAssignment={handleDeployAssignment}
-          onDeleteAssignment={handleDeleteAssignment}
           classId={classId.toString()}
           onRefresh={loadAssignments}
           subject={activeSubject}
