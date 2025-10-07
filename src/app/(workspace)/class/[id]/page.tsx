@@ -1,25 +1,14 @@
 'use client';
 
 import React, { useState, use, useEffect } from 'react';
-import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { FaArrowLeft } from 'react-icons/fa6';
 import { HiOutlinePencilSquare } from 'react-icons/hi2';
 import { Users } from 'lucide-react';
+import { AssignmentTab } from '@/components/class/AssignmentTab';
+import { StudentManagementTab } from '@/components/class/StudentManagementTab';
+import { ApprovalTab as StudentApprovalTab } from '@/components/class/StudentApprovalTab';
 import { PageHeader } from '@/components/layout/PageHeader';
-
-// Dynamic imports for heavy components
-const AssignmentTab = dynamic(() => import('@/components/class/AssignmentTab').then(mod => ({ default: mod.AssignmentTab })), {
-  loading: () => <div className="animate-pulse h-64 bg-gray-100 rounded"></div>
-});
-
-const StudentManagementTab = dynamic(() => import('@/components/class/StudentManagementTab').then(mod => ({ default: mod.StudentManagementTab })), {
-  loading: () => <div className="animate-pulse h-64 bg-gray-100 rounded"></div>
-});
-
-const StudentApprovalTab = dynamic(() => import('@/components/class/StudentApprovalTab').then(mod => ({ default: mod.ApprovalTab })), {
-  loading: () => <div className="animate-pulse h-64 bg-gray-100 rounded"></div>
-});
 import { classroomService, Classroom } from '@/services/authService';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

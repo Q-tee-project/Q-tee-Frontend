@@ -1,7 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
-import dynamic from 'next/dynamic';
+import React, { useState, useEffect } from 'react';
 import { mathService } from '@/services/mathService';
 import { koreanService } from '@/services/koreanService';
 import { useAuth } from '@/contexts/AuthContext';
@@ -12,36 +11,16 @@ import { Button } from '@/components/ui/button';
 
 import { CheckCircle } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { ScratchpadModal } from '@/components/ScratchpadModal';
+import { AssignmentList } from '@/components/test/AssignmentList';
+import { TestInterface } from '@/components/test/TestInterface';
+import { KoreanTestInterface } from '@/components/test/KoreanTestInterface';
+import { EnglishTestInterface } from '@/components/test/EnglishTestInterface';
+import { StudentResultView } from '@/components/test/StudentResultView';
 import { EnglishService } from '@/services/englishService';
 import { useSearchParams } from 'next/navigation';
 
-// Dynamic imports for heavy components
-const ScratchpadModal = dynamic(() => import('@/components/ScratchpadModal').then(mod => ({ default: mod.ScratchpadModal })), {
-  loading: () => <div>Loading...</div>,
-  ssr: false
-});
-
-const AssignmentList = dynamic(() => import('@/components/test/AssignmentList').then(mod => ({ default: mod.AssignmentList })), {
-  loading: () => <div className="w-1/4 bg-white rounded-lg shadow-sm p-4"><div className="animate-pulse h-full bg-gray-200 rounded"></div></div>
-});
-
-const TestInterface = dynamic(() => import('@/components/test/TestInterface').then(mod => ({ default: mod.TestInterface })), {
-  loading: () => <div className="w-5/6 bg-white rounded-lg shadow-sm p-4"><div className="animate-pulse h-full bg-gray-200 rounded"></div></div>
-});
-
-const KoreanTestInterface = dynamic(() => import('@/components/test/KoreanTestInterface').then(mod => ({ default: mod.KoreanTestInterface })), {
-  loading: () => <div className="w-5/6 bg-white rounded-lg shadow-sm p-4"><div className="animate-pulse h-full bg-gray-200 rounded"></div></div>
-});
-
-const EnglishTestInterface = dynamic(() => import('@/components/test/EnglishTestInterface').then(mod => ({ default: mod.EnglishTestInterface })), {
-  loading: () => <div className="w-5/6 bg-white rounded-lg shadow-sm p-4"><div className="animate-pulse h-full bg-gray-200 rounded"></div></div>
-});
-
-const StudentResultView = dynamic(() => import('@/components/test/StudentResultView').then(mod => ({ default: mod.StudentResultView })), {
-  loading: () => <div className="w-5/6 bg-white rounded-lg shadow-sm p-4"><div className="animate-pulse h-full bg-gray-200 rounded"></div></div>
-});
-
-function TestPageContent() {
+export default function TestPage() {
   const { userProfile } = useAuth();
   const searchParams = useSearchParams();
   const [worksheets, setWorksheets] = useState<(Worksheet | KoreanWorksheet)[]>([]);
@@ -158,7 +137,7 @@ function TestPageContent() {
 
       let assignmentData: any[] = [];
 
-      if (selectedSubject === '수학') {
+      if (selectedSubject === Subject.MATH) {
         try {
           assignmentData = await mathService.getStudentAssignments(userProfile.id);
           console.log('수학 과제 데이터:', assignmentData);
@@ -322,7 +301,7 @@ function TestPageContent() {
       }
 
       let assignmentDetail;
-      if (selectedSubject === '수학') {
+      if (selectedSubject === Subject.MATH) {
         assignmentDetail = await mathService.getAssignmentDetail(worksheetId, userProfile.id);
       } else if (selectedSubject === '국어') {
         assignmentDetail = await koreanService.getAssignmentDetail(worksheetId, userProfile.id);
@@ -923,13 +902,5 @@ function TestPageContent() {
         </div>
       )}
     </div>
-  );
-}
-
-export default function TestPage() {
-  return (
-    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div>Loading...</div></div>}>
-      <TestPageContent />
-    </Suspense>
   );
 }

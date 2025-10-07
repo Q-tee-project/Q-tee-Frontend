@@ -28,7 +28,7 @@ const LoginPage: React.FC = React.memo(() => {
         })
         const profile = await authService.getTeacherProfile()
         login('teacher', profile)
-        router.push('/dashboard/teacher')
+        router.push('/teacher')
       } else {
         await authService.studentLogin({
           username: formData.username,
@@ -36,7 +36,7 @@ const LoginPage: React.FC = React.memo(() => {
         })
         const profile = await authService.getStudentProfile()
         login('student', profile)
-        router.push('/dashboard/student')
+        router.push('/student')
       }
     } catch (error: any) {
       console.error('Login error:', error)
