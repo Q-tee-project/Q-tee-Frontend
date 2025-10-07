@@ -216,8 +216,8 @@ const ClassPerformanceChartCard = React.memo(({
               dataPoint[student.name] = 0;
               dataPoint[`${student.name}_status`] = 'unassigned';
               console.log(`학생 ${student.name}: 과제 미배포 (0으로 표시)`);
-            } else if (score !== undefined && score !== null) {
-              // 응시 완료: 실제 점수 표시
+            } else if (score !== undefined && score !== null && score >= 0) {
+              // 응시 완료: 실제 점수 표시 (0점 포함)
               dataPoint[student.name] = score;
               dataPoint[`${student.name}_status`] = 'completed';
               console.log(`학생 ${student.name}: ${score}점`);
@@ -307,8 +307,8 @@ const ClassPerformanceChartCard = React.memo(({
                 dataPoint[student.name] = 0;
                 dataPoint[`${student.name}_status`] = 'unassigned';
                 console.log(`❌ 학생 ${student.name}: 과제 미배포 (0으로 표시)`);
-              } else if (score !== undefined && score !== null) {
-                // 응시 완료: 실제 점수 표시
+              } else if (score !== undefined && score !== null && score >= 0) {
+                // 응시 완료: 실제 점수 표시 (0점 포함)
                 dataPoint[student.name] = score;
                 dataPoint[`${student.name}_status`] = 'completed';
                 console.log(`✅ 학생 ${student.name}: ${score}점`);
@@ -567,7 +567,7 @@ const ClassPerformanceChartCard = React.memo(({
               />
               {selectedStudents.length > 0 &&
                 selectedClass &&
-                selectedStudents.map((studentId) => {
+                selectedStudents.map((studentId, studentIndex) => {
                   const student = students[selectedClass]?.find((s) => s.id === studentId);
                   console.log(`📈 학생 ${studentId} Line 차트 생성:`, student);
                   console.log(`🔍 Line 차트 생성 시 학생 검색:`, {
@@ -585,13 +585,13 @@ const ClassPerformanceChartCard = React.memo(({
                   const color = getStudentColor(studentId);
                   return (
                     <Line
-                      key={studentId}
+                      key={`${studentId}-${studentIndex}`}
                       type="linear"
                       dataKey={student.name}
                       stroke={color || '#9ca3af'}
                       strokeWidth={2}
                       dot={(props) => {
-                        const { cx, cy, payload } = props;
+                        const { cx, cy, payload, index } = props;
                         const value = payload[student.name];
                         const status = payload[`${student.name}_status`];
                         
@@ -614,7 +614,7 @@ const ClassPerformanceChartCard = React.memo(({
                           
                           return (
                             <circle
-                              key={`${student.name}-${status}-${cx}-${cy}`}
+                              key={`${studentId}-${studentIndex}-${index}-${status}-${cx}-${cy}-${Date.now()}`}
                               cx={cx}
                               cy={cy}
                               r={dotRadius}
@@ -628,7 +628,7 @@ const ClassPerformanceChartCard = React.memo(({
                         // 값이 없는 경우 투명한 점
                         return (
                           <circle
-                            key={`${student.name}-hidden-${cx}-${cy}`}
+                            key={`${studentId}-${studentIndex}-${index}-hidden-${cx}-${cy}-${Date.now()}`}
                             cx={cx}
                             cy={cy}
                             r={0}
@@ -824,7 +824,10 @@ const ClassPerformanceChartCard = React.memo(({
                           ? 'border-blue-500 bg-blue-50' 
                           : 'border-gray-200 hover:border-gray-300'
                       }`}
-                      onClick={() => handleAssignmentSelect(assignment.id)}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleAssignmentSelect(assignment.id);
+                      }}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
@@ -832,6 +835,7 @@ const ClassPerformanceChartCard = React.memo(({
                             <Checkbox
                               checked={selectedAssignments.includes(assignment.id)}
                               disabled={!selectedAssignments.includes(assignment.id) && selectedAssignments.length >= 7}
+                              onClick={(e) => e.stopPropagation()}
                             />
                             <div>
                               <h4 className="text-sm font-medium text-gray-900">{assignment.title}</h4>
