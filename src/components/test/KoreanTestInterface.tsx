@@ -65,6 +65,37 @@ export function KoreanTestInterface({
 }: KoreanTestInterfaceProps) {
   const currentAnswer = answers[currentProblem.id] || '';
 
+  const renderFormattedText = (text: string | undefined | null) => {
+    if (!text) return null;
+
+    const parseLine = (line: string): React.ReactNode => {
+      // Regex to find **bold** or <u>underline</u> tags, non-greedy
+      const regex = /(\*\*.*?\*\*|<[uU]>.*?<\/[uU]>)/g;
+      const parts = line.split(regex).filter(Boolean);
+
+      return parts.map((part, index) => {
+        if (part.startsWith('**') && part.endsWith('**')) {
+          const content = part.slice(2, -2);
+          // Recursively call parseLine for the content to handle nesting
+          return <strong key={index}>{parseLine(content)}</strong>;
+        }
+        if (part.toLowerCase().startsWith('<u>') && part.toLowerCase().endsWith('</u>')) {
+          const content = part.slice(3, -4);
+          // Recursively call parseLine for the content to handle nesting
+          return <u key={index}>{parseLine(content)}</u>;
+        }
+        return part; // Plain text part
+      });
+    };
+
+    return text.split('\n').map((line, lineIndex, arr) => (
+      <React.Fragment key={lineIndex}>
+        {parseLine(line)}
+        {lineIndex < arr.length - 1 && <br />}
+      </React.Fragment>
+    ));
+  };
+
   return (
     <Card className="w-5/6 flex flex-col shadow-sm">
       {/* 상단 네비게이션 */}
@@ -117,8 +148,8 @@ export function KoreanTestInterface({
                   <span className="text-xs text-gray-500">- {currentProblem.source_author}</span>
                 )}
               </div>
-              <div className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">
-                {currentProblem.source_text}
+              <div className="text-sm text-gray-800 leading-relaxed">
+                {renderFormattedText(currentProblem.source_text)}
               </div>
             </div>
           )}
@@ -130,8 +161,8 @@ export function KoreanTestInterface({
                 {currentProblem.sequence_order}.
               </span>
               <div className="flex-1">
-                <div className="text-lg text-gray-800 leading-relaxed whitespace-pre-wrap">
-                  {currentProblem.question}
+                <div className="text-lg text-gray-800 leading-relaxed">
+                  {renderFormattedText(currentProblem.question)}
                 </div>
               </div>
             </div>
@@ -161,7 +192,7 @@ export function KoreanTestInterface({
                         onChange={(e) => onAnswerChange(currentProblem.id, e.target.value)}
                         className="mt-1"
                       />
-                      <span className="flex-1">{displayChoice}</span>
+                      <span className="flex-1">{renderFormattedText(displayChoice)}</span>
                     </label>
                   );
                 })}

@@ -158,7 +158,7 @@ function TestPageContent() {
 
       let assignmentData: any[] = [];
 
-      if (selectedSubject === Subject.MATH) {
+      if (selectedSubject === '수학') {
         try {
           assignmentData = await mathService.getStudentAssignments(userProfile.id);
           console.log('수학 과제 데이터:', assignmentData);
@@ -322,7 +322,7 @@ function TestPageContent() {
       }
 
       let assignmentDetail;
-      if (selectedSubject === Subject.MATH) {
+      if (selectedSubject === '수학') {
         assignmentDetail = await mathService.getAssignmentDetail(worksheetId, userProfile.id);
       } else if (selectedSubject === '국어') {
         assignmentDetail = await koreanService.getAssignmentDetail(worksheetId, userProfile.id);
