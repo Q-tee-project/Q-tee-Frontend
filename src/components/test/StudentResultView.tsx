@@ -310,6 +310,37 @@ export function StudentResultView({
     return totalScore;
   };
 
+  const renderFormattedText = (text: string | undefined | null) => {
+    if (!text) return null;
+
+    const parseLine = (line: string): React.ReactNode => {
+      // Regex to find **bold** or <u>underline</u> tags, non-greedy
+      const regex = /(\*\*.*?\*\*|<[uU]>.*?<\/[uU]>)/g;
+      const parts = line.split(regex).filter(Boolean);
+
+      return parts.map((part, index) => {
+        if (part.startsWith('**') && part.endsWith('**')) {
+          const content = part.slice(2, -2);
+          // Recursively call parseLine for the content to handle nesting
+          return <strong key={index}>{parseLine(content)}</strong>;
+        }
+        if (part.toLowerCase().startsWith('<u>') && part.toLowerCase().endsWith('</u>')) {
+          const content = part.slice(3, -4);
+          // Recursively call parseLine for the content to handle nesting
+          return <u key={index}>{parseLine(content)}</u>;
+        }
+        return part; // Plain text part
+      });
+    };
+
+    return text.split('\n').map((line, lineIndex, arr) => (
+      <React.Fragment key={lineIndex}>
+        {parseLine(line)}
+        {lineIndex < arr.length - 1 && <br />}
+      </React.Fragment>
+    ));
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -434,8 +465,8 @@ export function StudentResultView({
                             )}
                             {item.source_author && <span> - {item.source_author}</span>}
                           </div>
-                          <div className="text-sm leading-relaxed whitespace-pre-wrap">
-                            {item.source_text}
+                          <div className="text-sm leading-relaxed">
+                            {renderFormattedText(item.source_text)}
                           </div>
                         </div>
                       )}
@@ -444,7 +475,7 @@ export function StudentResultView({
                       <div className="mb-4">
                         <div className="text-gray-900 font-medium">
                           {isKorean ? (
-                            <p>{item.question}</p>
+                            <div>{renderFormattedText(item.question)}</div>
                           ) : isEnglish ? (
                             <div>
                               {item.question_text && <p>{item.question_text}</p>}
@@ -514,7 +545,7 @@ export function StudentResultView({
                                   </div>
                                   <div className="flex-1">
                                     {isKorean ? (
-                                      <span>{choice}</span>
+                                      <span>{renderFormattedText(choice)}</span>
                                     ) : isEnglish ? (
                                       <span>{choice}</span>
                                     ) : (
@@ -618,7 +649,7 @@ export function StudentResultView({
                           <h4 className="font-medium text-blue-900 mb-2">해설</h4>
                           <div className="text-blue-800 text-sm">
                             {isKorean ? (
-                              <p>{item.explanation}</p>
+                              <div>{renderFormattedText(item.explanation)}</div>
                             ) : isEnglish ? (
                               <p>{item.explanation}</p>
                             ) : (
