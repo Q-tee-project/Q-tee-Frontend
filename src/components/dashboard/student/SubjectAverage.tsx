@@ -112,7 +112,7 @@ const SubjectAverage: React.FC<SubjectAverageProps> = ({
               <Tooltip 
                 formatter={(value: any) => {
                   const num = typeof value === 'number' ? value : 0;
-                  return num === 0 ? ['미응시 0점', ''] : [`${num}점`, ''];
+                  return num === 0 ? ['0점', ''] : [`${num}점`, ''];
                 }}
               />
               <Radar
@@ -176,7 +176,7 @@ const SubjectAverage: React.FC<SubjectAverageProps> = ({
                 formatter={(value: any, name: string) => {
                   const num = typeof value === 'number' ? value : 0;
                   const mappedName = name === '내점수' ? '내 평균' : (name === '클래스평균' ? '클래스 평균' : name);
-                  const display = num === 0 ? '미응시 0점' : `${num}점`;
+                  const display = num === 0 ? '0점' : `${num}점`;
                   return [display, mappedName];
                 }}
               />
