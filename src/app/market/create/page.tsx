@@ -86,85 +86,94 @@ export default function CreateMarketPage() {
         description="워크시트를 마켓플레이스에 상품으로 등록해보세요"
       />
 
-      <Card className="max-w-2xl mx-auto">
-        <CardHeader>
-          <CardTitle>상품 정보 입력</CardTitle>
+      <Card className="flex-1 flex flex-col shadow-sm">
+        <CardHeader className="py-3 px-6 border-b border-gray-100 flex items-center justify-between">
+          <CardTitle className="text-base font-medium">상품 정보 입력</CardTitle>
+          <span className="text-sm font-normal text-gray-400">
+            필수 항목을 모두 입력해주세요
+          </span>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
+        <CardContent className="p-6">
+          <div className="max-w-2xl mx-auto">
+            <form onSubmit={handleSubmit} className="space-y-6">
             {/* 상품명 */}
-            <div>
-              <label className="block text-sm font-medium mb-2">상품명 *</label>
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">상품명 *</label>
               <Input
                 value={form.title}
                 onChange={(e) => setForm(prev => ({ ...prev, title: e.target.value }))}
                 placeholder="상품명을 입력하세요"
                 required
+                className="h-10"
               />
             </div>
 
             {/* 상품 설명 */}
-            <div>
-              <label className="block text-sm font-medium mb-2">상품 설명</label>
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">상품 설명</label>
               <Textarea
                 value={form.description}
                 onChange={(e) => setForm(prev => ({ ...prev, description: e.target.value }))}
                 placeholder="상품에 대한 자세한 설명을 입력하세요 (선택사항)"
-                rows={3}
+                rows={6}
+                className="resize-none overflow-y-auto h-32"
               />
             </div>
 
-            {/* 과목 선택 */}
-            <div>
-              <label className="block text-sm font-medium mb-2">과목 *</label>
-              <Select
-                value={form.original_service}
-                onValueChange={(value) => {
-                  setForm(prev => ({
-                    ...prev,
-                    original_service: value as 'korean' | 'math' | 'english',
-                    original_worksheet_id: null
-                  }));
-                  setWorksheets([]);
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="과목을 선택하세요" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="korean">국어</SelectItem>
-                  <SelectItem value="math">수학</SelectItem>
-                  <SelectItem value="english">영어</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {/* 과목 및 워크시트 선택 (가로 정렬) */}
+            <div className="flex space-x-4">
+              {/* 과목 선택 */}
+              <div className="flex-1 space-y-2">
+                <label className="block text-sm font-medium text-gray-700">과목 *</label>
+                <Select
+                  value={form.original_service}
+                  onValueChange={(value) => {
+                    setForm(prev => ({
+                      ...prev,
+                      original_service: value as 'korean' | 'math' | 'english',
+                      original_worksheet_id: null
+                    }));
+                    setWorksheets([]);
+                  }}
+                >
+                  <SelectTrigger className="h-10">
+                    <SelectValue placeholder="과목을 선택하세요" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="korean">국어</SelectItem>
+                    <SelectItem value="math">수학</SelectItem>
+                    <SelectItem value="english">영어</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-            {/* 워크시트 선택 */}
-            <div>
-              <label className="block text-sm font-medium mb-2">워크시트 *</label>
-              <Select
-                value={form.original_worksheet_id?.toString() || ''}
-                onValueChange={(value) => setForm(prev => ({
-                  ...prev,
-                  original_worksheet_id: parseInt(value)
-                }))}
-                disabled={!form.original_service || loading}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={
-                    loading ? '로딩 중...' :
-                    !form.original_service ? '먼저 과목을 선택하세요' :
-                    '워크시트를 선택하세요'
-                  } />
-                </SelectTrigger>
-                <SelectContent>
-                  {worksheets.map((worksheet) => (
-                    <SelectItem key={worksheet.id} value={worksheet.id.toString()}>
-                      {worksheet.title} ({worksheet.problem_count}문제) - {worksheet.school_level} {worksheet.grade}학년
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {/* 워크시T 선택 */}
+              <div className="flex-1 space-y-2">
+                <label className="block text-sm font-medium text-gray-700">워크시트 *</label>
+                <Select
+                  value={form.original_worksheet_id?.toString() || ''}
+                  onValueChange={(value) => setForm(prev => ({
+                    ...prev,
+                    original_worksheet_id: parseInt(value)
+                  }))}
+                  disabled={!form.original_service || loading}
+                >
+                  <SelectTrigger className="h-10">
+                    <SelectValue placeholder={
+                      loading ? '로딩 중...' :
+                      !form.original_service ? '먼저 과목을 선택하세요' :
+                      '워크시트를 선택하세요'
+                    } />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {worksheets.map((worksheet) => (
+                      <SelectItem key={worksheet.id} value={worksheet.id.toString()}>
+                        {worksheet.title} ({worksheet.problem_count}문제) - {worksheet.school_level} {worksheet.grade}학년
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             {/* 안내 메시지 */}
@@ -179,25 +188,26 @@ export default function CreateMarketPage() {
             </div>
 
             {/* 버튼 */}
-            <div className="flex gap-4">
+            <div className="flex gap-4 pt-4">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => router.back()}
                 disabled={submitting}
-                className="flex-1"
+                className="flex-1 h-10"
               >
                 취소
               </Button>
               <Button
                 type="submit"
                 disabled={submitting || !form.title || !form.original_service || !form.original_worksheet_id}
-                className="flex-1"
+                className="flex-1 h-10 bg-[#0072CE] hover:bg-[#005fa3] text-white"
               >
                 {submitting ? '등록 중...' : '상품 등록'}
               </Button>
             </div>
           </form>
+          </div>
         </CardContent>
       </Card>
     </div>

@@ -68,6 +68,37 @@ export const PurchasedKoreanWorksheetDetail: React.FC<PurchasedKoreanWorksheetDe
   problems,
   showAnswerSheet,
 }) => {
+  const renderFormattedText = (text: string | undefined | null) => {
+    if (!text) return null;
+
+    const parseLine = (line: string): React.ReactNode => {
+      // Regex to find **bold** or <u>underline</u> tags, non-greedy
+      const regex = /(\*\*.*?\*\*|<[uU]>.*?<\/[uU]>)/g;
+      const parts = line.split(regex).filter(Boolean);
+
+      return parts.map((part, index) => {
+        if (part.startsWith('**') && part.endsWith('**')) {
+          const content = part.slice(2, -2);
+          // Recursively call parseLine for the content to handle nesting
+          return <strong key={index}>{parseLine(content)}</strong>;
+        }
+        if (part.toLowerCase().startsWith('<u>') && part.toLowerCase().endsWith('</u>')) {
+          const content = part.slice(3, -4);
+          // Recursively call parseLine for the content to handle nesting
+          return <u key={index}>{parseLine(content)}</u>;
+        }
+        return part; // Plain text part
+      });
+    };
+
+    return text.split('\n').map((line, lineIndex, arr) => (
+      <React.Fragment key={lineIndex}>
+        {parseLine(line)}
+        {lineIndex < arr.length - 1 && <br />}
+      </React.Fragment>
+    ));
+  };
+
   if (!worksheet) {
     return (
       <Card className="flex-1 shadow-sm">
@@ -135,8 +166,8 @@ export const PurchasedKoreanWorksheetDetail: React.FC<PurchasedKoreanWorksheetDe
                             - {work.title} ({work.author})
                           </span>
                         </div>
-                        <div className="text-sm leading-relaxed text-gray-800 whitespace-pre-wrap">
-                          {work.text}
+                        <div className="text-sm leading-relaxed text-gray-800">
+                          {renderFormattedText(work.text)}
                         </div>
                       </div>
                     )}
@@ -176,7 +207,7 @@ export const PurchasedKoreanWorksheetDetail: React.FC<PurchasedKoreanWorksheetDe
 
                                 {/* 문제 내용 */}
                                 <div className="text-base leading-relaxed text-gray-900 mb-4">
-                                  {problem.question}
+                                  {renderFormattedText(problem.question)}
                                 </div>
 
                                 {/* 객관식 선택지 */}
@@ -204,7 +235,7 @@ export const PurchasedKoreanWorksheetDetail: React.FC<PurchasedKoreanWorksheetDe
                                             {showAnswerSheet && isCorrect ? '✓' : optionLabel}
                                           </span>
                                           <div className="flex-1 text-gray-900">
-                                            {choice.replace(/^[①②③④⑤⑥⑦⑧⑨⑩]\s*/, '')}
+                                            {renderFormattedText(choice.replace(/^[①②③④⑤⑥⑦⑧⑨⑩]\s*/, ''))}
                                           </div>
                                           {showAnswerSheet && isCorrect && (
                                             <span className="text-xs font-medium text-green-700 bg-green-200 px-2 py-1 rounded">
@@ -226,7 +257,7 @@ export const PurchasedKoreanWorksheetDetail: React.FC<PurchasedKoreanWorksheetDe
                                         <h4 className="font-medium text-gray-800 mb-2">정답</h4>
                                         <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                                           <span className="text-green-700 font-medium">
-                                            {problem.correct_answer || '답안 정보가 없습니다'}
+                                            {renderFormattedText(problem.correct_answer || '답안 정보가 없습니다')}
                                           </span>
                                         </div>
                                       </div>
@@ -241,7 +272,7 @@ export const PurchasedKoreanWorksheetDetail: React.FC<PurchasedKoreanWorksheetDe
                                           </span>
                                         </div>
                                         <div className="text-sm text-blue-800">
-                                          {problem.explanation}
+                                          {renderFormattedText(problem.explanation)}
                                         </div>
                                       </div>
                                     )}

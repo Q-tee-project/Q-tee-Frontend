@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Package, Info, X, Star } from 'lucide-react';
-import { FaRegCircleCheck } from 'react-icons/fa6';
 
 interface MarketProduct {
   id: number;
@@ -191,9 +190,6 @@ const MarketProductListCard = ({
                       >
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex-1 min-w-0 flex items-start gap-2">
-                            {isSelected && (
-                              <FaRegCircleCheck className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                            )}
                             <div className="flex-1 min-w-0">
                               <h4 className={`text-sm font-medium truncate ${
                                 isSelected ? 'text-gray-500' : 'text-gray-900'
