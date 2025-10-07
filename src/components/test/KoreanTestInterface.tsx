@@ -65,10 +65,6 @@ export function KoreanTestInterface({
 }: KoreanTestInterfaceProps) {
   const currentAnswer = answers[currentProblem.id] || '';
 
-  const handleChoiceClick = (choice: string) => {
-    onAnswerChange(currentProblem.id, choice);
-  };
-
   return (
     <Card className="w-5/6 flex flex-col shadow-sm">
       {/* 상단 네비게이션 */}
@@ -140,29 +136,35 @@ export function KoreanTestInterface({
               </div>
             </div>
 
-            {/* 객관식 선택지 */}
+            {/* 객관식 선택지 (수학 인터페이스 방식 적용) */}
             {currentProblem.choices && Array.isArray(currentProblem.choices) && currentProblem.choices.length > 0 && (
               <div className="space-y-3 ml-8">
-                {currentProblem.choices.map((choice, index) => (
-                  <button
-                    key={index}
-                    onClick={() => handleChoiceClick(choice)}
-                    className={`w-full text-left p-4 rounded-lg border-2 transition-all ${
-                      currentAnswer === choice
-                        ? 'border-blue-500 bg-blue-50 text-blue-900'
-                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                    }`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <span className={`font-semibold ${
-                        currentAnswer === choice ? 'text-blue-600' : 'text-gray-500'
-                      }`}>
-                        {'①②③④⑤⑥⑦⑧⑨⑩'[index] || `${index + 1}.`}
-                      </span>
-                      <span className="flex-1">{choice.replace(/^[①②③④⑤⑥⑦⑧⑨⑩]\s*/, '')}</span>
-                    </div>
-                  </button>
-                ))}
+                {currentProblem.choices.map((choice, index) => {
+                  const optionLabel = String.fromCharCode(65 + index); // 'A', 'B', 'C'...
+                  const isSelected = currentAnswer === optionLabel;
+                  const displayChoice = choice.replace(/^[①②③④⑤⑥⑦⑧⑨⑩]\s*/, '');
+
+                  return (
+                    <label
+                      key={index}
+                      className={`flex items-start gap-3 cursor-pointer p-4 rounded-lg border-2 transition-all ${
+                        isSelected
+                          ? 'border-blue-500 bg-blue-50 text-blue-900'
+                          : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name={`problem-${currentProblem.id}`}
+                        value={optionLabel}
+                        checked={isSelected}
+                        onChange={(e) => onAnswerChange(currentProblem.id, e.target.value)}
+                        className="mt-1"
+                      />
+                      <span className="flex-1">{displayChoice}</span>
+                    </label>
+                  );
+                })}
               </div>
             )}
           </div>
