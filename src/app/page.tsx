@@ -28,8 +28,7 @@ const LoginPage: React.FC = React.memo(() => {
         })
         const profile = await authService.getTeacherProfile()
         login('teacher', profile)
-        setError('') // 성공 시에만 에러 지우기
-        router.push('/teacher') // 선생님은 선생님 대시보드로
+        router.push('/dashboard/teacher')
       } else {
         await authService.studentLogin({
           username: formData.username,
@@ -37,8 +36,7 @@ const LoginPage: React.FC = React.memo(() => {
         })
         const profile = await authService.getStudentProfile()
         login('student', profile)
-        setError('') // 성공 시에만 에러 지우기
-        router.push('/student') // 학생은 학생 대시보드로
+        router.push('/dashboard/student')
       }
     } catch (error: any) {
       console.error('Login error:', error)

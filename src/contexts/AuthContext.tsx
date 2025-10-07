@@ -54,47 +54,38 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     setIsLoading(true);
     try {
       const authenticated = authService.isAuthenticated();
-      console.log('[AuthContext] refreshAuth - authenticated:', authenticated);
       if (authenticated) {
         const currentUser = authService.getCurrentUser();
-        console.log('[AuthContext] refreshAuth - currentUser:', currentUser);
         if (currentUser.type && currentUser.profile) {
-          // 로컬스토리지에 프로필이 있으면 바로 복원
-          console.log('[AuthContext] refreshAuth - 프로필 복원');
           setIsAuthenticated(true);
           setUserType(currentUser.type);
           setUserProfile(currentUser.profile);
-        } else if (currentUser.type && !currentUser.profile) {
-          // 토큰은 있지만 프로필이 없는 경우에만 API 호출
-          console.log('[AuthContext] refreshAuth - API로 프로필 가져오기');
-          try {
-            let freshProfile;
-            if (currentUser.type === 'teacher') {
-              freshProfile = await authService.getTeacherProfile();
-            } else {
-              freshProfile = await authService.getStudentProfile();
+          if (!currentUser.profile) {
+            try {
+              let freshProfile;
+              if (currentUser.type === 'teacher') {
+                freshProfile = await authService.getTeacherProfile();
+              } else {
+                freshProfile = await authService.getStudentProfile();
+              }
+              setUserProfile(freshProfile);
+            } catch (error) {
+              console.error('프로필 새로고침 실패:', error);
+              // 프로필 가져오기 실패시 로그아웃
+              logout();
             }
-            setIsAuthenticated(true);
-            setUserType(currentUser.type);
-            setUserProfile(freshProfile);
-          } catch (error) {
-            console.error('[AuthContext] 프로필 새로고침 실패:', error);
-            // 프로필 가져오기 실패시 로그아웃
-            logout();
           }
         } else {
-          // 토큰은 있지만 사용자 타입이 없는 경우 로그아웃
-          console.log('[AuthContext] refreshAuth - 사용자 타입 없음, 로그아웃');
+          // 토큰은 있지만 사용자 정보가 없는 경우 로그아웃
           logout();
         }
       } else {
-        console.log('[AuthContext] refreshAuth - 인증되지 않음');
         setIsAuthenticated(false);
         setUserType(null);
         setUserProfile(null);
       }
     } catch (error) {
-      console.error('[AuthContext] 인증 상태 확인 실패:', error);
+      console.error('인증 상태 확인 실패:', error);
       setIsAuthenticated(false);
       setUserType(null);
       setUserProfile(null);

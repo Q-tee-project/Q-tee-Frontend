@@ -838,24 +838,4 @@ export class EnglishService {
       throw error;
     }
   }
-
-  static async deleteAssignment(assignmentId: number): Promise<{ message: string }> {
-    const token = getToken();
-    if (!token) {
-      throw new Error('Authentication required');
-    }
-
-    const response = await fetch(`http://localhost:8002/api/assignments/${assignmentId}`, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to delete assignment: ${response.status}`);
-    }
-
-    return response.json();
-  }
 }

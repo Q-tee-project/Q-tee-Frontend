@@ -148,7 +148,7 @@ export default function AuthorMarketPage() {
         </div>
         <div className="flex space-x-4">
           <button
-            onClick={() => router.push('/market/my')}
+            onClick={() => router.push('/market/myMarket')}
             className="text-sm px-4 py-2 rounded-md bg-[#0072CE] text-white hover:bg-[#005fa3] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0072CE] focus-visible:ring-offset-2"
           >
             마이마켓

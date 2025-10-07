@@ -139,21 +139,26 @@ export function AssignmentList({
               value={`assignment-${assignment.id}`}
               className="border rounded-lg data-[state=open]:border-[#0072CE] transition-colors"
             >
-              <div className="relative">
-                <div className="p-4 pr-16">
-                  <div className="flex items-center gap-4 text-sm text-gray-600 mb-2">
-                    <div className="flex items-center gap-1">
-                      <Calendar className="w-4 h-4" />
-                      <span>{new Date(assignment.created_at).toLocaleDateString('ko-KR')}</span>
+              <AccordionTrigger className="p-4 hover:no-underline w-full">
+                <div className="flex items-center justify-between w-full">
+                  <div className="text-left">
+                    <div className="flex items-center gap-4 text-sm text-gray-600 mb-2">
+                      <div className="flex items-center gap-1">
+                        <Calendar className="w-4 h-4" />
+                        <span>{new Date(assignment.created_at).toLocaleDateString('ko-KR')}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Users className="w-4 h-4" />
+                        <span>{results.length}명 배포</span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Users className="w-4 h-4" />
-                      <span>{results.length}명 배포</span>
-                    </div>
+                    <h4 className="text-lg font-semibold text-gray-900 break-words overflow-hidden">{assignment.title}</h4>
                   </div>
-                  <h4 className="text-lg font-semibold text-gray-900 break-words overflow-hidden">{assignment.title}</h4>
                 </div>
-                <div className="absolute top-4 right-4 flex items-center gap-2">
+              </AccordionTrigger>
+              <AccordionContent className="p-4">
+                {/* 배포 및 삭제 버튼 */}
+                <div className="flex gap-2 justify-end mb-4">
                   {onDeployAssignment && (
                     <Button
                       size="sm"
@@ -175,10 +180,7 @@ export function AssignmentList({
                   >
                     <FaRegTrashAlt className="w-4 h-4" />
                   </Button>
-                  <AccordionTrigger className="hover:no-underline p-0 h-auto" />
                 </div>
-              </div>
-              <AccordionContent className="p-4">
                 <div className="space-y-4">
                   {/* 학생별 풀이 결과 테이블 */}
                   <div>

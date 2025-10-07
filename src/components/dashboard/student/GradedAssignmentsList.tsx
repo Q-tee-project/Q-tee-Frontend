@@ -50,7 +50,7 @@ const GradedAssignmentsList: React.FC<GradedAssignmentsListProps> = ({
             </div>
           ) : (
             <div className="space-y-2">
-              {gradedAssignments.map((assignment) => (
+              {gradedAssignments.slice(0, 3).map((assignment) => (
                 <div
                   key={assignment.id}
                   className="p-3 bg-white rounded-lg border border-gray-200 hover:bg-green-50 hover:border-green-200 cursor-pointer transition-colors"
@@ -67,6 +67,11 @@ const GradedAssignmentsList: React.FC<GradedAssignmentsListProps> = ({
                   </div>
                 </div>
               ))}
+              {gradedAssignments.length > 3 && (
+                <p className="text-xs text-gray-400 text-center">
+                  +{gradedAssignments.length - 3}개 더
+                </p>
+              )}
             </div>
           )}
         </div>
