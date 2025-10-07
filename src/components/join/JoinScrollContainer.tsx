@@ -49,45 +49,7 @@ export const JoinScrollContainer: React.FC<JoinScrollContainerProps> = React.mem
   onSubmitStep,
   onScrollToSection
 }) => {
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const sectionRefs = useRef<(HTMLDivElement | null)[]>([]);
-
-  const scrollToSection = useCallback((sectionIndex: number) => {
-    const section = sectionRefs.current[sectionIndex];
-    if (section) {
-      section.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start',
-      });
-    }
-  }, []);
-
-  // 스크롤 위치 감지 및 currentStep 업데이트
-  useEffect(() => {
-    const handleScrollPosition = () => {
-      const container = scrollContainerRef.current;
-      if (!container) return;
-
-      const scrollTop = container.scrollTop;
-      const sectionHeight = container.clientHeight;
-      const currentSectionIndex = Math.round(scrollTop / sectionHeight);
-      const newStep = (currentSectionIndex + 1) as Step;
-
-      if (newStep !== currentStep && newStep >= 1 && newStep <= getMaxStep()) {
-        onScrollToSection(newStep - 1);
-      }
-    };
-
-    const container = scrollContainerRef.current;
-    if (container) {
-      container.addEventListener('scroll', handleScrollPosition);
-      return () => container.removeEventListener('scroll', handleScrollPosition);
-    }
-  }, [currentStep, onScrollToSection]);
-
-  const getMaxStep = useCallback(() => {
-    return userType === 'teacher' ? 3 : 4;
-  }, [userType]);
 
   const renderCurrentSection = useMemo(() => {
     switch (currentStep) {
@@ -163,10 +125,7 @@ export const JoinScrollContainer: React.FC<JoinScrollContainerProps> = React.mem
   }, [currentStep]);
 
   return (
-    <div
-      ref={scrollContainerRef}
-      className="snap-y snap-mandatory h-screen overflow-y-auto relative z-10"
-    >
+    <>
       {/* 섹션 2: 기본 정보 */}
       {userType && (
         <div
@@ -313,7 +272,7 @@ export const JoinScrollContainer: React.FC<JoinScrollContainerProps> = React.mem
           )}
         </div>
       )}
-    </div>
+    </>
   );
 });
 

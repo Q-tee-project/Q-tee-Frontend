@@ -52,8 +52,36 @@ const JoinPage: React.FC = React.memo(() => {
         behavior: 'smooth',
         block: 'start',
       });
+      return;
+    }
+
+    // 섹션 ref가 없을 경우 컨테이너 높이를 이용해 위치로 스크롤
+    const container = scrollContainerRef.current;
+    if (container) {
+      const sectionHeight = container.clientHeight;
+      const targetTop = sectionHeight * sectionIndex;
+      container.scrollTo({ top: targetTop, behavior: 'smooth' });
     }
   };
+
+  const resetFormData = useCallback(() => {
+    setFormData({
+      name: '',
+      email: '',
+      phone: '',
+      username: '',
+      password: '',
+      confirmPassword: '',
+      parent_phone: '',
+      school_level: 'middle' as 'middle' | 'high',
+      grade: 1,
+    });
+    setFieldErrors({});
+    setTouchedFields({});
+    setIsUsernameChecked(false);
+    setIsUsernameAvailable(false);
+    setError('');
+  }, []);
 
   const handleUserTypeSelect = useCallback((type: UserType) => {
     setUserType(type);
@@ -62,9 +90,56 @@ const JoinPage: React.FC = React.memo(() => {
       setCurrentStep(2); // 먼저 단계를 업데이트
       scrollToSection(1); // 기본 정보 입력으로 스크롤
     }, 100);
-  }, []);
+  }, [resetFormData]);
 
-  // 스크롤 위치 감지 및 currentStep 업데이트
+  const isCurrentStepComplete = useCallback(() => {
+    // 필드가 유효한지 확인하는 헬퍼 함수
+    const isFieldValid = (fieldName: string, value: any, additionalChecks?: () => boolean) => {
+      const hasValue = typeof value === 'string' ? value.trim() : Boolean(value);
+      const hasNoError = !fieldErrors[fieldName];
+      const passesAdditionalChecks = additionalChecks ? additionalChecks() : true;
+
+      return hasValue && hasNoError && passesAdditionalChecks;
+    };
+
+    switch (currentStep) {
+      case 1:
+        return userType !== null;
+
+      case 2:
+        return (
+          isFieldValid('name', formData.name) &&
+          isFieldValid('email', formData.email) &&
+          isFieldValid('phone', formData.phone)
+        );
+
+      case 3:
+        return (
+          isFieldValid(
+            'username',
+            formData.username,
+            () => isUsernameChecked && isUsernameAvailable,
+          ) &&
+          isFieldValid('password', formData.password, () => formData.password.length >= 8) &&
+          isFieldValid(
+            'confirmPassword',
+            formData.confirmPassword,
+            () => formData.password === formData.confirmPassword,
+          )
+        );
+
+      case 4:
+        if (userType === 'student') {
+          return isFieldValid('parent_phone', formData.parent_phone);
+        }
+        return true;
+
+      default:
+        return false;
+    }
+  }, [currentStep, userType, formData, fieldErrors, isUsernameChecked, isUsernameAvailable]);
+
+  // 스크롤 위치 감지 및 currentStep 업데이트 (백업용)
   useEffect(() => {
     const handleScrollPosition = () => {
       const container = scrollContainerRef.current;
@@ -75,9 +150,13 @@ const JoinPage: React.FC = React.memo(() => {
       const currentSectionIndex = Math.round(scrollTop / sectionHeight);
       const newStep = (currentSectionIndex + 1) as Step;
 
-      console.log('스크롤 위치 감지:', { scrollTop, sectionHeight, currentSectionIndex, newStep });
+      console.log('스크롤 위치 감지 (백업):', { scrollTop, sectionHeight, currentSectionIndex, newStep });
 
-      if (newStep !== currentStep && newStep >= 1 && newStep <= getMaxStep()) {
+      const maxStep = userType === 'teacher' ? 3 : 4;
+      
+      // 휠 이벤트로 처리되지 않은 경우에만 백업으로 처리
+      if (newStep !== currentStep && newStep >= 1 && newStep <= maxStep) {
+        console.log('백업 단계 변경:', { currentStep, newStep });
         setCurrentStep(newStep);
       }
     };
@@ -85,58 +164,57 @@ const JoinPage: React.FC = React.memo(() => {
     const container = scrollContainerRef.current;
     if (container) {
       container.addEventListener('scroll', handleScrollPosition);
-      return () => container.removeEventListener('scroll', handleScrollPosition);
+      return () => {
+        container.removeEventListener('scroll', handleScrollPosition);
+      };
     }
-  }, [currentStep]);
+  }, [currentStep, userType]);
 
   // 스크롤 이벤트 핸들러
   useEffect(() => {
-    let scrollTimeout: NodeJS.Timeout;
-
     const handleScroll = (e: WheelEvent) => {
-      console.log('휠 이벤트 감지:', { deltaY: e.deltaY, isScrolling });
+      console.log('휠 이벤트 감지:', { deltaY: e.deltaY, currentStep });
 
-      // 이미 스크롤 중이면 무시
-      if (isScrolling) {
-        console.log('스크롤 중이라 무시');
-        e.preventDefault();
-        return;
-      }
-
-      // 스크롤 감도 조절 (더 민감하게)
-      if (Math.abs(e.deltaY) < 0.1) {
+      // 스크롤 감도 조절 (2로 통일)
+      if (Math.abs(e.deltaY) < 2) {
         console.log('스크롤 감도 부족:', Math.abs(e.deltaY));
         return;
       }
 
       // 아래로 스크롤 (다음 섹션으로)
       if (e.deltaY > 0) {
-        console.log('스크롤 다운 시도:', { currentStep, canScrollToNext, maxStep: getMaxStep() });
+        const maxStep = userType === 'teacher' ? 3 : 4;
+        const isStepComplete = isCurrentStepComplete();
+        console.log('스크롤 다운 시도:', { currentStep, canScrollToNext, maxStep, isStepComplete });
 
-        if (!canScrollToNext || isTypingPhone) {
-          console.log('스크롤 차단됨:', { canScrollToNext, isTypingPhone });
+        // 전화번호 입력 중에만 스크롤 차단
+        if (isTypingPhone) {
+          console.log('전화번호 입력 중이라 스크롤 차단');
           e.preventDefault();
           return;
         }
 
-        if (currentStep < getMaxStep()) {
+        // 현재 단계가 완료되지 않았으면 스크롤 차단
+        if (!isStepComplete) {
+          console.log('현재 단계가 완료되지 않아 스크롤 차단');
           e.preventDefault();
-          setIsScrolling(true);
+          return;
+        }
+
+        if (currentStep < maxStep) {
+          e.preventDefault();
+          console.log('스크롤 실행:', { currentStep, nextStep: currentStep + 1 });
 
           const nextStep = currentStep + 1;
           const sectionIndex = nextStep - 1;
-          console.log('스크롤 실행:', { currentStep, nextStep, sectionIndex });
 
-          // 먼저 아이콘 상태를 업데이트하고 스크롤
+          // 즉시 단계 변경
           setCurrentStep(nextStep as Step);
-          setTimeout(() => {
-            scrollToSection(sectionIndex); // 인덱스는 0부터 시작하므로 step에서 1을 빼줌
-          }, 50);
 
-          // 스크롤 완료 후 1초 뒤에 다시 스크롤 가능하도록
-          scrollTimeout = setTimeout(() => {
-            setIsScrolling(false);
-          }, 1000);
+          // 스크롤 실행
+          setTimeout(() => {
+            scrollToSection(sectionIndex);
+          }, 50);
         } else {
           console.log('스크롤 차단됨: 마지막 단계임');
         }
@@ -146,39 +224,27 @@ const JoinPage: React.FC = React.memo(() => {
         console.log('스크롤 업 시도:', { currentStep, deltaY: e.deltaY });
 
         e.preventDefault();
-        setIsScrolling(true);
+        console.log('스크롤 업 실행:', { currentStep, prevStep: currentStep - 1 });
 
         const prevStep = currentStep - 1;
-        console.log('스크롤 업 실행:', { currentStep, prevStep });
 
+        // 즉시 단계 변경
         setCurrentStep(prevStep as Step);
-        setTimeout(() => {
-          scrollToSection(prevStep - 1); // 인덱스는 0부터 시작
-        }, 50);
 
-        // 스크롤 완료 후 1초 뒤에 다시 스크롤 가능하도록
-        scrollTimeout = setTimeout(() => {
-          setIsScrolling(false);
-        }, 1000);
+        // 스크롤 실행
+        setTimeout(() => {
+          scrollToSection(prevStep - 1);
+        }, 50);
       }
     };
 
-    const container = scrollContainerRef.current;
-    if (container) {
-      container.addEventListener('wheel', handleScroll, { passive: false });
-
-      // 전체 document에도 이벤트 리스너 추가 (fallback)
+    // document에만 이벤트 리스너 추가 (더 안정적)
       document.addEventListener('wheel', handleScroll, { passive: false });
 
       return () => {
-        container.removeEventListener('wheel', handleScroll);
         document.removeEventListener('wheel', handleScroll);
-        if (scrollTimeout) {
-          clearTimeout(scrollTimeout);
-        }
       };
-    }
-  }, [currentStep, canScrollToNext, isScrolling, isTypingPhone]);
+  }, [currentStep, isTypingPhone, userType, isCurrentStepComplete]);
 
   // 전화번호 포맷팅 함수
   const formatPhoneNumber = useCallback((value: string) => {
@@ -377,53 +443,6 @@ const JoinPage: React.FC = React.memo(() => {
 
     setFieldErrors(newFieldErrors);
   }, [fieldErrors, userType, formData.password]);
-
-  const isCurrentStepComplete = useCallback(() => {
-    // 필드가 유효한지 확인하는 헬퍼 함수
-    const isFieldValid = (fieldName: string, value: any, additionalChecks?: () => boolean) => {
-      const hasValue = typeof value === 'string' ? value.trim() : Boolean(value);
-      const hasNoError = !fieldErrors[fieldName];
-      const passesAdditionalChecks = additionalChecks ? additionalChecks() : true;
-
-      return hasValue && hasNoError && passesAdditionalChecks;
-    };
-
-    switch (currentStep) {
-      case 1:
-        return userType !== null;
-
-      case 2:
-        return (
-          isFieldValid('name', formData.name) &&
-          isFieldValid('email', formData.email) &&
-          isFieldValid('phone', formData.phone)
-        );
-
-      case 3:
-        return (
-          isFieldValid(
-            'username',
-            formData.username,
-            () => isUsernameChecked && isUsernameAvailable,
-          ) &&
-          isFieldValid('password', formData.password, () => formData.password.length >= 8) &&
-          isFieldValid(
-            'confirmPassword',
-            formData.confirmPassword,
-            () => formData.password === formData.confirmPassword,
-          )
-        );
-
-      case 4:
-        if (userType === 'student') {
-          return isFieldValid('parent_phone', formData.parent_phone);
-        }
-        return true;
-
-      default:
-        return false;
-    }
-  }, [currentStep, userType, formData, fieldErrors, isUsernameChecked, isUsernameAvailable]);
 
   // 현재 단계 완료 상태 확인 시 스크롤 가능 여부 업데이트 및 자동 스크롤
   useEffect(() => {
@@ -675,25 +694,6 @@ const JoinPage: React.FC = React.memo(() => {
     router.push('/');
   }, [router]);
 
-  const resetFormData = useCallback(() => {
-    setFormData({
-      name: '',
-      email: '',
-      phone: '',
-      username: '',
-      password: '',
-      confirmPassword: '',
-      parent_phone: '',
-      school_level: 'middle' as 'middle' | 'high',
-      grade: 1,
-    });
-    setFieldErrors({});
-    setTouchedFields({});
-    setIsUsernameChecked(false);
-    setIsUsernameAvailable(false);
-    setError('');
-  }, []);
-
   const getStepTitle = () => {
     switch (currentStep) {
       case 1:
@@ -770,7 +770,7 @@ const JoinPage: React.FC = React.memo(() => {
                 </div>
 
       <JoinLoginLink onLoginClick={handleLoginClick} />
-    </div>
+                  </div>
   );
 });
 
