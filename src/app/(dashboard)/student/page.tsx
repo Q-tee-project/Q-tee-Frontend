@@ -24,11 +24,11 @@ const StudentDashboard = () => {
   const [classes, setClasses] = React.useState<any[]>([]);
   const [isLoadingClasses, setIsLoadingClasses] = React.useState(true);
 
-  // 컴포넌트 메모이제이션 (불필요한 리렌더 방지)
+  // 컴포넌트 메모이제이션
   const MemoClassAverage = React.useMemo(() => React.memo(ClassAverage), []);
   const MemoSubjectAverage = React.useMemo(() => React.memo(SubjectAverage), []);
 
-  // 독립 상태 업데이트 콜백 (참조 안정화 및 디버깅)
+  // 상태 업데이트 콜백
   const handleSetClassForAssignments = React.useCallback((val: string) => {
     setSelectedClassForAssignments(val);
   }, []);
@@ -69,29 +69,28 @@ const StudentDashboard = () => {
 
   // 클래스별 레이더 차트 데이터 생성
   const getRadarData = (classId: string) => {
-    // 클래스별 데이터 (실제로는 API에서 가져와야 함)
     const classData: Record<string, any> = {
-      '1': { // 클래스 A
+      '1': {
         국어: { 클래스평균: 85, 내점수: 40 },
         영어: { 클래스평균: 60, 내점수: 92 },
         수학: { 클래스평균: 82, 내점수: 75 },
       },
-      '2': { // 클래스 B
+      '2': {
         국어: { 클래스평균: 78, 내점수: 45 },
         영어: { 클래스평균: 72, 내점수: 88 },
         수학: { 클래스평균: 85, 내점수: 70 },
       },
-      '3': { // 클래스 C
+      '3': {
         국어: { 클래스평균: 90, 내점수: 35 },
         영어: { 클래스평균: 65, 내점수: 95 },
         수학: { 클래스평균: 88, 내점수: 80 },
       },
-      '4': { // 클래스 D
+      '4': {
         국어: { 클래스평균: 82, 내점수: 50 },
         영어: { 클래스평균: 70, 내점수: 85 },
         수학: { 클래스평균: 75, 내점수: 65 },
       },
-      '5': { // 클래스 E
+      '5': {
         국어: { 클래스평균: 88, 내점수: 42 },
         영어: { 클래스평균: 68, 내점수: 90 },
         수학: { 클래스평균: 80, 내점수: 72 },
@@ -127,21 +126,28 @@ const StudentDashboard = () => {
   const submittedAssignmentsForModal = React.useMemo(() => {
     return dashboardAssignments
       .filter(assignment => {
-        // 1. 응시 완료 상태 필터
+        // 응시 완료 상태 필터
         const status = assignment.status?.toLowerCase();
         const isSubmitted = status === 'completed' ||
                             status === 'submitted' ||
                             status === '응시' ||
                             status === 'graded' ||
                             status === 'finished';
+        
         if (!isSubmitted) {
           return false;
         }
 
-        // 2. 클래스별 필터
+        // 클래스별 필터
         if (assignment.subject === '영어') {
           return true; // 영어 과제는 classroom_id가 없으므로 항상 포함
         }
+        
+        // 클래스가 선택되지 않았거나, classroom_id가 없으면 모든 과제 포함
+        if (!selectedClassForAssignments || !assignment.classroom_id) {
+          return true;
+        }
+        
         return assignment.classroom_id?.toString() === selectedClassForAssignments;
       })
       .map(assignment => ({
@@ -151,77 +157,27 @@ const StudentDashboard = () => {
         dueDate: assignment.deployed_at,
         submittedCount: 0,
         totalCount: 0,
-        myScore: Math.floor(Math.random() * 51) + 50, // 임시 내 점수
-        classAverageScore: Math.floor(Math.random() * 51) + 50, // 임시 클래스 평균
+        myScore: Math.floor(Math.random() * 51) + 50,
+        classAverageScore: Math.floor(Math.random() * 51) + 50,
       }));
   }, [dashboardAssignments, selectedClassForAssignments]);
 
-  // 기본 ComposedChart 데이터
+  // 차트 데이터
   const defaultChartData = [
-    {
-      name: '1월',
-      클래스평균: 85,
-      내점수: 78,
-    },
-    {
-      name: '2월',
-      클래스평균: 88,
-      내점수: 82,
-    },
-    {
-      name: '3월',
-      클래스평균: 82,
-      내점수: 75,
-    },
-    {
-      name: '4월',
-      클래스평균: 90,
-      내점수: 85,
-    },
-    {
-      name: '5월',
-      클래스평균: 87,
-      내점수: 80,
-    },
-    {
-      name: '6월',
-      클래스평균: 92,
-      내점수: 88,
-    },
-    {
-      name: '7월',
-      클래스평균: 92,
-      내점수: 88,
-    },
-    {
-      name: '8월',
-      클래스평균: 92,
-      내점수: 88,
-    },
-    {
-      name: '9월',
-      클래스평균: 92,
-      내점수: 88,
-    },
-    {
-      name: '10월',
-      클래스평균: 65,
-      내점수: 70,
-    },
-    {
-      name: '11월',
-      클래스평균: 92,
-      내점수: 50,
-    },
-    {
-      name: '12월',
-      클래스평균: 60,
-      내점수: 88,
-    },
+    { name: '1월', 클래스평균: 85, 내점수: 78 },
+    { name: '2월', 클래스평균: 88, 내점수: 82 },
+    { name: '3월', 클래스평균: 82, 내점수: 75 },
+    { name: '4월', 클래스평균: 90, 내점수: 85 },
+    { name: '5월', 클래스평균: 87, 내점수: 80 },
+    { name: '6월', 클래스평균: 92, 내점수: 88 },
+    { name: '7월', 클래스평균: 92, 내점수: 88 },
+    { name: '8월', 클래스평균: 92, 내점수: 88 },
+    { name: '9월', 클래스평균: 92, 내점수: 88 },
+    { name: '10월', 클래스평균: 65, 내점수: 70 },
+    { name: '11월', 클래스평균: 92, 내점수: 50 },
+    { name: '12월', 클래스평균: 60, 내점수: 88 },
   ];
 
-  // 간단한 차트 데이터 (백엔드 담당자를 위해 단순화)
-  // 좌측 라인차트 데이터 고정 (불필요한 재생성으로 인한 애니메이션 방지)
   const composedChartData = React.useMemo(() => defaultChartData, []);
 
   // 과제 데이터 로딩
@@ -244,7 +200,7 @@ const StudentDashboard = () => {
         allAssignments.push(...mathAssignments.map((assignment: any) => ({
           ...assignment,
           subject: '수학',
-          id: `math-${assignment.assignment_id}`, // 고유 ID 생성
+          id: `math-${assignment.assignment_id}`,
           title: assignment.title,
           problem_count: assignment.problem_count,
           status: assignment.status,
@@ -260,7 +216,7 @@ const StudentDashboard = () => {
         allAssignments.push(...koreanAssignments.map((assignment: any) => ({
           ...assignment,
           subject: '국어',
-          id: `korean-${assignment.assignment_id}`, // 고유 ID 생성
+          id: `korean-${assignment.assignment_id}`,
           title: assignment.title,
           problem_count: assignment.problem_count,
           status: assignment.status,
@@ -287,20 +243,6 @@ const StudentDashboard = () => {
       }
 
       setDashboardAssignments(allAssignments);
-      console.log('📋 로드된 모든 과제:', allAssignments);
-      console.log('📋 과제 상태들:', allAssignments.map(a => ({ title: a.title, status: a.status, subject: a.subject })));
-      
-      // 미응시 과제 디버깅
-      const unsubmitted = allAssignments.filter(assignment => {
-        const status = assignment.status?.toLowerCase();
-        return status === 'deployed' || 
-               status === 'assigned' || 
-               status === '미응시' ||
-               status === 'not_started' ||
-               status === 'pending' ||
-               !status;
-      });
-      console.log('📋 미응시 과제들:', unsubmitted);
     } catch (error) {
       console.error('과제 로드 실패:', error);
     }
@@ -309,12 +251,11 @@ const StudentDashboard = () => {
     }
   };
 
-  // 과제 상태별 분류 (더 유연한 필터링)
+  // 과제 상태별 분류
   const unsubmittedAssignments = dashboardAssignments.filter(assignment => {
     const status = assignment.status?.toLowerCase();
-    console.log(`🔍 과제 "${assignment.title}" 상태 확인:`, status);
     
-    // 미응시 상태들 (더 포괄적으로)
+    // 미응시 상태들
     const isUnsubmitted = status === 'deployed' || 
            status === 'assigned' || 
            status === '미응시' ||
@@ -322,9 +263,8 @@ const StudentDashboard = () => {
            status === 'pending' ||
            status === 'active' ||
            status === 'available' ||
-           !status; // 상태가 없는 경우도 미제출로 간주
+           !status;
     
-    console.log(`🔍 "${assignment.title}" 미응시 여부:`, isUnsubmitted);
     return isUnsubmitted;
   });
 
@@ -337,9 +277,6 @@ const StudentDashboard = () => {
            status === 'finished';
   });
 
-  // 디버깅용 로그
-  console.log('🔍 미제출 과제들:', unsubmittedAssignments);
-  console.log('🔍 채점 완료 과제들:', gradedAssignments);
 
   // 과제 클릭 핸들러
   const handleAssignmentClick = (assignment: any) => {
