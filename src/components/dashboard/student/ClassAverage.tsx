@@ -38,53 +38,42 @@ interface Assignment {
 interface ClassAverageProps {
   selectedClass: string;
   setSelectedClass: (value: string) => void;
-  chartData: any[];
   classes: Array<{ id: string; name: string }>;
   assignments?: Assignment[];
-  onDataRequest?: (params: {
-    classId: string;
-    startDate: string;
-    endDate: string;
-    assignmentIds?: string[];
-  }) => Promise<any[]>;
 }
 
 const ClassAverage: React.FC<ClassAverageProps> = ({
   selectedClass,
   setSelectedClass,
-  chartData,
   classes,
   assignments = [],
-  onDataRequest,
 }) => {
   // 통합된 설정 모달 상태 관리
   const [showSettingsModal, setShowSettingsModal] = React.useState(false);
   const [selectedAssignments, setSelectedAssignments] = React.useState<string[]>([]);
-  const [startDate, setStartDate] = React.useState<Date | undefined>(undefined);
-  const [endDate, setEndDate] = React.useState<Date | undefined>(undefined);
   const [subjectFilter, setSubjectFilter] = React.useState<string>('전체');
   const [searchQuery, setSearchQuery] = React.useState<string>('');
-  const [startDatePopoverOpen, setStartDatePopoverOpen] = React.useState(false);
-  const [endDatePopoverOpen, setEndDatePopoverOpen] = React.useState(false);
-
-  // 백엔드 연동을 위한 로딩 상태
-  const [isLoading, setIsLoading] = React.useState(false);
 
   // 부모로부터 받은 assignments prop을 유일한 데이터 소스로 사용
   const allAssignments = assignments || [];
 
-  // 기간, 과목, 검색어에 따른 과제 필터링 함수
+  // assignments prop이 변경될 때 초기 선택된 과제 설정
+  React.useEffect(() => {
+    if (allAssignments.length > 0) {
+      const recentAssignments = [...allAssignments]
+        .sort((a, b) => {
+          if (!a.dueDate || !b.dueDate) return 0;
+          return new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime();
+        })
+        .slice(0, 7)
+        .map(a => a.id);
+      setSelectedAssignments(recentAssignments);
+    }
+  }, [assignments]);
+
+  // 과목, 검색어에 따른 과제 필터링 함수
   const getFilteredAssignments = () => {
     let filtered = allAssignments;
-
-    // 기간 필터 (날짜가 설정된 경우에만 적용)
-    if (startDate && endDate) {
-      filtered = filtered.filter(assignment => {
-        if (!assignment.dueDate) return false; // dueDate가 없는 경우 필터링 제외
-        const assignmentDate = new Date(assignment.dueDate);
-        return assignmentDate >= startDate && assignmentDate <= endDate;
-      });
-    }
 
     // 과목 필터
     if (subjectFilter !== '전체') {
@@ -103,29 +92,6 @@ const ClassAverage: React.FC<ClassAverageProps> = ({
 
   const filteredAssignments = getFilteredAssignments();
 
-  // 백엔드 API 호출 함수
-  const fetchChartData = async () => {
-    if (!onDataRequest || !startDate || !endDate) return;
-    
-    setIsLoading(true);
-    try {
-      const params = {
-        classId: selectedClass,
-        startDate: format(startDate, 'yyyy-MM-dd'),
-        endDate: format(endDate, 'yyyy-MM-dd'),
-        assignmentIds: selectedAssignments.length > 0 ? selectedAssignments : undefined,
-      };
-      
-      const data = await onDataRequest(params);
-      // 백엔드에서 받은 데이터로 차트 업데이트
-      console.log('Received chart data:', data);
-    } catch (error) {
-      console.error('Failed to fetch chart data:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   // 설정 적용 핸들러
   const handleSettingsApply = () => {
     setShowSettingsModal(false);
@@ -143,53 +109,20 @@ const ClassAverage: React.FC<ClassAverageProps> = ({
     });
   };
 
-  const handleAssignmentRemove = (assignmentId: string) => {
-    setSelectedAssignments(prev => prev.filter(id => id !== assignmentId));
+  // 차트 데이터 생성 함수 (selectedAssignments를 유일한 소스로 사용)
+  const getChartData = () => {
+    return selectedAssignments
+      .map(id => allAssignments.find(a => a.id === id))
+      .filter((a): a is Assignment => !!a) // undefined 제거
+      .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()) // 날짜순 정렬
+      .map(assignment => ({
+        name: assignment.name,
+        '클래스평균': assignment.classAverageScore || 0,
+        '내점수': assignment.myScore || 0,
+      }));
   };
 
-  // 날짜 선택 핸들러 (선택 후 캘린더 자동 닫힘)
-  const handleStartDateSelect = (date: Date | undefined) => {
-    setStartDate(date);
-    setStartDatePopoverOpen(false);
-  };
-
-  const handleEndDateSelect = (date: Date | undefined) => {
-    setEndDate(date);
-    setEndDatePopoverOpen(false);
-  };
-
-  // 차트 데이터 생성 함수
-  const getFilteredChartData = () => {
-    if (selectedAssignments.length > 0) {
-      // 과제별: 선택된 과제들의 데이터
-      return selectedAssignments.map((assignmentId, index) => {
-        const assignment = allAssignments.find(a => a.id === assignmentId);
-        return {
-          name: assignment?.name || `과제${index + 1}`,
-          클래스평균: (assignment as any)?.classAverageScore || 0,
-          내점수: (assignment as any)?.myScore || 0,
-        };
-      });
-    } else {
-      // 선택된 과제가 없으면 가장 최근 7개 과제를 자동으로 표시
-      const recentAssignments = [...allAssignments]
-        .sort((a, b) => {
-          if (!a.dueDate || !b.dueDate) return 0;
-          return new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime()
-        })
-        .slice(0, 7);
-      
-      return recentAssignments.map((assignment) => {
-        return {
-          name: assignment.name,
-          클래스평균: assignment.classAverageScore || 0,
-          내점수: assignment.myScore || 0,
-        };
-      });
-    }
-  };
-
-  const displayChartData = getFilteredChartData();
+  const displayChartData = getChartData();
   return (
     <Card className="flex-1 shadow-sm px-6">
       <CardHeader className="p-0">
@@ -287,7 +220,7 @@ const ClassAverage: React.FC<ClassAverageProps> = ({
               차트 설정
             </DialogTitle>
             <DialogDescription className="sr-only">
-              기간, 과목, 과제명을 기준으로 차트에 표시할 데이터를 설정합니다.
+              과목, 과제명을 기준으로 차트에 표시할 데이터를 설정합니다.
             </DialogDescription>
           </DialogHeader>
           
@@ -295,80 +228,10 @@ const ClassAverage: React.FC<ClassAverageProps> = ({
             {/* 안내 사항 */}
             <div className="p-2 bg-gray-50 rounded-lg">
               <ul className="text-xs text-gray-600 space-y-0.5">
-                <li>• 기간 설정 시 해당 기간 내의 과제만 표시됩니다</li>
                 <li>• 최대 7개의 과제까지 선택 가능합니다</li>
               </ul>
             </div>
             
-            {/* 기간 설정 */}
-            <div>
-              <label className="text-base font-semibold text-gray-800 mb-3 block">기간 설정</label>
-              <div className="flex items-center gap-2">
-                {/* 시작 날짜 박스 */}
-                <div className="flex-1">
-                  <Popover open={startDatePopoverOpen} onOpenChange={setStartDatePopoverOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="w-full flex items-center justify-start gap-2 h-10"
-                      >
-                        <CalendarIcon className="h-4 w-4 text-gray-500" />
-                        <span className="text-sm">
-                          {startDate ? format(startDate, 'yyyy.MM.dd', { locale: ko }) : '시작 날짜'}
-                        </span>
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={startDate}
-                        onSelect={handleStartDateSelect}
-                        initialFocus
-                        locale={ko}
-                        captionLayout="dropdown"
-                        fromYear={2020}
-                        toYear={new Date().getFullYear()}
-                        className="rounded-md border shadow-sm"
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-
-                {/* 구분선 */}
-                <span className="text-gray-400">-</span>
-
-                {/* 종료 날짜 박스 */}
-                <div className="flex-1">
-                  <Popover open={endDatePopoverOpen} onOpenChange={setEndDatePopoverOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="w-full flex items-center justify-start gap-2 h-10"
-                      >
-                        <CalendarIcon className="h-4 w-4 text-gray-500" />
-                        <span className="text-sm">
-                          {endDate ? format(endDate, 'yyyy.MM.dd', { locale: ko }) : '종료 날짜'}
-                        </span>
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={endDate}
-                        onSelect={handleEndDateSelect}
-                        initialFocus
-                        locale={ko}
-                        captionLayout="dropdown"
-                        fromYear={2020}
-                        toYear={new Date().getFullYear()}
-                        className="rounded-md border shadow-sm"
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              </div>
-            </div>
-
             {/* 과제 선택 */}
             <div>
               <label className="text-base font-semibold text-gray-800 mb-3 block">
@@ -409,8 +272,8 @@ const ClassAverage: React.FC<ClassAverageProps> = ({
               <div className="max-h-48 overflow-y-auto space-y-2">
                 {filteredAssignments.length === 0 ? (
                   <div className="text-center py-8 text-gray-500">
-                    <p>선택한 기간에 해당하는 과제가 없습니다.</p>
-                    <p className="text-xs mt-1">다른 기간을 선택해보세요.</p>
+                    <p>선택한 조건에 해당하는 과제가 없습니다.</p>
+                    <p className="text-xs mt-1">다른 필터를 선택해보세요.</p>
                   </div>
                 ) : (
                   filteredAssignments.map((assignment) => (
@@ -442,8 +305,6 @@ const ClassAverage: React.FC<ClassAverageProps> = ({
                 )}
               </div>
             </div>
-
-            
           </div>
 
           <DialogFooter>
@@ -456,9 +317,8 @@ const ClassAverage: React.FC<ClassAverageProps> = ({
             <Button
               onClick={handleSettingsApply}
               className="bg-blue-600 hover:bg-blue-700"
-              disabled={isLoading}
             >
-              {isLoading ? '적용 중...' : '적용'}
+              적용
             </Button>
           </DialogFooter>
         </DialogContent>
