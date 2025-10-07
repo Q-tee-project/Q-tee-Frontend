@@ -83,12 +83,8 @@ const ClassPerformanceChartCard = React.memo(({
   studentColorMap,
   isLoadingAssignments = false,
 }: ClassPerformanceChartCardProps) => {
-  const [startDate, setStartDate] = React.useState<Date | undefined>(undefined);
-  const [endDate, setEndDate] = React.useState<Date | undefined>(undefined);
   const [subjectFilter, setSubjectFilter] = React.useState<string>('전체');
   const [searchQuery, setSearchQuery] = React.useState<string>('');
-  const [startDatePopoverOpen, setStartDatePopoverOpen] = React.useState(false);
-  const [endDatePopoverOpen, setEndDatePopoverOpen] = React.useState(false);
 
   const getStudentColor = (studentId: number): string | null => {
     return studentColorMap[studentId] || null;
@@ -96,13 +92,6 @@ const ClassPerformanceChartCard = React.memo(({
 
   const getFilteredAssignments = () => {
     let filtered = assignments;
-
-    if (startDate && endDate) {
-      filtered = filtered.filter(assignment => {
-        const assignmentDate = new Date(assignment.dueDate);
-        return assignmentDate >= startDate && assignmentDate <= endDate;
-      });
-    }
 
     if (subjectFilter !== '전체') {
       filtered = filtered.filter(assignment => assignment.subject === subjectFilter);
@@ -119,15 +108,7 @@ const ClassPerformanceChartCard = React.memo(({
 
   const filteredAssignments = getFilteredAssignments();
 
-  const handleStartDateSelect = (date: Date | undefined) => {
-    setStartDate(date);
-    setStartDatePopoverOpen(false);
-  };
 
-  const handleEndDateSelect = (date: Date | undefined) => {
-    setEndDate(date);
-    setEndDatePopoverOpen(false);
-  };
 
   const getAssignmentChartData = React.useCallback(() => {
     console.log('📊 차트 데이터 생성 시작...');
@@ -704,84 +685,15 @@ const ClassPerformanceChartCard = React.memo(({
           <div className="space-y-4">
             <div className="p-2 bg-gray-50 rounded-lg">
               <ul className="text-xs text-gray-600 space-y-0.5">
-                <li>• 기간 설정 시 해당 기간 내의 과제만 표시됩니다</li>
                 <li>• 최대 7개의 과제까지 선택 가능합니다</li>
               </ul>
             </div>
             
-            <div>
-              <label className="text-base font-semibold text-gray-800 mb-3 block">기간 설정</label>
-              <div className="flex items-center gap-2">
-                <div className="flex-1">
-                  <Popover open={startDatePopoverOpen} onOpenChange={setStartDatePopoverOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="w-full flex items-center justify-start gap-2 h-10"
-                      >
-                        <CalendarIcon className="h-4 w-4 text-gray-500" />
-                        <span className="text-sm">
-                          {startDate ? format(startDate, 'yyyy.MM.dd', { locale: ko }) : '시작 날짜'}
-                        </span>
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={startDate}
-                        onSelect={handleStartDateSelect}
-                        initialFocus
-                        locale={ko}
-                        captionLayout="dropdown"
-                        fromYear={2020}
-                        toYear={new Date().getFullYear()}
-                        className="rounded-md border shadow-sm"
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
 
-                <span className="text-gray-400">-</span>
-
-                <div className="flex-1">
-                  <Popover open={endDatePopoverOpen} onOpenChange={setEndDatePopoverOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="w-full flex items-center justify-start gap-2 h-10"
-                      >
-                        <CalendarIcon className="h-4 w-4 text-gray-500" />
-                        <span className="text-sm">
-                          {endDate ? format(endDate, 'yyyy.MM.dd', { locale: ko }) : '종료 날짜'}
-                        </span>
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={endDate}
-                        onSelect={handleEndDateSelect}
-                        initialFocus
-                        locale={ko}
-                        captionLayout="dropdown"
-                        fromYear={2020}
-                        toYear={new Date().getFullYear()}
-                        className="rounded-md border shadow-sm"
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              </div>
-            </div>
 
             <div>
               <label className="text-base font-semibold text-gray-800 mb-3 block">
                 과제 선택 (최대 7개) 
-                {filteredAssignments.length !== assignments.length && (
-                  <span className="text-xs text-blue-600 ml-2">
-                    ({filteredAssignments.length}개 과제 중)
-                  </span>
-                )}
               </label>
 
               <div className="flex gap-2 mb-3">
