@@ -54,8 +54,6 @@ export const useEnglishBank = () => {
   const loadWorksheetProblems = async (worksheetId: number) => {
     try {
       const worksheetDetail = await EnglishService.getEnglishWorksheetDetail(worksheetId);
-      console.log(worksheetDetail);
-      console.log(",,,,");
       // API 응답 구조가 worksheet_data 안에 중첩되어 있음
       const worksheetData = worksheetDetail.worksheet_data;
       const questions = worksheetData?.questions || [];
