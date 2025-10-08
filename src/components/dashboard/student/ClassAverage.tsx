@@ -33,6 +33,7 @@ interface Assignment {
   totalCount: number;
   myScore?: number;
   classAverageScore?: number;
+  status?: 'completed' | 'pending'; // 응시 여부
 }
 
 interface ClassAverageProps {
@@ -119,6 +120,7 @@ const ClassAverage: React.FC<ClassAverageProps> = ({
         name: assignment.name,
         '클래스평균': assignment.classAverageScore || 0,
         '내점수': assignment.myScore || 0,
+        status: assignment.status, // 응시 여부 추가
       }));
   };
 
@@ -183,7 +185,20 @@ const ClassAverage: React.FC<ClassAverageProps> = ({
                 height={80}
               />
               <YAxis />
-              <Tooltip />
+              <Tooltip 
+                formatter={(value: any, name: string, props: any) => {
+                  const num = typeof value === 'number' ? value : 0;
+                  const status = props.payload?.status;
+                  
+                  // 미응시 (pending)면 "0점 (미응시)"로 표시
+                  if (status === 'pending' && num === 0) {
+                    return ['0점 (미응시)', name];
+                  }
+                  
+                  // 응시한 경우 점수 표시
+                  return [`${num}점`, name];
+                }}
+              />
               <Legend 
                 content={(props: any) => {
                   const { payload } = props;

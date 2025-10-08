@@ -81,11 +81,12 @@ const SubjectAverage: React.FC<SubjectAverageProps> = ({
                   const mappedName = name === '내점수' ? '내 평균' : (name === '클래스평균' ? '클래스 평균' : name);
                   const hasData = props.payload?.hasData;
                   
-                  // 미응시 (hasData가 false이고 점수가 0)면 "미응시 0점"으로 표시
+                  // 미응시 (hasData가 false이고 점수가 0)면 "0점 (미응시)"로 표시
                   if (!hasData && num === 0) {
-                    return ['미응시 0점', mappedName];
+                    return ['0점 (미응시)', mappedName];
                   }
                   
+                  // 응시한 경우 점수 표시
                   return [`${num}점`, mappedName];
                 }}
               />
@@ -152,11 +153,12 @@ const SubjectAverage: React.FC<SubjectAverageProps> = ({
                   const mappedName = name === '내점수' ? '내 평균' : (name === '클래스평균' ? '클래스 평균' : name);
                   const hasData = props.payload?.hasData;
                   
-                  // 미응시 (hasData가 false이고 점수가 0)면 "미응시 0점"으로 표시
+                  // 미응시 (hasData가 false이고 점수가 0)면 "0점 (미응시)"로 표시
                   if (!hasData && num === 0) {
-                    return ['미응시 0점', mappedName];
+                    return ['0점 (미응시)', mappedName];
                   }
                   
+                  // 응시한 경우 점수 표시
                   return [`${num}점`, mappedName];
                 }}
               />
