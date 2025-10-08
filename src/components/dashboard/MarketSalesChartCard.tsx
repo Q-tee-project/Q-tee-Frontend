@@ -36,7 +36,7 @@ const MarketSalesChartCard = ({
   marketProducts,
   getRecentProducts,
 }: MarketSalesChartCardProps) => {
-
+  const [selectedPeriod, setSelectedPeriod] = React.useState('all');
 
   const chartData = React.useMemo(() => {
     const baseData = [
@@ -54,7 +54,18 @@ const MarketSalesChartCard = ({
       { name: '12월' },
     ];
 
-    const filteredData = baseData;
+    const getFilteredData = () => {
+      switch (selectedPeriod) {
+        case '6months':
+          return baseData.slice(-6);
+        case '3months':
+          return baseData.slice(-3);
+        default:
+          return baseData;
+      }
+    };
+
+    const filteredData = getFilteredData();
 
     return filteredData.map((month, index) => {
       const monthData: any = { ...month };
@@ -80,7 +91,7 @@ const MarketSalesChartCard = ({
 
       return monthData;
     });
-  }, [selectedProducts, marketProducts, getRecentProducts]);
+  }, [selectedProducts, marketProducts, getRecentProducts, selectedPeriod]);
 
   const productsInChart = React.useMemo(() => {
     return selectedProducts.length > 0
@@ -109,7 +120,20 @@ const MarketSalesChartCard = ({
           </div>
         </div>
 
+        {/* Period Selection */}
+        <div className="flex items-center gap-4">
+          <Select defaultValue="all" onValueChange={setSelectedPeriod}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="기간 선택" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">전체 기간</SelectItem>
+              <SelectItem value="6months">최근 6개월</SelectItem>
+              <SelectItem value="3months">최근 3개월</SelectItem>
+            </SelectContent>
+          </Select>
 
+        </div>
       </CardHeader>
       <CardContent className="p-0">
         <div className="relative h-[28rem] bg-white rounded-lg p-4">

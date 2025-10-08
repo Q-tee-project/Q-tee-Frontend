@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { FiSend, FiUser, FiArrowLeft } from 'react-icons/fi';
 import { IoMailOutline } from 'react-icons/io5';
@@ -24,7 +24,7 @@ interface ClassroomInfo {
   grade: number;
 }
 
-export default function MessagePostPage() {
+function MessagePostContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -367,5 +367,14 @@ export default function MessagePostPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+
+export default function MessagePostPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div>Loading...</div></div>}>
+      <MessagePostContent />
+    </Suspense>
   );
 }

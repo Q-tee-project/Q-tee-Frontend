@@ -233,4 +233,10 @@ export const mathService = {
     document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
   },
+
+  deleteAssignment: async (assignmentId: number): Promise<{ message: string }> => {
+    return apiRequest(`/api/assignments/${assignmentId}`, {
+      method: 'DELETE',
+    });
+  },
 };

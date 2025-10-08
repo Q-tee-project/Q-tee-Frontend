@@ -141,75 +141,28 @@ const TeacherDashboard = React.memo(() => {
       .slice(0, 2);
   }, [marketProducts]);
 
-  // 에러 메시지를 사용자 친화적으로 변환하는 함수
-  const getErrorMessage = React.useCallback((error: any, context: string): string => {
-    if (!error) return '알 수 없는 오류가 발생했습니다.';
-    
-    // 네트워크 연결 오류
-    if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-      return '서버에 연결할 수 없습니다. 인터넷 연결을 확인해주세요.';
-    }
-    
-    // HTTP 상태 코드 기반 오류
-    if (error.status) {
-      switch (error.status) {
-        case 401:
-          return '로그인이 필요합니다. 다시 로그인해주세요.';
-        case 403:
-          return '접근 권한이 없습니다.';
-        case 404:
-          return `${context}을(를) 찾을 수 없습니다.`;
-        case 500:
-          return '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
-        case 503:
-          return '서비스가 일시적으로 사용할 수 없습니다.';
-        default:
-          return `${context} 처리 중 오류가 발생했습니다.`;
-      }
-    }
-    
-    // 타임아웃 오류
-    if (error.message && error.message.includes('timeout')) {
-      return '요청 시간이 초과되었습니다. 다시 시도해주세요.';
-    }
-    
-    // 기타 오류
-    return error.message || `${context} 처리 중 오류가 발생했습니다.`;
-  }, []);
-
-  // API 재시도 함수 (개선된 버전)
+  // API 재시도 함수 (안전한 버전)
   const retryApiCall = React.useCallback(async <T,>(
     apiCall: () => Promise<T>, 
-    context: string = 'API',
-    maxRetries: number = 2, 
-    delay: number = 1000
+    maxRetries: number = 1, 
+    delay: number = 500
   ): Promise<T> => {
-    let lastError: any;
-    
     for (let i = 0; i < maxRetries; i++) {
       try {
         return await apiCall();
       } catch (error) {
-        lastError = error;
-        
         // 네트워크 오류나 fetch 실패 시 즉시 에러 던지기
         if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
           throw error;
         }
-        
-        // 마지막 시도가 아니면 재시도
-        if (i < maxRetries - 1) {
-          console.log(`${context} 재시도 중... (${i + 1}/${maxRetries})`);
-          await new Promise(resolve => setTimeout(resolve, delay * (i + 1)));
+        if (i === maxRetries - 1) {
+          throw error; // 마지막 시도에서도 실패하면 에러 던지기
         }
+        await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
-    
-    // 모든 재시도 실패 시 사용자 친화적 에러 메시지와 함께 던지기
-    const userFriendlyError = new Error(getErrorMessage(lastError, context));
-    (userFriendlyError as any).originalError = lastError;
-    throw userFriendlyError;
-  }, [getErrorMessage]);
+    throw new Error('모든 재시도가 실패했습니다');
+  }, []);
 
   // 과제 배포된 학생 목록 조회
   const getAssignedStudents = React.useCallback(async (assignmentId: number, subject: 'korean' | 'english' | 'math'): Promise<number[]> => {
@@ -447,67 +400,33 @@ const TeacherDashboard = React.memo(() => {
     }
   }, []);
 
-  // 실제 클래스 데이터 로드 (개선된 에러 처리)
+  // 실제 클래스 데이터 로드
   const loadRealClasses = React.useCallback(async () => {
     try {
       setIsLoadingClasses(true);
-      setApiErrors(prev => {
-        const newSet = new Set(prev);
-        newSet.delete('classes');
-        return newSet;
-      });
-      
-      const classrooms = await retryApiCall(
-        () => classroomService.getMyClassrooms(),
-        '클래스 정보',
-        3,
-        1000
-      );
-      
+      const classrooms = await classroomService.getMyClassrooms();
       const classData: ClassData[] = classrooms.map(classroom => ({
         id: classroom.id.toString(),
         name: classroom.name,
         createdAt: classroom.created_at
       }));
-      
       setRealClasses(classData);
-      setLastClassSyncTime(new Date());
-      console.log('✅ 클래스 데이터 로딩 성공:', classData.length, '개 클래스');
-      
     } catch (error) {
-      console.error('❌ 클래스 데이터 로딩 실패:', error);
       setRealClasses([]);
-      setApiErrors(prev => new Set([...prev, 'classes']));
-      setErrorMessages(prev => ({ 
-        ...prev, 
-        classes: getErrorMessage(error, '클래스 정보')
-      }));
     } finally {
       setIsLoadingClasses(false);
     }
-  }, [retryApiCall, getErrorMessage]);
+  }, []);
 
-  // 실제 학생 데이터 로드 (개선된 에러 처리)
+  // 실제 학생 데이터 로드
   const loadRealStudents = React.useCallback(async () => {
     try {
       setIsLoadingStudents(true);
-      setApiErrors(prev => {
-        const newSet = new Set(prev);
-        newSet.delete('students');
-        return newSet;
-      });
-      
       const studentsData: Record<string, StudentData[]> = {};
-      let hasError = false;
       
       for (const classroom of realClasses) {
         try {
-          const students = await retryApiCall(
-            () => classroomService.getClassroomStudents(parseInt(classroom.id)),
-            `클래스 ${classroom.name} 학생 정보`,
-            2,
-            500
-          );
+          const students = await classroomService.getClassroomStudents(parseInt(classroom.id));
           
           studentsData[classroom.id] = students.map(student => ({
             id: student.id,
@@ -517,34 +436,17 @@ const TeacherDashboard = React.memo(() => {
           }));
           
         } catch (error) {
-          console.error(`❌ 클래스 ${classroom.name} 학생 데이터 로딩 실패:`, error);
           studentsData[classroom.id] = [];
-          hasError = true;
         }
       }
       
       setRealStudents(studentsData);
-      
-      if (hasError) {
-        setApiErrors(prev => new Set([...prev, 'students']));
-        setErrorMessages(prev => ({ 
-          ...prev, 
-          students: '일부 클래스의 학생 정보를 불러올 수 없습니다.'
-        }));
-      }
-      
     } catch (error) {
-      console.error('❌ 학생 데이터 로딩 실패:', error);
       setRealStudents({});
-      setApiErrors(prev => new Set([...prev, 'students']));
-      setErrorMessages(prev => ({ 
-        ...prev, 
-        students: getErrorMessage(error, '학생 정보')
-      }));
     } finally {
       setIsLoadingStudents(false);
     }
-  }, [realClasses, retryApiCall, getErrorMessage]);
+  }, [realClasses]);
 
   // 실제 과제 데이터 로드 (선택된 클래스의 배포된 과제만) - 최적화된 버전
   const loadRealAssignments = React.useCallback(async (selectedClassId?: string) => {
@@ -629,8 +531,6 @@ const TeacherDashboard = React.memo(() => {
   });
   const [isLoadingStats, setIsLoadingStats] = React.useState(true);
   const [apiErrors, setApiErrors] = React.useState<Set<string>>(new Set());
-  const [errorMessages, setErrorMessages] = React.useState<Record<string, string>>({});
-  const [isRetrying, setIsRetrying] = React.useState(false);
   
   // API 캐싱을 위한 상태
   const [apiCache, setApiCache] = React.useState<Map<string, { data: any; timestamp: number }>>(new Map());
@@ -858,49 +758,6 @@ const TeacherDashboard = React.memo(() => {
     }
   }, [selectedClass, realClasses, loadRealAssignments]);
                                  
-  // 에러 상태 표시 컴포넌트
-  const ErrorAlert = ({ errorKey, message }: { errorKey: string; message: string }) => (
-    <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center">
-          <div className="flex-shrink-0">
-            <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-            </svg>
-          </div>
-          <div className="ml-3">
-            <h3 className="text-sm font-medium text-red-800">
-              {errorKey === 'classes' && '클래스 정보 로딩 실패'}
-              {errorKey === 'students' && '학생 정보 로딩 실패'}
-              {errorKey === 'assignments' && '과제 정보 로딩 실패'}
-              {errorKey === 'market' && '마켓 정보 로딩 실패'}
-            </h3>
-            <p className="mt-1 text-sm text-red-700">{message}</p>
-          </div>
-        </div>
-        <button
-          onClick={() => {
-            setApiErrors(prev => {
-              const newSet = new Set(prev);
-              newSet.delete(errorKey);
-              return newSet;
-            });
-            setErrorMessages(prev => {
-              const newMessages = { ...prev };
-              delete newMessages[errorKey];
-              return newMessages;
-            });
-          }}
-          className="text-red-400 hover:text-red-600"
-        >
-          <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-          </svg>
-        </button>
-      </div>
-    </div>
-  );
-
   return (
     <div className="flex flex-col min-h-screen p-5 space-y-6">
       <PageHeader
@@ -909,15 +766,6 @@ const TeacherDashboard = React.memo(() => {
         variant="default"
         description="수업 현황과 마켓 관리를 확인하세요"
       />
-
-      {/* 에러 알림 표시 */}
-      {Array.from(apiErrors).map(errorKey => (
-        <ErrorAlert 
-          key={errorKey} 
-          errorKey={errorKey} 
-          message={errorMessages[errorKey] || '알 수 없는 오류가 발생했습니다.'} 
-        />
-      ))}
 
       {/* Tab Navigation */}
       <TabNavigation

@@ -66,10 +66,7 @@ const AssignmentSelectionModal = ({
             {assignments.map((assignment) => (
               <div
                 key={assignment.id}
-                onClick={(e) => {
-                  e.preventDefault();
-                  handleAssignmentSelect(assignment.id);
-                }}
+                onClick={() => handleAssignmentSelect(assignment.id)}
                 className={`p-3 rounded-lg border cursor-pointer transition-all duration-200 ${
                   selectedAssignments.includes(assignment.id)
                     ? 'bg-[#0072CE]/10 border-[#0072CE]/50'
