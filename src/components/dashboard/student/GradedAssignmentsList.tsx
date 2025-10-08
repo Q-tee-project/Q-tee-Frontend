@@ -2,18 +2,22 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { FileText, CheckCircle } from 'lucide-react';
+import { FileText } from 'lucide-react';
 import { RxExternalLink } from "react-icons/rx";
 
 interface Assignment {
   id: string;
   title: string;
-  subject: string;
-  problem_count: number;
-  status: string;
+  subject: '국어' | '영어' | '수학';
+  problem_count?: number;
+  status: 'completed' | 'pending';
   score?: number;
   deployed_at?: string;
+  raw_id: number;
+  raw_subject: 'korean' | 'english' | 'math';
+  dueDate: string;
+  myScore?: number;
+  averageScore?: number;
 }
 
 interface GradedAssignmentsListProps {
@@ -50,11 +54,11 @@ const GradedAssignmentsList: React.FC<GradedAssignmentsListProps> = ({
             </div>
           ) : (
             <div className="space-y-2">
-              {gradedAssignments.slice(0, 3).map((assignment) => (
+              {gradedAssignments.map((assignment) => (
                 <div
                   key={assignment.id}
-                  className="p-3 bg-white rounded-lg border border-gray-200 hover:bg-green-50 hover:border-green-200 cursor-pointer transition-colors"
                   onClick={() => onAssignmentClick(assignment)}
+                  className="p-3 bg-white rounded-lg border border-gray-200 hover:bg-green-50 hover:border-green-200 cursor-pointer transition-colors"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -67,11 +71,6 @@ const GradedAssignmentsList: React.FC<GradedAssignmentsListProps> = ({
                   </div>
                 </div>
               ))}
-              {gradedAssignments.length > 3 && (
-                <p className="text-xs text-gray-400 text-center">
-                  +{gradedAssignments.length - 3}개 더
-                </p>
-              )}
             </div>
           )}
         </div>

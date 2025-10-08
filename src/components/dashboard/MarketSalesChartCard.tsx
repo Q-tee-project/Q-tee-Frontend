@@ -36,6 +36,8 @@ const MarketSalesChartCard = ({
   marketProducts,
   getRecentProducts,
 }: MarketSalesChartCardProps) => {
+  const [selectedPeriod, setSelectedPeriod] = React.useState('all');
+
   const chartData = React.useMemo(() => {
     const baseData = [
       { name: '1월' },
@@ -48,9 +50,24 @@ const MarketSalesChartCard = ({
       { name: '8월' },
       { name: '9월' },
       { name: '10월' },
+      { name: '11월' },
+      { name: '12월' },
     ];
 
-    return baseData.map((month, index) => {
+    const getFilteredData = () => {
+      switch (selectedPeriod) {
+        case '6months':
+          return baseData.slice(-6);
+        case '3months':
+          return baseData.slice(-3);
+        default:
+          return baseData;
+      }
+    };
+
+    const filteredData = getFilteredData();
+
+    return filteredData.map((month, index) => {
       const monthData: any = { ...month };
 
       const productsToShow =
@@ -74,7 +91,7 @@ const MarketSalesChartCard = ({
 
       return monthData;
     });
-  }, [selectedProducts, marketProducts, getRecentProducts]);
+  }, [selectedProducts, marketProducts, getRecentProducts, selectedPeriod]);
 
   const productsInChart = React.useMemo(() => {
     return selectedProducts.length > 0
@@ -105,7 +122,7 @@ const MarketSalesChartCard = ({
 
         {/* Period Selection */}
         <div className="flex items-center gap-4">
-          <Select defaultValue="all">
+          <Select defaultValue="all" onValueChange={setSelectedPeriod}>
             <SelectTrigger className="w-48">
               <SelectValue placeholder="기간 선택" />
             </SelectTrigger>
@@ -116,12 +133,6 @@ const MarketSalesChartCard = ({
             </SelectContent>
           </Select>
 
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <CalendarIcon className="h-4 w-4 text-[#0072CE]" />
-              <label className="text-sm font-medium text-gray-700">기간별 차트</label>
-            </div>
-          </div>
         </div>
       </CardHeader>
       <CardContent className="p-0">
@@ -166,7 +177,7 @@ const MarketSalesChartCard = ({
                                 <div className="space-y-1">
                                   <div className="flex justify-between items-center">
                                     <span className="text-xs text-gray-600 font-medium">수입</span>
-                                    <span className="text-sm font-bold text-green-600">₩{revenue?.toLocaleString()}</span>
+                                    <span className="text-sm font-bold text-green-600">{revenue?.toLocaleString()}P</span>
                                   </div>
                                   <div className="flex justify-between items-center">
                                     <span className="text-xs text-gray-600 font-medium">판매량</span>
