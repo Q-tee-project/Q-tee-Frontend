@@ -32,7 +32,7 @@ import { IoIosClose } from "react-icons/io";
 
 export default function ClassCreatePage() {
   const router = useRouter();
-  const { isAuthenticated, userType } = useAuth();
+  const { isAuthenticated, userType, isLoading: authLoading } = useAuth();
   const [classes, setClasses] = useState<Classroom[]>([]);
   const [studentCounts, setStudentCounts] = useState<{[key: number]: number}>({});
   const [isLoading, setIsLoading] = useState(true);
@@ -52,13 +52,16 @@ export default function ClassCreatePage() {
 
   // 로그인 확인
   useEffect(() => {
+    // 인증 로딩 중에는 리디렉션하지 않음
+    if (authLoading) return;
+
     if (!isAuthenticated || userType !== 'teacher') {
       router.push('/');
       return;
     }
 
     loadClasses();
-  }, [isAuthenticated, userType, router]);
+  }, [isAuthenticated, userType, router, authLoading]);
 
   // 클래스 목록 로드
   const loadClasses = async () => {
