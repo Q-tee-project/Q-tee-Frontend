@@ -64,6 +64,14 @@ function TestPageContent() {
   const [showResultModal, setShowResultModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [showStudentResult, setShowStudentResult] = useState(false);
+  
+  // 과제 자동 선택을 위한 state
+  const [pendingAssignment, setPendingAssignment] = useState<{
+    assignmentId: string;
+    assignmentTitle: string;
+    subject: string;
+    viewResult: string;
+  } | null>(null);
 
   // 문제 유형을 한국어로 변환
   const getProblemTypeInKorean = (type: string): string => {
@@ -89,46 +97,144 @@ function TestPageContent() {
     }
   }, [selectedSubject, userProfile]);
 
-  // URL 파라미터에서 과제 자동 선택
+  // localStorage 확인 - 주기적으로 체크 (뒤로가기 대응)
   useEffect(() => {
-    const assignmentId = searchParams.get('assignmentId');
-    const assignmentTitle = searchParams.get('assignmentTitle');
-    const subject = searchParams.get('subject');
-    const viewResult = searchParams.get('viewResult');
+    const checkStorage = () => {
+      // URL 파라미터가 있으면 스킵
+      const urlAssignmentId = searchParams.get('assignmentId');
+      if (urlAssignmentId) {
+        return;
+      }
+      
+      try {
+        const storedData = localStorage.getItem('selectedAssignment');
+        if (storedData) {
+          const data = JSON.parse(storedData);
+          console.log('📦 localStorage 발견:', data);
+          
+          // 기존과 다른 ID면 업데이트
+          if (!pendingAssignment || pendingAssignment.assignmentId !== data.assignmentId) {
+            console.log('✅ 새로운 과제, pendingAssignment 업데이트');
+            setPendingAssignment({
+              assignmentId: data.assignmentId,
+              assignmentTitle: data.assignmentTitle,
+              subject: data.subject,
+              viewResult: data.viewResult,
+            });
+          }
+          
+          // localStorage 삭제
+          localStorage.removeItem('selectedAssignment');
+        }
+      } catch (e) {
+        console.error('localStorage 읽기 실패:', e);
+      }
+    };
+    
+    // 주기적으로 확인 (300ms마다)
+    const interval = setInterval(checkStorage, 300);
+    
+    return () => clearInterval(interval);
+  }, [searchParams, pendingAssignment]);
+
+  // URL 파라미터 또는 pendingAssignment에서 과제 자동 선택
+  useEffect(() => {
+    // 1. URL 파라미터 확인
+    let assignmentId = searchParams.get('assignmentId');
+    let assignmentTitle = searchParams.get('assignmentTitle');
+    let subject = searchParams.get('subject');
+    let viewResult = searchParams.get('viewResult');
+
+    // 2. URL 파라미터가 없으면 pendingAssignment 사용
+    if (!assignmentId && pendingAssignment) {
+      assignmentId = pendingAssignment.assignmentId;
+      assignmentTitle = pendingAssignment.assignmentTitle;
+      subject = pendingAssignment.subject;
+      viewResult = pendingAssignment.viewResult;
+      
+      console.log('✅ pendingAssignment 데이터 사용:', { assignmentId, assignmentTitle, subject, viewResult });
+    }
 
     if (assignmentId && assignmentTitle && worksheets.length > 0) {
       // 과목이 지정된 경우 해당 과목으로 변경
       if (subject && subject !== selectedSubject) {
-        console.log('🎯 과목 변경:', selectedSubject, '→', subject);
+        console.log('🎯 과목 변경 필요:', selectedSubject, '→', subject);
         setSelectedSubject(subject);
         return; // 과목이 변경되면 loadWorksheets가 다시 호출됨
       }
 
-      // 해당 과제 찾기
-      const targetWorksheet = worksheets.find(
-        (w) => w.id.toString() === assignmentId && w.title === assignmentTitle,
-      );
+      // 해당 과제 찾기 (ID만 사용 - 이미 과목이 일치함)
+      console.log('🔍 과제 검색:', {
+        assignmentId,
+        assignmentIdType: typeof assignmentId,
+        assignmentTitle,
+        subject,
+        selectedSubject,
+        viewResult,
+        worksheetsCount: worksheets.length,
+        availableWorksheets: worksheets.map((w) => ({ 
+          id: w.id, 
+          idType: typeof w.id,
+          idString: w.id.toString(),
+          title: w.title 
+        }))
+      });
+      
+      const targetWorksheet = worksheets.find((w) => {
+        const idMatch = w.id.toString() === assignmentId?.toString();
+        
+        // worksheet 객체에서 과목 확인
+        let worksheetSubject = '';
+        if ('korean_type' in w) worksheetSubject = '국어';
+        else if ('unit_name' in w && 'semester' in w) worksheetSubject = '수학';
+        else if ('worksheet_subject' in w || 'total_questions' in w) worksheetSubject = '영어';
+        
+        const subjectMatch = !subject || worksheetSubject === subject;
+        
+        const match = idMatch && subjectMatch;
+        
+        console.log('매칭 확인:', { 
+          worksheetId: w.id,
+          worksheetTitle: w.title,
+          worksheetSubject,
+          assignmentId, 
+          targetSubject: subject,
+          idMatch,
+          subjectMatch,
+          finalMatch: match
+        });
+        return match;
+      });
 
       if (targetWorksheet) {
-        console.log('🎯 URL 파라미터로 과제 자동 선택:', targetWorksheet);
-        console.log('🎯 viewResult 파라미터:', viewResult);
+        console.log('✅ 과제 찾음, 자동 선택 시작:', targetWorksheet);
+        console.log('🎯 viewResult:', viewResult);
 
         // 채점 완료된 과제인 경우 결과 보기 모드로 설정
         if (viewResult === 'true') {
-          console.log('🎯 결과 보기 모드로 자동 설정');
+          console.log('✅ 결과 보기 모드로 설정');
           setShowStudentResult(true);
+        } else {
+          console.log('✅ 문제 풀기 모드로 설정');
+          setShowStudentResult(false);
         }
 
         handleWorksheetSelect(targetWorksheet);
+        
+        // 과제 선택 성공 후 pendingAssignment 초기화
+        if (pendingAssignment) {
+          console.log('✅ pendingAssignment 초기화');
+          setPendingAssignment(null);
+        }
       } else {
-        console.log('🎯 과제를 찾을 수 없음:', {
-          assignmentId,
-          assignmentTitle,
-          availableWorksheets: worksheets.map((w) => ({ id: w.id, title: w.title })),
+        console.log('❌ 과제를 찾을 수 없음:', {
+          찾는ID: assignmentId,
+          찾는제목: assignmentTitle,
+          사용가능한과제목록: worksheets.map((w) => ({ id: w.id, title: w.title })),
         });
       }
     }
-  }, [worksheets, searchParams, selectedSubject]);
+  }, [worksheets, searchParams, selectedSubject, pendingAssignment]);
 
   // 타이머 효과
   useEffect(() => {

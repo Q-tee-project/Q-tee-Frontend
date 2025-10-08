@@ -14,6 +14,13 @@ interface SubjectAverageProps {
     내점수: number;
     fullMark: number;
   }>;
+  categoryData: Record<string, Array<{
+    subject: string;
+    클래스평균: number;
+    내점수: number;
+    fullMark: number;
+    hasData: boolean;
+  }>>;
   classes: Array<{ id: string; name: string }>;
 }
 
@@ -21,56 +28,15 @@ const SubjectAverage: React.FC<SubjectAverageProps> = ({
   selectedClass,
   setSelectedClass,
   radarData,
+  categoryData,
   classes,
 }) => {
   const [selectedSubject, setSelectedSubject] = React.useState<string>('국어');
 
-  // 하단 차트용: 과목별 카테고리 정의 및 데이터 생성
-  const subjectCategories: Record<string, string[]> = React.useMemo(() => ({
-    '국어': ['전체','시', '소설', '수필/비문학', '문법'],
-    '영어': ['전체', '독해', '어휘', '문법'],
-    '수학': ['전체', '소인수분해', '정수와 유리수', '방정식', '그래프와 비례'],
-  }), []);
-
-  // 하단 차트용 임시 점수 데이터 (과목/카테고리별 클래스 평균과 내 평균)
-  const mockSubjectScores: Record<string, Record<string, { avg: number; mine: number }>> = React.useMemo(() => ({
-    '국어': {
-      '시': { avg: 78, mine: 82 },
-      '소설': { avg: 74, mine: 69 },
-      '수필/비문학': { avg: 81, mine: 77 },
-      '문법': { avg: 70, mine: 73 },
-    },
-    '영어': {
-      '전체': { avg: 76, mine: 84 },
-      '독해': { avg: 72, mine: 80 },
-      '어휘': { avg: 79, mine: 75 },
-      '문법': { avg: 68, mine: 71 },
-    },
-    '수학': {
-      '소인수분해': { avg: 83, mine: 78 },
-      '정수와 유리수': { avg: 75, mine: 72 },
-      '방정식': { avg: 82, mine: 85 },
-      '그래프와 비례': { avg: 77, mine: 74 },
-    },
-  }), []);
-
+  // 실제 카테고리 데이터 사용 (고정 카테고리 모두 표시)
   const bottomRadarData = React.useMemo(() => {
-    const base = radarData.find(item => item.subject === selectedSubject);
-    const baseAvg = base?.클래스평균 ?? 0;
-    const baseMine = base?.내점수 ?? 0;
-    const categories = subjectCategories[selectedSubject] || [];
-    return categories.map(cat => {
-      const mock = mockSubjectScores[selectedSubject]?.[cat];
-      const avg = mock?.avg ?? baseAvg ?? 0;
-      const mine = mock?.mine ?? baseMine ?? 0;
-      return {
-        subject: cat,
-        클래스평균: typeof avg === 'number' ? avg : 0,
-        내점수: typeof mine === 'number' ? mine : 0,
-        fullMark: 100,
-      };
-    });
-  }, [radarData, selectedSubject, subjectCategories, mockSubjectScores]);
+    return categoryData[selectedSubject] || [];
+  }, [selectedSubject, categoryData]);
   return (
     <Card className="shadow-sm lg:col-span-2 h-full flex flex-col px-6 py-5" style={{ height: '100%' }}>
       <CardHeader className="px-0 py-0">
@@ -110,9 +76,18 @@ const SubjectAverage: React.FC<SubjectAverageProps> = ({
               <PolarAngleAxis dataKey="subject" />
               <PolarRadiusAxis angle={30} domain={[0, 100]} />
               <Tooltip 
-                formatter={(value: any) => {
+                formatter={(value: any, name: string, props: any) => {
                   const num = typeof value === 'number' ? value : 0;
-                  return num === 0 ? ['미응시 0점', ''] : [`${num}점`, ''];
+                  const mappedName = name === '내점수' ? '내 평균' : (name === '클래스평균' ? '클래스 평균' : name);
+                  const hasData = props.payload?.hasData;
+                  
+                  // 미응시 (hasData가 false이고 점수가 0)면 "0점 (미응시)"로 표시
+                  if (!hasData && num === 0) {
+                    return ['0점 (미응시)', mappedName];
+                  }
+                  
+                  // 응시한 경우 점수 표시
+                  return [`${num}점`, mappedName];
                 }}
               />
               <Radar
@@ -173,11 +148,18 @@ const SubjectAverage: React.FC<SubjectAverageProps> = ({
               <PolarAngleAxis dataKey="subject" />
               <PolarRadiusAxis angle={30} domain={[0, 100]} />
               <Tooltip 
-                formatter={(value: any, name: string) => {
+                formatter={(value: any, name: string, props: any) => {
                   const num = typeof value === 'number' ? value : 0;
                   const mappedName = name === '내점수' ? '내 평균' : (name === '클래스평균' ? '클래스 평균' : name);
-                  const display = num === 0 ? '미응시 0점' : `${num}점`;
-                  return [display, mappedName];
+                  const hasData = props.payload?.hasData;
+                  
+                  // 미응시 (hasData가 false이고 점수가 0)면 "0점 (미응시)"로 표시
+                  if (!hasData && num === 0) {
+                    return ['0점 (미응시)', mappedName];
+                  }
+                  
+                  // 응시한 경우 점수 표시
+                  return [`${num}점`, mappedName];
                 }}
               />
               <Radar
