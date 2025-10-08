@@ -2,16 +2,21 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { ClipboardList, Clock } from 'lucide-react';
+import { ClipboardList } from 'lucide-react';
 import { RxExternalLink } from "react-icons/rx";
 
 interface Assignment {
   id: string;
   title: string;
-  subject: string;
-  problem_count: number;
-  status: string;
+  subject: '국어' | '영어' | '수학';
+  problem_count?: number;
+  status: 'completed' | 'pending';
   deployed_at?: string;
+  raw_id: number;
+  raw_subject: 'korean' | 'english' | 'math';
+  dueDate: string;
+  myScore?: number;
+  averageScore?: number;
 }
 
 interface PendingAssignmentsListProps {
