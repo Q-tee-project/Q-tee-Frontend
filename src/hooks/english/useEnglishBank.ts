@@ -22,7 +22,7 @@ export const useEnglishBank = () => {
   } = useBankState<EnglishWorksheet, EnglishProblem>();
 
   // 컴포넌트 마운트 시 자동으로 데이터 로드
-  useEffect(() => {
+  useEffect(() => { 
     if (worksheets.length === 0 && !isLoading) {
       loadWorksheets();
     }
@@ -54,7 +54,6 @@ export const useEnglishBank = () => {
   const loadWorksheetProblems = async (worksheetId: number) => {
     try {
       const worksheetDetail = await EnglishService.getEnglishWorksheetDetail(worksheetId);
-
       // API 응답 구조가 worksheet_data 안에 중첩되어 있음
       const worksheetData = worksheetDetail.worksheet_data;
       const questions = worksheetData?.questions || [];
@@ -138,7 +137,7 @@ export const useEnglishBank = () => {
       updateState({
         worksheets: updatedWorksheets,
         selectedWorksheet: newSelectedWorksheet,
-        worksheetProblems: newSelectedWorksheet ? worksheetProblems : null
+        worksheetProblems: newSelectedWorksheet ? worksheetProblems : undefined
       });
 
       // 새로운 워크시트가 선택된 경우 문제 로드
