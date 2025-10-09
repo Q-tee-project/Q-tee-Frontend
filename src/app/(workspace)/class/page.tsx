@@ -24,7 +24,7 @@ import { IoSearch } from 'react-icons/io5';
 
 export default function StudentClassPage() {
   const router = useRouter();
-  const { isAuthenticated, userType, userProfile } = useAuth();
+  const { isAuthenticated, userType, userProfile, isLoading: authLoading } = useAuth();
   const [classes, setClasses] = useState<Classroom[]>([]);
   const [classesWithTeachers, setClassesWithTeachers] = useState<ClassroomWithTeacher[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -37,13 +37,16 @@ export default function StudentClassPage() {
 
   // 로그인 확인
   useEffect(() => {
+    // 인증 로딩 중에는 리디렉션하지 않음
+    if (authLoading) return;
+
     if (!isAuthenticated || userType !== 'student') {
       router.push('/');
       return;
     }
 
     loadClasses();
-  }, [isAuthenticated, userType, router]);
+  }, [isAuthenticated, userType, router, authLoading]);
 
   // 클래스 목록 로드
   const loadClasses = async () => {
