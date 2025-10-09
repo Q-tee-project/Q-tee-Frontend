@@ -67,7 +67,6 @@ export const useKoreanBank = () => {
     }
 
     try {
-      updateState({ isLoading: true });
       await koreanService.deleteKoreanWorksheet(worksheet.id);
 
       if (selectedWorksheet?.id === worksheet.id) {
@@ -81,14 +80,11 @@ export const useKoreanBank = () => {
       alert('국어 워크시트가 삭제되었습니다.');
     } catch (error: any) {
       alert(`삭제 실패: ${error.message}`);
-    } finally {
-      updateState({ isLoading: false });
     }
   };
 
   const handleBatchDeleteWorksheets = async (worksheets: KoreanWorksheet[]) => {
     try {
-      updateState({ isLoading: true });
       for (const worksheet of worksheets) {
         await koreanService.deleteKoreanWorksheet(worksheet.id);
       }
@@ -100,8 +96,6 @@ export const useKoreanBank = () => {
       alert(`${worksheets.length}개의 국어 워크시트가 삭제되었습니다.`);
     } catch (error: any) {
       alert(`일괄 삭제 실패: ${error.message}`);
-    } finally {
-      updateState({ isLoading: false });
     }
   };
 

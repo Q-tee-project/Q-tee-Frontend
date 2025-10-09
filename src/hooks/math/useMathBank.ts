@@ -69,7 +69,6 @@ export const useMathBank = () => {
     }
 
     try {
-      updateState({ isLoading: true });
       await mathService.deleteMathWorksheet(worksheet.id);
 
       if (selectedWorksheet?.id === worksheet.id) {
@@ -83,15 +82,11 @@ export const useMathBank = () => {
       alert('수학 워크시트가 삭제되었습니다.');
     } catch (error: any) {
       alert(`삭제 실패: ${error.message}`);
-    } finally {
-      updateState({ isLoading: false });
     }
   };
 
   const handleBatchDeleteWorksheets = async (worksheets: Worksheet[]) => {
     try {
-      updateState({ isLoading: true });
-
       // 각 워크시트를 순차적으로 삭제
       for (const worksheet of worksheets) {
         await mathService.deleteMathWorksheet(worksheet.id);
@@ -110,8 +105,6 @@ export const useMathBank = () => {
       alert(`${worksheets.length}개의 수학 워크시트가 삭제되었습니다.`);
     } catch (error: any) {
       alert(`일괄 삭제 실패: ${error.message}`);
-    } finally {
-      updateState({ isLoading: false });
     }
   };
 
