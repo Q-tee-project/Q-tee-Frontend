@@ -284,7 +284,14 @@ export const getMarketStats = async (): Promise<MarketStats> => {
   try {
     const response = await marketApi.get('/market/stats');
     return response.data;
-  } catch (error) {
+  } catch (error: any) {
+    // 404 에러는 조용히 처리 (엔드포인트가 없을 수 있음)
+    if (error?.response?.status === 404) {
+      console.log('[Market] /market/stats 엔드포인트가 없어서 대체 데이터를 사용합니다.');
+    } else {
+      console.error('[Market] 통계 조회 에러:', error);
+    }
+
     try {
       const products = await getProducts();
       return {
@@ -296,6 +303,7 @@ export const getMarketStats = async (): Promise<MarketStats> => {
         total_revenue: products.reduce((sum, product) => sum + product.total_revenue, 0),
       };
     } catch (fallbackError) {
+      console.log('[Market] 대체 데이터 조회 실패, 기본값을 사용합니다.');
       return {
         total_products: 0,
         total_sales: 0,

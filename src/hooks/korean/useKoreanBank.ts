@@ -18,14 +18,13 @@ export const useKoreanBank = () => {
 
   // 컴포넌트 마운트 시 자동으로 데이터 로드
   useEffect(() => {
-    if (worksheets.length === 0 && !isLoading) {
-      loadWorksheets();
-    }
+    loadWorksheets();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadWorksheets = async () => {
-    updateState({ isLoading: true });
     try {
+      updateState({ isLoading: true, error: null });
       const worksheetData = await koreanService.getKoreanWorksheets();
 
       updateState({ worksheets: worksheetData.worksheets }); // Access .worksheets property
@@ -35,6 +34,7 @@ export const useKoreanBank = () => {
         await loadWorksheetProblems(worksheetData.worksheets[0].id);
       }
     } catch (error: any) {
+      console.error('국어 워크시트 로딩 에러:', error);
       updateState({
         error: `국어 워크시트 데이터를 불러올 수 없습니다: ${error.message}`,
       });

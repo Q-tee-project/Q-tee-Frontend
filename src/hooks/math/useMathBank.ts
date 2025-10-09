@@ -25,31 +25,39 @@ export const useMathBank = () => {
   }, []);
 
   const loadWorksheets = async () => {
-    updateState({ isLoading: true });
     try {
+      updateState({ isLoading: true, error: null });
+      console.log('[useMathBank] 워크시트 로딩 시작');
+
       const worksheetResponse = await mathService.getMathWorksheets();
       const worksheetData = worksheetResponse.worksheets;
 
       updateState({ worksheets: worksheetData });
+      console.log('[useMathBank] 워크시트 로드 완료:', worksheetData.length, '개');
 
       if (worksheetData.length > 0) {
         updateState({ selectedWorksheet: worksheetData[0] });
         await loadWorksheetProblems(worksheetData[0].id);
       }
     } catch (error: any) {
+      console.error('[useMathBank] 수학 워크시트 로딩 에러:', error);
       updateState({
         error: `수학 워크시트 데이터를 불러올 수 없습니다: ${error.message}`,
       });
     } finally {
+      console.log('[useMathBank] 워크시트 로딩 종료 (isLoading → false)');
       updateState({ isLoading: false });
     }
   };
 
   const loadWorksheetProblems = async (worksheetId: number) => {
     try {
+      console.log('[useMathBank] 워크시트 문제 로딩 시작:', worksheetId);
       const worksheetDetail = await mathService.getMathWorksheetProblems(worksheetId);
       updateState({ worksheetProblems: worksheetDetail.problems || [] });
+      console.log('[useMathBank] 워크시트 문제 로드 완료:', worksheetDetail.problems?.length || 0, '개');
     } catch (error: any) {
+      console.error('[useMathBank] 워크시트 문제 로딩 에러:', error);
       updateState({ error: '수학 워크시트 문제를 불러올 수 없습니다.' });
     }
   };
