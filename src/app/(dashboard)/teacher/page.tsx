@@ -477,6 +477,7 @@ const TeacherDashboard = React.memo(() => {
       setMarketStats(stats);
       setLastSyncTime(new Date());
     } catch (error: any) {
+      console.log('[Dashboard] 마켓 통계 조회 실패, 기본값을 사용합니다.');
       const fallbackStats = {
         total_products: 0,
         total_sales: 0,
@@ -497,6 +498,7 @@ const TeacherDashboard = React.memo(() => {
       setMarketProducts(products);
       setLastSyncTime(new Date());
     } catch (error: any) {
+      console.log('[Dashboard] 마켓 상품 조회 실패, 빈 목록을 표시합니다.');
       setMarketProducts([]);
     } finally {
       setIsLoadingProducts(false);
@@ -589,15 +591,15 @@ const TeacherDashboard = React.memo(() => {
 
       setRealStudents(studentsData);
 
-      // 에러가 있는지 확인
-      const hasAnyError = results.some((result) => result.students.length === 0);
-      if (hasAnyError) {
-        setApiErrors((prev) => new Set([...prev, 'students']));
-        setErrorMessages((prev) => ({
-          ...prev,
-          students: '일부 클래스의 학생 정보를 불러올 수 없습니다.',
-        }));
-      }
+      // 에러가 있는지 확인 - 학생이 0명인 것은 정상일 수 있으므로 에러로 처리하지 않음
+      // const hasAnyError = results.some((result) => result.students.length === 0);
+      // if (hasAnyError) {
+      //   setApiErrors((prev) => new Set([...prev, 'students']));
+      //   setErrorMessages((prev) => ({
+      //     ...prev,
+      //     students: '일부 클래스의 학생 정보를 불러올 수 없습니다.',
+      //   }));
+      // }
     } catch (error) {
       console.error('❌ 학생 데이터 로딩 실패:', error);
       setRealStudents({});
@@ -949,14 +951,16 @@ const TeacherDashboard = React.memo(() => {
     };
 
     initializeData();
-  }, [loadMarketStats, loadMarketProducts, loadRealClasses]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // 마운트 시 한 번만 실행
 
   // 클래스 데이터 로드 후 통계 데이터 로드
   React.useEffect(() => {
     if (realClasses.length > 0) {
       loadRealStats();
     }
-  }, [realClasses.length, loadRealStats]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [realClasses.length]); // loadRealStats 제거하여 무한 루프 방지
 
   // 클래스 데이터가 로드되면 학생 데이터만 로드 (과제는 선택된 클래스에서만)
   React.useEffect(() => {
@@ -973,7 +977,8 @@ const TeacherDashboard = React.memo(() => {
         setSelectedClass(latestClassId);
       }
     }
-  }, [realClasses, loadRealStudents, selectedClass, realStudents]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [realClasses.length]); // realClasses만 length로 추적하여 무한 루프 방지
 
   // 선택된 클래스가 변경될 때 해당 클래스의 학생 데이터가 없으면 즉시 로드
   React.useEffect(() => {
@@ -1000,7 +1005,8 @@ const TeacherDashboard = React.memo(() => {
 
       loadSpecificClassStudents();
     }
-  }, [selectedClass, realClasses, realStudents]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedClass]); // selectedClass 변경 시에만 실행
 
   React.useEffect(() => {
     setSelectedStudents([]);
@@ -1011,16 +1017,14 @@ const TeacherDashboard = React.memo(() => {
   React.useEffect(() => {
     if (selectedClass && realClasses.length > 0) {
       loadRealAssignments(selectedClass);
-
-      // 선택된 클래스의 학생 데이터가 없으면 로드
-      if (!realStudents[selectedClass]) {
-        console.log(`🔄 선택된 클래스 ${selectedClass}의 학생 데이터가 없어서 로드합니다.`);
-        loadRealStudents();
-      }
     }
-  }, [selectedClass, realClasses, loadRealAssignments, realStudents, loadRealStudents]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedClass]); // selectedClass 변경 시에만 실행
 
   // 주기적으로 학생 데이터 새로고침 (학생 초대/승인 후 실시간 업데이트)
+  // 이 기능은 너무 많은 API 호출을 유발하므로 비활성화
+  // 대신 수동 새로고침 버튼을 사용하도록 권장
+  /*
   React.useEffect(() => {
     if (!selectedClass) return;
 
@@ -1060,6 +1064,7 @@ const TeacherDashboard = React.memo(() => {
 
     return () => clearInterval(interval);
   }, [selectedClass, realStudents]);
+  */
 
   // 에러 상태 표시 컴포넌트
   const ErrorAlert = ({ errorKey, message }: { errorKey: string; message: string }) => (
@@ -1078,7 +1083,7 @@ const TeacherDashboard = React.memo(() => {
           <div className="ml-3">
             <h3 className="text-sm font-medium text-red-800">
               {errorKey === 'classes' && '클래스 정보 로딩 실패'}
-              {errorKey === 'students' && '학생 정보 로딩 실패'}
+
               {errorKey === 'assignments' && '과제 정보 로딩 실패'}
               {errorKey === 'market' && '마켓 정보 로딩 실패'}
             </h3>
@@ -1126,7 +1131,7 @@ const TeacherDashboard = React.memo(() => {
         <ErrorAlert
           key={errorKey}
           errorKey={errorKey}
-          message={errorMessages[errorKey] || '알 수 없는 오류가 발생했습니다.'}
+          message={errorMessages[errorKey] || `알 수 없는 오류가 발생했습니다. (에러 키: ${errorKey})`}
         />
       ))}
 
