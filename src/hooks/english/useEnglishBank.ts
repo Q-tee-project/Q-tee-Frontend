@@ -90,7 +90,6 @@ export const useEnglishBank = () => {
     }
 
     try {
-      updateState({ isLoading: true });
       // English delete not implemented yet
       throw new Error('영어 워크시트 삭제 기능은 아직 구현되지 않았습니다.');
 
@@ -105,15 +104,11 @@ export const useEnglishBank = () => {
       alert('영어 워크시트가 삭제되었습니다.');
     } catch (error: any) {
       alert(`삭제 실패: ${error.message}`);
-    } finally {
-      updateState({ isLoading: false });
     }
   };
 
   const handleBatchDeleteWorksheets = async (worksheetsToDelete: EnglishWorksheet[]) => {
     try {
-      updateState({ isLoading: true });
-
       // 삭제할 워크시트의 ID 목록 생성
       const worksheetIdsToDelete = worksheetsToDelete
         .map(w => w.worksheet_id)
@@ -148,8 +143,6 @@ export const useEnglishBank = () => {
       alert(`✅ ${worksheetsToDelete.length}개의 워크시트가 삭제되었습니다.`);
     } catch (error: any) {
       alert(`삭제 실패: ${error.message}`);
-    } finally {
-      updateState({ isLoading: false });
     }
   };
 
