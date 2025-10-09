@@ -57,8 +57,8 @@ export const LaTeXRenderer: React.FC<LaTeXRendererProps> = ({
   };
 
   const renderMixedContent = (text: string): string => {
-    // 텍스트를 $ 기호와 \frac{} 패턴을 기준으로 분할
-    const parts = text.split(/(\$[^$]*\$|\$\$[^$]*\$\$|\\frac\{[^}]*\}\{[^}]*\})/g);
+    // 텍스트를 $ 기호, \[ \] 패턴, \frac{} 패턴을 기준으로 분할
+    const parts = text.split(/(\$[^$]*\$|\$\$[^$]*\$\$|\\\[[\s\S]*?\\\]|\\frac\{[^}]*\}\{[^}]*\})/g);
 
     return parts
       .map((part) => {
@@ -66,6 +66,10 @@ export const LaTeXRenderer: React.FC<LaTeXRendererProps> = ({
         // $ 기호로 감싸진 부분은 LaTeX로 렌더링
         if (part.startsWith('$') && part.endsWith('$')) {
           return renderSingleMathExpression(part);
+        }
+        // \[ \]로 감싸진 부분은 display mode LaTeX로 렌더링
+        else if (part.startsWith('\\[') && part.endsWith('\\]')) {
+          return renderSingleMathExpression('$$' + part.slice(2, -2) + '$$');
         }
         // \frac{} 패턴이 포함된 부분은 LaTeX로 렌더링
         else if (part.startsWith('\\frac{') && part.endsWith('}')) {
