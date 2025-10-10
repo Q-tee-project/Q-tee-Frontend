@@ -41,7 +41,7 @@ interface ClassManagementTabProps {
   isLoadingClasses: boolean;
   isLoadingStats: boolean;
   isLoadingAssignments: boolean;
-  lastClassSyncTime: Date | null;
+  lastClassSyncTime: string | null;
   isRefreshing: boolean;
   isAssignmentModalOpen: boolean;
   periodStats: {
@@ -55,7 +55,7 @@ interface ClassManagementTabProps {
   onStudentSelect: (studentId: number) => void;
   onAssignmentSelect: (assignmentId: string) => void;
   onAssignmentModalToggle: (isOpen: boolean) => void;
-  onStudentColorMapChange: React.Dispatch<React.SetStateAction<Record<number, string>>>;
+  onStudentColorMapChange: (colorMap: Record<number, string>) => void;
   getStudentColor: (studentId: number) => string | null;
 }
 

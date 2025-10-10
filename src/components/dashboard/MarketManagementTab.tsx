@@ -11,7 +11,7 @@ interface MarketManagementTabProps {
   marketProducts: MarketProduct[];
   selectedProducts: number[];
   isLoadingProducts: boolean;
-  lastSyncTime: Date | null;
+  lastSyncTime: string | null;
   onRefresh: () => void;
   onProductSelect: (productId: number) => void;
   getRecentProducts: () => MarketProduct[];
