@@ -14,10 +14,9 @@ interface PeriodStats {
 
 interface ClassStatsCardProps {
   periodStats: PeriodStats;
-  isLoading?: boolean;
 }
 
-const ClassStatsCard = ({ periodStats, isLoading = false }: ClassStatsCardProps) => {
+const ClassStatsCard = ({ periodStats }: ClassStatsCardProps) => {
   return (
     <Card className="bg-card text-card-foreground gap-6 rounded-xl border py-6 flex-1 flex flex-col shadow-sm">
       <CardHeader className="py-2 px-6 border-b border-gray-100 flex items-center justify-between">
@@ -34,11 +33,7 @@ const ClassStatsCard = ({ periodStats, isLoading = false }: ClassStatsCardProps)
               </div>
             </div>
             <div className="text-2xl font-bold text-[#0072CE] mb-1">
-              {isLoading ? (
-                <div className="animate-pulse bg-[#0072CE]/20 rounded h-8 w-12"></div>
-              ) : (
-                <AnimatedCounter value={periodStats.totalClasses} />
-              )}
+              <AnimatedCounter value={periodStats.totalClasses} />
             </div>
             <div className="text-sm text-[#0072CE]/80 font-medium">전체 클래스</div>
           </div>
@@ -49,11 +44,7 @@ const ClassStatsCard = ({ periodStats, isLoading = false }: ClassStatsCardProps)
               </div>
             </div>
             <div className="text-2xl font-bold text-cyan-700 mb-1">
-              {isLoading ? (
-                <div className="animate-pulse bg-cyan-500/20 rounded h-8 w-12"></div>
-              ) : (
-                <AnimatedCounter value={periodStats.totalStudents} />
-              )}
+              <AnimatedCounter value={periodStats.totalStudents} />
             </div>
             <div className="text-sm text-cyan-600 font-medium">전체 학생</div>
           </div>
@@ -64,11 +55,7 @@ const ClassStatsCard = ({ periodStats, isLoading = false }: ClassStatsCardProps)
               </div>
             </div>
             <div className="text-2xl font-bold text-indigo-700 mb-1">
-              {isLoading ? (
-                <div className="animate-pulse bg-indigo-500/20 rounded h-8 w-12"></div>
-              ) : (
-                <AnimatedCounter value={periodStats.activeAssignments} />
-              )}
+              <AnimatedCounter value={periodStats.activeAssignments} />
             </div>
             <div className="text-sm text-indigo-600 font-medium">활성 과제</div>
           </div>
@@ -79,11 +66,7 @@ const ClassStatsCard = ({ periodStats, isLoading = false }: ClassStatsCardProps)
               </div>
             </div>
             <div className="text-2xl font-bold text-sky-700 mb-1">
-              {isLoading ? (
-                <div className="animate-pulse bg-sky-500/20 rounded h-8 w-12"></div>
-              ) : (
-                <AnimatedCounter value={periodStats.totalProblems} />
-              )}
+              <AnimatedCounter value={periodStats.totalProblems} />
             </div>
             <div className="text-sm text-sky-600 font-medium">전체 문제</div>
           </div>
