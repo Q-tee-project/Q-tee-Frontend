@@ -100,45 +100,6 @@ const StudentDashboard = () => {
     return Math.round(average * 10) / 10;
   }, []);
 
-
-  //같은 문제지(raw_id)의 점수를 모든 클래스에 동기화
-  const syncAssignmentScores = React.useCallback((assignments: DetailedAssignmentData[]): DetailedAssignmentData[] => {
-    // raw_id + raw_subject 기준으로 그룹화
-    const assignmentGroups = new Map<string, DetailedAssignmentData[]>();
-    
-    assignments.forEach(assignment => {
-      const key = `${assignment.raw_id}-${assignment.raw_subject}`;
-      if (!assignmentGroups.has(key)) {
-        assignmentGroups.set(key, []);
-      }
-      assignmentGroups.get(key)!.push(assignment);
-    });
-    
-    // 각 그룹에서 completed 상태와 점수를 찾아서 동기화
-    const syncedAssignments: DetailedAssignmentData[] = [];
-    
-    assignmentGroups.forEach((group) => {
-      // 그룹 내에서 completed 상태인 과제 찾기 (점수는 0점도 포함, undefined만 제외)
-      const completedAssignment = group.find(a => a.status === 'completed' && a.myScore !== undefined);
-      
-      if (completedAssignment) {
-        // 같은 그룹의 모든 과제에 응시 상태와 내 점수 동기화 (새 객체 생성)
-        group.forEach(assignment => {
-          syncedAssignments.push({
-            ...assignment,
-            status: 'completed' as const,
-            myScore: completedAssignment.myScore,
-          });
-        });
-      } else {
-        // completed 과제가 없으면 원본 그대로
-        syncedAssignments.push(...group);
-      }
-    });
-    
-    return syncedAssignments;
-  }, []);
-
   // 가입한 클래스 목록 로드
   const loadRealClasses = React.useCallback(async () => {
     if (!userProfile?.id) return;
@@ -351,17 +312,15 @@ const StudentDashboard = () => {
         allAssignmentsData.push(...koreanData, ...englishData, ...mathData);
       }
       
-      // 같은 과제(raw_id + raw_subject)에 대해 응시 상태와 점수를 동기화
-      const syncedAssignments = syncAssignmentScores(allAssignmentsData);
-      
-      setAllAssignments(syncedAssignments);
+      // 클래스가 다르면 같은 문제지라도 별도 과제로 처리 (동기화 제거)
+      setAllAssignments(allAssignmentsData);
     } catch (error) {
       console.error('Failed to load assignments:', error);
       setAllAssignments([]);
     } finally {
       setIsLoadingAssignments(false);
     }
-  }, [userProfile, retryApiCall, calculateAverageScore, realClasses, syncAssignmentScores]);
+  }, [userProfile, retryApiCall, calculateAverageScore, realClasses]);
 
   // 과제 클릭 시 풀이 페이지로 이동
   const handleAssignmentClick = (assignment: DetailedAssignmentData) => {
@@ -398,13 +357,13 @@ const StudentDashboard = () => {
     loadRealAssignments();
   }, [loadRealAssignments]);
 
-  // 과제 목록용 중복 제거 / 같은 문제지(raw_id)는 하나만 표시 / completed 상태 우선
+  // 과제 목록용 중복 제거 / 클래스가 다르면 같은 문제지라도 별도 과제로 처리
   const removeDuplicateAssignments = (assignments: DetailedAssignmentData[]) => {
     const assignmentMap = new Map<string, DetailedAssignmentData>();
     
     assignments.forEach(assignment => {
-      // 배포된 문제지 ID + 과목으로 중복 판단 (같은 문제지면 같은 과제)
-      const key = `${assignment.raw_id}-${assignment.raw_subject}`;
+      // 배포된 문제지 ID + 과목 + 클래스 ID로 중복 판단
+      const key = `${assignment.raw_id}-${assignment.raw_subject}-${assignment.classroom_id}`;
       const existing = assignmentMap.get(key);
       
       if (!existing) {
