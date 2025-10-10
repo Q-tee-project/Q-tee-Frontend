@@ -1,3 +1,5 @@
+import { StudentAssignmentResponse } from '@/types/korean';
+
 // Base Worksheet interface
 export interface Worksheet {
   id: number;
@@ -137,7 +139,7 @@ export const koreanService = {
     });
   },
 
-  getStudentAssignments: async (studentId: number): Promise<Assignment[]> => {
+  getStudentAssignments: async (studentId: number): Promise<StudentAssignmentResponse[]> => {
     return apiRequest(`/assignments/student/${studentId}`);
   },
 

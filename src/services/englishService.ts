@@ -12,6 +12,7 @@ import {
   EnglishTaskStatus,
   EnglishRegenerationAsyncResponse,
   EnglishRegenerationTaskStatus,
+  StudentAssignmentResponse,
 } from '@/types/english';
 
 // Helper function to get auth token
@@ -425,7 +426,7 @@ export class EnglishService {
   }
 
   // 영어 학생 과제 목록 조회
-  static async getStudentAssignments(studentId: number): Promise<any[]> {
+  static async getStudentAssignments(studentId: number): Promise<StudentAssignmentResponse[]> {
     const currentUser = JSON.parse(localStorage.getItem('user_profile') || '{}');
     const userId = currentUser?.id;
 

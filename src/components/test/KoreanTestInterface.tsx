@@ -97,42 +97,44 @@ export function KoreanTestInterface({
   };
 
   return (
-    <Card className="w-5/6 flex flex-col shadow-sm">
+    <Card className="flex flex-col shadow-sm h-full">
       {/* 상단 네비게이션 */}
-      <CardHeader className="border-b">
-        <div className="flex items-center justify-between">
-          <button
-            onClick={onBackToAssignmentList}
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors"
-          >
-            <FaArrowLeft />
-            <span>과제 목록으로</span>
-          </button>
+      <CardHeader className="flex flex-row items-center justify-between py-4 px-6 border-b border-gray-100 flex-shrink-0">
+        {/* 이전으로 돌아가기 버튼 */}
+        <button
+          onClick={onBackToAssignmentList}
+          className="p-2 rounded-md text-gray-400 hover:text-gray-600 transition-colors duration-200"
+          style={{ backgroundColor: '#f5f5f5', borderRadius: '50%', cursor: 'pointer' }}
+        >
+          <FaArrowLeft className="h-5 w-5" />
+        </button>
 
-          <div className="flex items-center gap-4">
-            <div className="text-sm text-gray-600">
-              남은 시간: <span className="font-mono text-blue-600">{formatTime(timeRemaining)}</span>
-            </div>
-            <Badge variant="outline">
-              {currentProblemIndex + 1} / {worksheetProblems.length}
-            </Badge>
+        {/* 문제지명과 남은 시간 */}
+        <div className="flex items-center gap-4">
+          <div>
+            <span className="text-lg font-semibold text-gray-900">
+              {selectedWorksheet.title}
+            </span>
+          </div>
+          <div className="px-3 py-2 rounded-md" style={{ backgroundColor: '#f5f5f5' }}>
+            <span className="text-lg font-semibold text-gray-900">
+              {formatTime(timeRemaining)}
+            </span>
           </div>
         </div>
 
-        <div className="flex items-center gap-3 mt-3">
-          <BookOpen className="w-5 h-5 text-blue-600" />
-          <h2 className="text-xl font-semibold text-gray-800">{selectedWorksheet.title}</h2>
-          <Badge className="bg-green-100 text-green-800 border-green-200">
-            {currentProblem.korean_type}
-          </Badge>
-          <Badge variant="outline">
-            {currentProblem.difficulty}
-          </Badge>
-        </div>
+        {/* 제출하기 버튼 */}
+        <Button
+          onClick={onSubmitTest}
+          disabled={isSubmitting || Object.keys(answers).length < worksheetProblems.length}
+          className="bg-[#0072CE] hover:bg-[#0056A3] text-white disabled:bg-gray-400"
+        >
+          {isSubmitting ? '제출 중...' : Object.keys(answers).length < worksheetProblems.length ? `제출하기 (${Object.keys(answers).length}/${worksheetProblems.length})` : '제출하기'}
+        </Button>
       </CardHeader>
 
       {/* 문제 내용 */}
-      <CardContent className="flex-1 overflow-y-auto p-6">
+      <CardContent className="flex-1 overflow-y-auto p-6 min-h-0">
         <div className="space-y-6">
           {/* 출처 텍스트 */}
           {currentProblem.source_text && (

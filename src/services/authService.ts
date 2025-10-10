@@ -283,6 +283,14 @@ export const authService = {
       body: JSON.stringify({ username }),
     });
   },
+
+  // 이메일 중복 체크
+  async checkEmailAvailability(email: string): Promise<{ available: boolean; message?: string }> {
+    return authApiRequest<{ available: boolean; message?: string }>('/api/auth/check-email', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+  },
 };
 
 // 클래스룸 관리 API 서비스 (Teacher용)
