@@ -120,3 +120,16 @@ export enum Subject {
 // 유틸리티 함수 타입
 export type ProblemTypeConverter = (type: string) => string;
 export type DifficultyConverter = (difficulty: string) => string;
+
+// 학생용 과제 응답 타입
+export interface StudentAssignmentResponse {
+  id: number;
+  title: string;
+  unit_name: string;
+  chapter_name: string;
+  problem_count: number;
+  status: string;
+  deployed_at: string;
+  assignment_id: number;
+  classroom_id: number;
+}

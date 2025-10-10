@@ -220,3 +220,15 @@ export interface EnglishRegenerationTaskStatus {
   result?: EnglishRegenerationResponse;  // SUCCESS일 때 재생성 결과 포함
   error?: string;
 }
+
+// 학생용 과제 응답 타입
+export interface StudentAssignmentResponse {
+  id: number;
+  title: string;
+  problem_type: string;
+  total_questions: number;
+  status: string;
+  deployed_at: string;
+  assignment_id: number;
+  classroom_id: number;
+}
