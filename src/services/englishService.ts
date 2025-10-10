@@ -38,6 +38,33 @@ export interface EnglishAssignmentDeployRequest {
 
 const ENGLISH_API_BASE = 'http://localhost:8002/api/english';
 
+// Helper function for API requests
+const apiRequest = async <T = any>(
+  endpoint: string,
+  options: RequestInit = {}
+): Promise<T> => {
+  const token = getToken();
+  if (!token) {
+    throw new Error('Authentication token not found. Please log in.');
+  }
+
+  const response = await fetch(`${ENGLISH_API_BASE}${endpoint}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      ...options.headers,
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || `Request failed: ${response.status}`);
+  }
+
+  return response.json();
+};
+
 // 영어 결과 관련 타입
 export interface EnglishAssignmentResult {
   id: number;
@@ -65,19 +92,10 @@ export class EnglishService {
       throw new Error('로그인이 필요합니다.');
     }
 
-    const response = await fetch(`${ENGLISH_API_BASE}/worksheet-generate?user_id=${userId}`, {
+    return apiRequest<EnglishAsyncResponse>(`/worksheet-generate?user_id=${userId}`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify(formData),
     });
-
-    if (!response.ok) {
-      throw new Error(`English API Error: ${response.status}`);
-    }
-
-    return response.json(); // 이제 {task_id, status, message} 반환
   }
 
   // 영어 워크시트 목록 가져오기
@@ -89,17 +107,7 @@ export class EnglishService {
       throw new Error('로그인이 필요합니다.');
     }
 
-    const apiUrl = `${ENGLISH_API_BASE}/worksheets?user_id=${userId}&limit=1000`;
-
-    const response = await fetch(apiUrl);
-
-    if (!response.ok) {
-      console.error('📚 영어 워크시트 API 에러:', response.status, response.statusText);
-      throw new Error(`English API Error: ${response.status}`);
-    }
-
-    const data = await response.json();
-
+    const data = await apiRequest<EnglishWorksheet[]>(`/worksheets?user_id=${userId}&limit=1000`);
     return data || [];
   }
 
@@ -112,24 +120,12 @@ export class EnglishService {
       throw new Error('로그인이 필요합니다.');
     }
 
-    const response = await fetch(`${ENGLISH_API_BASE}/worksheets/${worksheetId}?user_id=${userId}`);
-
-    if (!response.ok) {
-      throw new Error(`English API Error: ${response.status}`);
-    }
-
-    return response.json();
+    return apiRequest<EnglishWorksheetDetailResponse>(`/worksheets/${worksheetId}?user_id=${userId}`);
   }
 
   // 영어 태스크 상태 확인 (개선)
   static async getTaskStatus(taskId: string): Promise<EnglishTaskStatus> {
-    const response = await fetch(`${ENGLISH_API_BASE}/task-status/${taskId}`);
-
-    if (!response.ok) {
-      throw new Error(`English API Error: ${response.status}`);
-    }
-
-    return response.json();
+    return apiRequest<EnglishTaskStatus>(`/task-status/${taskId}`);
   }
 
   // 영어 워크시트 업데이트
@@ -144,29 +140,11 @@ export class EnglishService {
       throw new Error('로그인이 필요합니다.');
     }
 
-    const response = await fetch(
-      `${ENGLISH_API_BASE}/worksheets/${worksheetId}?user_id=${userId}`,
-      {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(updateData),
-      },
-    );
+    const result = await apiRequest(`/worksheets/${worksheetId}?user_id=${userId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updateData),
+    });
 
-    if (!response.ok) {
-      let errorMessage = `English API Error: ${response.status}`;
-      try {
-        const errorData = await response.text();
-        errorMessage += ` - ${errorData}`;
-      } catch (e) {
-        // JSON 파싱 실패 시 기본 메시지 사용
-      }
-      throw new Error(errorMessage);
-    }
-
-    const result = await response.json();
     return { success: true, message: result.message || '영어 워크시트가 업데이트되었습니다.' };
   }
 
@@ -184,26 +162,11 @@ export class EnglishService {
     console.log('💾 저장할 워크시트 데이터:', worksheetData);
     console.log('💾 questions 샘플:', worksheetData.questions?.[0]);
 
-    const response = await fetch(`${ENGLISH_API_BASE}/worksheet-save`, {
+    const result = await apiRequest<{ worksheet_id: number; message: string }>(`/worksheet-save`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify(worksheetData),
     });
 
-    if (!response.ok) {
-      let errorMessage = `English API Error: ${response.status}`;
-      try {
-        const errorData = await response.text();
-        errorMessage += ` - ${errorData}`;
-      } catch (e) {
-        // JSON 파싱 실패 시 기본 메시지 사용
-      }
-      throw new Error(errorMessage);
-    }
-
-    const result = await response.json();
     return {
       worksheet_id: result.worksheet_id || worksheetData.worksheet_id || 0,
       message: result.message || '영어 워크시트가 저장되었습니다.',
@@ -223,22 +186,14 @@ export class EnglishService {
       throw new Error('로그인이 필요합니다.');
     }
 
-    const response = await fetch(
-      `${ENGLISH_API_BASE}/worksheets/${worksheetId}/questions/${questionId}?user_id=${userId}`,
+    const result = await apiRequest(
+      `/worksheets/${worksheetId}/questions/${questionId}?user_id=${userId}`,
       {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify(updateData),
-      },
+      }
     );
 
-    if (!response.ok) {
-      throw new Error(`English API Error: ${response.status}`);
-    }
-
-    const result = await response.json();
     return { success: true, message: result.message || '영어 문제가 업데이트되었습니다.' };
   }
 
@@ -255,22 +210,14 @@ export class EnglishService {
       throw new Error('로그인이 필요합니다.');
     }
 
-    const response = await fetch(
-      `${ENGLISH_API_BASE}/worksheets/${worksheetId}/passages/${passageId}?user_id=${userId}`,
+    const result = await apiRequest(
+      `/worksheets/${worksheetId}/passages/${passageId}?user_id=${userId}`,
       {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify(updateData),
-      },
+      }
     );
 
-    if (!response.ok) {
-      throw new Error(`English API Error: ${response.status}`);
-    }
-
-    const result = await response.json();
     return { success: true, message: result.message || '영어 지문이 업데이트되었습니다.' };
   }
 
@@ -286,22 +233,11 @@ export class EnglishService {
       throw new Error('로그인이 필요합니다.');
     }
 
-    const response = await fetch(
-      `${ENGLISH_API_BASE}/worksheets/${worksheetId}/title?user_id=${userId}`,
-      {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ worksheet_name: newTitle }),
-      },
-    );
+    const result = await apiRequest(`/worksheets/${worksheetId}/title?user_id=${userId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ worksheet_name: newTitle }),
+    });
 
-    if (!response.ok) {
-      throw new Error(`English API Error: ${response.status}`);
-    }
-
-    const result = await response.json();
     return { success: true, message: result.message || '영어 워크시트 제목이 업데이트되었습니다.' };
   }
 
@@ -320,20 +256,11 @@ export class EnglishService {
       throw new Error('삭제할 워크시트 ID가 필요합니다.');
     }
 
-    const response = await fetch(`${ENGLISH_API_BASE}/worksheets/batch?user_id=${userId}`, {
+    const result = await apiRequest(`/worksheets/batch?user_id=${userId}`, {
       method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify({ worksheet_ids: worksheetIds }),
     });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(`일괄 삭제 실패: ${errorData.detail || response.status}`);
-    }
-
-    const result = await response.json();
     return {
       success: true,
       message: result.message || `${worksheetIds.length}개의 워크시트가 삭제되었습니다.`,
@@ -353,15 +280,9 @@ export class EnglishService {
       throw new Error('로그인이 필요합니다.');
     }
 
-    const response = await fetch(
-      `${ENGLISH_API_BASE}/worksheets/${worksheetId}/questions/${questionId}/regeneration-info?user_id=${userId}`,
+    return apiRequest<EnglishRegenerationInfo>(
+      `/worksheets/${worksheetId}/questions/${questionId}/regeneration-info?user_id=${userId}`
     );
-
-    if (!response.ok) {
-      throw new Error(`English API Error: ${response.status}`);
-    }
-
-    return response.json();
   }
 
   // 영어 문제 재생성 실행
@@ -377,29 +298,14 @@ export class EnglishService {
       throw new Error('로그인이 필요합니다.');
     }
 
-    const response = await fetch(
-      `${ENGLISH_API_BASE}/worksheets/${worksheetId}/questions/${questionId}/regenerate?user_id=${userId}`,
+    const result = await apiRequest<EnglishRegenerationResponse>(
+      `/worksheets/${worksheetId}/questions/${questionId}/regenerate?user_id=${userId}`,
       {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify(regenerationData),
-      },
+      }
     );
 
-    if (!response.ok) {
-      let errorMessage = `English API Error: ${response.status}`;
-      try {
-        const errorData = await response.text();
-        errorMessage += ` - ${errorData}`;
-      } catch (e) {
-        // JSON 파싱 실패 시 기본 메시지 사용
-      }
-      throw new Error(errorMessage);
-    }
-
-    const result = await response.json();
     console.log('영어 문제 재생성 응답 (ID 기반):', result);
     return result;
   }
@@ -423,52 +329,30 @@ export class EnglishService {
       formData: regenerationRequest,
     };
 
-    const response = await fetch(`${ENGLISH_API_BASE}/questions/regenerate?user_id=${userId}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestBody),
-    });
-
-    if (!response.ok) {
-      let errorMessage = `English API Error: ${response.status}`;
-      try {
-        const errorData = await response.text();
-        console.error('🚨 재생성 API 에러:', {
-          status: response.status,
-          statusText: response.statusText,
-          url: response.url,
-          requestBody: requestBody,
-          errorData: errorData,
-        });
-        errorMessage += ` - ${errorData}`;
-      } catch (e) {
-        console.error('🚨 에러 데이터 파싱 실패:', e);
+    const result = await apiRequest<EnglishRegenerationAsyncResponse>(
+      `/questions/regenerate?user_id=${userId}`,
+      {
+        method: 'POST',
+        body: JSON.stringify(requestBody),
       }
-      throw new Error(errorMessage);
-    }
+    );
 
-    const result = await response.json();
     console.log('✅ 영어 지문/문제 재생성 비동기 시작:', result);
     return result;
   }
 
   // 영어 재생성 태스크 상태 조회
   static async getRegenerationTaskStatus(taskId: string): Promise<EnglishRegenerationTaskStatus> {
-    const response = await fetch(`${ENGLISH_API_BASE}/task-status/${taskId}`);
-
-    if (!response.ok) {
-      throw new Error(`재생성 작업 상태 조회 실패: ${response.status}`);
-    }
-
-    return response.json();
+    return apiRequest<EnglishRegenerationTaskStatus>(`/task-status/${taskId}`);
   }
 
-  // 영어 서비스 헬스체크
+  // 영어 서비스 헬스체크 (public endpoint - 토큰 선택적)
   static async healthCheck(): Promise<{ status: string; message: string }> {
     try {
-      const response = await fetch('http://localhost:8002/');
+      const token = getToken();
+      const response = await fetch('http://localhost:8002/', {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
 
       if (!response.ok) {
         throw new Error(`English Service Error: ${response.status}`);
@@ -489,85 +373,30 @@ export class EnglishService {
 
   static async deployAssignment(deployRequest: EnglishAssignmentDeployRequest): Promise<any> {
     console.log('📤 영어 과제 배포 요청:', deployRequest);
-    console.log('📤 API URL:', `${ENGLISH_API_BASE}/assignments/deploy`);
 
-    const response = await fetch(`${ENGLISH_API_BASE}/assignments/deploy`, {
+    const result = await apiRequest(`/assignments/deploy`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify(deployRequest),
     });
 
-    console.log('📤 응답 상태:', response.status);
-
-    if (!response.ok) {
-      let errorMessage = `English API Error: ${response.status}`;
-      try {
-        const errorData = await response.text();
-        console.error('📤 영어 과제 배포 실패 응답:', errorData);
-        errorMessage += ` - ${errorData}`;
-      } catch (e) {
-        console.error('📤 에러 응답 읽기 실패:', e);
-        errorMessage += ` - Failed to read error response`;
-      }
-      throw new Error(errorMessage);
-    }
-
-    const responseText = await response.text();
-    console.log('📤 성공 응답 내용:', responseText);
-
-    try {
-      return JSON.parse(responseText);
-    } catch (e) {
-      console.error('📤 JSON 파싱 실패. 응답 내용:', responseText);
-      throw new Error(
-        `Unexpected response format. Expected JSON but got: ${responseText.substring(0, 200)}...`,
-      );
-    }
+    console.log('📤 성공 응답:', result);
+    return result;
   }
 
   // 영어 과제 생성 (배포하지 않고 생성만)
   static async createAssignment(worksheetId: number, classroomId: number): Promise<any> {
     console.log('📝 영어 과제 생성 요청:', { worksheetId, classroomId });
 
-    const response = await fetch(`${ENGLISH_API_BASE}/assignments/create`, {
+    const result = await apiRequest(`/assignments/create`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify({
         worksheet_id: worksheetId,
         classroom_id: classroomId,
       }),
     });
 
-    console.log('📝 과제 생성 응답 상태:', response.status);
-
-    if (!response.ok) {
-      let errorMessage = `English API Error: ${response.status}`;
-      try {
-        const errorData = await response.text();
-        console.error('📝 영어 과제 생성 실패:', errorData);
-        errorMessage += ` - ${errorData}`;
-      } catch (e) {
-        console.error('📝 에러 응답 읽기 실패:', e);
-        errorMessage += ` - Failed to read error response`;
-      }
-      throw new Error(errorMessage);
-    }
-
-    const responseText = await response.text();
-    console.log('📝 과제 생성 성공 응답:', responseText);
-
-    try {
-      return JSON.parse(responseText);
-    } catch (e) {
-      console.error('📝 JSON 파싱 실패. 응답 내용:', responseText);
-      throw new Error(
-        `Unexpected response format. Expected JSON but got: ${responseText.substring(0, 200)}...`,
-      );
-    }
+    console.log('📝 과제 생성 성공 응답:', result);
+    return result;
   }
 
   // 영어 배포된 과제 목록 조회
@@ -579,16 +408,7 @@ export class EnglishService {
       throw new Error('로그인이 필요합니다.');
     }
 
-    let response;
-
-    // 국어/수학과 동일한 방식: 클래스룸의 모든 과제 가져오기
-    response = await fetch(`${ENGLISH_API_BASE}/assignments/classrooms/${classId}/assignments`);
-
-    if (!response.ok) {
-      throw new Error(`English API Error: ${response.status}`);
-    }
-
-    const data = await response.json();
+    const data = await apiRequest<any[]>(`/assignments/classrooms/${classId}/assignments`);
     return Array.isArray(data) ? data : [];
   }
 
@@ -601,15 +421,7 @@ export class EnglishService {
       throw new Error('로그인이 필요합니다.');
     }
 
-    const response = await fetch(
-      `${ENGLISH_API_BASE}/assignments/${assignmentId}/student/${studentId}?user_id=${userId}`,
-    );
-
-    if (!response.ok) {
-      throw new Error(`English API Error: ${response.status}`);
-    }
-
-    return response.json();
+    return apiRequest(`/assignments/${assignmentId}/student/${studentId}?user_id=${userId}`);
   }
 
   // 영어 학생 과제 목록 조회
@@ -621,15 +433,7 @@ export class EnglishService {
       throw new Error('로그인이 필요합니다.');
     }
 
-    const response = await fetch(
-      `${ENGLISH_API_BASE}/assignments/student/${studentId}?user_id=${userId}`,
-    );
-
-    if (!response.ok) {
-      throw new Error(`English API Error: ${response.status}`);
-    }
-
-    const data = await response.json();
+    const data = await apiRequest<any[]>(`/assignments/student/${studentId}?user_id=${userId}`);
     return data || [];
   }
 
@@ -655,27 +459,11 @@ export class EnglishService {
 
     console.log('📤 영어 과제 제출 데이터:', submissionData);
 
-    const response = await fetch(`${ENGLISH_API_BASE}/assignments/submit`, {
+    const result = await apiRequest(`/assignments/submit`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify(submissionData),
     });
 
-    if (!response.ok) {
-      let errorMessage = `English API Error: ${response.status}`;
-      try {
-        const errorData = await response.text();
-        errorMessage += ` - ${errorData}`;
-        console.error('📤 영어 과제 제출 실패:', errorData);
-      } catch (e) {
-        // JSON 파싱 실패 시 기본 메시지 사용
-      }
-      throw new Error(errorMessage);
-    }
-
-    const result = await response.json();
     console.log('📤 영어 과제 제출 성공:', result);
     return result;
   }
@@ -683,18 +471,7 @@ export class EnglishService {
   // 영어 과제 결과 조회
   static async getEnglishAssignmentResults(assignmentId: number): Promise<any> {
     try {
-      const response = await fetch(`${ENGLISH_API_BASE}/assignments/${assignmentId}/results`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`English API Error: ${response.status}`);
-      }
-
-      const data = await response.json();
+      const data = await apiRequest(`/assignments/${assignmentId}/results`);
       return data.results || [];
     } catch (error) {
       console.error('Failed to load English assignment results:', error);
@@ -733,19 +510,10 @@ export class EnglishService {
   // 영어 채점 결과 승인/리뷰
   static async approveEnglishGrade(resultId: string, reviewData?: any): Promise<any> {
     try {
-      const response = await fetch(`${ENGLISH_API_BASE}/grading-results/${resultId}/review`, {
+      return await apiRequest(`/grading-results/${resultId}/review`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify(reviewData || { is_reviewed: true }),
       });
-
-      if (!response.ok) {
-        throw new Error(`English API Error: ${response.status}`);
-      }
-
-      return await response.json();
     } catch (error) {
       console.error('Failed to approve English grade:', error);
       throw error;
@@ -798,13 +566,7 @@ export class EnglishService {
   // 영어 AI 채점 상태 확인
   static async getEnglishGradingTaskStatus(taskId: string): Promise<any> {
     try {
-      const response = await fetch(`${ENGLISH_API_BASE}/grading/tasks/${taskId}/status`);
-
-      if (!response.ok) {
-        throw new Error(`English API Error: ${response.status}`);
-      }
-
-      return await response.json();
+      return await apiRequest(`/grading/tasks/${taskId}/status`);
     } catch (error) {
       console.error('Failed to get English grading task status:', error);
       throw error;

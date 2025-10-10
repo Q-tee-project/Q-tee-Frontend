@@ -522,11 +522,54 @@ export default function CreatePage() {
                       }
                     }}
                   />
+                ) : currentGeneration.isGenerating ? (
+                  <div className="flex-1 flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
+                      <div className="text-lg font-medium text-gray-700 mb-2">영어 문제를 생성하고 있습니다...</div>
+                      <div className="w-64 bg-gray-200 rounded-full h-2">
+                        <div
+                          className="bg-blue-600 h-2 rounded-full transition-all duration-300 ease-out"
+                          style={{ width: `${currentGeneration.generationProgress}%` }}
+                        ></div>
+                      </div>
+                      <div className="text-sm text-gray-500 mt-2">{Math.round(currentGeneration.generationProgress)}% 완료</div>
+                    </div>
+                  </div>
                 ) : (
-                  <div className="flex-1 flex items-center justify-center text-gray-500">
-                    {currentGeneration.isGenerating
-                      ? '영어 문제를 생성하고 있습니다...'
-                      : '영어 과목을 선택하고 문제를 생성해주세요'}
+                  <div className="flex-1 flex flex-col items-center justify-center p-8">
+                    <div className="text-center max-w-lg">
+                      <div className="mb-6">
+                        <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
+                          <svg
+                            className="w-8 h-8 text-blue-600"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                            />
+                          </svg>
+                        </div>
+                        <h3 className="text-xl font-semibold text-gray-900 mb-2">문제 생성 가이드</h3>
+                      </div>
+
+                      <div className="text-left space-y-4 text-gray-700">
+                        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                          <ol className="text-sm space-y-1 text-blue-800">
+                            <li>1. 좌측에서 과목을 선택하세요</li>
+                            <li>2. 생성 옵션을 설정하세요</li>
+                            <li>3. '문제 생성' 버튼을 클릭하세요</li>
+                            <li>4. 생성된 문제를 확인하고 수정하세요</li>
+                            <li>5. 문제지 이름을 입력하고 저장하세요</li>
+                          </ol>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 )
               ) : (
