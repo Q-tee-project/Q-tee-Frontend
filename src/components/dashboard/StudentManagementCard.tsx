@@ -259,11 +259,21 @@ const StudentManagementCard = React.memo(({
             <div className="h-full flex items-center justify-center">
               <div className="text-center">
                 <Users className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                <p className="text-gray-500 text-sm">클래스를 선택해주세요</p>
-                <p className="text-gray-400 text-xs mt-1">
-                  위의 드롭다운에서 클래스를 선택하면
+                <p className="text-gray-500 text-sm">
+                  {classes.length === 0 ? '생성된 클래스가 없습니다' : '클래스를 선택해주세요'}
                 </p>
-                <p className="text-gray-400 text-xs">해당 클래스의 학생 목록이 표시됩니다</p>
+                <p className="text-gray-400 text-xs mt-1">
+                  {classes.length === 0 
+                    ? '새로운 클래스를 생성하면 학생 목록이 표시됩니다'
+                    : '위의 드롭다운에서 클래스를 선택하면'
+                  }
+                </p>
+                <p className="text-gray-400 text-xs">
+                  {classes.length === 0 
+                    ? ''
+                    : '해당 클래스의 학생 목록이 표시됩니다'
+                  }
+                </p>
               </div>
             </div>
           )}

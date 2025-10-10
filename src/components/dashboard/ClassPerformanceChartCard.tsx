@@ -28,6 +28,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Input } from '@/components/ui/input';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
+import { useRouter } from 'next/navigation';
 
 interface ClassData {
   id: string;
@@ -83,6 +84,7 @@ const ClassPerformanceChartCard = React.memo(({
   studentColorMap,
   isLoadingAssignments = false,
 }: ClassPerformanceChartCardProps) => {
+  const router = useRouter();
   const [startDate, setStartDate] = React.useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = React.useState<Date | undefined>(undefined);
   const [subjectFilter, setSubjectFilter] = React.useState<string>('전체');
@@ -397,14 +399,20 @@ const ClassPerformanceChartCard = React.memo(({
         <div className="flex items-center gap-4">
           <Select value={selectedClass} onValueChange={setSelectedClass}>
             <SelectTrigger className="w-48">
-              <SelectValue placeholder="클래스 선택" />
+              <SelectValue placeholder={classes.length === 0 ? "클래스 없음" : "클래스 선택"} />
             </SelectTrigger>
             <SelectContent>
-              {classes.map((cls) => (
-                <SelectItem key={cls.id} value={cls.id}>
-                  {cls.name}
+              {classes.length === 0 ? (
+                <SelectItem value="no-classes" disabled>
+                  생성된 클래스가 없습니다
                 </SelectItem>
-              ))}
+              ) : (
+                classes.map((cls) => (
+                  <SelectItem key={cls.id} value={cls.id}>
+                    {cls.name}
+                  </SelectItem>
+                ))
+              )}
             </SelectContent>
           </Select>
 
@@ -422,7 +430,27 @@ const ClassPerformanceChartCard = React.memo(({
       </CardHeader>
       <CardContent className="flex flex-col flex-1">
         <div className="relative flex-1 bg-white rounded-lg p-4" style={{ minHeight: '32rem' }}>
-          {isLoadingAssignments ? (
+          {classes.length === 0 ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center">
+                <BarChart3 className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">생성된 클래스가 없습니다</h3>
+                <p className="text-gray-500 mb-4">
+                  새로운 클래스를 생성하면 과제와 성적 정보가 표시됩니다.
+                </p>
+                <div className="text-sm text-gray-400 mb-4">
+                  <p>클래스를 생성하고 학생을 초대하면</p>
+                  <p>과제를 배포하고 성적 차트를 확인할 수 있습니다</p>
+                </div>
+                <Button
+                  onClick={() => router.push('/class/create')}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2"
+                >
+                  클래스 생성하기
+                </Button>
+              </div>
+            </div>
+          ) : isLoadingAssignments ? (
             <div className="animate-pulse h-full flex items-center justify-center">
               <div className="bg-gray-200 rounded-lg w-full h-full"></div>
             </div>
