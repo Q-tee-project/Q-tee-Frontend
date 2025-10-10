@@ -101,11 +101,11 @@ export function AssignmentList({
               <button
                 key={subject}
                 onClick={() => onSubjectChange(subject)}
-                className={`py-2 px-4 text-sm font-medium rounded transition-colors duration-150 cursor-pointer ${
+                className={`badge ${
                   selectedSubject === subject
-                    ? 'bg-[#E6F3FF] text-[#0085FF]'
-                    : 'bg-[#f5f5f5] text-[#999999]'
-                }`}
+                    ? 'badge-blue'
+                    : 'badge-gray'
+                } cursor-pointer transition-colors duration-150`}
               >
                 {subject}
               </button>
@@ -188,37 +188,34 @@ export function AssignmentList({
 
                 {/* 문제 수 및 응시 상태 뱃지 */}
                 <div className="flex justify-start gap-2 flex-wrap">
-                  {/* 클래스 정보 표시 */}
-                  {(selectedWorksheet as any).classroom_id && classes.length > 0 && (
-                    <Badge className="bg-purple-100 text-purple-700 text-xs">
-                      {classes.find(c => c.id?.toString() === (selectedWorksheet as any).classroom_id?.toString())?.name || '클래스'}
-                    </Badge>
-                  )}
-                  <Badge className="bg-gray-100 text-gray-700 text-xs">
-                    {selectedWorksheet.problem_count}문제
-                  </Badge>
+                  {/* 응시여부 */}
                   {(() => {
                     const isCompleted = selectedWorksheet.status === 'completed' || selectedWorksheet.status === 'submitted';
                     return (
-                      <Badge
-                        className={`text-xs ${
-                          isCompleted
-                            ? 'bg-[#E6F3FF] text-[#0085FF]'
-                            : 'bg-[#ffebeb] text-[#f00]'
-                        }`}
-                      >
+                      <Badge className={`badge ${isCompleted ? 'badge-blue' : 'badge-red'}`}>
                         {isCompleted ? '응시' : '미응시'}
                       </Badge>
                     );
                   })()}
+                  {/* 점수 */}
                   {(() => {
                     const isCompleted = selectedWorksheet.status === 'completed' || selectedWorksheet.status === 'submitted';
                     return isCompleted && (selectedWorksheet as any).score !== undefined && (
-                      <Badge className="bg-green-100 text-green-700 text-xs font-semibold">
+                      <Badge className="badge badge-green font-semibold">
                         {(selectedWorksheet as any).score}점
                       </Badge>
                     );
                   })()}
+                  {/* 클래스 정보 */}
+                  {(selectedWorksheet as any).classroom_id && classes.length > 0 && (
+                    <Badge className="badge badge-purple">
+                      {classes.find(c => c.id?.toString() === (selectedWorksheet as any).classroom_id?.toString())?.name || '클래스'}
+                    </Badge>
+                  )}
+                  {/* 문항 수 */}
+                  <Badge className="badge badge-gray">
+                    {selectedWorksheet.problem_count}문제
+                  </Badge>
                 </div>
               </div>
 
@@ -319,18 +316,18 @@ export function AssignmentList({
                                   {(problem as any).sequence_order || (problem as any).question_id || index + 1}
                                 </TableCell>
                                 <TableCell className="text-center">
-                                  <Badge className="bg-blue-100 text-blue-800 border-blue-200 text-xs">
+                                  <Badge className="badge badge-blue">
                                     {getProblemTypeInKorean((problem as any).problem_type || (problem as any).question_detail_type || 'unknown')}
                                   </Badge>
                                 </TableCell>
                                 <TableCell className="text-center">
                                   <Badge
-                                    className={`text-xs ${
+                                    className={`badge ${
                                       ((problem as any).difficulty === 'A' || (problem as any).question_difficulty === '상')
-                                        ? 'border-red-300 text-red-600 bg-red-50'
+                                        ? 'badge-red'
                                         : ((problem as any).difficulty === 'B' || (problem as any).question_difficulty === '중')
-                                        ? 'border-green-300 text-green-600 bg-green-50'
-                                        : 'border-purple-300 text-purple-600 bg-purple-50'
+                                        ? 'badge-green'
+                                        : 'badge-yellow'
                                     }`}
                                   >
                                     {(problem as any).difficulty || (problem as any).question_difficulty || '중'}
@@ -383,29 +380,26 @@ export function AssignmentList({
 
                       {/* 문제 수 및 응시 상태 뱃지 */}
                       <div className="flex justify-start gap-2 flex-wrap">
-                        {/* 클래스 정보 표시 */}
-                        {(worksheet as any).classroom_id && classes.length > 0 && (
-                          <Badge className="bg-purple-100 text-purple-700 text-xs">
-                            {classes.find(c => c.id?.toString() === (worksheet as any).classroom_id?.toString())?.name || '클래스'}
-                          </Badge>
-                        )}
-                        <Badge className="bg-gray-100 text-gray-700 text-xs">
-                          {worksheet.problem_count}문제
-                        </Badge>
-                        <Badge
-                          className={`text-xs ${
-                            isCompleted
-                              ? 'bg-[#E6F3FF] text-[#0085FF]'
-                              : 'bg-[#ffebeb] text-[#f00]'
-                          }`}
-                        >
+                        {/* 응시여부 */}
+                        <Badge className={`badge ${isCompleted ? 'badge-blue' : 'badge-red'}`}>
                           {isCompleted ? '응시' : '미응시'}
                         </Badge>
+                        {/* 점수 */}
                         {isCompleted && (worksheet as any).score !== undefined && (
-                          <Badge className="bg-green-100 text-green-700 text-xs font-semibold">
+                          <Badge className="badge badge-green font-semibold">
                             {(worksheet as any).score}점
                           </Badge>
                         )}
+                        {/* 클래스 정보 */}
+                        {(worksheet as any).classroom_id && classes.length > 0 && (
+                          <Badge className="badge badge-purple">
+                            {classes.find(c => c.id?.toString() === (worksheet as any).classroom_id?.toString())?.name || '클래스'}
+                          </Badge>
+                        )}
+                        {/* 문항 수 */}
+                        <Badge className="badge badge-gray">
+                          {worksheet.problem_count}문제
+                        </Badge>
                       </div>
                     </div>
                   </div>

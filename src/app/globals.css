@@ -680,3 +680,40 @@
 .notif-scroll::-webkit-scrollbar {
   display: none; /* Chrome, Safari, Opera */
 }
+
+
+/* Base badge style */
+.badge {
+  @apply inline-flex items-center justify-center rounded px-2.5 py-1.5 text-sm font-medium transition-colors;
+}
+
+/* Badge color variants */
+.badge-purple {
+  color: #9115E5;
+  background-color: #F5EBFF;
+}
+
+.badge-blue {
+  color: #0072CE;
+  background-color: #E6F3FF;
+}
+
+.badge-red {
+  color: #FF0000;
+  background-color: #FFEBEB;
+}
+
+.badge-gray {
+  color: #333333;
+  background-color: #F3F4F6;
+}
+
+.badge-green {
+  color: #13866D;
+  background-color: #E6FFEF;
+}
+
+.badge-yellow {
+  color: #FF9F2D;
+  background-color: #FFF5E9;
+}
