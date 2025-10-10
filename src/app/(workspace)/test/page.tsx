@@ -175,6 +175,12 @@ function TestPageContent() {
         setCurrentProblemIndex(0);
         setSessionDetails(null);
         
+        // pendingAssignment 초기화 (탭 변경 시 자동 선택 방지)
+        // URL 파라미터가 있는 경우에만 유지
+        if (!searchParams.get('assignmentId')) {
+          setPendingAssignment(null);
+        }
+        
         // 클래스 목록을 먼저 로드
         await loadClasses();
         
@@ -269,6 +275,9 @@ function TestPageContent() {
         
         // setSelectedWorksheet 대신 handleWorksheetSelect를 바로 호출
         handleWorksheetSelect(targetWorksheet);
+        
+        // 자동 선택 후 pendingAssignment 초기화 (한 번만 실행되도록)
+        setPendingAssignment(null);
       }
     }
   }, [worksheets, searchParams, selectedSubject, pendingAssignment]);
@@ -559,6 +568,9 @@ function TestPageContent() {
 
   // 문제지 선택 핸들러
   const handleWorksheetSelect = async (worksheet: Worksheet | KoreanWorksheet) => {
+    // pendingAssignment 초기화 (수동 선택 시 자동 선택 방지)
+    setPendingAssignment(null);
+    
     setSelectedWorksheet(worksheet);
 
     // Check if this is a completed assignment (completed 또는 submitted 상태)
@@ -584,6 +596,9 @@ function TestPageContent() {
 
   // 결과 보기에서 돌아가기
   const handleBackFromResult = () => {
+    // pendingAssignment 초기화 (돌아가기 후 자동 선택 방지)
+    setPendingAssignment(null);
+    
     setShowStudentResult(false);
     setSelectedWorksheet(null);
     setWorksheetProblems([]);
@@ -759,6 +774,8 @@ function TestPageContent() {
       }
 
       setIsTestStarted(false);
+      // 제출 후 pendingAssignment 초기화
+      setPendingAssignment(null);
     } catch (error: any) {
       setError('과제 제출에 실패했습니다: ' + error.message);
     } finally {
@@ -1040,6 +1057,7 @@ function TestPageContent() {
                 onNextProblem={goToNextProblem}
                 onSubmitTest={submitTest}
                 onBackToAssignmentList={() => {
+                  setPendingAssignment(null);
                   setIsTestStarted(false);
                   setTestSession(null);
                   setCurrentProblemIndex(0);
@@ -1062,6 +1080,7 @@ function TestPageContent() {
                 onNextProblem={goToNextProblem}
                 onSubmitTest={submitTest}
                 onBackToAssignmentList={() => {
+                  setPendingAssignment(null);
                   setIsTestStarted(false);
                   setTestSession(null);
                   setCurrentProblemIndex(0);
@@ -1083,6 +1102,7 @@ function TestPageContent() {
                 onNextProblem={goToNextProblem}
                 onSubmitTest={submitTest}
                 onBackToAssignmentList={() => {
+                  setPendingAssignment(null);
                   setIsTestStarted(false);
                   setTestSession(null);
                   setCurrentProblemIndex(0);

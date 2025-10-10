@@ -272,17 +272,17 @@ export default function ClassCreatePage() {
                       </TableCell>
                       <TableCell className="text-center p-3">
                         <Badge
-                          className={`rounded px-2.5 py-1.5 text-sm ${
+                          className={`badge ${
                             classroom.school_level === 'middle' 
-                              ? 'bg-[#E6F3FF] text-[#0085FF]' 
-                              : 'bg-[#FFF5E9] text-[#FF9F2D]'
+                              ? 'badge-blue' 
+                              : 'badge-yellow'
                           }`}
                         >
                           {classroom.school_level === 'middle' ? '중학교' : '고등학교'}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-center p-3">
-                        <Badge className="rounded px-2.5 py-1.5 text-sm bg-[#f5f5f5] text-[#999999]">
+                        <Badge className="badge badge-gray">
                           {classroom.grade}학년
                         </Badge>
                       </TableCell>

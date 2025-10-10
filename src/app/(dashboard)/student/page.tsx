@@ -61,6 +61,9 @@ const StudentDashboard = () => {
 
   // 로딩 상태
   const [isLoadingAssignments, setIsLoadingAssignments] = React.useState(true);
+  
+  // 본 채점 완료 과제 목록 (localStorage에 저장)
+  const [viewedGradedAssignments, setViewedGradedAssignments] = React.useState<Set<string>>(new Set());
 
 
   // API 재시도 함수
@@ -343,9 +346,32 @@ const StudentDashboard = () => {
     
     localStorage.setItem('selectedAssignment', JSON.stringify(assignmentData));
     
+    // 채점 완료 과제를 클릭했을 때 viewed 목록에 추가
+    if (assignment.status === 'completed') {
+      const newViewed = new Set(viewedGradedAssignments);
+      newViewed.add(assignment.id);
+      setViewedGradedAssignments(newViewed);
+      
+      // localStorage에 저장
+      localStorage.setItem('viewedGradedAssignments', JSON.stringify(Array.from(newViewed)));
+    }
+    
     // 과제 풀이 페이지로 이동
     router.push('/test');
   };
+
+  // localStorage에서 본 과제 목록 불러오기
+  React.useEffect(() => {
+    const storedViewed = localStorage.getItem('viewedGradedAssignments');
+    if (storedViewed) {
+      try {
+        const parsedViewed = JSON.parse(storedViewed);
+        setViewedGradedAssignments(new Set(parsedViewed));
+      } catch (e) {
+        console.error('Failed to parse viewed assignments:', e);
+      }
+    }
+  }, []);
 
   // 클래스 목록 로드
   React.useEffect(() => {
@@ -398,7 +424,10 @@ const StudentDashboard = () => {
     const allGraded = uniqueAssignmentsData.filter(a => a.status === 'completed');
     const allUnsubmitted = uniqueAssignmentsData.filter(a => a.status === 'pending');
     
-    setGradedAssignments(allGraded);
+    // 채점 완료 과제에서 이미 본 과제는 제외
+    const notViewedGraded = allGraded.filter(a => !viewedGradedAssignments.has(a.id));
+    
+    setGradedAssignments(notViewedGraded);
     setUnsubmittedAssignments(allUnsubmitted);
 
     // 레이더 차트 데이터 (과목별 평균) - 선택된 클래스만 필터링
@@ -515,7 +544,7 @@ const StudentDashboard = () => {
     });
 
     setCategoryData(categoryScores);
-  }, [allAssignments, selectedClassForSubjectAvg]);
+  }, [allAssignments, selectedClassForSubjectAvg, viewedGradedAssignments]);
 
   // 렌더링
   return (
