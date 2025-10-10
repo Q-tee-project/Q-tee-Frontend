@@ -27,6 +27,7 @@ interface CreateClassModalProps {
     school_level: 'middle' | 'high';
     grade: number;
   }) => Promise<void>;
+  onSuccess?: () => void; // 클래스 생성 성공 후 콜백
   error?: string;
 }
 
@@ -34,6 +35,7 @@ export default function CreateClassModal({
   isOpen,
   onClose,
   onSubmit,
+  onSuccess,
   error
 }: CreateClassModalProps) {
   const [formData, setFormData] = useState({
@@ -66,6 +68,11 @@ export default function CreateClassModal({
         school_level: 'middle',
         grade: 1,
       });
+      
+      // 클래스 생성 성공 후 콜백 실행
+      if (onSuccess) {
+        onSuccess();
+      }
     } finally {
       setIsSubmitting(false);
     }

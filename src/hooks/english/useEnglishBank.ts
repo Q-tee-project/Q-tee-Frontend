@@ -23,14 +23,13 @@ export const useEnglishBank = () => {
 
   // 컴포넌트 마운트 시 자동으로 데이터 로드
   useEffect(() => {
-    if (worksheets.length === 0 && !isLoading) {
-      loadWorksheets();
-    }
+    loadWorksheets();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadWorksheets = async () => {
-    updateState({ isLoading: true });
     try {
+      updateState({ isLoading: true, error: null });
       const worksheetData = await EnglishService.getEnglishWorksheets();
 
       updateState({ worksheets: worksheetData });
@@ -43,6 +42,7 @@ export const useEnglishBank = () => {
         }
       }
     } catch (error: any) {
+      console.error('영어 워크시트 로딩 에러:', error);
       updateState({
         error: `영어 워크시트 데이터를 불러올 수 없습니다: ${error.message}`,
       });
@@ -54,7 +54,6 @@ export const useEnglishBank = () => {
   const loadWorksheetProblems = async (worksheetId: number) => {
     try {
       const worksheetDetail = await EnglishService.getEnglishWorksheetDetail(worksheetId);
-
       // API 응답 구조가 worksheet_data 안에 중첩되어 있음
       const worksheetData = worksheetDetail.worksheet_data;
       const questions = worksheetData?.questions || [];
@@ -91,7 +90,6 @@ export const useEnglishBank = () => {
     }
 
     try {
-      updateState({ isLoading: true });
       // English delete not implemented yet
       throw new Error('영어 워크시트 삭제 기능은 아직 구현되지 않았습니다.');
 
@@ -106,15 +104,11 @@ export const useEnglishBank = () => {
       alert('영어 워크시트가 삭제되었습니다.');
     } catch (error: any) {
       alert(`삭제 실패: ${error.message}`);
-    } finally {
-      updateState({ isLoading: false });
     }
   };
 
   const handleBatchDeleteWorksheets = async (worksheetsToDelete: EnglishWorksheet[]) => {
     try {
-      updateState({ isLoading: true });
-
       // 삭제할 워크시트의 ID 목록 생성
       const worksheetIdsToDelete = worksheetsToDelete
         .map(w => w.worksheet_id)
@@ -138,7 +132,7 @@ export const useEnglishBank = () => {
       updateState({
         worksheets: updatedWorksheets,
         selectedWorksheet: newSelectedWorksheet,
-        worksheetProblems: newSelectedWorksheet ? worksheetProblems : null
+        worksheetProblems: newSelectedWorksheet ? worksheetProblems : undefined
       });
 
       // 새로운 워크시트가 선택된 경우 문제 로드
@@ -149,8 +143,6 @@ export const useEnglishBank = () => {
       alert(`✅ ${worksheetsToDelete.length}개의 워크시트가 삭제되었습니다.`);
     } catch (error: any) {
       alert(`삭제 실패: ${error.message}`);
-    } finally {
-      updateState({ isLoading: false });
     }
   };
 

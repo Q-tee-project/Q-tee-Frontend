@@ -2,6 +2,7 @@ import {
   EnglishWorksheetGeneratorFormData,
   EnglishGenerationResponse,
   EnglishWorksheetData,
+  EnglishWorksheetDetailResponse,
   EnglishQuestion,
   EnglishRegenerationInfo,
   EnglishRegenerationRequest,
@@ -103,7 +104,7 @@ export class EnglishService {
   }
 
   // 영어 워크시트 상세 정보 가져오기
-  static async getEnglishWorksheetDetail(worksheetId: number): Promise<EnglishWorksheetDetail> {
+  static async getEnglishWorksheetDetail(worksheetId: number): Promise<EnglishWorksheetDetailResponse> {
     const currentUser = JSON.parse(localStorage.getItem('user_profile') || '{}');
     const userId = currentUser?.id;
 

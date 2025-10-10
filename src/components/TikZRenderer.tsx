@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useMemo } from 'react';
+import katex from 'katex';
 
 interface TikZRendererProps {
   tikzCode: string;
@@ -37,11 +38,46 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
   // LaTeX 수식을 일반 텍스트로 변환하는 헬퍼 함수
   const cleanLatexLabel = (label: string): string => {
     if (!label) return '';
-    // $A$, $B$ 등의 LaTeX 수식에서 내용만 추출
-    return label
-      .replace(/\$/g, '')
-      .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '$1/$2')
-      .trim();
+
+    let cleaned = label;
+
+    // $ 기호 제거
+    cleaned = cleaned.replace(/\$/g, '');
+
+    // 이중 백슬래시를 단일 백슬래시로 (\\frac -> \frac, \\mathrm -> \mathrm)
+    cleaned = cleaned.replace(/\\\\/g, '\\');
+
+    // 분수 변환: \frac{a}{b} -> a/b (여러 번 적용하여 중첩된 분수도 처리)
+    for (let i = 0; i < 3; i++) {
+      cleaned = cleaned.replace(/\\frac\{([^{}]+)\}\{([^{}]+)\}/g, '($1)/($2)');
+    }
+
+    // LaTeX 명령어 제거 - 중첩 가능하므로 여러 번 적용
+    for (let i = 0; i < 3; i++) {
+      cleaned = cleaned.replace(/\\mathrm\{([^{}]+)\}/g, '$1'); // \mathrm{B} -> B
+      cleaned = cleaned.replace(/\\mathbf\{([^{}]+)\}/g, '$1'); // \mathbf{B} -> B
+      cleaned = cleaned.replace(/\\text\{([^{}]+)\}/g, '$1');   // \text{abc} -> abc
+    }
+
+    cleaned = cleaned.replace(/\\small/g, '');                // \small 제거
+    cleaned = cleaned.replace(/\\large/g, '');                // \large 제거
+    cleaned = cleaned.replace(/\\displaystyle/g, '');         // \displaystyle 제거
+    cleaned = cleaned.replace(/\\textstyle/g, '');            // \textstyle 제거
+
+    // 남은 백슬래시 명령어들 제거 (\O, \Alpha, \x, \y 등)
+    cleaned = cleaned.replace(/\\[a-zA-Z]+/g, '');
+
+    // 중괄호 제거
+    cleaned = cleaned.replace(/[{}]/g, '');
+
+    // 불필요한 괄호 정리: (16)/(x) -> 16/x
+    cleaned = cleaned.replace(/\((\d+)\)\//g, '$1/');
+    cleaned = cleaned.replace(/\/\(([a-z])\)/g, '/$1');
+
+    // 연속된 공백을 하나로
+    cleaned = cleaned.replace(/\s+/g, ' ');
+
+    return cleaned.trim();
   };
 
   const parsedData = useMemo(() => {
@@ -231,15 +267,37 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
     }
 
     // Labels 파싱: \node[blue] at (4, -2.5) {$y=\frac{a}{x}$};
-    const labelMatches = tikzCode.matchAll(/\\node\[([^\]]*)\]\s*at\s*\(([^)]+)\)\s*\{([^}]+)\}/g);
-    for (const match of labelMatches) {
-      const [, colorSpec, coordStr, text] = match;
+    // 중괄호 매칭을 개선하여 \frac{}{} 같은 중첩된 중괄호도 처리
+    const nodeRegex = /\\node\[([^\]]*)\]\s*at\s*\(([^)]+)\)\s*\{/g;
+    let nodeMatch;
+    while ((nodeMatch = nodeRegex.exec(tikzCode)) !== null) {
+      const [fullMatch, colorSpec, coordStr] = nodeMatch;
+      const startIndex = nodeMatch.index + fullMatch.length;
+
+      // 중괄호 카운팅으로 라벨 텍스트 추출
+      let braceCount = 1;
+      let endIndex = startIndex;
+      while (braceCount > 0 && endIndex < tikzCode.length) {
+        if (tikzCode[endIndex] === '{') braceCount++;
+        else if (tikzCode[endIndex] === '}') braceCount--;
+        endIndex++;
+      }
+
+      const text = tikzCode.substring(startIndex, endIndex - 1);
 
       const coord = resolveCoord(`(${coordStr})`);
       if (!coord) continue;
 
+      // 축 눈금 라벨 필터링 (\x, \y, \\x, \\y)
+      if (text === '$\\x$' || text === '$\\y$' || text === '\\x' || text === '\\y') {
+        continue;
+      }
+
       // 원점 O 라벨 필터링 (O, $O$ 등)
       const cleanedText = cleanLatexLabel(text);
+
+      console.log('[TikZ] 라벨 변환:', text, '→', cleanedText);
+
       if (coord.x === 0 && coord.y === 0 && (cleanedText === 'O' || cleanedText === 'o')) {
         continue;
       }
@@ -416,15 +474,6 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
             y
           </text>
 
-          {/* 원점 (0,0) */}
-          <circle
-            cx={toSvgX(0)}
-            cy={toSvgY(0)}
-            r="4"
-            fill={colors.gray}
-            stroke="white"
-            strokeWidth="1"
-          />
 
           {/* Filled areas (색칠된 영역) */}
           {filledAreas.map((area, idx) => {
@@ -595,7 +644,54 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
             const svgX = toSvgX(label.coord.x);
             const svgY = toSvgY(label.coord.y);
 
-            return (
+            // LaTeX 수식을 KaTeX로 렌더링
+            let renderedMath = '';
+            try {
+              let mathContent = label.text;
+
+              // 분수가 포함된 경우 LaTeX로 렌더링
+              if (mathContent.includes('/')) {
+                // 다양한 분수 패턴 처리:
+                // y=16/x -> y=\frac{16}{x}
+                mathContent = mathContent.replace(/(\w+)=(\d+)\/(\w+)/g, '$1=\\frac{$2}{$3}');
+                // y=(a)/x -> y=\frac{a}{x}
+                mathContent = mathContent.replace(/(\w+)=\(([^)]+)\)\/(\w+)/g, '$1=\\frac{$2}{$3}');
+                // (a)/x -> \frac{a}{x} (앞에 = 없는 경우)
+                mathContent = mathContent.replace(/\(([^)]+)\)\/(\w+)/g, '\\frac{$1}{$2}');
+                // 16/x -> \frac{16}{x} (앞에 = 없는 경우)
+                mathContent = mathContent.replace(/(\d+)\/(\w+)/g, '\\frac{$1}{$2}');
+
+                renderedMath = katex.renderToString(mathContent, {
+                  displayMode: false,
+                  throwOnError: false,
+                  output: 'mathml',
+                });
+              }
+            } catch (e) {
+              console.warn('KaTeX rendering failed:', e);
+            }
+
+            return renderedMath ? (
+              <foreignObject
+                key={`label-${idx}`}
+                x={svgX - 40}
+                y={svgY - 15}
+                width="80"
+                height="30"
+              >
+                <div
+                  style={{
+                    color: colors[label.color as keyof typeof colors] || label.color,
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                  }}
+                  dangerouslySetInnerHTML={{ __html: renderedMath }}
+                />
+              </foreignObject>
+            ) : (
               <text
                 key={`label-${idx}`}
                 x={svgX}
