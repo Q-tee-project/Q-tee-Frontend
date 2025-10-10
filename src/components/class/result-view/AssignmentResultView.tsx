@@ -104,7 +104,7 @@ export function AssignmentResultView({ assignment, onBack }: AssignmentResultVie
         setProblems(data.problems);
       } else if (subject === 'english') {
         data = await EnglishService.getEnglishWorksheetDetail(assignment.worksheet_id);
-        setProblems(data.questions || []);
+        setProblems(data.worksheet_data.questions || []);
       } else {
         try {
           data = await mathService.getMathWorksheetProblems(assignment.worksheet_id);

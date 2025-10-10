@@ -49,7 +49,7 @@ export function TestInterface({
   onOCRCapture,
 }: TestInterfaceProps) {
   return (
-    <Card className="w-5/6 flex flex-col shadow-sm">
+    <Card className="flex flex-col shadow-sm h-full">
       {/* 상단 네비게이션 */}
       <CardHeader className="flex flex-row items-center justify-between py-4 px-6 border-b border-gray-100">
         {/* 이전으로 돌아가기 버튼 */}

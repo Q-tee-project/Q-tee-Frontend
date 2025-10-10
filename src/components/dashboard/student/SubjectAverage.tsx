@@ -33,12 +33,12 @@ const SubjectAverage: React.FC<SubjectAverageProps> = ({
 }) => {
   const [selectedSubject, setSelectedSubject] = React.useState<string>('국어');
 
-  // 실제 카테고리 데이터 사용 (고정 카테고리 모두 표시)
+  // 선택한 과목의 카테고리별 데이터 (성능 최적화를 위한 메모이제이션)
   const bottomRadarData = React.useMemo(() => {
     return categoryData[selectedSubject] || [];
   }, [selectedSubject, categoryData]);
   return (
-    <Card className="shadow-sm lg:col-span-2 h-full flex flex-col px-6 py-5" style={{ height: '100%' }}>
+    <Card className="shadow-sm h-full flex flex-col px-6 py-5">
       <CardHeader className="px-0 py-0">
         <div className="flex items-center justify-between">
           <h3 className="text-xl font-bold text-gray-900">과목별 내 점수</h3>
@@ -68,8 +68,8 @@ const SubjectAverage: React.FC<SubjectAverageProps> = ({
           </div>
         </div>
       </CardHeader>
-      <CardContent className="flex-1 pt-4 px-0 flex flex-col">
-        <div className="bg-white focus:outline-none" style={{ flexBasis: '46%' }}>
+      <CardContent className="flex-1 pt-4 px-0 flex flex-col min-h-[500px] md:min-h-[600px]">
+        <div className="bg-white focus:outline-none flex-1 min-h-[200px] md:min-h-[250px]">
           <ResponsiveContainer width="100%" height="100%">
             <RadarChart key={selectedClass} cx="50%" cy="50%" outerRadius="85%" data={radarData}>
               <PolarGrid />
@@ -141,7 +141,7 @@ const SubjectAverage: React.FC<SubjectAverageProps> = ({
           <div className="border-t border-gray-200" />
         </div>
 
-        <div className="bg-white focus:outline-none" style={{ flexBasis: '54%' }}>
+        <div className="bg-white focus:outline-none flex-1 min-h-[200px] md:min-h-[250px]">
           <ResponsiveContainer width="100%" height="100%">
             <RadarChart cx="50%" cy="50%" outerRadius="85%" data={bottomRadarData}>
               <PolarGrid />

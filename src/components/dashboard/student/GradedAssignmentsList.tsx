@@ -4,7 +4,9 @@ import React from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { FileText } from 'lucide-react';
 import { RxExternalLink } from "react-icons/rx";
+import { FaCircleCheck } from "react-icons/fa6";
 
+// 채점 완료된 과제 목록 컴포넌트
 interface Assignment {
   id: string;
   title: string;
@@ -62,7 +64,7 @@ const GradedAssignmentsList: React.FC<GradedAssignmentsListProps> = ({
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <div className="w-3 h-3 bg-green-500 rounded-full flex-shrink-0"></div>
+                      <FaCircleCheck className="w-4 h-4 text-green-500 flex-shrink-0" />
                       <h4 className="text-sm font-medium text-gray-900 truncate">
                         {assignment.title}
                       </h4>
