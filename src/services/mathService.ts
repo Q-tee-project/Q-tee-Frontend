@@ -1,4 +1,4 @@
-import { Worksheet, MathProblem } from '@/types/math';
+import { Worksheet, MathProblem, StudentAssignmentResponse } from '@/types/math';
 import {
   Assignment,
   AssignmentDeployRequest,
@@ -82,7 +82,7 @@ export const mathService = {
     });
   },
 
-  getStudentAssignments: async (studentId: number): Promise<Assignment[]> => {
+  getStudentAssignments: async (studentId: number): Promise<StudentAssignmentResponse[]> => {
     return apiRequest(`/api/assignments/student/${studentId}`);
   },
 
