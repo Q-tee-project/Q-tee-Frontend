@@ -4,7 +4,6 @@ import React from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import {
   Dialog,
@@ -15,22 +14,16 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
 import { VscSettings } from "react-icons/vsc";
-import { CalendarIcon, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { format } from 'date-fns';
-import { ko } from 'date-fns/locale';
 
-// 백엔드 API 연동을 위한 타입 정의
+// 타입 정의
 interface Assignment {
   id: string;
   name: string;
   subject: string;
   dueDate: string;
-  submittedCount: number;
-  totalCount: number;
   myScore?: number;
   classAverageScore?: number;
   status?: 'completed' | 'pending'; // 응시 여부
@@ -49,13 +42,14 @@ const ClassAverage: React.FC<ClassAverageProps> = ({
   classes,
   assignments = [],
 }) => {
-  // 통합된 설정 모달 상태 관리
+  // 차트 설정 모달 상태
   const [showSettingsModal, setShowSettingsModal] = React.useState(false);
   const [selectedAssignments, setSelectedAssignments] = React.useState<string[]>([]);
+  
+  // 필터 상태
   const [subjectFilter, setSubjectFilter] = React.useState<string>('전체');
   const [searchQuery, setSearchQuery] = React.useState<string>('');
 
-  // 부모로부터 받은 assignments prop을 유일한 데이터 소스로 사용
   const allAssignments = assignments || [];
 
   // assignments prop이 변경될 때 초기 선택된 과제 설정
@@ -72,7 +66,7 @@ const ClassAverage: React.FC<ClassAverageProps> = ({
     }
   }, [assignments]);
 
-  // 과목, 검색어에 따른 과제 필터링 함수
+  // 과목 및 검색어로 과제 필터링
   const getFilteredAssignments = () => {
     let filtered = allAssignments;
 
@@ -93,12 +87,12 @@ const ClassAverage: React.FC<ClassAverageProps> = ({
 
   const filteredAssignments = getFilteredAssignments();
 
-  // 설정 적용 핸들러
+  // 모달 닫기
   const handleSettingsApply = () => {
     setShowSettingsModal(false);
   };
 
-  // 과제 선택 핸들러
+  // 과제 선택/해제 (최대 7개)
   const handleAssignmentToggle = (assignmentId: string) => {
     setSelectedAssignments(prev => {
       if (prev.includes(assignmentId)) {
@@ -110,7 +104,7 @@ const ClassAverage: React.FC<ClassAverageProps> = ({
     });
   };
 
-  // 차트 데이터 생성 함수 (selectedAssignments를 유일한 소스로 사용)
+  // 선택된 과제들을 날짜순으로 정렬하여 차트 데이터 생성
   const getChartData = () => {
     return selectedAssignments
       .map(id => allAssignments.find(a => a.id === id))
@@ -184,7 +178,7 @@ const ClassAverage: React.FC<ClassAverageProps> = ({
                 domain={['dataMin', 'dataMax']}
                 height={80}
               />
-              <YAxis />
+              <YAxis domain={[0, 100]} ticks={[0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]} />
               <Tooltip 
                 formatter={(value: any, name: string, props: any) => {
                   const num = typeof value === 'number' ? value : 0;
@@ -229,7 +223,7 @@ const ClassAverage: React.FC<ClassAverageProps> = ({
 
       {/* 통합 설정 모달 */}
       <Dialog open={showSettingsModal} onOpenChange={setShowSettingsModal}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-lg max-h-[85vh]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               차트 설정
@@ -284,7 +278,7 @@ const ClassAverage: React.FC<ClassAverageProps> = ({
                 </div>
               </div>
 
-              <div className="max-h-48 overflow-y-auto space-y-2">
+              <div className="max-h-96 overflow-y-auto space-y-2">
                 {filteredAssignments.length === 0 ? (
                   <div className="text-center py-8 text-gray-500">
                     <p>선택한 조건에 해당하는 과제가 없습니다.</p>

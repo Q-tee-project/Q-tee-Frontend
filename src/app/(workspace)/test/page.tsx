@@ -220,8 +220,17 @@ function TestPageContent() {
 
         return match;
       });
+
+      // 찾은 과제를 선택하고 바로 처리
+      if (targetWorksheet) {
+        console.log('🎯 과제 자동 선택:', targetWorksheet);
+        
+        // setSelectedWorksheet 대신 handleWorksheetSelect를 바로 호출
+        handleWorksheetSelect(targetWorksheet);
+      }
     }
   }, [worksheets, searchParams, selectedSubject, pendingAssignment]);
+
 
   // 타이머 효과
   useEffect(() => {
