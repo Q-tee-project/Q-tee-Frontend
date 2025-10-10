@@ -30,6 +30,8 @@ export default function JoinPage() {
   const [error, setError] = useState('');
   const [isUsernameChecked, setIsUsernameChecked] = useState(false);
   const [isUsernameAvailable, setIsUsernameAvailable] = useState(false);
+  const [isEmailChecked, setIsEmailChecked] = useState(false);
+  const [isEmailAvailable, setIsEmailAvailable] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [touchedFields, setTouchedFields] = useState<TouchedFields>({});
 
@@ -250,6 +252,19 @@ export default function JoinPage() {
           // 유효한 형식이면 에러 제거
           setError('');
         }
+      }
+    }
+
+    // 이메일이 변경되면 중복체크 초기화
+    if (name === 'email') {
+      setIsEmailChecked(false);
+      setIsEmailAvailable(false);
+
+      // 이메일 필드의 에러도 초기화 (새로운 입력을 위해)
+      if (fieldErrors.email) {
+        const newFieldErrors = { ...fieldErrors };
+        delete newFieldErrors.email;
+        setFieldErrors(newFieldErrors);
       }
     }
 
@@ -505,6 +520,41 @@ export default function JoinPage() {
     setIsLoading(false);
   };
 
+  const handleEmailCheck = async () => {
+    if (!formData.email.trim()) {
+      setError('이메일을 입력해주세요.');
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email.trim())) {
+      setError('올바른 이메일 형식이 아닙니다.');
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const result = await authService.checkEmailAvailability(formData.email.trim());
+      setIsEmailChecked(true);
+      setIsEmailAvailable(result.available);
+
+      if (!result.available) {
+        setError('이미 사용 중인 이메일입니다.');
+      } else {
+        setError('');
+      }
+    } catch (error: any) {
+      console.error('Email check failed:', error);
+      setError('중복 체크 중 오류가 발생했습니다. 다시 시도해주세요.');
+      setIsEmailChecked(false);
+      setIsEmailAvailable(false);
+    }
+
+    setIsLoading(false);
+  };
+
   const validateCurrentStep = () => {
     setError('');
 
@@ -525,6 +575,20 @@ export default function JoinPage() {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(formData.email)) {
           setError('올바른 이메일 형식이 아닙니다.');
+          return false;
+        }
+        // 이메일 중복체크 검증 추가
+        if (
+          !isEmailChecked &&
+          !error.includes('중복체크 기능을 사용할 수 없습니다') &&
+          !error.includes('중복체크 중 오류가 발생했습니다')
+        ) {
+          setError('이메일 중복체크를 완료해주세요.');
+          return false;
+        }
+        // 이메일 중복체크를 완료했지만 사용 불가능한 경우
+        if (isEmailChecked && !isEmailAvailable) {
+          setError('다른 이메일을 선택해주세요.');
           return false;
         }
         return true;
@@ -686,6 +750,10 @@ export default function JoinPage() {
             onInputBlur={handleInputBlur}
             onPhoneFocus={handlePhoneFocus}
             onPhoneKeyDown={handlePhoneKeyDown}
+            isLoading={isLoading}
+            isEmailChecked={isEmailChecked}
+            isEmailAvailable={isEmailAvailable}
+            onEmailCheck={handleEmailCheck}
           />
         );
       case 3:
@@ -735,6 +803,8 @@ export default function JoinPage() {
     setTouchedFields({});
     setIsUsernameChecked(false);
     setIsUsernameAvailable(false);
+    setIsEmailChecked(false);
+    setIsEmailAvailable(false);
     setError('');
   };
 
