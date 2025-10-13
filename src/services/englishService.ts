@@ -66,10 +66,16 @@ export class EnglishService {
       throw new Error('로그인이 필요합니다.');
     }
 
+    const token = getToken();
+    if (!token) {
+      throw new Error('인증 토큰이 없습니다. 다시 로그인해주세요.');
+    }
+
     const response = await fetch(`${ENGLISH_API_BASE}/worksheet-generate?user_id=${userId}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
       },
       body: JSON.stringify(formData),
     });
@@ -205,6 +211,7 @@ export class EnglishService {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
       },
       body: JSON.stringify(worksheetData),
     });
@@ -337,10 +344,16 @@ export class EnglishService {
       throw new Error('삭제할 워크시트 ID가 필요합니다.');
     }
 
+    const token = getToken();
+    if (!token) {
+      throw new Error('인증 토큰이 없습니다. 다시 로그인해주세요.');
+    }
+
     const response = await fetch(`${ENGLISH_API_BASE}/worksheets/batch?user_id=${userId}`, {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
       },
       body: JSON.stringify({ worksheet_ids: worksheetIds }),
     });
@@ -568,10 +581,20 @@ export class EnglishService {
       throw new Error('로그인이 필요합니다.');
     }
 
+    const token = getToken();
+    if (!token) {
+      throw new Error('인증 토큰이 없습니다. 다시 로그인해주세요.');
+    }
+
     let response;
 
     // 국어/수학과 동일한 방식: 클래스룸의 모든 과제 가져오기
-    response = await fetch(`${ENGLISH_API_BASE}/assignments/classrooms/${classId}/assignments`);
+    response = await fetch(`${ENGLISH_API_BASE}/assignments/classrooms/${classId}/assignments`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
 
     if (!response.ok) {
       throw new Error(`English API Error: ${response.status}`);
@@ -590,8 +613,19 @@ export class EnglishService {
       throw new Error('로그인이 필요합니다.');
     }
 
+    const token = getToken();
+    if (!token) {
+      throw new Error('인증 토큰이 없습니다. 다시 로그인해주세요.');
+    }
+
     const response = await fetch(
       `${ENGLISH_API_BASE}/assignments/${assignmentId}/student/${studentId}?user_id=${userId}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      }
     );
 
     if (!response.ok) {
@@ -610,8 +644,19 @@ export class EnglishService {
       throw new Error('로그인이 필요합니다.');
     }
 
+    const token = getToken();
+    if (!token) {
+      throw new Error('인증 토큰이 없습니다. 다시 로그인해주세요.');
+    }
+
     const response = await fetch(
       `${ENGLISH_API_BASE}/assignments/student/${studentId}?user_id=${userId}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      }
     );
 
     if (!response.ok) {
