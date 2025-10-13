@@ -380,8 +380,9 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
           {/* 그리드 라인 */}
           <g>
             {Array.from({ length: Math.floor((xMax - xMin) / xStep) + 1 }, (_, i) => {
-              const x = xMin + i * xStep;
-              return x !== 0 ? (
+              // xStep의 배수로 정렬 (예: xMin=-6.5, xStep=2 -> 시작점 -6)
+              const x = Math.ceil(xMin / xStep) * xStep + i * xStep;
+              return x !== 0 && x >= xMin && x <= xMax ? (
                 <line
                   key={`grid-v-${i}`}
                   x1={toSvgX(x)}
@@ -395,8 +396,9 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
               ) : null;
             })}
             {Array.from({ length: Math.floor((yMax - yMin) / yStep) + 1 }, (_, i) => {
-              const y = yMin + i * yStep;
-              return y !== 0 ? (
+              // yStep의 배수로 정렬 (예: yMin=-6.5, yStep=2 -> 시작점 -6)
+              const y = Math.ceil(yMin / yStep) * yStep + i * yStep;
+              return y !== 0 && y >= yMin && y <= yMax ? (
                 <line
                   key={`grid-h-${i}`}
                   x1={padding}
