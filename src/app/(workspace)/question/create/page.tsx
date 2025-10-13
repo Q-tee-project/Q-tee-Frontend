@@ -470,7 +470,7 @@ export default function CreatePage() {
                     worksheetPassages={englishGeneration.worksheetData.passages || []}
                     showAnswerSheet={showAnswerSheet}
                     isEditingTitle={isEditingTitle}
-                    editedTitle={worksheetSave.worksheetName || `수학 문제지 ${new Date().toLocaleDateString()}`}
+                    editedTitle={worksheetSave.worksheetName || `영어 문제지 ${new Date().toLocaleDateString()}`}
                     onToggleAnswerSheet={() => setShowAnswerSheet(!showAnswerSheet)}
                     onOpenDistributeDialog={() => {}}
                     onOpenEditDialog={() => {}}
@@ -484,54 +484,8 @@ export default function CreatePage() {
                       setIsEditingTitle(false);
                     }}
                     onEditedTitleChange={worksheetSave.setWorksheetName}
+                    onRefresh={() => setForceUpdateKey(prev => prev + 1)}
                   />
-                </div>
-          ) : subject === '국어' && currentGeneration.previewQuestions.length > 0 ? (
-                <div className="w-2/3 h-full overflow-hidden">
-                  <KoreanWorksheetDetail
-                    selectedWorksheet={{
-                      id: 0,
-                      title: worksheetSave.worksheetName || `국어 문제지 ${new Date().toLocaleDateString()}`,
-                      school_level: '중학교',
-                      grade: 1,
-                      korean_type: '문학',
-                      problem_count: currentGeneration.previewQuestions.length,
-                      passage_title: '',
-                      passage_content: '',
-                      passage_author: '',
-                      status: 'completed',
-                    } as any}
-                    worksheetProblems={currentGeneration.previewQuestions.map((q: any, index: number) => ({
-                      id: q.id || index + 1,
-                      sequence_order: index + 1,
-                      question: q.question || q.title,
-                      problem_type: q.problem_type || 'multiple_choice',
-                      question_type: q.question_type || q.problem_type || 'multiple_choice',
-                      korean_type: '문학',
-                      difficulty: q.difficulty || 'B',
-                      correct_answer: q.correct_answer || q.answer,
-                      choices: q.choices || q.options || [],
-                      explanation: q.explanation || q.solution || '',
-                      created_at: new Date().toISOString(),
-                    }))}
-                    showAnswerSheet={showAnswerSheet}
-                    isEditingTitle={isEditingTitle}
-                    editedTitle={worksheetSave.worksheetName || `국어 문제지 ${new Date().toLocaleDateString()}`}
-                    onToggleAnswerSheet={() => setShowAnswerSheet(!showAnswerSheet)}
-                    onOpenDistributeDialog={() => {}}
-                    onOpenEditDialog={() => {}}
-                    onEditProblem={() => {}}
-                    onStartEditTitle={() => setIsEditingTitle(true)}
-                    onCancelEditTitle={() => {
-                      setIsEditingTitle(false);
-                      worksheetSave.setWorksheetName(worksheetSave.worksheetName);
-                    }}
-                    onSaveTitle={() => {
-                      setIsEditingTitle(false);
-                    }}
-                    onEditedTitleChange={worksheetSave.setWorksheetName}
-                  />
-                </div>
           ) : subject === '영어' && englishGeneration.worksheetData &&
                 englishGeneration.worksheetData.questions &&
                 englishGeneration.worksheetData.questions.length > 0 ? (
