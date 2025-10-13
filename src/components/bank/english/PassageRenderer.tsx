@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -50,44 +49,47 @@ export const PassageRenderer: React.FC<PassageRendererProps> = ({
 }) => {
 
   return (
-    <Card className="mb-4 bg-blue-50 border-blue-200">
-      <CardContent className="p-6">
-        <div className="flex justify-between items-center mb-3">
-          <div className="text-sm font-semibold text-blue-800">
-            [문제 {passage.related_questions && passage.related_questions.length > 1 ? `${passage.related_questions[0]}-${passage.related_questions[passage.related_questions.length - 1]}` : passage.related_questions?.[0] || ''}]
-          </div>
-          <div className="flex gap-2">
-            {editingPassageId === passage.passage_id ? (
-              <>
-                <Button
-                  onClick={onSave}
-                  disabled={isLoading}
-                  size="sm"
-                  className="bg-green-600 hover:bg-green-700"
-                >
-                  <Check className="w-4 h-4" />
-                </Button>
-                <Button
-                  onClick={onCancelEdit}
-                  disabled={isLoading}
-                  size="sm"
-                  variant="outline"
-                >
-                  <X className="w-4 h-4" />
-                </Button>
-              </>
-            ) : (
+    <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+      <div className="flex items-center justify-between gap-2 mb-3">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold text-gray-700">
+            📖 지문 {passage.related_questions && passage.related_questions.length > 1 ? `(문제 ${passage.related_questions[0]}-${passage.related_questions[passage.related_questions.length - 1]})` : passage.related_questions?.[0] ? `(문제 ${passage.related_questions[0]})` : ''}
+          </span>
+        </div>
+        <div className="flex gap-1">
+          {editingPassageId === passage.passage_id ? (
+            <>
               <Button
-                onClick={() => onStartEdit(passage)}
+                onClick={onSave}
+                disabled={isLoading}
+                size="sm"
+                className="bg-green-600 hover:bg-green-700 p-1"
+              >
+                <Check className="w-4 h-4" />
+              </Button>
+              <Button
+                onClick={onCancelEdit}
+                disabled={isLoading}
                 size="sm"
                 variant="outline"
-                className="bg-white hover:bg-gray-50"
+                className="p-1"
               >
-                <Edit3 className="w-4 h-4" />
+                <X className="w-4 h-4" />
               </Button>
-            )}
-          </div>
+            </>
+          ) : (
+            <Button
+              onClick={() => onStartEdit(passage)}
+              size="sm"
+              variant="ghost"
+              className="text-[#0072CE] hover:text-[#0056A3] hover:bg-[#EBF6FF] p-1"
+              title="지문 편집"
+            >
+              <Edit3 className="w-4 h-4" />
+            </Button>
+          )}
         </div>
+      </div>
 
         {/* Metadata rendering for correspondence and review */}
         {passage.passage_content?.metadata && (
@@ -433,7 +435,6 @@ export const PassageRenderer: React.FC<PassageRendererProps> = ({
             )}
           </div>
         )}
-      </CardContent>
-    </Card>
+    </div>
   );
 };
