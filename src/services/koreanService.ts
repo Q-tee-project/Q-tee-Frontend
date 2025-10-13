@@ -84,21 +84,32 @@ const apiRequest = async <T = any>(
     throw new Error('Authentication token not found. Please log in.');
   }
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-      ...options.headers,
-    },
-  });
+  try {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+        ...options.headers,
+      },
+    });
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.detail || `Request failed: ${response.status}`);
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.detail || `Request failed: ${response.status}`);
+    }
+
+    return response.json();
+  } catch (error) {
+    // 네트워크 에러나 연결 거부 에러는 조용하게 처리
+    if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+      throw new Error('서비스 연결 중입니다. 잠시 후 다시 시도해주세요.');
+    }
+    if (error instanceof TypeError && error.message.includes('ERR_CONNECTION_REFUSED')) {
+      throw new Error('서비스 연결 중입니다. 잠시 후 다시 시도해주세요.');
+    }
+    throw error;
   }
-
-  return response.json();
 };
 
 export const koreanService = {

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { Suspense, useEffect } from 'react';
+import React, { Suspense, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { ReduxProvider } from '@/providers/ReduxProvider';
@@ -26,23 +26,31 @@ import {
 } from '@/store/slices/dashboardSlice';
 
 import TabNavigation from '@/components/dashboard/TabNavigation';
+import { preloadStaticData, preloadUserData, getCachedData, createCacheKey } from '@/utils/preloadData';
 
 const MarketManagementTab = React.lazy(() => import('@/components/dashboard/MarketManagementTab'));
 const ClassManagementTab = React.lazy(() => import('@/components/dashboard/ClassManagementTab'));
+
 const LoadingFallback = React.memo(() => (
   <div className="space-y-6">
     <div className="animate-pulse">
-      <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+      <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="bg-gray-200 rounded-lg h-32"></div>
+          <div key={i} className="bg-gray-200 rounded-lg h-24"></div>
         ))}
       </div>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="bg-gray-200 rounded-lg h-96 lg:col-span-2"></div>
-        <div className="bg-gray-200 rounded-lg h-96"></div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="bg-gray-200 rounded-lg h-80 lg:col-span-2"></div>
+        <div className="bg-gray-200 rounded-lg h-80"></div>
       </div>
     </div>
+  </div>
+));
+
+const QuickLoadingFallback = React.memo(() => (
+  <div className="flex items-center justify-center py-8">
+    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
   </div>
 ));
 
@@ -51,20 +59,37 @@ const TeacherDashboardContent = React.memo(() => {
   const dispatch = useAppDispatch();
   const state = useAppSelector((state) => state.dashboard);
 
-  const studentColors = React.useMemo(() => ['#22c55e', '#a855f7', '#eab308'], []);
-  const getStudentColor = React.useCallback(
+  const studentColors: string[] = useMemo(() => {
+    const cachedColors = getCachedData<string[]>(createCacheKey('static', 'studentColors'));
+    return cachedColors || ['#22c55e', '#a855f7', '#eab308'];
+  }, []);
+  
+  const getStudentColor = useCallback(
     (studentId: number): string | null => {
       return state.studentColorMap[studentId] || null;
     },
     [state.studentColorMap],
   );
 
-  const getRecentProducts = React.useMemo((): any[] => {
+  const getRecentProducts = useMemo((): any[] => {
     if (state.marketProducts.length === 0) return [];
     return [...state.marketProducts]
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
       .slice(0, 2);
   }, [state.marketProducts]);
+
+  const handleTabChange = useCallback((tab: string) => {
+    dispatch(setSelectedTab(tab));
+  }, [dispatch]);
+
+  const handleMarketRefresh = useCallback(() => {
+    dispatch(loadMarketStats());
+    dispatch(loadMarketProducts());
+  }, [dispatch]);
+
+  const handleClassRefresh = useCallback(() => {
+    dispatch(refreshAll());
+  }, [dispatch]);
 
   const handleStudentSelect = React.useCallback((studentId: number) => {
     if (studentId === -1) {
@@ -81,7 +106,7 @@ const TeacherDashboardContent = React.memo(() => {
       dispatch(setSelectedStudents(prev.filter((id) => id !== studentId)));
     } else if (prev.length < 3) {
       const usedColors = Object.values(state.studentColorMap);
-      const availableColors = studentColors.filter((color) => !usedColors.includes(color));
+      const availableColors = studentColors.filter((color: string) => !usedColors.includes(color));
       const assignedColor =
         availableColors[0] || studentColors[prev.length % studentColors.length];
 
@@ -116,71 +141,90 @@ const TeacherDashboardContent = React.memo(() => {
 
   useEffect(() => {
     const initializeData = async () => {
-      await Promise.all([
+      await Promise.allSettled([
+        preloadStaticData(),
+        userProfile?.id ? preloadUserData(userProfile.id.toString()) : Promise.resolve(),
+      ]);
+
+      const classesPromise = dispatch(loadClasses());
+      
+      const marketPromises = Promise.allSettled([
         dispatch(loadMarketStats()),
         dispatch(loadMarketProducts()),
-        dispatch(loadClasses()),
       ]);
+
+      classesPromise.then(() => {
+        dispatch(loadStats());
+      });
+
+      marketPromises.catch(() => {
+      });
     };
 
     initializeData();
-  }, [dispatch]);
+  }, [dispatch, userProfile?.id]);
 
   useEffect(() => {
     if (state.classes.length > 0) {
-      dispatch(loadStats());
-    }
-  }, [state.classes.length, dispatch]);
+      const loadClassData = async () => {
+        const latestClassId = [...state.classes].sort(
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        )[0].id;
 
-  useEffect(() => {
-    if (state.classes.length > 0) {
-      dispatch(loadStudents());
-      
-      const latestClassId = [...state.classes].sort(
-        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-      )[0].id;
+        await Promise.all([
+          dispatch(loadStudents()),
+          !state.selectedClass ? dispatch(setSelectedClass(latestClassId)) : Promise.resolve(),
+        ]);
+      };
 
-      if (!state.selectedClass) {
-        dispatch(setSelectedClass(latestClassId));
-      }
+      loadClassData();
     }
-  }, [state.classes.length, dispatch]);
+  }, [state.classes.length, dispatch, state.selectedClass]);
 
   useEffect(() => {
     if (state.selectedClass && state.classes.length > 0) {
-      dispatch(loadAssignments(state.selectedClass));
+
+      const timeoutId = setTimeout(() => {
+        dispatch(loadAssignments(state.selectedClass));
+      }, 100);
+
+      return () => clearTimeout(timeoutId);
     }
-  }, [state.selectedClass, dispatch]);
+  }, [state.selectedClass, dispatch, state.classes.length]);
 
   const ErrorAlert = React.memo(({ errorKey, message, onRemove }: { 
     errorKey: string; 
     message: string; 
     onRemove: (key: string) => void;
   }) => (
-    <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+    <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
       <div className="flex items-center justify-between">
         <div className="flex items-center">
           <div className="flex-shrink-0">
-            <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+            <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
               <path
                 fillRule="evenodd"
-                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
                 clipRule="evenodd"
               />
             </svg>
           </div>
           <div className="ml-3">
-            <h3 className="text-sm font-medium text-red-800">
-              {errorKey === 'classes' && '클래스 정보 로딩 실패'}
-              {errorKey === 'assignments' && '과제 정보 로딩 실패'}
-              {errorKey === 'market' && '마켓 정보 로딩 실패'}
+            <h3 className="text-sm font-medium text-yellow-800">
+              {errorKey === 'classes' && '클래스 정보 로딩 중'}
+              {errorKey === 'assignments' && '과제 정보 로딩 중'}
+              {errorKey === 'market' && '마켓 정보 로딩 중'}
             </h3>
-            <p className="mt-1 text-sm text-red-700">{message}</p>
+            <p className="mt-1 text-sm text-yellow-700">
+              {errorKey === 'classes' && '일부 서비스가 연결되지 않아 기본 정보만 표시됩니다.'}
+              {errorKey === 'assignments' && '과제 서비스 연결 중입니다. 잠시 후 다시 시도해주세요.'}
+              {errorKey === 'market' && '마켓 서비스 연결 중입니다. 잠시 후 다시 시도해주세요.'}
+            </p>
           </div>
         </div>
         <button
           onClick={() => onRemove(errorKey)}
-          className="text-red-400 hover:text-red-600"
+          className="text-yellow-400 hover:text-yellow-600"
         >
           <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
             <path
@@ -214,11 +258,11 @@ const TeacherDashboardContent = React.memo(() => {
 
       <TabNavigation 
         selectedTab={state.selectedTab} 
-        setSelectedTab={React.useCallback((tab) => dispatch(setSelectedTab(tab)), [dispatch])} 
+        setSelectedTab={handleTabChange} 
       />
 
       {state.selectedTab === '마켓 관리' && (
-        <Suspense fallback={<LoadingFallback />}>
+        <Suspense fallback={<QuickLoadingFallback />}>
           <MarketManagementTab
             marketStats={state.marketStats}
             isLoadingMarketStats={state.isLoadingMarketStats}
@@ -226,10 +270,7 @@ const TeacherDashboardContent = React.memo(() => {
             selectedProducts={state.selectedProducts}
             isLoadingProducts={state.isLoadingProducts}
             lastSyncTime={state.lastSyncTime}
-            onRefresh={() => {
-              dispatch(loadMarketStats());
-              dispatch(loadMarketProducts());
-            }}
+            onRefresh={handleMarketRefresh}
             onProductSelect={handleProductSelect}
             getRecentProducts={() => getRecentProducts}
           />
@@ -237,7 +278,7 @@ const TeacherDashboardContent = React.memo(() => {
       )}
 
       {state.selectedTab === '클래스 관리' && (
-        <Suspense fallback={<LoadingFallback />}>
+        <Suspense fallback={<QuickLoadingFallback />}>
           <ClassManagementTab
             realClasses={state.classes}
             realStudents={state.students}
@@ -254,7 +295,7 @@ const TeacherDashboardContent = React.memo(() => {
             isRefreshing={state.isRefreshing}
             isAssignmentModalOpen={state.isAssignmentModalOpen}
             periodStats={state.stats}
-            onRefresh={() => dispatch(refreshAll())}
+            onRefresh={handleClassRefresh}
             onClassSelect={(classId) => dispatch(setSelectedClass(classId))}
             onStudentSelect={handleStudentSelect}
             onAssignmentSelect={handleAssignmentSelect}

@@ -105,7 +105,6 @@ export class EnglishService {
     });
 
     if (!response.ok) {
-      console.error('📚 영어 워크시트 API 에러:', response.status, response.statusText);
       throw new Error(`English API Error: ${response.status}`);
     }
 
@@ -201,9 +200,6 @@ export class EnglishService {
     if (!userId) {
       throw new Error('로그인이 필요합니다.');
     }
-
-    console.log('💾 저장할 워크시트 데이터:', worksheetData);
-    console.log('💾 questions 샘플:', worksheetData.questions?.[0]);
 
     const response = await fetch(`${ENGLISH_API_BASE}/worksheet-save`, {
       method: 'POST',
@@ -421,7 +417,6 @@ export class EnglishService {
     }
 
     const result = await response.json();
-    console.log('영어 문제 재생성 응답 (ID 기반):', result);
     return result;
   }
 
@@ -456,22 +451,14 @@ export class EnglishService {
       let errorMessage = `English API Error: ${response.status}`;
       try {
         const errorData = await response.text();
-        console.error('🚨 재생성 API 에러:', {
-          status: response.status,
-          statusText: response.statusText,
-          url: response.url,
-          requestBody: requestBody,
-          errorData: errorData,
-        });
         errorMessage += ` - ${errorData}`;
       } catch (e) {
-        console.error('🚨 에러 데이터 파싱 실패:', e);
+        // 에러 데이터 파싱 실패 시 기본 메시지 사용
       }
       throw new Error(errorMessage);
     }
 
     const result = await response.json();
-    console.log('✅ 영어 지문/문제 재생성 비동기 시작:', result);
     return result;
   }
 
@@ -509,9 +496,6 @@ export class EnglishService {
   }
 
   static async deployAssignment(deployRequest: EnglishAssignmentDeployRequest): Promise<any> {
-    console.log('📤 영어 과제 배포 요청:', deployRequest);
-    console.log('📤 API URL:', `${ENGLISH_API_BASE}/assignments/deploy`);
-
     const response = await fetch(`${ENGLISH_API_BASE}/assignments/deploy`, {
       method: 'POST',
       headers: {
@@ -520,28 +504,21 @@ export class EnglishService {
       body: JSON.stringify(deployRequest),
     });
 
-    console.log('📤 응답 상태:', response.status);
-
     if (!response.ok) {
       let errorMessage = `English API Error: ${response.status}`;
       try {
         const errorData = await response.text();
-        console.error('📤 영어 과제 배포 실패 응답:', errorData);
         errorMessage += ` - ${errorData}`;
       } catch (e) {
-        console.error('📤 에러 응답 읽기 실패:', e);
         errorMessage += ` - Failed to read error response`;
       }
       throw new Error(errorMessage);
     }
 
     const responseText = await response.text();
-    console.log('📤 성공 응답 내용:', responseText);
-
     try {
       return JSON.parse(responseText);
     } catch (e) {
-      console.error('📤 JSON 파싱 실패. 응답 내용:', responseText);
       throw new Error(
         `Unexpected response format. Expected JSON but got: ${responseText.substring(0, 200)}...`,
       );
@@ -550,8 +527,6 @@ export class EnglishService {
 
   // 영어 과제 생성 (배포하지 않고 생성만)
   static async createAssignment(worksheetId: number, classroomId: number): Promise<any> {
-    console.log('📝 영어 과제 생성 요청:', { worksheetId, classroomId });
-
     const response = await fetch(`${ENGLISH_API_BASE}/assignments/create`, {
       method: 'POST',
       headers: {
@@ -563,28 +538,21 @@ export class EnglishService {
       }),
     });
 
-    console.log('📝 과제 생성 응답 상태:', response.status);
-
     if (!response.ok) {
       let errorMessage = `English API Error: ${response.status}`;
       try {
         const errorData = await response.text();
-        console.error('📝 영어 과제 생성 실패:', errorData);
         errorMessage += ` - ${errorData}`;
       } catch (e) {
-        console.error('📝 에러 응답 읽기 실패:', e);
         errorMessage += ` - Failed to read error response`;
       }
       throw new Error(errorMessage);
     }
 
     const responseText = await response.text();
-    console.log('📝 과제 생성 성공 응답:', responseText);
-
     try {
       return JSON.parse(responseText);
     } catch (e) {
-      console.error('📝 JSON 파싱 실패. 응답 내용:', responseText);
       throw new Error(
         `Unexpected response format. Expected JSON but got: ${responseText.substring(0, 200)}...`,
       );
@@ -674,8 +642,6 @@ export class EnglishService {
       user_id: userId,
     };
 
-    console.log('📤 영어 과제 제출 데이터:', submissionData);
-
     const response = await fetch(`${ENGLISH_API_BASE}/assignments/submit`, {
       method: 'POST',
       headers: {
@@ -689,7 +655,6 @@ export class EnglishService {
       try {
         const errorData = await response.text();
         errorMessage += ` - ${errorData}`;
-        console.error('📤 영어 과제 제출 실패:', errorData);
       } catch (e) {
         // JSON 파싱 실패 시 기본 메시지 사용
       }
@@ -697,7 +662,6 @@ export class EnglishService {
     }
 
     const result = await response.json();
-    console.log('📤 영어 과제 제출 성공:', result);
     return result;
   }
 
@@ -718,7 +682,6 @@ export class EnglishService {
       const data = await response.json();
       return data.results || [];
     } catch (error) {
-      console.error('Failed to load English assignment results:', error);
       throw error;
     }
   }
@@ -746,7 +709,6 @@ export class EnglishService {
 
       return await response.json();
     } catch (error) {
-      console.error('Failed to load English assignment result detail:', error);
       throw error;
     }
   }
@@ -768,7 +730,6 @@ export class EnglishService {
 
       return await response.json();
     } catch (error) {
-      console.error('Failed to approve English grade:', error);
       throw error;
     }
   }
@@ -811,7 +772,6 @@ export class EnglishService {
 
       return await response.json();
     } catch (error) {
-      console.error('Failed to start English AI grading:', error);
       throw error;
     }
   }
@@ -827,7 +787,6 @@ export class EnglishService {
 
       return await response.json();
     } catch (error) {
-      console.error('Failed to get English grading task status:', error);
       throw error;
     }
   }
@@ -856,7 +815,6 @@ export class EnglishService {
 
       return await response.json();
     } catch (error) {
-      console.error('Failed to update English grading session:', error);
       throw error;
     }
   }
