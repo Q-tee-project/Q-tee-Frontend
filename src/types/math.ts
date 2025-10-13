@@ -32,7 +32,10 @@ export interface MathProblem {
   has_diagram?: boolean;
   diagram_type?: string;
   diagram_elements?: any;
-  tikz_code?: string;
+  tikz_code?: string; // 선택적 필드 - 데이터베이스에 존재하지 않을 수 있음
+  image_url?: string; // 추가된 필드
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface MathFormData {
@@ -120,3 +123,16 @@ export enum Subject {
 // 유틸리티 함수 타입
 export type ProblemTypeConverter = (type: string) => string;
 export type DifficultyConverter = (difficulty: string) => string;
+
+// 학생용 과제 응답 타입
+export interface StudentAssignmentResponse {
+  id: number;
+  title: string;
+  unit_name: string;
+  chapter_name: string;
+  problem_count: number;
+  status: string;
+  deployed_at: string;
+  assignment_id: number;
+  classroom_id: number;
+}

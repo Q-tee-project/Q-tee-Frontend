@@ -219,15 +219,19 @@ const FixedNotificationIcon = ({ isSidebarOpen = false }: FixedNotificationIconP
         ref={buttonRef}
         onMouseDown={handleMouseDown}
         onClick={toggleBellMenu}
-        className={`w-8 h-8 rounded-full bg-gray-900 flex items-center justify-center transition-all duration-200 ease-in-out relative ${
+        className={`w-8 h-8 rounded-full ${
+          hasNewNotification ? 'bg-red-500' : 'bg-gray-900'
+        } flex items-center justify-center transition-all duration-200 ease-in-out relative ${
           isDragging ? 'cursor-grabbing scale-110 shadow-lg' : 'cursor-grab'
         }`}
         aria-label="알림"
       >
         <FaBell className="w-[18px] h-[18px] text-white" />
-        {/* 새 알림 표시 */}
+        {/* 새 알림 개수 표시 */}
         {hasNewNotification && (
-          <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-red-500 border border-white" />
+          <div className="absolute -top-1 -right-1 min-w-[18px] h-[18px] rounded-full bg-white text-red-500 border-2 border-red-500 flex items-center justify-center text-[10px] font-bold px-1">
+            {unreadCount > 99 ? '99+' : unreadCount}
+          </div>
         )}
       </button>
 

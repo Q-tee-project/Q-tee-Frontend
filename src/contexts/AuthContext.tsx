@@ -57,26 +57,28 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       if (authenticated) {
         const currentUser = authService.getCurrentUser();
         if (currentUser.type && currentUser.profile) {
+          // 로컬스토리지에 프로필이 있으면 바로 복원
           setIsAuthenticated(true);
           setUserType(currentUser.type);
           setUserProfile(currentUser.profile);
-          if (!currentUser.profile) {
-            try {
-              let freshProfile;
-              if (currentUser.type === 'teacher') {
-                freshProfile = await authService.getTeacherProfile();
-              } else {
-                freshProfile = await authService.getStudentProfile();
-              }
-              setUserProfile(freshProfile);
-            } catch (error) {
-              console.error('프로필 새로고침 실패:', error);
-              // 프로필 가져오기 실패시 로그아웃
-              logout();
+        } else if (currentUser.type && !currentUser.profile) {
+          // 토큰은 있지만 프로필이 없는 경우에만 API 호출
+          try {
+            let freshProfile;
+            if (currentUser.type === 'teacher') {
+              freshProfile = await authService.getTeacherProfile();
+            } else {
+              freshProfile = await authService.getStudentProfile();
             }
+            setIsAuthenticated(true);
+            setUserType(currentUser.type);
+            setUserProfile(freshProfile);
+          } catch (error) {
+            // 프로필 가져오기 실패시 로그아웃
+            logout();
           }
         } else {
-          // 토큰은 있지만 사용자 정보가 없는 경우 로그아웃
+          // 토큰은 있지만 사용자 타입이 없는 경우 로그아웃
           logout();
         }
       } else {
@@ -85,7 +87,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         setUserProfile(null);
       }
     } catch (error) {
-      console.error('인증 상태 확인 실패:', error);
       setIsAuthenticated(false);
       setUserType(null);
       setUserProfile(null);

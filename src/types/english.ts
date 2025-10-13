@@ -88,6 +88,13 @@ export interface EnglishWorksheetData {
   questions?: EnglishQuestion[]; // 문제 데이터
 }
 
+// 영어 워크시트 상세 응답 타입 정의
+export interface EnglishWorksheetDetailResponse {
+  status: string;
+  message: string;
+  worksheet_data: EnglishWorksheetData;
+}
+
 // 영어 지문 데이터 타입 정의
 export interface EnglishPassage {
   passage_id: number;
@@ -212,4 +219,16 @@ export interface EnglishRegenerationTaskStatus {
   total: number;
   result?: EnglishRegenerationResponse;  // SUCCESS일 때 재생성 결과 포함
   error?: string;
+}
+
+// 학생용 과제 응답 타입
+export interface StudentAssignmentResponse {
+  id: number;
+  title: string;
+  problem_type: string;
+  total_questions: number;
+  status: string;
+  deployed_at: string;
+  assignment_id: number;
+  classroom_id: number;
 }

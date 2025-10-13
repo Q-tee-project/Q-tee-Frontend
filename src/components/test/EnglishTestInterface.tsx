@@ -250,36 +250,44 @@ export function EnglishTestInterface({
   };
 
   return (
-    <div className="w-full h-full">
-      <Card className="h-full shadow-sm">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onBackToAssignmentList}
-                className="flex items-center gap-2 text-gray-600 hover:text-gray-800"
-              >
-                <FaArrowLeft className="w-4 h-4" />
-                목록으로
-              </Button>
-              <div className="flex items-center gap-2">
-                <BookOpen className="w-5 h-5 text-blue-600" />
-                <span className="font-semibold text-gray-800">{selectedWorksheet.title}</span>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <Badge variant="outline" className="text-xs">
-                {formatTime(timeRemaining)}
-              </Badge>
-              <Badge variant="secondary" className="text-xs">
-                {currentProblemIndex + 1} / {worksheetProblems.length}
-              </Badge>
-            </div>
+    <Card className="flex flex-col shadow-sm h-full">
+      {/* 상단 네비게이션 */}
+      <CardHeader className="flex flex-row items-center justify-between py-4 px-6 border-b border-gray-100 flex-shrink-0">
+        {/* 이전으로 돌아가기 버튼 */}
+        <button
+          onClick={onBackToAssignmentList}
+          className="p-2 rounded-md text-gray-400 hover:text-gray-600 transition-colors duration-200"
+          style={{ backgroundColor: '#f5f5f5', borderRadius: '50%', cursor: 'pointer' }}
+        >
+          <FaArrowLeft className="h-5 w-5" />
+        </button>
+
+        {/* 문제지명과 남은 시간 */}
+        <div className="flex items-center gap-4">
+          <div>
+            <span className="text-lg font-semibold text-gray-900">
+              {selectedWorksheet.title}
+            </span>
           </div>
-        </CardHeader>
-        <CardContent className="h-[calc(100%-80px)] overflow-y-auto">
+          <div className="px-3 py-2 rounded-md" style={{ backgroundColor: '#f5f5f5' }}>
+            <span className="text-lg font-semibold text-gray-900">
+              {formatTime(timeRemaining)}
+            </span>
+          </div>
+        </div>
+
+        {/* 제출하기 버튼 */}
+        <Button
+          onClick={onSubmitTest}
+          disabled={isSubmitting || Object.keys(answers).length < worksheetProblems.length}
+          className="bg-[#0072CE] hover:bg-[#0056A3] text-white disabled:bg-gray-400"
+        >
+          {isSubmitting ? '제출 중...' : Object.keys(answers).length < worksheetProblems.length ? `제출하기 (${Object.keys(answers).length}/${worksheetProblems.length})` : '제출하기'}
+        </Button>
+      </CardHeader>
+      
+      {/* 문제 내용 */}
+      <CardContent className="flex-1 overflow-y-auto p-6 min-h-0">
           <div className="space-y-6">
             {/* 지문 영역 */}
             {currentPassage && (
@@ -427,7 +435,6 @@ export function EnglishTestInterface({
             </div>
           </div>
         </CardContent>
-      </Card>
-    </div>
+    </Card>
   );
 }

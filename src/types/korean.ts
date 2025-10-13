@@ -76,3 +76,16 @@ export interface KoreanGenerationResponse {
   task_id: string;
   request_data: KoreanGenerationRequest;
 }
+
+// 학생용 과제 응답 타입
+export interface StudentAssignmentResponse {
+  id: number;
+  title: string;
+  korean_type: string;
+  question_type: string;
+  problem_count: number;
+  status: string;
+  deployed_at: string;
+  assignment_id: number;
+  classroom_id: number;
+}

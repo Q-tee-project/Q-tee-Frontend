@@ -1,19 +1,25 @@
 'use client';
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { FileText, CheckCircle } from 'lucide-react';
+import { FileText } from 'lucide-react';
 import { RxExternalLink } from "react-icons/rx";
+import { FaCircleCheck } from "react-icons/fa6";
 
+// 채점 완료된 과제 목록 컴포넌트
 interface Assignment {
   id: string;
   title: string;
-  subject: string;
-  problem_count: number;
-  status: string;
+  subject: '국어' | '영어' | '수학';
+  problem_count?: number;
+  status: 'completed' | 'pending';
   score?: number;
   deployed_at?: string;
+  raw_id: number;
+  raw_subject: 'korean' | 'english' | 'math';
+  dueDate: string;
+  myScore?: number;
+  averageScore?: number;
 }
 
 interface GradedAssignmentsListProps {
@@ -22,11 +28,41 @@ interface GradedAssignmentsListProps {
   onAssignmentClick: (assignment: Assignment) => void;
 }
 
-const GradedAssignmentsList: React.FC<GradedAssignmentsListProps> = ({
+
+const GradedAssignmentItem = React.memo(function GradedAssignmentItem({
+  assignment,
+  onAssignmentClick,
+}: {
+  assignment: Assignment;
+  onAssignmentClick: (assignment: Assignment) => void;
+}) {
+  const handleClick = useCallback(() => {
+    onAssignmentClick(assignment);
+  }, [assignment, onAssignmentClick]);
+
+  return (
+    <div
+      onClick={handleClick}
+      className="p-3 bg-white rounded-lg border border-gray-200 hover:bg-green-50 hover:border-green-200 cursor-pointer transition-colors"
+    >
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <FaCircleCheck className="w-4 h-4 text-green-500 flex-shrink-0" />
+          <h4 className="text-sm font-medium text-gray-900 truncate">
+            {assignment.title}
+          </h4>
+        </div>
+        <RxExternalLink className="h-4 w-4 text-gray-400 flex-shrink-0" />
+      </div>
+    </div>
+  );
+});
+
+const GradedAssignmentsList: React.FC<GradedAssignmentsListProps> = React.memo(function GradedAssignmentsList({
   gradedAssignments,
   isLoadingAssignments,
   onAssignmentClick,
-}) => {
+}) {
   return (
     <Card className="shadow-sm h-full flex flex-col px-6 py-5 gap-0">
       <CardHeader className="px-0 py-3">
@@ -50,34 +86,19 @@ const GradedAssignmentsList: React.FC<GradedAssignmentsListProps> = ({
             </div>
           ) : (
             <div className="space-y-2">
-              {gradedAssignments.slice(0, 3).map((assignment) => (
-                <div
+              {gradedAssignments.map((assignment) => (
+                <GradedAssignmentItem
                   key={assignment.id}
-                  className="p-3 bg-white rounded-lg border border-gray-200 hover:bg-green-50 hover:border-green-200 cursor-pointer transition-colors"
-                  onClick={() => onAssignmentClick(assignment)}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <div className="w-3 h-3 bg-green-500 rounded-full flex-shrink-0"></div>
-                      <h4 className="text-sm font-medium text-gray-900 truncate">
-                        {assignment.title}
-                      </h4>
-                    </div>
-                    <RxExternalLink className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                  </div>
-                </div>
+                  assignment={assignment}
+                  onAssignmentClick={onAssignmentClick}
+                />
               ))}
-              {gradedAssignments.length > 3 && (
-                <p className="text-xs text-gray-400 text-center">
-                  +{gradedAssignments.length - 3}개 더
-                </p>
-              )}
             </div>
           )}
         </div>
       </CardContent>
     </Card>
   );
-};
+});
 
 export default GradedAssignmentsList;

@@ -11,6 +11,11 @@ export const EnglishContentRenderer: React.FC<EnglishContentRendererProps> = ({
 }) => {
   // HTML 태그를 React 컴포넌트로 변환
   const renderContent = (text: string) => {
+    // null, undefined, 또는 string이 아닌 경우 빈 문자열 반환
+    if (!text || typeof text !== 'string') {
+      return '';
+    }
+
     // 간단한 HTML 태그들을 처리
     const htmlContent = text
       .replace(/<u>(.*?)<\/u>/g, '<span class="underline">$1</span>')

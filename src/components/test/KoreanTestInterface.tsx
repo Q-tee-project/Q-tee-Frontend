@@ -65,47 +65,76 @@ export function KoreanTestInterface({
 }: KoreanTestInterfaceProps) {
   const currentAnswer = answers[currentProblem.id] || '';
 
-  const handleChoiceClick = (choice: string) => {
-    onAnswerChange(currentProblem.id, choice);
+  const renderFormattedText = (text: string | undefined | null) => {
+    if (!text) return null;
+
+    const parseLine = (line: string): React.ReactNode => {
+      // Regex to find **bold** or <u>underline</u> tags, non-greedy
+      const regex = /(\*\*.*?\*\*|<[uU]>.*?<\/[uU]>)/g;
+      const parts = line.split(regex).filter(Boolean);
+
+      return parts.map((part, index) => {
+        if (part.startsWith('**') && part.endsWith('**')) {
+          const content = part.slice(2, -2);
+          // Recursively call parseLine for the content to handle nesting
+          return <strong key={index}>{parseLine(content)}</strong>;
+        }
+        if (part.toLowerCase().startsWith('<u>') && part.toLowerCase().endsWith('</u>')) {
+          const content = part.slice(3, -4);
+          // Recursively call parseLine for the content to handle nesting
+          return <u key={index}>{parseLine(content)}</u>;
+        }
+        return part; // Plain text part
+      });
+    };
+
+    return text.split('\n').map((line, lineIndex, arr) => (
+      <React.Fragment key={lineIndex}>
+        {parseLine(line)}
+        {lineIndex < arr.length - 1 && <br />}
+      </React.Fragment>
+    ));
   };
 
   return (
-    <Card className="w-5/6 flex flex-col shadow-sm">
+    <Card className="flex flex-col shadow-sm h-full">
       {/* 상단 네비게이션 */}
-      <CardHeader className="border-b">
-        <div className="flex items-center justify-between">
-          <button
-            onClick={onBackToAssignmentList}
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors"
-          >
-            <FaArrowLeft />
-            <span>과제 목록으로</span>
-          </button>
+      <CardHeader className="flex flex-row items-center justify-between py-4 px-6 border-b border-gray-100 flex-shrink-0">
+        {/* 이전으로 돌아가기 버튼 */}
+        <button
+          onClick={onBackToAssignmentList}
+          className="p-2 rounded-md text-gray-400 hover:text-gray-600 transition-colors duration-200"
+          style={{ backgroundColor: '#f5f5f5', borderRadius: '50%', cursor: 'pointer' }}
+        >
+          <FaArrowLeft className="h-5 w-5" />
+        </button>
 
-          <div className="flex items-center gap-4">
-            <div className="text-sm text-gray-600">
-              남은 시간: <span className="font-mono text-blue-600">{formatTime(timeRemaining)}</span>
-            </div>
-            <Badge variant="outline">
-              {currentProblemIndex + 1} / {worksheetProblems.length}
-            </Badge>
+        {/* 문제지명과 남은 시간 */}
+        <div className="flex items-center gap-4">
+          <div>
+            <span className="text-lg font-semibold text-gray-900">
+              {selectedWorksheet.title}
+            </span>
+          </div>
+          <div className="px-3 py-2 rounded-md" style={{ backgroundColor: '#f5f5f5' }}>
+            <span className="text-lg font-semibold text-gray-900">
+              {formatTime(timeRemaining)}
+            </span>
           </div>
         </div>
 
-        <div className="flex items-center gap-3 mt-3">
-          <BookOpen className="w-5 h-5 text-blue-600" />
-          <h2 className="text-xl font-semibold text-gray-800">{selectedWorksheet.title}</h2>
-          <Badge className="bg-green-100 text-green-800 border-green-200">
-            {currentProblem.korean_type}
-          </Badge>
-          <Badge variant="outline">
-            {currentProblem.difficulty}
-          </Badge>
-        </div>
+        {/* 제출하기 버튼 */}
+        <Button
+          onClick={onSubmitTest}
+          disabled={isSubmitting || Object.keys(answers).length < worksheetProblems.length}
+          className="bg-[#0072CE] hover:bg-[#0056A3] text-white disabled:bg-gray-400"
+        >
+          {isSubmitting ? '제출 중...' : Object.keys(answers).length < worksheetProblems.length ? `제출하기 (${Object.keys(answers).length}/${worksheetProblems.length})` : '제출하기'}
+        </Button>
       </CardHeader>
 
       {/* 문제 내용 */}
-      <CardContent className="flex-1 overflow-y-auto p-6">
+      <CardContent className="flex-1 overflow-y-auto p-6 min-h-0">
         <div className="space-y-6">
           {/* 출처 텍스트 */}
           {currentProblem.source_text && (
@@ -121,8 +150,8 @@ export function KoreanTestInterface({
                   <span className="text-xs text-gray-500">- {currentProblem.source_author}</span>
                 )}
               </div>
-              <div className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">
-                {currentProblem.source_text}
+              <div className="text-sm text-gray-800 leading-relaxed">
+                {renderFormattedText(currentProblem.source_text)}
               </div>
             </div>
           )}
@@ -134,35 +163,41 @@ export function KoreanTestInterface({
                 {currentProblem.sequence_order}.
               </span>
               <div className="flex-1">
-                <div className="text-lg text-gray-800 leading-relaxed whitespace-pre-wrap">
-                  {currentProblem.question}
+                <div className="text-lg text-gray-800 leading-relaxed">
+                  {renderFormattedText(currentProblem.question)}
                 </div>
               </div>
             </div>
 
-            {/* 객관식 선택지 */}
+            {/* 객관식 선택지 (수학 인터페이스 방식 적용) */}
             {currentProblem.choices && Array.isArray(currentProblem.choices) && currentProblem.choices.length > 0 && (
               <div className="space-y-3 ml-8">
-                {currentProblem.choices.map((choice, index) => (
-                  <button
-                    key={index}
-                    onClick={() => handleChoiceClick(choice)}
-                    className={`w-full text-left p-4 rounded-lg border-2 transition-all ${
-                      currentAnswer === choice
-                        ? 'border-blue-500 bg-blue-50 text-blue-900'
-                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                    }`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <span className={`font-semibold ${
-                        currentAnswer === choice ? 'text-blue-600' : 'text-gray-500'
-                      }`}>
-                        {'①②③④⑤⑥⑦⑧⑨⑩'[index] || `${index + 1}.`}
-                      </span>
-                      <span className="flex-1">{choice.replace(/^[①②③④⑤⑥⑦⑧⑨⑩]\s*/, '')}</span>
-                    </div>
-                  </button>
-                ))}
+                {currentProblem.choices.map((choice, index) => {
+                  const optionLabel = String.fromCharCode(65 + index); // 'A', 'B', 'C'...
+                  const isSelected = currentAnswer === optionLabel;
+                  const displayChoice = choice.replace(/^[①②③④⑤⑥⑦⑧⑨⑩]\s*/, '');
+
+                  return (
+                    <label
+                      key={index}
+                      className={`flex items-start gap-3 cursor-pointer p-4 rounded-lg border-2 transition-all ${
+                        isSelected
+                          ? 'border-blue-500 bg-blue-50 text-blue-900'
+                          : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name={`problem-${currentProblem.id}`}
+                        value={optionLabel}
+                        checked={isSelected}
+                        onChange={(e) => onAnswerChange(currentProblem.id, e.target.value)}
+                        className="mt-1"
+                      />
+                      <span className="flex-1">{renderFormattedText(displayChoice)}</span>
+                    </label>
+                  );
+                })}
               </div>
             )}
           </div>

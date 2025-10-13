@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { memo } from 'react';
 import { Input } from '@/components/ui/input';
 import { AlertCircle } from 'lucide-react';
 
@@ -20,7 +20,7 @@ interface InputFieldProps {
   disablePaste?: boolean;
 }
 
-export const InputField: React.FC<InputFieldProps> = ({
+export const InputField = memo<InputFieldProps>(({
   name,
   type,
   label,
@@ -70,4 +70,6 @@ export const InputField: React.FC<InputFieldProps> = ({
       )}
     </div>
   );
-};
+});
+
+InputField.displayName = 'InputField';

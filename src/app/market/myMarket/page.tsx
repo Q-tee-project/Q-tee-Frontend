@@ -221,7 +221,7 @@ export default function MyMarketPage() {
       <Card className="flex-1 flex flex-col shadow-sm">
         <CardHeader className="py-2 px-6 border-b border-gray-100 flex items-center justify-between">
           <CardTitle className="text-base font-medium">
-            <span style={{ color: '#0072CE' }}>{myProducts[0]?.seller_name}</span> 님의 {selectedTab} 상품 목록
+            <span style={{ color: '#0072CE' }}>{userProfile?.name}</span> 님의 {selectedTab} 상품 목록
           </CardTitle>
           <span className="text-sm font-normal" style={{ color: '#C8C8C8' }}>
             총 {filteredProducts.length}건
