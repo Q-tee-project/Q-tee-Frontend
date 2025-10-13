@@ -149,7 +149,17 @@ export class EnglishService {
 
   // 영어 태스크 상태 확인 (개선)
   static async getTaskStatus(taskId: string): Promise<EnglishTaskStatus> {
-    const response = await fetch(`${ENGLISH_API_BASE}/task-status/${taskId}`);
+    const token = getToken();
+    if (!token) {
+      throw new Error('인증 토큰이 없습니다. 다시 로그인해주세요.');
+    }
+
+    const response = await fetch(`${ENGLISH_API_BASE}/task-status/${taskId}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
 
     if (!response.ok) {
       throw new Error(`English API Error: ${response.status}`);
@@ -170,12 +180,18 @@ export class EnglishService {
       throw new Error('로그인이 필요합니다.');
     }
 
+    const token = getToken();
+    if (!token) {
+      throw new Error('인증 토큰이 없습니다. 다시 로그인해주세요.');
+    }
+
     const response = await fetch(
       `${ENGLISH_API_BASE}/worksheets/${worksheetId}?user_id=${userId}`,
       {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify(updateData),
       },
@@ -205,6 +221,11 @@ export class EnglishService {
 
     if (!userId) {
       throw new Error('로그인이 필요합니다.');
+    }
+
+    const token = getToken();
+    if (!token) {
+      throw new Error('인증 토큰이 없습니다. 다시 로그인해주세요.');
     }
 
     const response = await fetch(`${ENGLISH_API_BASE}/worksheet-save`, {
@@ -247,12 +268,18 @@ export class EnglishService {
       throw new Error('로그인이 필요합니다.');
     }
 
+    const token = getToken();
+    if (!token) {
+      throw new Error('인증 토큰이 없습니다. 다시 로그인해주세요.');
+    }
+
     const response = await fetch(
       `${ENGLISH_API_BASE}/worksheets/${worksheetId}/questions/${questionId}?user_id=${userId}`,
       {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify(updateData),
       },
@@ -279,12 +306,18 @@ export class EnglishService {
       throw new Error('로그인이 필요합니다.');
     }
 
+    const token = getToken();
+    if (!token) {
+      throw new Error('인증 토큰이 없습니다. 다시 로그인해주세요.');
+    }
+
     const response = await fetch(
       `${ENGLISH_API_BASE}/worksheets/${worksheetId}/passages/${passageId}?user_id=${userId}`,
       {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify(updateData),
       },
@@ -310,12 +343,18 @@ export class EnglishService {
       throw new Error('로그인이 필요합니다.');
     }
 
+    const token = getToken();
+    if (!token) {
+      throw new Error('인증 토큰이 없습니다. 다시 로그인해주세요.');
+    }
+
     const response = await fetch(
       `${ENGLISH_API_BASE}/worksheets/${worksheetId}/title?user_id=${userId}`,
       {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({ worksheet_name: newTitle }),
       },
@@ -383,8 +422,19 @@ export class EnglishService {
       throw new Error('로그인이 필요합니다.');
     }
 
+    const token = getToken();
+    if (!token) {
+      throw new Error('인증 토큰이 없습니다. 다시 로그인해주세요.');
+    }
+
     const response = await fetch(
       `${ENGLISH_API_BASE}/worksheets/${worksheetId}/questions/${questionId}/regeneration-info?user_id=${userId}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      }
     );
 
     if (!response.ok) {
@@ -407,12 +457,18 @@ export class EnglishService {
       throw new Error('로그인이 필요합니다.');
     }
 
+    const token = getToken();
+    if (!token) {
+      throw new Error('인증 토큰이 없습니다. 다시 로그인해주세요.');
+    }
+
     const response = await fetch(
       `${ENGLISH_API_BASE}/worksheets/${worksheetId}/questions/${questionId}/regenerate?user_id=${userId}`,
       {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify(regenerationData),
       },
@@ -446,6 +502,11 @@ export class EnglishService {
       throw new Error('로그인이 필요합니다.');
     }
 
+    const token = getToken();
+    if (!token) {
+      throw new Error('인증 토큰이 없습니다. 다시 로그인해주세요.');
+    }
+
     const requestBody = {
       questions: questionsData,
       passage: passageData,
@@ -456,6 +517,7 @@ export class EnglishService {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
       },
       body: JSON.stringify(requestBody),
     });
@@ -477,7 +539,17 @@ export class EnglishService {
 
   // 영어 재생성 태스크 상태 조회
   static async getRegenerationTaskStatus(taskId: string): Promise<EnglishRegenerationTaskStatus> {
-    const response = await fetch(`${ENGLISH_API_BASE}/task-status/${taskId}`);
+    const token = getToken();
+    if (!token) {
+      throw new Error('인증 토큰이 없습니다. 다시 로그인해주세요.');
+    }
+
+    const response = await fetch(`${ENGLISH_API_BASE}/task-status/${taskId}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
 
     if (!response.ok) {
       throw new Error(`재생성 작업 상태 조회 실패: ${response.status}`);
@@ -509,10 +581,16 @@ export class EnglishService {
   }
 
   static async deployAssignment(deployRequest: EnglishAssignmentDeployRequest): Promise<any> {
+    const token = getToken();
+    if (!token) {
+      throw new Error('인증 토큰이 없습니다. 다시 로그인해주세요.');
+    }
+
     const response = await fetch(`${ENGLISH_API_BASE}/assignments/deploy`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
       },
       body: JSON.stringify(deployRequest),
     });
@@ -540,10 +618,16 @@ export class EnglishService {
 
   // 영어 과제 생성 (배포하지 않고 생성만)
   static async createAssignment(worksheetId: number, classroomId: number): Promise<any> {
+    const token = getToken();
+    if (!token) {
+      throw new Error('인증 토큰이 없습니다. 다시 로그인해주세요.');
+    }
+
     const response = await fetch(`${ENGLISH_API_BASE}/assignments/create`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
       },
       body: JSON.stringify({
         worksheet_id: worksheetId,
@@ -680,6 +764,11 @@ export class EnglishService {
       throw new Error('로그인이 필요합니다.');
     }
 
+    const token = getToken();
+    if (!token) {
+      throw new Error('인증 토큰이 없습니다. 다시 로그인해주세요.');
+    }
+
     const submissionData = {
       assignment_id: assignmentId,
       student_id: studentId,
@@ -691,6 +780,7 @@ export class EnglishService {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
       },
       body: JSON.stringify(submissionData),
     });
@@ -713,10 +803,16 @@ export class EnglishService {
   // 영어 과제 결과 조회
   static async getEnglishAssignmentResults(assignmentId: number): Promise<any> {
     try {
+      const token = getToken();
+      if (!token) {
+        throw new Error('인증 토큰이 없습니다. 다시 로그인해주세요.');
+      }
+
       const response = await fetch(`${ENGLISH_API_BASE}/assignments/${assignmentId}/results`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
       });
 
@@ -761,10 +857,16 @@ export class EnglishService {
   // 영어 채점 결과 승인/리뷰
   static async approveEnglishGrade(resultId: string, reviewData?: any): Promise<any> {
     try {
+      const token = getToken();
+      if (!token) {
+        throw new Error('인증 토큰이 없습니다. 다시 로그인해주세요.');
+      }
+
       const response = await fetch(`${ENGLISH_API_BASE}/grading-results/${resultId}/review`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify(reviewData || { is_reviewed: true }),
       });
@@ -789,11 +891,17 @@ export class EnglishService {
         throw new Error('로그인이 필요합니다.');
       }
 
+      const token = getToken();
+      if (!token) {
+        throw new Error('인증 토큰이 없습니다. 다시 로그인해주세요.');
+      }
+
       // 영어 백엔드에서 지원하는 실제 엔드포인트 사용
       const response = await fetch(`${ENGLISH_API_BASE}/worksheets/${worksheetId}/start-grading`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({ user_id: userId }),
       });
@@ -804,6 +912,7 @@ export class EnglishService {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
           },
           body: JSON.stringify({ worksheet_id: worksheetId, user_id: userId }),
         });
@@ -824,7 +933,17 @@ export class EnglishService {
   // 영어 AI 채점 상태 확인
   static async getEnglishGradingTaskStatus(taskId: string): Promise<any> {
     try {
-      const response = await fetch(`${ENGLISH_API_BASE}/grading/tasks/${taskId}/status`);
+      const token = getToken();
+      if (!token) {
+        throw new Error('인증 토큰이 없습니다. 다시 로그인해주세요.');
+      }
+
+      const response = await fetch(`${ENGLISH_API_BASE}/grading/tasks/${taskId}/status`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
 
       if (!response.ok) {
         throw new Error(`English API Error: ${response.status}`);

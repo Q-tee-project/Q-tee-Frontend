@@ -311,9 +311,9 @@ export default function CreatePage() {
             >
               <CardTitle className="text-lg font-semibold text-gray-900">문제 생성</CardTitle>
             </CardHeader>
-            <CardContent className="flex-1 min-h-0" style={{ padding: '20px' }}>
+            <CardContent className="flex-1 min-h-0 flex flex-col" style={{ padding: '20px', gap: '16px' }}>
               {/* 과목 탭 */}
-              <div className="mb-4">
+              <div>
                 <div className="flex gap-2">
                   {SUBJECTS.map((s) => (
                     <button
@@ -331,8 +331,8 @@ export default function CreatePage() {
                 </div>
               </div>
 
-              {/* 과목별 컴포넌트 렌더링 */}
-              <div className="overflow-y-auto pr-2">
+              {/* 과목별 컴포넌트 렌더링 - 스크롤 영역 */}
+              <div className="flex-1 overflow-y-auto pr-2 min-h-0">
                 {subject === '국어' && (
                   <KoreanGenerator
                     onGenerate={handleGenerate}
