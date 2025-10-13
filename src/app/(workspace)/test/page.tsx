@@ -29,7 +29,7 @@ const AssignmentList = dynamic(
   () => import('@/components/test/AssignmentList').then((mod) => ({ default: mod.AssignmentList })),
   {
     loading: () => (
-      <div className="w-1/4 bg-white rounded-lg shadow-sm p-4">
+      <div className="w-1/3 bg-white rounded-lg shadow-sm p-4">
         <div className="animate-pulse h-full bg-gray-200 rounded"></div>
       </div>
     ),
@@ -40,7 +40,7 @@ const TestInterface = dynamic(
   () => import('@/components/test/TestInterface').then((mod) => ({ default: mod.TestInterface })),
   {
     loading: () => (
-      <div className="w-3/4 bg-white rounded-lg shadow-sm p-4">
+      <div className="w-2/3 bg-white rounded-lg shadow-sm p-4">
         <div className="animate-pulse h-full bg-gray-200 rounded"></div>
       </div>
     ),
@@ -54,7 +54,7 @@ const KoreanTestInterface = dynamic(
     })),
   {
     loading: () => (
-      <div className="w-3/4 bg-white rounded-lg shadow-sm p-4">
+      <div className="w-2/3 bg-white rounded-lg shadow-sm p-4">
         <div className="animate-pulse h-full bg-gray-200 rounded"></div>
       </div>
     ),
@@ -68,7 +68,7 @@ const EnglishTestInterface = dynamic(
     })),
   {
     loading: () => (
-      <div className="w-3/4 bg-white rounded-lg shadow-sm p-4">
+      <div className="w-2/3 bg-white rounded-lg shadow-sm p-4">
         <div className="animate-pulse h-full bg-gray-200 rounded"></div>
       </div>
     ),
@@ -82,7 +82,7 @@ const StudentResultView = dynamic(
     })),
   {
     loading: () => (
-      <div className="w-3/4 bg-white rounded-lg shadow-sm p-4">
+      <div className="w-2/3 bg-white rounded-lg shadow-sm p-4">
         <div className="animate-pulse h-full bg-gray-200 rounded"></div>
       </div>
     ),
@@ -976,7 +976,7 @@ function TestPageContent() {
               }
 
               return (
-                <div className="w-3/4 h-full">
+                <div className="w-2/3 h-full">
                 <StudentResultView
                   assignmentId={selectedWorksheet.id}
                   studentId={userProfile.id}
@@ -997,7 +997,7 @@ function TestPageContent() {
           })()}
 
           {selectedWorksheet && !isTestStarted && !showStudentResult && (
-            <Card className="w-3/4 h-full flex items-center justify-center shadow-sm overflow-y-auto">
+            <Card className="w-2/3 h-full flex items-center justify-center shadow-sm overflow-y-auto">
               <div className="text-center py-20">
                 <div className="text-gray-700 text-lg font-medium mb-2">
                   {selectedWorksheet.title}
@@ -1042,7 +1042,7 @@ function TestPageContent() {
           {selectedWorksheet &&
             currentProblem &&
             isTestStarted && (
-            <div className="w-3/4 h-full">
+            <div className="w-2/3 h-full">
               {selectedSubject === '국어' ? (
               <KoreanTestInterface
                 selectedWorksheet={selectedWorksheet as KoreanWorksheet}
@@ -1108,7 +1108,6 @@ function TestPageContent() {
                   setCurrentProblemIndex(0);
                   setAnswers({});
                 }}
-                onOpenScratchpad={() => setScratchpadOpen(true)}
                 getProblemTypeInKorean={getProblemTypeInKorean}
                 formatTime={formatTime}
                 onOCRCapture={handleOCRCapture}
@@ -1118,7 +1117,7 @@ function TestPageContent() {
           )}
 
           {!selectedWorksheet && (
-            <Card className="w-3/4 h-full flex items-center justify-center shadow-sm">
+            <Card className="w-2/3 h-full flex items-center justify-center shadow-sm">
               <div className="text-center py-20">
                 {testResult ? (
                   <>
