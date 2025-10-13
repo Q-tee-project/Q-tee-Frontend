@@ -25,14 +25,10 @@ import {
   removeApiError,
 } from '@/store/slices/dashboardSlice';
 
-// Import dashboard components
 import TabNavigation from '@/components/dashboard/TabNavigation';
 
-// Lazy load heavy components with optimized loading
 const MarketManagementTab = React.lazy(() => import('@/components/dashboard/MarketManagementTab'));
 const ClassManagementTab = React.lazy(() => import('@/components/dashboard/ClassManagementTab'));
-
-// Optimized loading fallback component
 const LoadingFallback = React.memo(() => (
   <div className="space-y-6">
     <div className="animate-pulse">
@@ -55,10 +51,7 @@ const TeacherDashboardContent = React.memo(() => {
   const dispatch = useAppDispatch();
   const state = useAppSelector((state) => state.dashboard);
 
-  // Fixed colors for student lines in the chart
   const studentColors = React.useMemo(() => ['#22c55e', '#a855f7', '#eab308'], []);
-
-  // Helper functions - optimized with useMemo for better performance
   const getStudentColor = React.useCallback(
     (studentId: number): string | null => {
       return state.studentColorMap[studentId] || null;
@@ -73,7 +66,6 @@ const TeacherDashboardContent = React.memo(() => {
       .slice(0, 2);
   }, [state.marketProducts]);
 
-  // Student selection handler - optimized
   const handleStudentSelect = React.useCallback((studentId: number) => {
     if (studentId === -1) {
       dispatch(setStudentColorMap({}));
@@ -102,7 +94,6 @@ const TeacherDashboardContent = React.memo(() => {
     }
   }, [state.selectedStudents, state.studentColorMap, dispatch, studentColors]);
 
-  // Assignment selection handler
   const handleAssignmentSelect = React.useCallback((assignmentId: string) => {
     const prev = state.selectedAssignments;
     if (prev.includes(assignmentId)) {
@@ -112,7 +103,6 @@ const TeacherDashboardContent = React.memo(() => {
     }
   }, [state.selectedAssignments, dispatch]);
 
-  // Product selection handler
   const handleProductSelect = React.useCallback((productId: number) => {
     const prev = state.selectedProducts;
     if (productId === -1) {
@@ -124,7 +114,6 @@ const TeacherDashboardContent = React.memo(() => {
     }
   }, [state.selectedProducts, dispatch]);
 
-  // Initialize data on mount
   useEffect(() => {
     const initializeData = async () => {
       await Promise.all([
@@ -137,14 +126,12 @@ const TeacherDashboardContent = React.memo(() => {
     initializeData();
   }, [dispatch]);
 
-  // Load stats when classes are available
   useEffect(() => {
     if (state.classes.length > 0) {
       dispatch(loadStats());
     }
   }, [state.classes.length, dispatch]);
 
-  // Load students when classes are available (only on initial load and refresh)
   useEffect(() => {
     if (state.classes.length > 0) {
       dispatch(loadStudents());
@@ -159,14 +146,12 @@ const TeacherDashboardContent = React.memo(() => {
     }
   }, [state.classes.length, dispatch]);
 
-  // Load assignments when selected class changes (only when class is actually selected)
   useEffect(() => {
     if (state.selectedClass && state.classes.length > 0) {
       dispatch(loadAssignments(state.selectedClass));
     }
   }, [state.selectedClass, dispatch]);
 
-  // Error alert component - memoized for performance
   const ErrorAlert = React.memo(({ errorKey, message, onRemove }: { 
     errorKey: string; 
     message: string; 
@@ -218,7 +203,6 @@ const TeacherDashboardContent = React.memo(() => {
         description="수업 현황과 마켓 관리를 확인하세요"
       />
 
-      {/* Error alerts */}
       {Array.from(state.apiErrors).map((errorKey) => (
         <ErrorAlert
           key={errorKey}
@@ -228,13 +212,11 @@ const TeacherDashboardContent = React.memo(() => {
         />
       ))}
 
-      {/* Tab Navigation */}
       <TabNavigation 
         selectedTab={state.selectedTab} 
         setSelectedTab={React.useCallback((tab) => dispatch(setSelectedTab(tab)), [dispatch])} 
       />
 
-      {/* Market Management Tab */}
       {state.selectedTab === '마켓 관리' && (
         <Suspense fallback={<LoadingFallback />}>
           <MarketManagementTab
@@ -254,7 +236,6 @@ const TeacherDashboardContent = React.memo(() => {
         </Suspense>
       )}
 
-      {/* Class Management Tab */}
       {state.selectedTab === '클래스 관리' && (
         <Suspense fallback={<LoadingFallback />}>
           <ClassManagementTab

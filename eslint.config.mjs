@@ -12,6 +12,17 @@ const compat = new FlatCompat({
 const eslintConfig = [
   ...compat.extends("next/core-web-vitals", "next/typescript"),
   {
+    plugins: {
+      "react-perf": (await import("eslint-plugin-react-perf")).default,
+    },
+    rules: {
+      "react-perf/jsx-no-new-object-as-prop": "error",
+      "react-perf/jsx-no-new-array-as-prop": "error",
+      "react-perf/jsx-no-new-function-as-prop": "error",
+      "react-perf/jsx-no-jsx-as-prop": "error",
+    },
+  },
+  {
     ignores: [
       "node_modules/**",
       ".next/**",
