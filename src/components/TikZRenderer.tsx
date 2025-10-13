@@ -56,13 +56,13 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
     for (let i = 0; i < 3; i++) {
       cleaned = cleaned.replace(/\\mathrm\{([^{}]+)\}/g, '$1'); // \mathrm{B} -> B
       cleaned = cleaned.replace(/\\mathbf\{([^{}]+)\}/g, '$1'); // \mathbf{B} -> B
-      cleaned = cleaned.replace(/\\text\{([^{}]+)\}/g, '$1');   // \text{abc} -> abc
+      cleaned = cleaned.replace(/\\text\{([^{}]+)\}/g, '$1'); // \text{abc} -> abc
     }
 
-    cleaned = cleaned.replace(/\\small/g, '');                // \small 제거
-    cleaned = cleaned.replace(/\\large/g, '');                // \large 제거
-    cleaned = cleaned.replace(/\\displaystyle/g, '');         // \displaystyle 제거
-    cleaned = cleaned.replace(/\\textstyle/g, '');            // \textstyle 제거
+    cleaned = cleaned.replace(/\\small/g, ''); // \small 제거
+    cleaned = cleaned.replace(/\\large/g, ''); // \large 제거
+    cleaned = cleaned.replace(/\\displaystyle/g, ''); // \displaystyle 제거
+    cleaned = cleaned.replace(/\\textstyle/g, ''); // \textstyle 제거
 
     // 남은 백슬래시 명령어들 제거 (\O, \Alpha, \x, \y 등)
     cleaned = cleaned.replace(/\\[a-zA-Z]+/g, '');
@@ -187,13 +187,16 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
       if (styleStr.includes('->')) continue;
 
       // plot, grid, foreach는 skip
-      if (pathStr.includes('plot') || pathStr.includes('grid') || pathStr.includes('foreach')) continue;
+      if (pathStr.includes('plot') || pathStr.includes('grid') || pathStr.includes('foreach'))
+        continue;
 
       const style = styleStr.includes('dashed') ? 'dashed' : 'solid';
 
       // 색상 추출 - TikZ 그대로 사용
       let color = 'black';
-      const colorMatch = styleStr.match(/\b(blue|red|green|gray|orange|purple|brown|pink|cyan|magenta|yellow)\b/);
+      const colorMatch = styleStr.match(
+        /\b(blue|red|green|gray|orange|purple|brown|pink|cyan|magenta|yellow)\b/,
+      );
       if (colorMatch) color = colorMatch[1];
 
       // 경로에서 좌표 추출
@@ -255,7 +258,9 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
 
       // 색상 추출 - TikZ 그대로 사용
       let color = 'black';
-      const colorMatch = styleStr.match(/\b(blue|red|green|gray|orange|purple|brown|pink|cyan|magenta|yellow)\b/);
+      const colorMatch = styleStr.match(
+        /\b(blue|red|green|gray|orange|purple|brown|pink|cyan|magenta|yellow)\b/,
+      );
       if (colorMatch) color = colorMatch[1];
 
       data.functionPlots.push({
@@ -304,7 +309,9 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
 
       // 색상 추출 - TikZ 그대로 사용
       let color = 'black';
-      const colorMatch = colorSpec.match(/\b(blue|red|green|gray|orange|purple|brown|pink|cyan|magenta|yellow)\b/);
+      const colorMatch = colorSpec.match(
+        /\b(blue|red|green|gray|orange|purple|brown|pink|cyan|magenta|yellow)\b/,
+      );
       if (colorMatch) color = colorMatch[1];
 
       data.labels.push({ coord, text: cleanedText, color });
@@ -328,10 +335,6 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
   // 좌표 변환 함수
   const toSvgX = (x: number) => padding + ((x - xMin) / (xMax - xMin)) * graphWidth;
   const toSvgY = (y: number) => svgHeight - padding - ((y - yMin) / (yMax - yMin)) * graphHeight;
-
-  // 그리드/축용 정수 좌표 변환 함수
-  const toSvgXInt = (x: number) => Math.round(toSvgX(x));
-  const toSvgYInt = (y: number) => Math.round(toSvgY(y));
 
   // 함수 표현식 평가
   const evaluateExpression = (expr: string, x: number): number | null => {
@@ -377,36 +380,34 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
           {/* 그리드 라인 */}
           <g>
             {Array.from({ length: Math.floor((xMax - xMin) / xStep) + 1 }, (_, i) => {
-              const x = Math.ceil(xMin / xStep) * xStep + i * xStep;
-              if (x > xMax || x === 0) return null;
-              return (
+              const x = xMin + i * xStep;
+              return x !== 0 ? (
                 <line
                   key={`grid-v-${i}`}
-                  x1={toSvgXInt(x)}
+                  x1={toSvgX(x)}
                   y1={padding}
-                  x2={toSvgXInt(x)}
+                  x2={toSvgX(x)}
                   y2={svgHeight - padding}
                   stroke={colors.grid}
                   strokeWidth="1"
                   strokeDasharray="2 2"
                 />
-              );
+              ) : null;
             })}
             {Array.from({ length: Math.floor((yMax - yMin) / yStep) + 1 }, (_, i) => {
-              const y = Math.ceil(yMin / yStep) * yStep + i * yStep;
-              if (y > yMax || y === 0) return null;
-              return (
+              const y = yMin + i * yStep;
+              return y !== 0 ? (
                 <line
                   key={`grid-h-${i}`}
                   x1={padding}
-                  y1={toSvgYInt(y)}
+                  y1={toSvgY(y)}
                   x2={svgWidth - padding}
-                  y2={toSvgYInt(y)}
+                  y2={toSvgY(y)}
                   stroke={colors.grid}
                   strokeWidth="1"
                   strokeDasharray="2 2"
                 />
-              );
+              ) : null;
             })}
           </g>
 
@@ -439,9 +440,9 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
           {/* X축 */}
           <line
             x1={toSvgX(xMin)}
-            y1={toSvgYInt(0)}
+            y1={toSvgY(0)}
             x2={toSvgX(xMax)}
-            y2={toSvgYInt(0)}
+            y2={toSvgY(0)}
             stroke={colors.axis}
             strokeWidth="1.5"
             markerEnd="url(#arrowX)"
@@ -449,9 +450,9 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
 
           {/* Y축 */}
           <line
-            x1={toSvgXInt(0)}
+            x1={toSvgX(0)}
             y1={toSvgY(yMin)}
-            x2={toSvgXInt(0)}
+            x2={toSvgX(0)}
             y2={toSvgY(yMax)}
             stroke={colors.axis}
             strokeWidth="1.5"
@@ -461,7 +462,7 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
           {/* 축 라벨 */}
           <text
             x={toSvgX(xMax) + 15}
-            y={toSvgYInt(0) + 5}
+            y={toSvgY(0) + 5}
             fontSize="16"
             fill={colors.label}
             fontFamily="system-ui, -apple-system, sans-serif"
@@ -470,7 +471,7 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
             x
           </text>
           <text
-            x={toSvgXInt(0) + 5}
+            x={toSvgX(0) + 5}
             y={toSvgY(yMax) - 10}
             fontSize="16"
             fill={colors.label}
@@ -479,7 +480,6 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
           >
             y
           </text>
-
 
           {/* Filled areas (색칠된 영역) */}
           {filledAreas.map((area, idx) => {
@@ -582,7 +582,6 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
                   fill="none"
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  shapeRendering="geometricPrecision"
                 />
               );
             });
