@@ -329,6 +329,10 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
   const toSvgX = (x: number) => padding + ((x - xMin) / (xMax - xMin)) * graphWidth;
   const toSvgY = (y: number) => svgHeight - padding - ((y - yMin) / (yMax - yMin)) * graphHeight;
 
+  // 그리드/축용 정수 좌표 변환 함수
+  const toSvgXInt = (x: number) => Math.round(toSvgX(x));
+  const toSvgYInt = (y: number) => Math.round(toSvgY(y));
+
   // 함수 표현식 평가
   const evaluateExpression = (expr: string, x: number): number | null => {
     try {
@@ -373,34 +377,36 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
           {/* 그리드 라인 */}
           <g>
             {Array.from({ length: Math.floor((xMax - xMin) / xStep) + 1 }, (_, i) => {
-              const x = xMin + i * xStep;
-              return x !== 0 ? (
+              const x = Math.ceil(xMin / xStep) * xStep + i * xStep;
+              if (x > xMax || x === 0) return null;
+              return (
                 <line
                   key={`grid-v-${i}`}
-                  x1={toSvgX(x)}
+                  x1={toSvgXInt(x)}
                   y1={padding}
-                  x2={toSvgX(x)}
+                  x2={toSvgXInt(x)}
                   y2={svgHeight - padding}
                   stroke={colors.grid}
                   strokeWidth="1"
                   strokeDasharray="2 2"
                 />
-              ) : null;
+              );
             })}
             {Array.from({ length: Math.floor((yMax - yMin) / yStep) + 1 }, (_, i) => {
-              const y = yMin + i * yStep;
-              return y !== 0 ? (
+              const y = Math.ceil(yMin / yStep) * yStep + i * yStep;
+              if (y > yMax || y === 0) return null;
+              return (
                 <line
                   key={`grid-h-${i}`}
                   x1={padding}
-                  y1={toSvgY(y)}
+                  y1={toSvgYInt(y)}
                   x2={svgWidth - padding}
-                  y2={toSvgY(y)}
+                  y2={toSvgYInt(y)}
                   stroke={colors.grid}
                   strokeWidth="1"
                   strokeDasharray="2 2"
                 />
-              ) : null;
+              );
             })}
           </g>
 
@@ -433,9 +439,9 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
           {/* X축 */}
           <line
             x1={toSvgX(xMin)}
-            y1={toSvgY(0)}
+            y1={toSvgYInt(0)}
             x2={toSvgX(xMax)}
-            y2={toSvgY(0)}
+            y2={toSvgYInt(0)}
             stroke={colors.axis}
             strokeWidth="1.5"
             markerEnd="url(#arrowX)"
@@ -443,9 +449,9 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
 
           {/* Y축 */}
           <line
-            x1={toSvgX(0)}
+            x1={toSvgXInt(0)}
             y1={toSvgY(yMin)}
-            x2={toSvgX(0)}
+            x2={toSvgXInt(0)}
             y2={toSvgY(yMax)}
             stroke={colors.axis}
             strokeWidth="1.5"
@@ -455,7 +461,7 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
           {/* 축 라벨 */}
           <text
             x={toSvgX(xMax) + 15}
-            y={toSvgY(0) + 5}
+            y={toSvgYInt(0) + 5}
             fontSize="16"
             fill={colors.label}
             fontFamily="system-ui, -apple-system, sans-serif"
@@ -464,7 +470,7 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
             x
           </text>
           <text
-            x={toSvgX(0) + 5}
+            x={toSvgXInt(0) + 5}
             y={toSvgY(yMax) - 10}
             fontSize="16"
             fill={colors.label}
@@ -576,6 +582,7 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
                   fill="none"
                   strokeLinecap="round"
                   strokeLinejoin="round"
+                  shapeRendering="geometricPrecision"
                 />
               );
             });
