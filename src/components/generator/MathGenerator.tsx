@@ -197,7 +197,7 @@ export default function MathGenerator({ onGenerate, isGenerating }: MathGenerato
     <div>
       <div className="divide-y divide-gray-200">
         <GeneratorSection title="기본 정보">
-          <div className="flex justify-center gap-4">
+          <div className="flex justify-start gap-4">
             <Select value={school || ''} onValueChange={(v) => setSchool(v as School)}>
               <SelectTrigger>
                 <SelectValue placeholder="학교 선택" />
@@ -238,7 +238,7 @@ export default function MathGenerator({ onGenerate, isGenerating }: MathGenerato
         </GeneratorSection>
 
         <GeneratorSection title="단원 선택">
-          <div className="flex justify-center gap-4">
+          <div className="flex justify-start gap-4">
             <Select value={selectedUnit} onValueChange={setSelectedUnit}>
               <SelectTrigger>
                 <SelectValue placeholder="대단원 선택" />
