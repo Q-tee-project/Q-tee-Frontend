@@ -78,8 +78,8 @@ export function AssignmentList({
   getAnswerStatus,
 }: AssignmentListProps) {
   return (
-    <Card className="w-1/4 flex flex-col shadow-sm h-full" style={{ gap: '0', padding: '0' }}>
-      <CardHeader className="flex flex-row items-center justify-between border-b border-gray-100 flex-shrink-0" style={{ padding: '20px' }}>
+    <Card className="w-1/3 flex flex-col shadow-sm h-full gap-0 p-0">
+      <CardHeader className="flex flex-row items-center justify-between border-b border-gray-100 flex-shrink-0 p-5">
         <CardTitle className="text-lg font-semibold text-gray-900">과제 목록</CardTitle>
         <div className="flex items-center gap-2">
           <Button
@@ -93,7 +93,7 @@ export function AssignmentList({
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="flex-1 min-h-0 flex flex-col overflow-hidden" style={{ padding: '20px' }}>
+      <CardContent className="flex-1 min-h-0 flex flex-col overflow-hidden p-5">
         {/* 과목 선택 탭 - 고정 */}
         <div className="mb-4 flex-shrink-0">
           <div className="flex gap-2">
