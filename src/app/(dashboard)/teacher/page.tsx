@@ -28,9 +28,27 @@ import {
 // Import dashboard components
 import TabNavigation from '@/components/dashboard/TabNavigation';
 
-// Lazy load heavy components
+// Lazy load heavy components with optimized loading
 const MarketManagementTab = React.lazy(() => import('@/components/dashboard/MarketManagementTab'));
 const ClassManagementTab = React.lazy(() => import('@/components/dashboard/ClassManagementTab'));
+
+// Optimized loading fallback component
+const LoadingFallback = React.memo(() => (
+  <div className="space-y-6">
+    <div className="animate-pulse">
+      <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="bg-gray-200 rounded-lg h-32"></div>
+        ))}
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="bg-gray-200 rounded-lg h-96 lg:col-span-2"></div>
+        <div className="bg-gray-200 rounded-lg h-96"></div>
+      </div>
+    </div>
+  </div>
+));
 
 const TeacherDashboardContent = React.memo(() => {
   const { userProfile } = useAuth();
@@ -40,7 +58,7 @@ const TeacherDashboardContent = React.memo(() => {
   // Fixed colors for student lines in the chart
   const studentColors = React.useMemo(() => ['#22c55e', '#a855f7', '#eab308'], []);
 
-  // Helper functions
+  // Helper functions - optimized with useMemo for better performance
   const getStudentColor = React.useCallback(
     (studentId: number): string | null => {
       return state.studentColorMap[studentId] || null;
@@ -48,17 +66,15 @@ const TeacherDashboardContent = React.memo(() => {
     [state.studentColorMap],
   );
 
-  const getRecentProducts = React.useCallback((): any[] => {
+  const getRecentProducts = React.useMemo((): any[] => {
     if (state.marketProducts.length === 0) return [];
     return [...state.marketProducts]
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
       .slice(0, 2);
   }, [state.marketProducts]);
 
-  // Student selection handler
+  // Student selection handler - optimized
   const handleStudentSelect = React.useCallback((studentId: number) => {
-    const studentColors = ['#22c55e', '#a855f7', '#eab308'];
-    
     if (studentId === -1) {
       dispatch(setStudentColorMap({}));
       dispatch(setSelectedStudents([]));
@@ -84,7 +100,7 @@ const TeacherDashboardContent = React.memo(() => {
       dispatch(setStudentColorMap(newColorMap));
       dispatch(setSelectedStudents([...prev, studentId]));
     }
-  }, [state.selectedStudents, state.studentColorMap, dispatch]);
+  }, [state.selectedStudents, state.studentColorMap, dispatch, studentColors]);
 
   // Assignment selection handler
   const handleAssignmentSelect = React.useCallback((assignmentId: string) => {
@@ -128,7 +144,7 @@ const TeacherDashboardContent = React.memo(() => {
     }
   }, [state.classes.length, dispatch]);
 
-  // Load students when classes are available
+  // Load students when classes are available (only on initial load and refresh)
   useEffect(() => {
     if (state.classes.length > 0) {
       dispatch(loadStudents());
@@ -137,21 +153,25 @@ const TeacherDashboardContent = React.memo(() => {
         (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
       )[0].id;
 
-      if (!state.selectedClass || !state.students[state.selectedClass]) {
+      if (!state.selectedClass) {
         dispatch(setSelectedClass(latestClassId));
       }
     }
-  }, [state.classes.length, dispatch, state.selectedClass, state.students]);
+  }, [state.classes.length, dispatch]);
 
-  // Load assignments when selected class changes
+  // Load assignments when selected class changes (only when class is actually selected)
   useEffect(() => {
     if (state.selectedClass && state.classes.length > 0) {
       dispatch(loadAssignments(state.selectedClass));
     }
-  }, [state.selectedClass, state.classes.length, dispatch]);
+  }, [state.selectedClass, dispatch]);
 
-  // Error alert component
-  const ErrorAlert = ({ errorKey, message }: { errorKey: string; message: string }) => (
+  // Error alert component - memoized for performance
+  const ErrorAlert = React.memo(({ errorKey, message, onRemove }: { 
+    errorKey: string; 
+    message: string; 
+    onRemove: (key: string) => void;
+  }) => (
     <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
       <div className="flex items-center justify-between">
         <div className="flex items-center">
@@ -174,7 +194,7 @@ const TeacherDashboardContent = React.memo(() => {
           </div>
         </div>
         <button
-          onClick={() => dispatch(removeApiError(errorKey))}
+          onClick={() => onRemove(errorKey)}
           className="text-red-400 hover:text-red-600"
         >
           <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -187,7 +207,7 @@ const TeacherDashboardContent = React.memo(() => {
         </button>
       </div>
     </div>
-  );
+  ));
 
   return (
     <div className="flex flex-col min-h-screen p-5 space-y-6">
@@ -204,32 +224,19 @@ const TeacherDashboardContent = React.memo(() => {
           key={errorKey}
           errorKey={errorKey}
           message={state.errorMessages[errorKey] || `알 수 없는 오류가 발생했습니다. (에러 키: ${errorKey})`}
+          onRemove={(key) => dispatch(removeApiError(key))}
         />
       ))}
 
       {/* Tab Navigation */}
-      <TabNavigation selectedTab={state.selectedTab} setSelectedTab={(tab) => dispatch(setSelectedTab(tab))} />
+      <TabNavigation 
+        selectedTab={state.selectedTab} 
+        setSelectedTab={React.useCallback((tab) => dispatch(setSelectedTab(tab)), [dispatch])} 
+      />
 
       {/* Market Management Tab */}
       {state.selectedTab === '마켓 관리' && (
-        <Suspense
-          fallback={
-            <div className="space-y-6">
-              <div className="animate-pulse">
-                <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-                  {[...Array(4)].map((_, i) => (
-                    <div key={i} className="bg-gray-200 rounded-lg h-32"></div>
-                  ))}
-                </div>
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  <div className="bg-gray-200 rounded-lg h-96 lg:col-span-2"></div>
-                  <div className="bg-gray-200 rounded-lg h-96"></div>
-                </div>
-              </div>
-            </div>
-          }
-        >
+        <Suspense fallback={<LoadingFallback />}>
           <MarketManagementTab
             marketStats={state.marketStats}
             isLoadingMarketStats={state.isLoadingMarketStats}
@@ -242,31 +249,14 @@ const TeacherDashboardContent = React.memo(() => {
               dispatch(loadMarketProducts());
             }}
             onProductSelect={handleProductSelect}
-            getRecentProducts={getRecentProducts}
+            getRecentProducts={() => getRecentProducts}
           />
         </Suspense>
       )}
 
       {/* Class Management Tab */}
       {state.selectedTab === '클래스 관리' && (
-        <Suspense
-          fallback={
-            <div className="space-y-6">
-              <div className="animate-pulse">
-                <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-                  {[...Array(4)].map((_, i) => (
-                    <div key={i} className="bg-gray-200 rounded-lg h-32"></div>
-                  ))}
-                </div>
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  <div className="bg-gray-200 rounded-lg h-96 lg:col-span-2"></div>
-                  <div className="bg-gray-200 rounded-lg h-96"></div>
-                </div>
-              </div>
-            </div>
-          }
-        >
+        <Suspense fallback={<LoadingFallback />}>
           <ClassManagementTab
             realClasses={state.classes}
             realStudents={state.students}
