@@ -113,7 +113,7 @@ function TestPageContent() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showStudentResult, setShowStudentResult] = useState(false);
   const [sessionDetails, setSessionDetails] = useState<any>(null);
-  
+
   // 클래스 관련 state
   const [classes, setClasses] = useState<Array<{ id: string; name: string }>>([]);
   const [selectedClass, setSelectedClass] = useState<string>('all');
@@ -146,7 +146,7 @@ function TestPageContent() {
   // 클래스 목록 로드
   const loadClasses = async () => {
     if (!userProfile?.id) return;
-    
+
     try {
       const classrooms = await studentClassService.getMyClasses();
       console.log('📚 로드된 클래스 목록:', classrooms);
@@ -164,7 +164,7 @@ function TestPageContent() {
   // 데이터 로드
   useEffect(() => {
     const loadData = async () => {
-    if (userProfile?.id) {
+      if (userProfile?.id) {
         // 과목 변경 시 상태 초기화
         setSelectedWorksheet(null);
         setWorksheetProblems([]);
@@ -174,21 +174,21 @@ function TestPageContent() {
         setAnswers({});
         setCurrentProblemIndex(0);
         setSessionDetails(null);
-        
+
         // pendingAssignment 초기화 (탭 변경 시 자동 선택 방지)
         // URL 파라미터가 있는 경우에만 유지
         if (!searchParams.get('assignmentId')) {
           setPendingAssignment(null);
         }
-        
+
         // 클래스 목록을 먼저 로드
         await loadClasses();
-        
+
         // 그 다음 과제 목록 로드 (클래스 정보를 사용)
         await loadWorksheets();
       }
     };
-    
+
     loadData();
   }, [selectedSubject, userProfile]);
 
@@ -272,16 +272,15 @@ function TestPageContent() {
       // 찾은 과제를 선택하고 바로 처리
       if (targetWorksheet) {
         console.log('🎯 과제 자동 선택:', targetWorksheet);
-        
+
         // setSelectedWorksheet 대신 handleWorksheetSelect를 바로 호출
         handleWorksheetSelect(targetWorksheet);
-        
+
         // 자동 선택 후 pendingAssignment 초기화 (한 번만 실행되도록)
         setPendingAssignment(null);
       }
     }
   }, [worksheets, searchParams, selectedSubject, pendingAssignment]);
-
 
   // 타이머 효과
   useEffect(() => {
@@ -387,11 +386,11 @@ function TestPageContent() {
             각_필드값: Object.entries(assignment).reduce((acc, [key, value]) => {
               acc[key] = value;
               return acc;
-            }, {} as any)
+            }, {} as any),
           });
-          
+
           // classroom_id 추출 - 가능한 모든 필드 확인
-          const classroomId = 
+          const classroomId =
             assignment.classroom_id ||
             assignment.deployment?.classroom_id ||
             assignment.assignment?.classroom_id ||
@@ -407,7 +406,7 @@ function TestPageContent() {
               'assignment.class_id': assignment.class_id,
               'assignment.classroomId': assignment.classroomId,
               'assignment.room_id': assignment.room_id,
-            }
+            },
           });
 
           if (selectedSubject === '국어') {
@@ -467,32 +466,32 @@ function TestPageContent() {
 
       // 각 클래스별 배포를 개별 과제로 유지 (중복 제거 안함)
       setWorksheets(worksheetData);
-      
+
       // 클래스별 과제 분포 요약
       const classDistribution: Record<string, number> = {};
       const classDetails: Record<string, string[]> = {};
-      
+
       worksheetData.forEach((ws) => {
         const classId = (ws as any).classroom_id;
         if (classId) {
           const classIdStr = classId.toString();
           classDistribution[classIdStr] = (classDistribution[classIdStr] || 0) + 1;
-          
+
           if (!classDetails[classIdStr]) {
             classDetails[classIdStr] = [];
           }
           classDetails[classIdStr].push(ws.title);
         }
       });
-      
+
       console.log('📊 과제 로드 완료 요약:', {
         총_과제수: worksheetData.length,
         과목: selectedSubject,
         클래스별_분포: classDistribution,
         클래스별_과제_목록: classDetails,
-        현재_클래스_목록: classes.map(c => `${c.name}(ID: ${c.id})`),
+        현재_클래스_목록: classes.map((c) => `${c.name}(ID: ${c.id})`),
       });
-      
+
       // 처음에는 아무것도 선택하지 않음
       setSelectedWorksheet(null);
     } catch (error: any) {
@@ -570,7 +569,7 @@ function TestPageContent() {
   const handleWorksheetSelect = async (worksheet: Worksheet | KoreanWorksheet) => {
     // pendingAssignment 초기화 (수동 선택 시 자동 선택 방지)
     setPendingAssignment(null);
-    
+
     setSelectedWorksheet(worksheet);
 
     // Check if this is a completed assignment (completed 또는 submitted 상태)
@@ -598,7 +597,7 @@ function TestPageContent() {
   const handleBackFromResult = () => {
     // pendingAssignment 초기화 (돌아가기 후 자동 선택 방지)
     setPendingAssignment(null);
-    
+
     setShowStudentResult(false);
     setSelectedWorksheet(null);
     setWorksheetProblems([]);
@@ -798,15 +797,15 @@ function TestPageContent() {
   // 결과 데이터를 기반으로 답안 상태를 가져오는 함수
   const getAnswerStatus = (problemId: string) => {
     if (!showStudentResult || !selectedWorksheet || !sessionDetails) return null;
-    
+
     // 문제 ID로 답안 상태 찾기
-    const problem = worksheetProblems.find(p => 
-      (p as any).id?.toString() === problemId || 
-      (p as any).question_id?.toString() === problemId
+    const problem = worksheetProblems.find(
+      (p) =>
+        (p as any).id?.toString() === problemId || (p as any).question_id?.toString() === problemId,
     );
-    
+
     if (!problem) return null;
-    
+
     // 실제 결과 데이터에서 답안 상태 가져오기
     // 과목별로 다른 로직 적용
     if (selectedSubject === '국어') {
@@ -814,11 +813,15 @@ function TestPageContent() {
       const problemResult = sessionDetails.problem_results?.find(
         (pr: any) => pr.problem_id?.toString() === problemId || pr.id?.toString() === problemId,
       );
-      
+
       const correctAnswer = (problem as any).correct_answer || (problem as any).answer; // 문제지의 실제 정답
-      const studentAnswer = problemResult?.user_answer || problemResult?.student_answer || problemResult?.answer || '-'; // 학생이 선택한 답안
-      const isCorrect = problemResult?.is_correct !== undefined ? problemResult.is_correct : studentAnswer === correctAnswer;
-      
+      const studentAnswer =
+        problemResult?.user_answer || problemResult?.student_answer || problemResult?.answer || '-'; // 학생이 선택한 답안
+      const isCorrect =
+        problemResult?.is_correct !== undefined
+          ? problemResult.is_correct
+          : studentAnswer === correctAnswer;
+
       return {
         studentAnswer: studentAnswer, // 학생이 선택한 답안
         correctAnswer: correctAnswer, // 문제지의 실제 정답
@@ -831,11 +834,18 @@ function TestPageContent() {
       const questionResult = sessionDetails.question_results?.find(
         (qr: any) => qr.question_id?.toString() === problemId,
       );
-      
+
       const correctAnswer = (problem as any).correct_answer || (problem as any).answer; // 문제지의 실제 정답
-      const studentAnswer = questionResult?.user_answer || questionResult?.student_answer || questionResult?.answer || '-'; // 학생이 선택한 답안
-      const isCorrect = questionResult?.is_correct !== undefined ? questionResult.is_correct : studentAnswer === correctAnswer;
-      
+      const studentAnswer =
+        questionResult?.user_answer ||
+        questionResult?.student_answer ||
+        questionResult?.answer ||
+        '-'; // 학생이 선택한 답안
+      const isCorrect =
+        questionResult?.is_correct !== undefined
+          ? questionResult.is_correct
+          : studentAnswer === correctAnswer;
+
       return {
         studentAnswer: studentAnswer, // 학생이 선택한 답안
         correctAnswer: correctAnswer, // 문제지의 실제 정답
@@ -848,11 +858,15 @@ function TestPageContent() {
       const problemResult = sessionDetails.problem_results?.find(
         (pr: any) => pr.problem_id?.toString() === problemId,
       );
-      
+
       const correctAnswer = (problem as any).correct_answer || (problem as any).answer; // 문제지의 실제 정답
-      const studentAnswer = problemResult?.user_answer || problemResult?.student_answer || problemResult?.answer || '-'; // 학생이 선택한 답안
-      const isCorrect = problemResult?.is_correct !== undefined ? problemResult.is_correct : studentAnswer === correctAnswer;
-      
+      const studentAnswer =
+        problemResult?.user_answer || problemResult?.student_answer || problemResult?.answer || '-'; // 학생이 선택한 답안
+      const isCorrect =
+        problemResult?.is_correct !== undefined
+          ? problemResult.is_correct
+          : studentAnswer === correctAnswer;
+
       return {
         studentAnswer: studentAnswer, // 학생이 선택한 답안
         correctAnswer: correctAnswer, // 문제지의 실제 정답
@@ -861,7 +875,7 @@ function TestPageContent() {
         explanation: problemResult?.explanation || '',
       };
     }
-    
+
     return null;
   };
 
@@ -869,28 +883,29 @@ function TestPageContent() {
   const filteredWorksheets = worksheets.filter((worksheet) => {
     // 검색어 필터링
     const matchesSearch = worksheet.title.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     // 클래스 필터링
     const selectedClassStr = selectedClass?.toString();
-    
+
     if (selectedClassStr === 'all') {
       return matchesSearch;
     }
-    
+
     // classroom_id가 선택한 클래스와 일치하는지 확인
     const worksheetClassId = (worksheet as any).classroom_id;
     const matchesClass = worksheetClassId?.toString() === selectedClassStr;
-    
+
     return matchesSearch && matchesClass;
   });
 
   // 필터링 결과 요약 (클래스 선택 변경 시)
   React.useEffect(() => {
     if (worksheets.length > 0) {
-      const selectedClassName = selectedClass === 'all' 
-        ? '전체' 
-        : classes.find(c => c.id === selectedClass)?.name || selectedClass;
-      
+      const selectedClassName =
+        selectedClass === 'all'
+          ? '전체'
+          : classes.find((c) => c.id === selectedClass)?.name || selectedClass;
+
       console.log(`🔍 필터링 적용:`, {
         선택된_클래스: selectedClassName,
         클래스_ID: selectedClass,
@@ -899,24 +914,26 @@ function TestPageContent() {
         필터링된_과제: filteredWorksheets.length,
         검색어: searchTerm || '없음',
       });
-      
+
       // 전체 과제의 클래스 정보 출력
-      console.log('📋 전체 과제의 클래스 정보:', 
-        worksheets.map(w => ({
+      console.log(
+        '📋 전체 과제의 클래스 정보:',
+        worksheets.map((w) => ({
           제목: w.title,
           클래스ID: (w as any).classroom_id,
           클래스ID_문자열: (w as any).classroom_id?.toString(),
-        }))
+        })),
       );
-      
+
       // 필터링된 과제의 클래스 분포
       if (selectedClass !== 'all') {
-        console.log(`📋 필터링 결과:`, 
-          filteredWorksheets.map(w => ({
+        console.log(
+          `📋 필터링 결과:`,
+          filteredWorksheets.map((w) => ({
             제목: w.title,
             클래스ID: (w as any).classroom_id,
             매칭여부: (w as any).classroom_id?.toString() === selectedClass?.toString(),
-          }))
+          })),
         );
       }
     }
@@ -989,7 +1006,7 @@ function TestPageContent() {
                     onSessionDetailsChange={setSessionDetails}
                     currentProblemIndex={currentProblemIndex}
                     onProblemIndexChange={setCurrentProblemIndex}
-                />
+                  />
                 </div>
               );
             }

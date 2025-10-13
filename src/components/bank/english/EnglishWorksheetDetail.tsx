@@ -530,17 +530,9 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
       passages.find((p: EnglishPassage) => p.passage_id === question.question_passage_id) : null;
   });
 
-  const ContentWrapper = mode === 'generation' ? 'div' : Card;
-  const HeaderWrapper = mode === 'generation' ? 'div' : CardHeader;
-  const BodyWrapper = mode === 'generation' ? 'div' : CardContent;
-
   return (
-    <ContentWrapper className={mode === 'generation'
-      ? "flex-1 flex flex-col overflow-hidden"
-      : "flex-1 flex flex-col shadow-sm h-[calc(100vh-200px)]"}>
-      <HeaderWrapper className={mode === 'generation'
-        ? "flex flex-row items-center py-4 px-6 border-b border-gray-100 flex-shrink-0"
-        : "flex flex-row items-center py-6 px-6 border-b border-gray-100 flex-shrink-0"}>
+    <Card className="w-2/3 flex flex-col shadow-sm h-[calc(100vh-200px)]">
+      <CardHeader className="flex flex-row items-center py-6 px-6 border-b border-gray-100 flex-shrink-0">
         <div className="flex-1"></div>
         <div className="flex items-center justify-center gap-3">
           {isEditingTitle ? (
@@ -620,13 +612,11 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
 
           {/* 뱅크 모드: 배포 및 편집 버튼 */}
         </div>
-      </HeaderWrapper>
+      </CardHeader>
 
-      <BodyWrapper className="flex-1 flex flex-col p-0 overflow-hidden">
+      <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
         <ScrollArea style={{
-          height: mode === 'generation'
-            ? 'calc(100vh - 360px)'
-            : 'calc(100vh - 280px)'
+          height: 'calc(100vh - 280px)'
         }} className="w-full">
           {questions.length === 0 ? (
             <div className="text-center py-20 text-gray-400">
@@ -682,7 +672,7 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
             </div>
           )}
         </ScrollArea>
-      </BodyWrapper>
+      </CardContent>
 
       {/* 재생성 모달 */}
       <Dialog open={isRegenerateModalOpen} onOpenChange={setIsRegenerateModalOpen}>
@@ -815,6 +805,6 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
         }}
         previewData={previewData}
       />
-    </ContentWrapper>
+    </Card>
   );
 };

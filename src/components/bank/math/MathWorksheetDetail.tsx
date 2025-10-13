@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,8 +8,11 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { LaTeXRenderer } from '@/components/LaTeXRenderer';
 import { TikZRenderer } from '@/components/TikZRenderer';
 import { Worksheet, MathProblem, ProblemType } from '@/types/math';
-import { Edit3, RotateCcw } from 'lucide-react';
+import { Edit3, RotateCcw, FileDown } from 'lucide-react';
 import { ProblemRegenerateDialog } from '../common/ProblemRegenerateDialog';
+import { useReactToPrint } from 'react-to-print';
+import { SolutionPrintLayout } from '@/components/pdf/SolutionPrintLayout';
+import { ExamPrintLayout } from '@/components/pdf/ExamPrintLayout';
 
 interface MathWorksheetDetailProps {
   selectedWorksheet: Worksheet | null;
@@ -58,6 +61,10 @@ export const MathWorksheetDetail: React.FC<MathWorksheetDetailProps> = ({
 }) => {
   const [isRegenerateDialogOpen, setIsRegenerateDialogOpen] = useState(false);
   const [selectedProblemForRegenerate, setSelectedProblemForRegenerate] = useState<MathProblem | null>(null);
+  const [isPrintingExam, setIsPrintingExam] = useState(false);
+  const [isPrintingSolution, setIsPrintingSolution] = useState(false);
+  const examRef = useRef<HTMLDivElement>(null);
+  const solutionRef = useRef<HTMLDivElement>(null);
 
   const handleRegenerateClick = (problem: MathProblem) => {
     setSelectedProblemForRegenerate(problem);
@@ -68,6 +75,48 @@ export const MathWorksheetDetail: React.FC<MathWorksheetDetailProps> = ({
     if (selectedProblemForRegenerate && onRegenerateProblem) {
       onRegenerateProblem(selectedProblemForRegenerate, feedback);
     }
+  };
+
+  const handlePrintExam = useReactToPrint({
+    contentRef: examRef,
+    documentTitle: `${selectedWorksheet?.title || 'worksheet'}_시험지`,
+    onAfterPrint: () => {
+      setIsPrintingExam(false);
+    },
+  });
+
+  const handlePrintSolution = useReactToPrint({
+    contentRef: solutionRef,
+    documentTitle: `${selectedWorksheet?.title || 'worksheet'}_해설지`,
+    onAfterPrint: () => {
+      setIsPrintingSolution(false);
+    },
+  });
+
+  const handleDownloadExam = () => {
+    if (!selectedWorksheet || worksheetProblems.length === 0) {
+      alert('문제를 먼저 불러와주세요.');
+      return;
+    }
+    setIsPrintingExam(true);
+    setTimeout(() => {
+      if (handlePrintExam) {
+        handlePrintExam();
+      }
+    }, 500);
+  };
+
+  const handleDownloadSolution = () => {
+    if (!selectedWorksheet || worksheetProblems.length === 0) {
+      alert('문제를 먼저 불러와주세요.');
+      return;
+    }
+    setIsPrintingSolution(true);
+    setTimeout(() => {
+      if (handlePrintSolution) {
+        handlePrintSolution();
+      }
+    }, 500);
   };
 
   if (!selectedWorksheet) {
@@ -141,13 +190,33 @@ export const MathWorksheetDetail: React.FC<MathWorksheetDetailProps> = ({
         </div>
         <div className="flex-1 flex justify-end gap-3">
           {worksheetProblems.length > 0 && (
-            <Button
-              onClick={onToggleAnswerSheet}
-              variant="outline"
-              className="bg-white/80 backdrop-blur-sm border-[#0072CE]/30 text-[#0072CE] hover:bg-[#0072CE]/10 hover:border-[#0072CE]/50"
-            >
-              {showAnswerSheet ? '시험지 보기' : '정답 및 해설'}
-            </Button>
+            <>
+              <Button
+                onClick={handleDownloadExam}
+                variant="outline"
+                className="bg-white/80 backdrop-blur-sm border-[#0072CE]/30 text-[#0072CE] hover:bg-[#0072CE]/10 hover:border-[#0072CE]/50"
+                disabled={isPrintingExam}
+              >
+                <FileDown className="w-4 h-4 mr-2" />
+                문제지 다운로드
+              </Button>
+              <Button
+                onClick={handleDownloadSolution}
+                variant="outline"
+                className="bg-white/80 backdrop-blur-sm border-[#0072CE]/30 text-[#0072CE] hover:bg-[#0072CE]/10 hover:border-[#0072CE]/50"
+                disabled={isPrintingSolution}
+              >
+                <FileDown className="w-4 h-4 mr-2" />
+                해설지 다운로드
+              </Button>
+              <Button
+                onClick={onToggleAnswerSheet}
+                variant="outline"
+                className="bg-white/80 backdrop-blur-sm border-[#0072CE]/30 text-[#0072CE] hover:bg-[#0072CE]/10 hover:border-[#0072CE]/50"
+              >
+                {showAnswerSheet ? '시험지 보기' : '정답 및 해설'}
+              </Button>
+            </>
           )}
         </div>
       </CardHeader>
@@ -389,6 +458,24 @@ export const MathWorksheetDetail: React.FC<MathWorksheetDetailProps> = ({
       onConfirm={handleRegenerateConfirm}
       subject="수학"
     />
+
+    {/* 숨겨진 프린트 레이아웃 */}
+    <div style={{ display: 'none' }}>
+      {isPrintingExam && selectedWorksheet && (
+        <ExamPrintLayout
+          ref={examRef}
+          worksheet={selectedWorksheet}
+          problems={worksheetProblems}
+        />
+      )}
+      {isPrintingSolution && selectedWorksheet && (
+        <SolutionPrintLayout
+          ref={solutionRef}
+          worksheet={selectedWorksheet}
+          problems={worksheetProblems}
+        />
+      )}
+    </div>
     </>
   );
 };
