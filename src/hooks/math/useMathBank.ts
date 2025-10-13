@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { mathService } from '@/services/mathService';
 import { Worksheet, MathProblem } from '@/types/math';
 import { useBankState } from '../common/useBankState';
+import { normalizeMathProblem } from '@/utils/mathSchemaUtils';
 
 export const useMathBank = () => {
   const {
@@ -54,11 +55,18 @@ export const useMathBank = () => {
     try {
       console.log('[useMathBank] 워크시트 문제 로딩 시작:', worksheetId);
       const worksheetDetail = await mathService.getMathWorksheetProblems(worksheetId);
-      updateState({ worksheetProblems: worksheetDetail.problems || [] });
-      console.log('[useMathBank] 워크시트 문제 로드 완료:', worksheetDetail.problems?.length || 0, '개');
+      
+      // 문제 데이터 정규화 (존재하지 않는 필드 처리)
+      const normalizedProblems = (worksheetDetail.problems || []).map(normalizeMathProblem);
+      
+      updateState({ worksheetProblems: normalizedProblems });
+      console.log('[useMathBank] 워크시트 문제 로드 완료:', normalizedProblems.length, '개');
     } catch (error: any) {
       console.error('[useMathBank] 워크시트 문제 로딩 에러:', error);
-      updateState({ error: '수학 워크시트 문제를 불러올 수 없습니다.' });
+      updateState({ 
+        error: '수학 워크시트 문제를 불러올 수 없습니다.',
+        worksheetProblems: [] // 오류 시 빈 배열로 설정
+      });
     }
   };
 
@@ -137,7 +145,7 @@ export const useMathBank = () => {
           question: problem.question,
           difficulty: problem.difficulty,
           problem_type: problem.problem_type,
-          tikz_code: (problem as any).tikz_code, // TikZ 코드도 포함
+          tikz_code: problem.tikz_code || null, // 안전한 처리
         }
       };
 
@@ -158,18 +166,22 @@ export const useMathBank = () => {
 
         try {
           const worksheetDetail = await mathService.getMathWorksheetProblems(selectedWorksheet.id);
-          const updatedProblem = worksheetDetail.problems?.find((p: MathProblem) => p.id === problem.id);
+          
+          // 문제 데이터 정규화
+          const normalizedProblems = (worksheetDetail.problems || []).map(normalizeMathProblem);
+          
+          const updatedProblem = normalizedProblems.find((p: MathProblem) => p.id === problem.id);
 
           // 문제가 실제로 변경되었는지 확인
           if (updatedProblem && updatedProblem.question !== originalQuestion) {
-            updateState({ worksheetProblems: worksheetDetail.problems || [] });
+            updateState({ worksheetProblems: normalizedProblems });
             clearInterval(checkCompletion);
             alert('✅ 문제 재생성이 완료되었습니다!');
             return;
           }
 
           // 중간 업데이트
-          updateState({ worksheetProblems: worksheetDetail.problems || [] });
+          updateState({ worksheetProblems: normalizedProblems });
 
           if (attempts >= maxAttempts) {
             clearInterval(checkCompletion);

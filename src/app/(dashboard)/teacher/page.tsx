@@ -139,31 +139,39 @@ const TeacherDashboardContent = React.memo(() => {
     }
   }, [state.selectedProducts, dispatch]);
 
+  // 데이터 초기화 최적화 (배치 처리)
   useEffect(() => {
     const initializeData = async () => {
-      await Promise.allSettled([
+      // 정적 데이터와 사용자 데이터를 병렬로 로드
+      const [staticDataResult, userDataResult] = await Promise.allSettled([
         preloadStaticData(),
         userProfile?.id ? preloadUserData(userProfile.id.toString()) : Promise.resolve(),
       ]);
 
+      // 클래스 로드 후 통계 로드
       const classesPromise = dispatch(loadClasses());
       
+      // 마켓 데이터를 병렬로 로드
       const marketPromises = Promise.allSettled([
         dispatch(loadMarketStats()),
         dispatch(loadMarketProducts()),
       ]);
 
+      // 클래스 로드 완료 후 통계 로드
       classesPromise.then(() => {
         dispatch(loadStats());
       });
 
+      // 마켓 로드 실패는 무시 (선택적 기능)
       marketPromises.catch(() => {
+        // 마켓 로드 실패는 에러로 처리하지 않음
       });
     };
 
     initializeData();
   }, [dispatch, userProfile?.id]);
 
+  // 클래스 데이터 로드 최적화
   useEffect(() => {
     if (state.classes.length > 0) {
       const loadClassData = async () => {
@@ -171,6 +179,7 @@ const TeacherDashboardContent = React.memo(() => {
           (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
         )[0].id;
 
+        // 학생 로드와 클래스 선택을 병렬로 처리
         await Promise.all([
           dispatch(loadStudents()),
           !state.selectedClass ? dispatch(setSelectedClass(latestClassId)) : Promise.resolve(),
@@ -181,9 +190,9 @@ const TeacherDashboardContent = React.memo(() => {
     }
   }, [state.classes.length, dispatch, state.selectedClass]);
 
+  // 과제 로드 최적화 (디바운싱)
   useEffect(() => {
     if (state.selectedClass && state.classes.length > 0) {
-
       const timeoutId = setTimeout(() => {
         dispatch(loadAssignments(state.selectedClass));
       }, 100);

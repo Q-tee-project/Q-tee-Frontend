@@ -32,7 +32,10 @@ export interface MathProblem {
   has_diagram?: boolean;
   diagram_type?: string;
   diagram_elements?: any;
-  tikz_code?: string;
+  tikz_code?: string; // 선택적 필드 - 데이터베이스에 존재하지 않을 수 있음
+  image_url?: string; // 추가된 필드
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface MathFormData {
