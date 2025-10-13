@@ -97,12 +97,12 @@ const initialState: DashboardState = {
   marketProducts: [],
   selectedProducts: [],
   
-  isLoadingClasses: true,
-  isLoadingStudents: true,
-  isLoadingAssignments: true,
-  isLoadingStats: true,
-  isLoadingMarketStats: true,
-  isLoadingProducts: true,
+  isLoadingClasses: false,
+  isLoadingStudents: false,
+  isLoadingAssignments: false,
+  isLoadingStats: false,
+  isLoadingMarketStats: false,
+  isLoadingProducts: false,
   
   apiErrors: new Set(),
   errorMessages: {},
@@ -163,7 +163,6 @@ const retryApiCall = async <T,>(
       }
 
       if (i < maxRetries - 1) {
-        console.log(`${context} 재시도 중... (${i + 1}/${maxRetries})`);
         await new Promise((resolve) => setTimeout(resolve, delay * (i + 1)));
       }
     }
@@ -192,10 +191,8 @@ export const loadClasses = createAsyncThunk(
         createdAt: classroom.created_at,
       }));
 
-      console.log('클래스 데이터 로딩 성공:', classData.length, '개 클래스');
       return classData;
     } catch (error) {
-      console.error('클래스 데이터 로딩 실패:', error);
       return rejectWithValue(getErrorMessage(error, '클래스 정보'));
     }
   }
@@ -229,7 +226,6 @@ export const loadStudents = createAsyncThunk(
 
           return { classId: classroom.id, students: classStudents };
         } catch (error) {
-          console.error(`클래스 ${classroom.name} 학생 데이터 로딩 실패:`, error);
           return { classId: classroom.id, students: [] };
         }
       });
@@ -241,7 +237,6 @@ export const loadStudents = createAsyncThunk(
 
       return studentsData;
     } catch (error) {
-      console.error('학생 데이터 로딩 실패:', error);
       return rejectWithValue(getErrorMessage(error, '학생 정보'));
     }
   }
@@ -423,7 +418,6 @@ export const loadMarketStats = createAsyncThunk(
       const stats = await getMarketStats();
       return stats;
     } catch (error: any) {
-      console.log('[Dashboard] 마켓 통계 조회 실패, 기본값을 사용합니다.');
       const fallbackStats = {
         total_products: 0,
         total_sales: 0,
@@ -442,7 +436,6 @@ export const loadMarketProducts = createAsyncThunk(
       const products = await getMyProducts();
       return products;
     } catch (error: any) {
-      console.log('[Dashboard] 마켓 상품 조회 실패, 빈 목록을 표시합니다.');
       return [];
     }
   }

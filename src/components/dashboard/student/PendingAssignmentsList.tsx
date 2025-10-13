@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { ClipboardList } from 'lucide-react';
 import { RxExternalLink } from "react-icons/rx";
@@ -27,11 +27,40 @@ interface PendingAssignmentsListProps {
   onAssignmentClick: (assignment: Assignment) => void;
 }
 
-const PendingAssignmentsList: React.FC<PendingAssignmentsListProps> = ({
+const AssignmentItem = React.memo(function AssignmentItem({
+  assignment,
+  onAssignmentClick,
+}: {
+  assignment: Assignment;
+  onAssignmentClick: (assignment: Assignment) => void;
+}) {
+  const handleClick = useCallback(() => {
+    onAssignmentClick(assignment);
+  }, [assignment, onAssignmentClick]);
+
+  return (
+    <div
+      onClick={handleClick}
+      className="p-3 bg-white rounded-lg border border-gray-200 hover:bg-red-50 hover:border-red-200 cursor-pointer transition-colors"
+    >
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <FaCircleExclamation className="w-4 h-4 text-red-500 flex-shrink-0" />
+          <h4 className="text-sm font-medium text-gray-900 truncate">
+            {assignment.title}
+          </h4>
+        </div>
+        <RxExternalLink className="h-4 w-4 text-gray-400 flex-shrink-0" />
+      </div>
+    </div>
+  );
+});
+
+const PendingAssignmentsList: React.FC<PendingAssignmentsListProps> = React.memo(function PendingAssignmentsList({
   unsubmittedAssignments,
   isLoadingAssignments,
   onAssignmentClick,
-}) => {
+}) {
   return (
     <Card className="shadow-sm h-full flex flex-col px-6 py-5 gap-0">
       <CardHeader className="px-0 py-3">
@@ -55,22 +84,12 @@ const PendingAssignmentsList: React.FC<PendingAssignmentsListProps> = ({
             </div>
           ) : (
             <div className="space-y-2">
-              {unsubmittedAssignments.map((assignment, index) => (
-                <div
-                  key={index}
-                  onClick={() => onAssignmentClick(assignment)}
-                  className="p-3 bg-white rounded-lg border border-gray-200 hover:bg-red-50 hover:border-red-200 cursor-pointer transition-colors"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <FaCircleExclamation className="w-4 h-4 text-red-500 flex-shrink-0" />
-                      <h4 className="text-sm font-medium text-gray-900 truncate">
-                        {assignment.title}
-                      </h4>
-                    </div>
-                    <RxExternalLink className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                  </div>
-                </div>
+              {unsubmittedAssignments.map((assignment) => (
+                <AssignmentItem
+                  key={assignment.id}
+                  assignment={assignment}
+                  onAssignmentClick={onAssignmentClick}
+                />
               ))}
             </div>
           )}
@@ -78,6 +97,6 @@ const PendingAssignmentsList: React.FC<PendingAssignmentsListProps> = ({
       </CardContent>
     </Card>
   );
-};
+});
 
 export default PendingAssignmentsList;

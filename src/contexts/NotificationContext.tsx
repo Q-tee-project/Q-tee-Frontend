@@ -39,8 +39,6 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
   // SSE 연결 관리
   useEffect(() => {
     if (!isLoading && isAuthenticated && userType && userProfile) {
-      console.log(`SSE 연결 시작: ${userType} ${userProfile.id}`);
-
       // SSE 연결
       notificationService.connect(userType, userProfile.id);
 
@@ -60,7 +58,6 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
             20,
           );
           if (storedNotifications.length > 0) {
-            console.log(`저장된 알림 ${storedNotifications.length}개 로드`);
             setNotifications((prev) => {
               const existingIds = new Set(prev.map((n) => n.id));
               const newNotifications = storedNotifications.filter((n) => !existingIds.has(n.id));
@@ -68,7 +65,7 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
             });
           }
         } catch (error) {
-          console.error('저장된 알림 로드 실패:', error);
+          // 저장된 알림 로드 실패는 조용히 처리
         }
       };
 
@@ -76,7 +73,6 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
 
       // 알림 리스너 등록
       const handleNotification = (notification: SSENotification) => {
-        console.log('새 알림 수신:', notification);
         setNotifications((prev) => {
           if (prev.some((n) => n.id === notification.id)) {
             return prev; // 이미 존재하면 상태 변경 안함
@@ -92,7 +88,6 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
         notificationService.removeListener(handleNotification);
         notificationService.disconnect();
         setIsConnected(false);
-        console.log('SSE 연결 해제');
       };
     } else {
       // 로그아웃이나 인증 실패 시 연결 해제
@@ -127,7 +122,6 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
     try {
       const success = await notificationService.markAsRead(userType, userProfile.id, id);
       if (!success) {
-        console.error(`Failed to mark notification ${id} as read on server`);
         // 실패 시 로컬 상태 롤백
         setNotifications((prev) =>
           prev.map((notification) =>
@@ -136,7 +130,6 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
         );
       }
     } catch (error) {
-      console.error('Error marking notification as read:', error);
     }
   };
 
@@ -153,10 +146,8 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
     try {
       const success = await notificationService.markAllAsRead(userType, userProfile.id);
       if (!success) {
-        console.error('Failed to mark all notifications as read on server');
       }
     } catch (error) {
-      console.error('Error marking all notifications as read:', error);
     }
   };
 
@@ -202,11 +193,9 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
         type,
       );
       if (!success) {
-        console.error(`Failed to delete ${type} notifications from server`);
         // 실패 시에는 페이지를 새로고침하거나 알림을 다시 불러와야 할 수 있음
       }
     } catch (error) {
-      console.error(`Error deleting ${type} notifications:`, error);
     }
   };
 
@@ -216,7 +205,6 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
       try {
         await notificationService.clearStoredNotifications(userType, userProfile.id);
       } catch (error) {
-        console.error('서버 알림 삭제 실패:', error);
       }
     }
     setNotifications([]);
@@ -228,12 +216,9 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
       try {
         const success = await notificationService.sendTestNotification(userType, userProfile.id);
         if (success) {
-          console.log('테스트 알림 전송 성공');
         } else {
-          console.error('테스트 알림 전송 실패');
         }
       } catch (error) {
-        console.error('테스트 알림 전송 에러:', error);
       }
     }
   };

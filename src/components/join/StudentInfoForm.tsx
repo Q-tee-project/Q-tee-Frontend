@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { memo } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { InputField } from './InputField';
 
@@ -26,7 +26,7 @@ interface StudentInfoFormProps {
   onPhoneKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
 }
 
-export const StudentInfoForm: React.FC<StudentInfoFormProps> = ({
+export const StudentInfoForm = memo<StudentInfoFormProps>(({
   formData,
   fieldErrors,
   touchedFields,
@@ -94,4 +94,6 @@ export const StudentInfoForm: React.FC<StudentInfoFormProps> = ({
       </div>
     </>
   );
-};
+});
+
+StudentInfoForm.displayName = 'StudentInfoForm';

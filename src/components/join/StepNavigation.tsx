@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { memo } from 'react';
 import { User, Mail, Lock, GraduationCap } from 'lucide-react';
 
 interface StepNavigationProps {
@@ -9,7 +9,7 @@ interface StepNavigationProps {
   userType: 'teacher' | 'student' | null;
 }
 
-export const StepNavigation: React.FC<StepNavigationProps> = ({
+export const StepNavigation = memo<StepNavigationProps>(({
   currentStep,
   maxStep,
   userType,
@@ -83,4 +83,6 @@ export const StepNavigation: React.FC<StepNavigationProps> = ({
       </div>
     </div>
   );
-};
+});
+
+StepNavigation.displayName = 'StepNavigation';

@@ -1,9 +1,49 @@
-import React from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { LaTeXRenderer } from '@/components/LaTeXRenderer';
 import { TikZRenderer } from '@/components/TikZRenderer';
 import type { AnswerStatus, SubjectType } from './types';
+
+// 선택지 아이템 컴포넌트 (메모이제이션)
+const ChoiceItem = React.memo(function ChoiceItem({
+  choice,
+  choiceNum,
+  subject,
+  isStudentChoice,
+  isCorrectChoice,
+}: {
+  choice: string;
+  choiceNum: string;
+  subject: SubjectType;
+  isStudentChoice: boolean;
+  isCorrectChoice: boolean;
+}) {
+  return (
+    <div
+      className={`p-3 rounded border text-sm ${
+        isCorrectChoice
+          ? 'bg-blue-50 border-blue-200'
+          : isStudentChoice
+          ? 'bg-red-50 border-red-200'
+          : 'bg-white border-gray-200'
+      }`}
+    >
+      <div className="flex items-start gap-2">
+        <span className="font-medium min-w-[20px]">{choiceNum}.</span>
+        <div className="flex-1">
+          {subject === 'math' ? (
+            <LaTeXRenderer content={choice || ''} />
+          ) : (
+            <span>{choice}</span>
+          )}
+        </div>
+        {isStudentChoice && <span className="text-xs text-gray-500">(학생 선택)</span>}
+        {isCorrectChoice && <span className="text-xs text-blue-600">(정답)</span>}
+      </div>
+    </div>
+  );
+});
 
 interface ProblemCardProps {
   problemNumber: number;
@@ -15,7 +55,7 @@ interface ProblemCardProps {
   onToggleCorrectness: (problemId: string) => void;
 }
 
-export function ProblemCard({
+export const ProblemCard = React.memo(function ProblemCard({
   problemNumber,
   problem,
   answerStatus,
@@ -24,13 +64,21 @@ export function ProblemCard({
   problemCorrectness,
   onToggleCorrectness,
 }: ProblemCardProps) {
-  const problemId = subject === 'korean'
-    ? problem.id
-    : subject === 'english'
-    ? problem.question_id
-    : problem.id;
+  const problemId = useMemo(() => {
+    return subject === 'korean'
+      ? problem.id
+      : subject === 'english'
+      ? problem.question_id
+      : problem.id;
+  }, [subject, problem.id, problem.question_id]);
 
-  const isCorrect = problemCorrectness[problemId.toString()] ?? answerStatus?.isCorrect;
+  const isCorrect = useMemo(() => {
+    return problemCorrectness[problemId.toString()] ?? answerStatus?.isCorrect;
+  }, [problemCorrectness, problemId, answerStatus?.isCorrect]);
+
+  const handleToggleCorrectness = useCallback(() => {
+    onToggleCorrectness(problemId.toString());
+  }, [onToggleCorrectness, problemId]);
 
   return (
     <Card className="border">
@@ -50,7 +98,7 @@ export function ProblemCard({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => onToggleCorrectness(problemId.toString())}
+                onClick={handleToggleCorrectness}
                 className={`text-sm ${
                   isCorrect
                     ? 'border-blue-600 text-blue-600 hover:bg-blue-50'
@@ -92,7 +140,7 @@ export function ProblemCard({
                     .replace(/\\begin\{tikzpicture\}[\s\S]*?\\end\{tikzpicture\}/g, '')
                     .trim()}
                 />
-                {problem.tikz_code && (
+                {problem.tikz_code && problem.tikz_code !== null && (
                   <div className="mt-3">
                     <TikZRenderer tikzCode={problem.tikz_code} />
                   </div>
@@ -114,29 +162,14 @@ export function ProblemCard({
                   : answerStatus?.correctAnswer === choiceNum;
 
                 return (
-                  <div
+                  <ChoiceItem
                     key={idx}
-                    className={`p-3 rounded border text-sm ${
-                      isCorrectChoice
-                        ? 'bg-blue-50 border-blue-200'
-                        : isStudentChoice
-                        ? 'bg-red-50 border-red-200'
-                        : 'bg-white border-gray-200'
-                    }`}
-                  >
-                    <div className="flex items-start gap-2">
-                      <span className="font-medium min-w-[20px]">{choiceNum}.</span>
-                      <div className="flex-1">
-                        {subject === 'math' ? (
-                          <LaTeXRenderer content={choice || ''} />
-                        ) : (
-                          <span>{choice}</span>
-                        )}
-                      </div>
-                      {isStudentChoice && <span className="text-xs text-gray-500">(학생 선택)</span>}
-                      {isCorrectChoice && <span className="text-xs text-blue-600">(정답)</span>}
-                    </div>
-                  </div>
+                    choice={choice}
+                    choiceNum={choiceNum}
+                    subject={subject}
+                    isStudentChoice={isStudentChoice}
+                    isCorrectChoice={isCorrectChoice}
+                  />
                 );
               })}
             </div>
