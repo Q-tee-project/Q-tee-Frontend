@@ -8,7 +8,6 @@ import { LaTeXRenderer } from '@/components/LaTeXRenderer';
 import { TikZRenderer } from '@/components/TikZRenderer';
 import { HandwritingCanvas } from '@/components/HandwritingCanvas';
 import { FaArrowLeft } from "react-icons/fa6";
-import { BookOpen } from 'lucide-react';
 import { Worksheet, MathProblem } from '@/types/math';
 
 interface TestInterfaceProps {
@@ -24,7 +23,6 @@ interface TestInterfaceProps {
   onNextProblem: () => void;
   onSubmitTest: () => void;
   onBackToAssignmentList: () => void;
-  onOpenScratchpad: () => void;
   getProblemTypeInKorean: (type: string) => string;
   formatTime: (seconds: number) => string;
   onOCRCapture?: (problemId: number, imageBlob: Blob) => void;
@@ -43,7 +41,6 @@ export function TestInterface({
   onNextProblem,
   onSubmitTest,
   onBackToAssignmentList,
-  onOpenScratchpad,
   getProblemTypeInKorean,
   formatTime,
   onOCRCapture,
@@ -161,20 +158,9 @@ export function TestInterface({
                     </div>
                   ) : currentProblem.problem_type === 'short_answer' ? (
                     <div className="space-y-4">
-                      <div className="flex justify-between items-center">
-                        <label className="block text-sm font-medium text-gray-700">
-                          답 (핸드라이팅):
-                        </label>
-                        <Button
-                          onClick={onOpenScratchpad}
-                          variant="outline"
-                          size="sm"
-                          className="flex items-center gap-1 text-[#0072CE] border-[#0072CE]"
-                        >
-                          <BookOpen className="w-4 h-4" />
-                          연습장
-                        </Button>
-                      </div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        답 (핸드라이팅):
+                      </label>
                       <HandwritingCanvas
                         key={`short-answer-${currentProblem.id}`}
                         width={580}
@@ -189,20 +175,9 @@ export function TestInterface({
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      <div className="flex justify-between items-center">
-                        <label className="block text-sm font-medium text-gray-700">
-                          풀이 과정 (핸드라이팅):
-                        </label>
-                        <Button
-                          onClick={onOpenScratchpad}
-                          variant="outline"
-                          size="sm"
-                          className="flex items-center gap-1 text-[#0072CE] border-[#0072CE]"
-                        >
-                          <BookOpen className="w-4 h-4" />
-                          연습장
-                        </Button>
-                      </div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        풀이 과정 (핸드라이팅):
+                      </label>
                       <HandwritingCanvas
                         key={`essay-${currentProblem.id}`}
                         width={580}
