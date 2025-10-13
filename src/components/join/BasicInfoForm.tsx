@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { memo } from 'react';
 import { Button } from '@/components/ui/button';
 import { InputField } from './InputField';
 
@@ -30,7 +30,7 @@ interface BasicInfoFormProps {
   onEmailCheck: () => void;
 }
 
-export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
+export const BasicInfoForm = memo<BasicInfoFormProps>(({
   formData,
   fieldErrors,
   touchedFields,
@@ -117,4 +117,6 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
       </div>
     </>
   );
-};
+});
+
+BasicInfoForm.displayName = 'BasicInfoForm';

@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { memo } from 'react';
 import { Button } from '@/components/ui/button';
 import { InputField } from './InputField';
 import { AlertCircle } from 'lucide-react';
@@ -29,7 +29,7 @@ interface AccountInfoFormProps {
   onUsernameCheck: () => void;
 }
 
-export const AccountInfoForm: React.FC<AccountInfoFormProps> = ({
+export const AccountInfoForm = memo<AccountInfoFormProps>(({
   formData,
   fieldErrors,
   touchedFields,
@@ -145,4 +145,6 @@ export const AccountInfoForm: React.FC<AccountInfoFormProps> = ({
       )}
     </>
   );
-};
+});
+
+AccountInfoForm.displayName = 'AccountInfoForm';
