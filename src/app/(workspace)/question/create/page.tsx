@@ -432,11 +432,14 @@ export default function CreatePage() {
                     question: q.question || q.title,
                     problem_type: q.problem_type || 'multiple_choice',
                     question_type: q.question_type || q.problem_type || 'multiple_choice',
-                    korean_type: '문학',
+                    korean_type: q.korean_type || '문학',
                     difficulty: q.difficulty || 'B',
                     correct_answer: q.correct_answer || q.answer,
                     choices: q.choices || q.options || [],
                     explanation: q.explanation || q.solution || '',
+                    source_text: q.source_text || q.passage_content || '',
+                    source_title: q.source_title || q.passage_title || '',
+                    source_author: q.source_author || q.passage_author || '',
                     created_at: new Date().toISOString(),
                   }))}
                   showAnswerSheet={showAnswerSheet}

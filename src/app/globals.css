@@ -739,3 +739,18 @@
   color: #FF9F2D;
   background-color: #FFF5E9;
 }
+
+/* MathML 분수 표기 크기 약간 확대 */
+math {
+  font-size: 1.02em;
+}
+
+/* 분수 표기 크기 약간 증가 */
+mfrac {
+  font-size: 1.05em;
+}
+
+/* 분자와 분모 크기 약간 증가 */
+mfrac > * {
+  font-size: 1.03em;
+}
