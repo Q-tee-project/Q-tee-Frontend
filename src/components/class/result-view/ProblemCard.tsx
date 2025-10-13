@@ -229,4 +229,4 @@ export const ProblemCard = React.memo(function ProblemCard({
       </CardContent>
     </Card>
   );
-}
+});
