@@ -115,6 +115,7 @@ export default function NotificationPanel({
     notification: Notification,
     isExpanded: boolean,
     isMainItem: boolean = false,
+    count?: number,
   ) => {
     const handleClick = () => {
       if (isMainItem && !isExpanded) {
@@ -140,6 +141,7 @@ export default function NotificationPanel({
         isMainItem={isMainItem}
         onClick={handleClick}
         onDelete={handleDelete}
+        count={count}
       />
     );
   };
@@ -257,12 +259,7 @@ export default function NotificationPanel({
                       {/* 메인 알림 */}
                       <div className="flex flex-col bg-black/40 text-white rounded-2xl border border-white/10 transition-all duration-300 backdrop-blur-xl overflow-hidden">
                         <div className="relative">
-                          {renderNotificationItem(latest, isExpanded, true)}
-                          {list.length > 1 && !isExpanded && (
-                            <div className="absolute -top-1 -right-1 flex items-center justify-center w-5 h-5 rounded-full bg-gray-800 text-white text-xs font-semibold z-[3]">
-                              {list.length}
-                            </div>
-                          )}
+                          {renderNotificationItem(latest, isExpanded, true, list.length)}
                         </div>
                       </div>
                     </div>
