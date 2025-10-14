@@ -99,6 +99,9 @@ export const useMathGeneration = () => {
               question: result.problem.question,
               choices: result.problem.choices,
               backendId: result.problem.id,
+              problem_type: result.problem.problem_type,
+              difficulty: result.problem.difficulty,
+              tikz_code: result.problem.tikz_code || null,
             };
 
             updateState({
@@ -144,6 +147,8 @@ export const useMathGeneration = () => {
             choices: problem.choices,
             backendId: problem.id,
             problem_type: problem.problem_type,
+            difficulty: problem.difficulty,
+            tikz_code: problem.tikz_code || null,
           })
         );
 

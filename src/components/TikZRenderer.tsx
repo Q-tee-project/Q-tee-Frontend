@@ -56,13 +56,13 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
     for (let i = 0; i < 3; i++) {
       cleaned = cleaned.replace(/\\mathrm\{([^{}]+)\}/g, '$1'); // \mathrm{B} -> B
       cleaned = cleaned.replace(/\\mathbf\{([^{}]+)\}/g, '$1'); // \mathbf{B} -> B
-      cleaned = cleaned.replace(/\\text\{([^{}]+)\}/g, '$1');   // \text{abc} -> abc
+      cleaned = cleaned.replace(/\\text\{([^{}]+)\}/g, '$1'); // \text{abc} -> abc
     }
 
-    cleaned = cleaned.replace(/\\small/g, '');                // \small 제거
-    cleaned = cleaned.replace(/\\large/g, '');                // \large 제거
-    cleaned = cleaned.replace(/\\displaystyle/g, '');         // \displaystyle 제거
-    cleaned = cleaned.replace(/\\textstyle/g, '');            // \textstyle 제거
+    cleaned = cleaned.replace(/\\small/g, ''); // \small 제거
+    cleaned = cleaned.replace(/\\large/g, ''); // \large 제거
+    cleaned = cleaned.replace(/\\displaystyle/g, ''); // \displaystyle 제거
+    cleaned = cleaned.replace(/\\textstyle/g, ''); // \textstyle 제거
 
     // 남은 백슬래시 명령어들 제거 (\O, \Alpha, \x, \y 등)
     cleaned = cleaned.replace(/\\[a-zA-Z]+/g, '');
@@ -187,13 +187,16 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
       if (styleStr.includes('->')) continue;
 
       // plot, grid, foreach는 skip
-      if (pathStr.includes('plot') || pathStr.includes('grid') || pathStr.includes('foreach')) continue;
+      if (pathStr.includes('plot') || pathStr.includes('grid') || pathStr.includes('foreach'))
+        continue;
 
       const style = styleStr.includes('dashed') ? 'dashed' : 'solid';
 
       // 색상 추출 - TikZ 그대로 사용
       let color = 'black';
-      const colorMatch = styleStr.match(/\b(blue|red|green|gray|orange|purple|brown|pink|cyan|magenta|yellow)\b/);
+      const colorMatch = styleStr.match(
+        /\b(blue|red|green|gray|orange|purple|brown|pink|cyan|magenta|yellow)\b/,
+      );
       if (colorMatch) color = colorMatch[1];
 
       // 경로에서 좌표 추출
@@ -255,7 +258,9 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
 
       // 색상 추출 - TikZ 그대로 사용
       let color = 'black';
-      const colorMatch = styleStr.match(/\b(blue|red|green|gray|orange|purple|brown|pink|cyan|magenta|yellow)\b/);
+      const colorMatch = styleStr.match(
+        /\b(blue|red|green|gray|orange|purple|brown|pink|cyan|magenta|yellow)\b/,
+      );
       if (colorMatch) color = colorMatch[1];
 
       data.functionPlots.push({
@@ -304,7 +309,9 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
 
       // 색상 추출 - TikZ 그대로 사용
       let color = 'black';
-      const colorMatch = colorSpec.match(/\b(blue|red|green|gray|orange|purple|brown|pink|cyan|magenta|yellow)\b/);
+      const colorMatch = colorSpec.match(
+        /\b(blue|red|green|gray|orange|purple|brown|pink|cyan|magenta|yellow)\b/,
+      );
       if (colorMatch) color = colorMatch[1];
 
       data.labels.push({ coord, text: cleanedText, color });
@@ -373,8 +380,9 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
           {/* 그리드 라인 */}
           <g>
             {Array.from({ length: Math.floor((xMax - xMin) / xStep) + 1 }, (_, i) => {
-              const x = xMin + i * xStep;
-              return x !== 0 ? (
+              // xStep의 배수로 정렬 (예: xMin=-6.5, xStep=2 -> 시작점 -6)
+              const x = Math.ceil(xMin / xStep) * xStep + i * xStep;
+              return x !== 0 && x >= xMin && x <= xMax ? (
                 <line
                   key={`grid-v-${i}`}
                   x1={toSvgX(x)}
@@ -388,8 +396,9 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
               ) : null;
             })}
             {Array.from({ length: Math.floor((yMax - yMin) / yStep) + 1 }, (_, i) => {
-              const y = yMin + i * yStep;
-              return y !== 0 ? (
+              // yStep의 배수로 정렬 (예: yMin=-6.5, yStep=2 -> 시작점 -6)
+              const y = Math.ceil(yMin / yStep) * yStep + i * yStep;
+              return y !== 0 && y >= yMin && y <= yMax ? (
                 <line
                   key={`grid-h-${i}`}
                   x1={padding}
@@ -473,7 +482,6 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
           >
             y
           </text>
-
 
           {/* Filled areas (색칠된 영역) */}
           {filledAreas.map((area, idx) => {

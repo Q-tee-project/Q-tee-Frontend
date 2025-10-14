@@ -108,6 +108,11 @@ export class EnglishService {
       throw new Error('로그인이 필요합니다.');
     }
 
+    const token = getToken();
+    if (!token) {
+      throw new Error('인증 토큰이 없습니다. 다시 로그인해주세요.');
+    }
+
     const data = await apiRequest<EnglishWorksheet[]>(`/worksheets?user_id=${userId}&limit=1000`);
     return data || [];
   }
@@ -141,6 +146,11 @@ export class EnglishService {
       throw new Error('로그인이 필요합니다.');
     }
 
+    const token = getToken();
+    if (!token) {
+      throw new Error('인증 토큰이 없습니다. 다시 로그인해주세요.');
+    }
+
     const result = await apiRequest(`/worksheets/${worksheetId}?user_id=${userId}`, {
       method: 'PUT',
       body: JSON.stringify(updateData),
@@ -160,8 +170,10 @@ export class EnglishService {
       throw new Error('로그인이 필요합니다.');
     }
 
-    console.log('💾 저장할 워크시트 데이터:', worksheetData);
-    console.log('💾 questions 샘플:', worksheetData.questions?.[0]);
+    const token = getToken();
+    if (!token) {
+      throw new Error('인증 토큰이 없습니다. 다시 로그인해주세요.');
+    }
 
     const result = await apiRequest<{ worksheet_id: number; message: string }>(`/worksheet-save`, {
       method: 'POST',
@@ -234,6 +246,11 @@ export class EnglishService {
       throw new Error('로그인이 필요합니다.');
     }
 
+    const token = getToken();
+    if (!token) {
+      throw new Error('인증 토큰이 없습니다. 다시 로그인해주세요.');
+    }
+
     const result = await apiRequest(`/worksheets/${worksheetId}/title?user_id=${userId}`, {
       method: 'PUT',
       body: JSON.stringify({ worksheet_name: newTitle }),
@@ -281,6 +298,11 @@ export class EnglishService {
       throw new Error('로그인이 필요합니다.');
     }
 
+    const token = getToken();
+    if (!token) {
+      throw new Error('인증 토큰이 없습니다. 다시 로그인해주세요.');
+    }
+
     return apiRequest<EnglishRegenerationInfo>(
       `/worksheets/${worksheetId}/questions/${questionId}/regeneration-info?user_id=${userId}`
     );
@@ -322,6 +344,11 @@ export class EnglishService {
 
     if (!userId) {
       throw new Error('로그인이 필요합니다.');
+    }
+
+    const token = getToken();
+    if (!token) {
+      throw new Error('인증 토큰이 없습니다. 다시 로그인해주세요.');
     }
 
     const requestBody = {
@@ -386,7 +413,10 @@ export class EnglishService {
 
   // 영어 과제 생성 (배포하지 않고 생성만)
   static async createAssignment(worksheetId: number, classroomId: number): Promise<any> {
-    console.log('📝 영어 과제 생성 요청:', { worksheetId, classroomId });
+    const token = getToken();
+    if (!token) {
+      throw new Error('인증 토큰이 없습니다. 다시 로그인해주세요.');
+    }
 
     const result = await apiRequest(`/assignments/create`, {
       method: 'POST',
@@ -409,6 +439,11 @@ export class EnglishService {
       throw new Error('로그인이 필요합니다.');
     }
 
+    const token = getToken();
+    if (!token) {
+      throw new Error('인증 토큰이 없습니다. 다시 로그인해주세요.');
+    }
+
     const data = await apiRequest<any[]>(`/assignments/classrooms/${classId}/assignments`);
     return Array.isArray(data) ? data : [];
   }
@@ -422,6 +457,11 @@ export class EnglishService {
       throw new Error('로그인이 필요합니다.');
     }
 
+    const token = getToken();
+    if (!token) {
+      throw new Error('인증 토큰이 없습니다. 다시 로그인해주세요.');
+    }
+
     return apiRequest(`/assignments/${assignmentId}/student/${studentId}?user_id=${userId}`);
   }
 
@@ -432,6 +472,11 @@ export class EnglishService {
 
     if (!userId) {
       throw new Error('로그인이 필요합니다.');
+    }
+
+    const token = getToken();
+    if (!token) {
+      throw new Error('인증 토큰이 없습니다. 다시 로그인해주세요.');
     }
 
     const data = await apiRequest<any[]>(`/assignments/student/${studentId}?user_id=${userId}`);
@@ -449,6 +494,11 @@ export class EnglishService {
 
     if (!userId) {
       throw new Error('로그인이 필요합니다.');
+    }
+
+    const token = getToken();
+    if (!token) {
+      throw new Error('인증 토큰이 없습니다. 다시 로그인해주세요.');
     }
 
     const submissionData = {
@@ -475,7 +525,6 @@ export class EnglishService {
       const data = await apiRequest(`/assignments/${assignmentId}/results`);
       return data.results || [];
     } catch (error) {
-      console.error('Failed to load English assignment results:', error);
       throw error;
     }
   }
@@ -503,7 +552,6 @@ export class EnglishService {
 
       return await response.json();
     } catch (error) {
-      console.error('Failed to load English assignment result detail:', error);
       throw error;
     }
   }
@@ -516,7 +564,6 @@ export class EnglishService {
         body: JSON.stringify(reviewData || { is_reviewed: true }),
       });
     } catch (error) {
-      console.error('Failed to approve English grade:', error);
       throw error;
     }
   }
@@ -531,11 +578,17 @@ export class EnglishService {
         throw new Error('로그인이 필요합니다.');
       }
 
+      const token = getToken();
+      if (!token) {
+        throw new Error('인증 토큰이 없습니다. 다시 로그인해주세요.');
+      }
+
       // 영어 백엔드에서 지원하는 실제 엔드포인트 사용
       const response = await fetch(`${ENGLISH_API_BASE}/worksheets/${worksheetId}/start-grading`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({ user_id: userId }),
       });
@@ -546,6 +599,7 @@ export class EnglishService {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
           },
           body: JSON.stringify({ worksheet_id: worksheetId, user_id: userId }),
         });
@@ -559,7 +613,6 @@ export class EnglishService {
 
       return await response.json();
     } catch (error) {
-      console.error('Failed to start English AI grading:', error);
       throw error;
     }
   }
@@ -569,7 +622,6 @@ export class EnglishService {
     try {
       return await apiRequest(`/grading/tasks/${taskId}/status`);
     } catch (error) {
-      console.error('Failed to get English grading task status:', error);
       throw error;
     }
   }
@@ -598,7 +650,6 @@ export class EnglishService {
 
       return await response.json();
     } catch (error) {
-      console.error('Failed to update English grading session:', error);
       throw error;
     }
   }

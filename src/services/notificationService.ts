@@ -140,27 +140,23 @@ class NotificationService {
     // Uncomment the following code when notification service is implemented:
     
     const url = `${this.baseUrl}/api/notifications/stream/${userType}/${userId}`;
-    console.log('SSE 연결 시도:', url);
 
     this.eventSource = new EventSource(url);
 
     this.eventSource.onopen = () => {
-      console.log('SSE 연결 성공');
       this.reconnectAttempts = 0;
     };
 
     this.eventSource.onmessage = (event) => {
       try {
         const notification: SSENotification = JSON.parse(event.data);
-        console.log('새 알림 수신:', notification);
         this.notifyListeners(notification);
       } catch (error) {
-        console.error('알림 파싱 에러:', error);
+        // 알림 파싱 에러는 조용히 처리
       }
     };
 
     this.eventSource.onerror = (error) => {
-      console.error('SSE 연결 에러:', error);
       this.handleReconnect(userType, userId);
     };
     
@@ -170,7 +166,6 @@ class NotificationService {
     if (this.eventSource) {
       this.eventSource.close();
       this.eventSource = null;
-      console.log('SSE 연결 해제');
     }
     this.reconnectAttempts = 0;
   }
@@ -180,13 +175,9 @@ class NotificationService {
       this.reconnectAttempts++;
       const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1);
 
-      console.log(`${delay}ms 후 재연결 시도 (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
-
       setTimeout(() => {
         this.connect(userType, userId);
       }, delay);
-    } else {
-      console.error('최대 재연결 시도 횟수 초과');
     }
   }
 
@@ -219,7 +210,6 @@ class NotificationService {
       const data: StoredNotificationResponse = await response.json();
       return data.notifications;
     } catch (error) {
-      console.error('저장된 알림 조회 실패:', error);
       return [];
     }
   }
@@ -233,7 +223,6 @@ class NotificationService {
 
       return response.ok;
     } catch (error) {
-      console.error('저장된 알림 삭제 실패:', error);
       return false;
     }
   }
@@ -246,7 +235,6 @@ class NotificationService {
       );
       return response.ok;
     } catch (error) {
-      console.error(`Failed to mark notification ${notificationId} as read:`, error);
       return false;
     }
   }
@@ -259,7 +247,6 @@ class NotificationService {
       );
       return response.ok;
     } catch (error) {
-      console.error('Failed to mark all notifications as read:', error);
       return false;
     }
   }
@@ -272,7 +259,6 @@ class NotificationService {
       );
       return response.ok;
     } catch (error) {
-      console.error(`Failed to delete ${notificationType} notifications:`, error);
       return false;
     }
   }
@@ -285,7 +271,6 @@ class NotificationService {
       );
       return response.ok;
     } catch (error) {
-      console.error(`Failed to delete notification ${notificationId}:`, error);
       return false;
     }
   }
@@ -298,7 +283,6 @@ class NotificationService {
 
       return response.ok;
     } catch (error) {
-      console.error('테스트 알림 전송 실패:', error);
       return false;
     }
   }
@@ -317,7 +301,6 @@ class NotificationService {
       );
       return response.ok;
     } catch (error) {
-      console.error('문제 생성 알림 전송 실패:', error);
       return false;
     }
   }
@@ -336,7 +319,6 @@ class NotificationService {
       );
       return response.ok;
     } catch (error) {
-      console.error('문제 재생성 알림 전송 실패:', error);
       return false;
     }
   }
@@ -355,7 +337,6 @@ class NotificationService {
       );
       return response.ok;
     } catch (error) {
-      console.error('과제 제출 알림 전송 실패:', error);
       return false;
     }
   }
@@ -374,7 +355,6 @@ class NotificationService {
       );
       return response.ok;
     } catch (error) {
-      console.error('과제 배포 알림 전송 실패:', error);
       return false;
     }
   }
@@ -393,7 +373,6 @@ class NotificationService {
       );
       return response.ok;
     } catch (error) {
-      console.error('클래스 가입 요청 알림 전송 실패:', error);
       return false;
     }
   }
@@ -412,7 +391,6 @@ class NotificationService {
       );
       return response.ok;
     } catch (error) {
-      console.error('클래스 승인 알림 전송 실패:', error);
       return false;
     }
   }
@@ -431,7 +409,6 @@ class NotificationService {
       );
       return response.ok;
     } catch (error) {
-      console.error('채점 수정 알림 전송 실패:', error);
       return false;
     }
   }
@@ -450,7 +427,6 @@ class NotificationService {
       );
       return response.ok;
     } catch (error) {
-      console.error('마켓 판매 알림 전송 실패:', error);
       return false;
     }
   }
@@ -469,7 +445,6 @@ class NotificationService {
       );
       return response.ok;
     } catch (error) {
-      console.error('마켓 신상품 알림 전송 실패:', error);
       return false;
     }
   }

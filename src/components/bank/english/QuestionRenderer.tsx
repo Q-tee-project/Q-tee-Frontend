@@ -62,42 +62,40 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = ({
   onOpenRegenerateModal,
 }) => {
   return (
-    <Card className="border border-gray-200 shadow-sm">
+    <Card className="border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200">
       <CardContent className="p-6">
-        <div className="grid grid-cols-12 gap-4">
-          <div className="col-span-8">
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0">
-                <span className="inline-flex items-center justify-center w-8 h-8 bg-white/80 backdrop-blur-sm border border-[#0072CE]/30 text-[#0072CE] rounded-full text-sm font-bold">
-                  {question.question_id}
+        <div className="flex items-start gap-4">
+          <div className="flex-shrink-0">
+            <span className="inline-flex items-center justify-center w-8 h-8 bg-white/80 backdrop-blur-sm border border-[#0072CE]/30 text-[#0072CE] rounded-full text-sm font-bold">
+              {question.question_id}
+            </span>
+          </div>
+          <div className="flex-1">
+            {/* 문제 메타데이터 */}
+            <div className="flex justify-between items-start mb-3">
+              <div className="flex items-center gap-3">
+                <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-medium">
+                  {question.question_subject}
+                </span>
+                <span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs font-medium">
+                  {question.question_detail_type}
+                </span>
+                <span
+                  className={`px-2 py-1 rounded text-xs font-medium ${
+                    question.question_difficulty === '상'
+                      ? 'bg-red-100 text-red-800'
+                      : question.question_difficulty === '중'
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-purple-100 text-purple-800'
+                  }`}
+                >
+                  {question.question_difficulty}
                 </span>
               </div>
-              <div className="flex-1">
-                {/* 문제 메타데이터 */}
-                <div className="flex justify-between items-start mb-3">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                      {question.question_subject}
-                    </span>
-                    <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
-                      {question.question_detail_type}
-                    </span>
-                    <span
-                      className={`text-xs px-2 py-1 rounded ${
-                        question.question_difficulty === '상'
-                          ? 'bg-red-100 text-red-800'
-                          : question.question_difficulty === '중'
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : 'bg-gray-100 text-gray-800'
-                      }`}
-                    >
-                      {question.question_difficulty}
-                    </span>
-                  </div>
-                  {editingQuestionId === question.question_id ? (
-                    <div className="flex gap-2">
-                      <Button
-                        onClick={onSave}
+              {editingQuestionId === question.question_id ? (
+                <div className="flex gap-2">
+                  <Button
+                    onClick={onSave}
                         disabled={isLoading}
                         size="sm"
                         className="bg-green-600 hover:bg-green-700"
@@ -363,19 +361,23 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                     {(showAnswerSheet
                       ? question.example_original_content
                       : question.example_content) && (
-                      <div className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
-                        <div className="text-sm font-semibold text-gray-700 mb-2">📝 예문</div>
-                        <EnglishContentRenderer
-                          content={
-                            showAnswerSheet
-                              ? question.example_original_content
-                              : question.example_content
-                          }
-                          className="text-gray-800 leading-relaxed"
-                        />
+                      <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                        <div className="flex items-center gap-2 mb-3">
+                          <span className="text-sm font-semibold text-gray-700">📝 예문</span>
+                        </div>
+                        <div className="text-sm leading-relaxed text-gray-800">
+                          <EnglishContentRenderer
+                            content={
+                              showAnswerSheet
+                                ? question.example_original_content
+                                : question.example_content
+                            }
+                            className="text-gray-800 leading-relaxed"
+                          />
+                        </div>
                         {/* 정답지 모드일 때만 한글 번역 표시 */}
                         {showAnswerSheet && question.example_korean_translation && (
-                          <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                          <div className="mt-3 pt-3 border-t border-gray-300">
                             <div className="text-sm font-medium text-green-700 mb-1">
                               🇰🇷 한글 번역
                             </div>
@@ -425,46 +427,58 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                     })}
                   </div>
                 )}
-              </div>
-            </div>
-          </div>
 
-          {/* 정답 및 해설 영역 - 오른쪽 컬럼 */}
-          <div className="col-span-4">
-            {showAnswerSheet && (
-              <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
-                {/* 주관식 문제인 경우 정답 표시 */}
-                {question.question_type === '단답형' ||
-                  (question.question_type === '서술형' && (
-                    <div className="mb-3 p-3 bg-green-100 border border-green-300 rounded-lg">
-                      <div className="text-sm font-semibold text-green-800 mb-1">✓ 정답:</div>
-                      <div className="text-sm text-green-900 font-medium">
-                        {question.correct_answer || '정답 정보가 없습니다'}
-                      </div>
+                {/* 정답 및 해설 (객관식) */}
+                {question.question_choices && question.question_choices.length > 0 && showAnswerSheet && (
+                  <div className="mt-4 ml-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-sm font-semibold text-blue-800">해설:</span>
                     </div>
-                  ))}
-
-                {/* 객관식 정답 표시 */}
-                {question.question_type === '객관식' && (
-                  <div className="text-sm font-semibold text-gray-700 mb-2">
-                    정답: {question.correct_answer}번
+                    <div className="text-sm text-blue-800 mb-3">
+                      {question.explanation || '해설 정보가 없습니다'}
+                    </div>
+                    {question.learning_point && (
+                      <>
+                        <div className="text-sm font-semibold text-blue-800 mb-2">💡 학습 포인트:</div>
+                        <div className="text-sm text-blue-800">{question.learning_point}</div>
+                      </>
+                    )}
                   </div>
                 )}
 
-                <div className="text-sm font-semibold text-blue-800 mb-2">해설:</div>
-                <div className="text-sm text-blue-800 mb-3">
-                  {question.explanation || '해설 정보가 없습니다'}
-                </div>
-                {question.learning_point && (
-                  <>
-                    <div className="text-sm font-semibold text-blue-800 mb-2">💡 학습 포인트:</div>
-                    <div className="text-sm text-blue-800">{question.learning_point}</div>
-                  </>
+                {/* 단답형/서술형 답안 및 해설 */}
+                {(!question.question_choices || question.question_choices.length === 0) && (
+                  <div className="mt-4 ml-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-700">답:</span>
+                      {showAnswerSheet ? (
+                        <div className="bg-green-100 border border-green-300 rounded px-3 py-2 text-green-800 font-medium">
+                          {question.correct_answer || '답안 정보가 없습니다'}
+                        </div>
+                      ) : (
+                        <div className="border-b-2 border-gray-300 flex-1 h-8"></div>
+                      )}
+                    </div>
+                    {showAnswerSheet && (
+                      <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-sm font-semibold text-blue-800">해설:</span>
+                        </div>
+                        <div className="text-sm text-blue-800 mb-3">
+                          {question.explanation || '해설 정보가 없습니다'}
+                        </div>
+                        {question.learning_point && (
+                          <>
+                            <div className="text-sm font-semibold text-blue-800 mb-2">💡 학습 포인트:</div>
+                            <div className="text-sm text-blue-800">{question.learning_point}</div>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
-            )}
-          </div>
-        </div>
+            </div>
       </CardContent>
     </Card>
   );

@@ -49,6 +49,7 @@ export function AssignmentList({
   const [classStudents, setClassStudents] = useState<any[]>([]);
   const [isLoadingStudents, setIsLoadingStudents] = useState(false);
   const [assignmentResults, setAssignmentResults] = useState<{ [key: number]: any[] }>({});
+  const [loadingAssignments, setLoadingAssignments] = useState<{ [key: number]: boolean }>({});
 
   // 클래스 학생 정보 로드
   useEffect(() => {
@@ -70,57 +71,55 @@ export function AssignmentList({
     }
   }, [classId]);
 
-  // 과제별 결과 로드 함수
-  const loadAssignmentResults = async () => {
-    const results: { [key: number]: any[] } = {};
+  // 단일 과제 결과 로드 함수 (지연 로딩)
+  const loadSingleAssignmentResult = async (assignment: any) => {
+    // 이미 로드 중이거나 로드된 경우 스킵
+    if (loadingAssignments[assignment.id] || assignmentResults[assignment.id]) {
+      return;
+    }
 
-    for (const assignment of assignments) {
-      try {
-        let assignmentResultData;
-        const isKorean =
-          assignment.question_type !== undefined || assignment.korean_type !== undefined;
-        const isEnglish = assignment.problem_type !== undefined && !isKorean;
+    setLoadingAssignments(prev => ({ ...prev, [assignment.id]: true }));
 
-        if (isKorean) {
-          assignmentResultData = await koreanService.getAssignmentResults(assignment.id);
-        } else if (isEnglish) {
-          assignmentResultData = await EnglishService.getEnglishAssignmentResults(assignment.id);
-          // 영어는 네트워크에서 받은 원본 데이터 그대로 사용 (변환하지 않음)
-        } else {
-          assignmentResultData = await mathService.getAssignmentResults(assignment.id);
-        }
+    try {
+      let assignmentResultData;
+      const isKorean =
+        assignment.question_type !== undefined || assignment.korean_type !== undefined;
+      const isEnglish = assignment.problem_type !== undefined && !isKorean;
 
-        // API 응답이 배열인지 확인하고 안전하게 처리
-        if (Array.isArray(assignmentResultData)) {
-          results[assignment.id] = assignmentResultData;
-        } else if (
-          assignmentResultData &&
-          typeof assignmentResultData === 'object' &&
-          'results' in assignmentResultData
-        ) {
-          results[assignment.id] = (assignmentResultData as any).results || [];
-        } else {
-          results[assignment.id] = [];
-        }
-      } catch (error) {
-        console.error(`Failed to load results for assignment ${assignment.id}:`, error);
-        results[assignment.id] = [];
+      if (isKorean) {
+        assignmentResultData = await koreanService.getAssignmentResults(assignment.id);
+      } else if (isEnglish) {
+        assignmentResultData = await EnglishService.getEnglishAssignmentResults(assignment.id);
+        // 영어는 네트워크에서 받은 원본 데이터 그대로 사용 (변환하지 않음)
+      } else {
+        assignmentResultData = await mathService.getAssignmentResults(assignment.id);
       }
-    }
 
-    setAssignmentResults(results);
+      // API 응답이 배열인지 확인하고 안전하게 처리
+      let results = [];
+      if (Array.isArray(assignmentResultData)) {
+        results = assignmentResultData;
+      } else if (
+        assignmentResultData &&
+        typeof assignmentResultData === 'object' &&
+        'results' in assignmentResultData
+      ) {
+        results = (assignmentResultData as any).results || [];
+      }
+
+      setAssignmentResults(prev => ({ ...prev, [assignment.id]: results }));
+    } catch (error) {
+      console.error(`Failed to load results for assignment ${assignment.id}:`, error);
+      setAssignmentResults(prev => ({ ...prev, [assignment.id]: [] }));
+    } finally {
+      setLoadingAssignments(prev => ({ ...prev, [assignment.id]: false }));
+    }
   };
-
-  // 과제별 결과 로드 (학생 정보가 로드된 후에)
-  useEffect(() => {
-    if (assignments.length > 0 && classStudents.length > 0) {
-      loadAssignmentResults();
-    }
-  }, [assignments, classStudents]);
 
   // 과목 변경 시 결과 초기화
   useEffect(() => {
     setAssignmentResults({});
+    setLoadingAssignments({});
   }, [subject]);
 
   if (assignments.length === 0) {
@@ -129,9 +128,24 @@ export function AssignmentList({
 
   return (
     <div className="flex flex-col gap-4">
-      <Accordion type="single" collapsible className="w-full">
+      <Accordion 
+        type="single" 
+        collapsible 
+        className="w-full"
+        onValueChange={(value) => {
+          // Accordion이 열릴 때 해당 과제의 결과 로드
+          if (value) {
+            const assignmentId = parseInt(value.replace('assignment-', ''));
+            const assignment = assignments.find(a => a.id === assignmentId);
+            if (assignment && classStudents.length > 0) {
+              loadSingleAssignmentResult(assignment);
+            }
+          }
+        }}
+      >
         {assignments.map((assignment) => {
           const results = assignmentResults[assignment.id] || [];
+          const isLoadingThisAssignment = loadingAssignments[assignment.id];
 
           return (
             <AccordionItem
@@ -218,7 +232,15 @@ export function AssignmentList({
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {isLoadingStudents ? (
+                        {isLoadingThisAssignment ? (
+                          <TableRow>
+                            <TableCell colSpan={9} className="text-center py-8">
+                              <span className="text-sm text-[#666666]">
+                                과제 결과를 불러오는 중...
+                              </span>
+                            </TableCell>
+                          </TableRow>
+                        ) : isLoadingStudents ? (
                           <TableRow>
                             <TableCell colSpan={9} className="text-center py-8">
                               <span className="text-sm text-[#666666]">

@@ -24,7 +24,7 @@ interface StudentManagementCardProps {
   students: Record<string, StudentData[]>;
   selectedStudents: number[];
   handleStudentSelect: (studentId: number) => void;
-  setStudentColorMap: React.Dispatch<React.SetStateAction<Record<number, string>>>;
+  setStudentColorMap: (colorMap: Record<number, string>) => void;
   studentColors: string[];
   getStudentColor: (studentId: number) => string | null;
 }
@@ -185,9 +185,9 @@ const StudentManagementCard = React.memo(({
               <div className="flex-1 p-4 pt-3 overflow-y-auto">
                 {currentClassStudents && currentClassStudents.length > 0 ? (
                   <div className="space-y-3">
-                    {currentClassStudents
-                      ?.sort((a, b) => a.id - b.id)
-                      ?.map((student, index) => {
+                    {[...(currentClassStudents || [])]
+                      .sort((a, b) => a.id - b.id)
+                      .map((student, index) => {
                         const isSelected = selectedStudents.includes(student.id);
                         const canSelect = !isSelected && selectedStudents.length < 3;
 
