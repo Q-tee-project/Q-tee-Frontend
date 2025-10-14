@@ -55,8 +55,8 @@ export function StudentResultList({
                   ? ` (${taskProgress.info.current}%)`
                   : '')
               : subject === 'english'
-              ? 'AI 채점 시작'
-              : 'OCR + AI 채점 시작'}
+              ? 'AI 채점 재시작'
+              : 'OCR 채점 재시작'}
           </Button>
         </div>
       )}

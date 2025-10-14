@@ -110,6 +110,10 @@ export const useKoreanGeneration = () => {
             explanation: problem.explanation,
             question: problem.question,
             choices: problem.choices,
+            difficulty: problem.difficulty, // 난이도 필드 추가
+            problem_type: problem.problem_type, // 문제 유형 필드 추가
+            question_type: problem.question_type, // 질문 유형 필드 추가
+            korean_type: problem.korean_type, // 국어 유형 필드 추가
             backendId: problem.id, // 백엔드 ID는 별도 저장
             source_text: problem.source_text, // 지문 텍스트
             source_title: problem.source_title, // 지문 제목

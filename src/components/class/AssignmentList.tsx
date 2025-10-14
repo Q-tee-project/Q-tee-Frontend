@@ -71,50 +71,65 @@ export function AssignmentList({
     }
   }, [classId]);
 
-  // 단일 과제 결과 로드 함수 (지연 로딩)
-  const loadSingleAssignmentResult = async (assignment: any) => {
-    // 이미 로드 중이거나 로드된 경우 스킵
-    if (loadingAssignments[assignment.id] || assignmentResults[assignment.id]) {
-      return;
-    }
-
-    setLoadingAssignments(prev => ({ ...prev, [assignment.id]: true }));
-
-    try {
-      let assignmentResultData;
-      const isKorean =
-        assignment.question_type !== undefined || assignment.korean_type !== undefined;
-      const isEnglish = assignment.problem_type !== undefined && !isKorean;
-
-      if (isKorean) {
-        assignmentResultData = await koreanService.getAssignmentResults(assignment.id);
-      } else if (isEnglish) {
-        assignmentResultData = await EnglishService.getEnglishAssignmentResults(assignment.id);
-        // 영어는 네트워크에서 받은 원본 데이터 그대로 사용 (변환하지 않음)
-      } else {
-        assignmentResultData = await mathService.getAssignmentResults(assignment.id);
+  // 모든 과제 결과 한 번에 로드
+  useEffect(() => {
+    const loadAllAssignmentResults = async () => {
+      if (!assignments || assignments.length === 0) {
+        return;
       }
 
-      // API 응답이 배열인지 확인하고 안전하게 처리
-      let results = [];
-      if (Array.isArray(assignmentResultData)) {
-        results = assignmentResultData;
-      } else if (
-        assignmentResultData &&
-        typeof assignmentResultData === 'object' &&
-        'results' in assignmentResultData
-      ) {
-        results = (assignmentResultData as any).results || [];
-      }
+      setLoadingAssignments(
+        assignments.reduce((acc, a) => ({ ...acc, [a.id]: true }), {}),
+      );
 
-      setAssignmentResults(prev => ({ ...prev, [assignment.id]: results }));
-    } catch (error) {
-      console.error(`Failed to load results for assignment ${assignment.id}:`, error);
-      setAssignmentResults(prev => ({ ...prev, [assignment.id]: [] }));
-    } finally {
-      setLoadingAssignments(prev => ({ ...prev, [assignment.id]: false }));
-    }
-  };
+      try {
+        const resultsPromises = assignments.map(async (assignment) => {
+          try {
+            const isKorean =
+              assignment.question_type !== undefined || assignment.korean_type !== undefined;
+            const isEnglish = assignment.problem_type !== undefined && !isKorean;
+
+            let assignmentResultData;
+            if (isKorean) {
+              assignmentResultData = await koreanService.getAssignmentResults(assignment.id);
+            } else if (isEnglish) {
+              assignmentResultData = await EnglishService.getEnglishAssignmentResults(assignment.id);
+            } else {
+              assignmentResultData = await mathService.getAssignmentResults(assignment.id);
+            }
+
+            let results = [];
+            if (Array.isArray(assignmentResultData)) {
+              results = assignmentResultData;
+            } else if (
+              assignmentResultData &&
+              typeof assignmentResultData === 'object' &&
+              'results' in assignmentResultData
+            ) {
+              results = (assignmentResultData as any).results || [];
+            }
+            return { assignmentId: assignment.id, results };
+          } catch (error) {
+            console.error(`Failed to load results for assignment ${assignment.id}:`, error);
+            return { assignmentId: assignment.id, results: [] };
+          }
+        });
+
+        const allResults = await Promise.all(resultsPromises);
+
+        setAssignmentResults(
+          allResults.reduce(
+            (acc, res) => ({ ...acc, [res.assignmentId]: res.results }),
+            {},
+          ),
+        );
+      } finally {
+        setLoadingAssignments({});
+      }
+    };
+
+    loadAllAssignmentResults();
+  }, [assignments]);
 
   // 과목 변경 시 결과 초기화
   useEffect(() => {
@@ -132,16 +147,6 @@ export function AssignmentList({
         type="single" 
         collapsible 
         className="w-full"
-        onValueChange={(value) => {
-          // Accordion이 열릴 때 해당 과제의 결과 로드
-          if (value) {
-            const assignmentId = parseInt(value.replace('assignment-', ''));
-            const assignment = assignments.find(a => a.id === assignmentId);
-            if (assignment && classStudents.length > 0) {
-              loadSingleAssignmentResult(assignment);
-            }
-          }
-        }}
       >
         {assignments.map((assignment) => {
           const results = assignmentResults[assignment.id] || [];
@@ -214,9 +219,6 @@ export function AssignmentList({
                           </TableHead>
                           <TableHead className="font-semibold text-center border-b border-[#666666] text-base text-[#666666] p-3 w-[8%]">
                             점수
-                          </TableHead>
-                          <TableHead className="font-semibold text-center border-b border-[#666666] text-base text-[#666666] p-3 w-[10%]">
-                            소요 시간
                           </TableHead>
                           <TableHead className="font-semibold text-center border-b border-[#666666] text-base text-[#666666] p-3 w-[12%]">
                             완료일시
@@ -331,8 +333,6 @@ export function AssignmentList({
                                 ? studentResult.score || studentResult.total_score
                                 : null;
 
-                              // 소요 시간 계산 (임시로 설정)
-                              const duration = hasSubmitted ? '정보없음' : null;
                               const completedAt =
                                 hasSubmitted &&
                                 (studentResult.completed_at || studentResult.submitted_at)
@@ -384,9 +384,6 @@ export function AssignmentList({
                                         ? `${score}점`
                                         : '0점'}
                                     </span>
-                                  </TableCell>
-                                  <TableCell className="text-center text-sm text-[#666666] p-3">
-                                    {hasSubmitted && duration ? duration : '-'}
                                   </TableCell>
                                   <TableCell className="text-center text-sm text-[#666666] p-3">
                                     {hasSubmitted && completedAt ? completedAt : '-'}

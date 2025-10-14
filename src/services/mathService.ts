@@ -132,7 +132,7 @@ export const mathService = {
   },
 
   submitTest: async (sessionId: string, answers: any): Promise<any> => {
-    return apiRequest(`/api/test-sessions/test-sessions/${sessionId}/submit`, {
+    return apiRequest(`/api/test-sessions/${sessionId}/submit`, {
       method: 'POST',
       body: JSON.stringify({ answers }),
     });
@@ -194,7 +194,7 @@ export const mathService = {
       formData.append('handwriting_image', handwritingImage);
     }
 
-    return apiRequest(`/api/test-sessions/test-sessions/${sessionId}/answers/ocr`, {
+    return apiRequest(`/api/test-sessions/${sessionId}/answers/ocr`, {
       method: 'POST',
       headers: {},
       body: formData,

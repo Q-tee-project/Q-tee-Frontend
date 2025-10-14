@@ -216,22 +216,12 @@ export function KoreanTestInterface({
           </Button>
 
           <div className="flex items-center gap-3">
-            {currentProblemIndex === worksheetProblems.length - 1 ? (
-              <Button
-                onClick={onSubmitTest}
-                disabled={isSubmitting || Object.keys(answers).length < worksheetProblems.length}
-                className="bg-red-600 hover:bg-red-700 text-white disabled:bg-gray-400"
-              >
-                {isSubmitting ? '제출 중...' : Object.keys(answers).length < worksheetProblems.length ? `과제 제출 (${Object.keys(answers).length}/${worksheetProblems.length})` : '과제 제출'}
-              </Button>
-            ) : (
-              <Button
-                onClick={onNextProblem}
-                disabled={currentProblemIndex === worksheetProblems.length - 1}
-              >
-                다음 문제
-              </Button>
-            )}
+            <Button
+              onClick={onNextProblem}
+              disabled={currentProblemIndex === worksheetProblems.length - 1}
+            >
+              다음 문제
+            </Button>
           </div>
         </div>
       </div>
