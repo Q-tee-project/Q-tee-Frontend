@@ -26,7 +26,12 @@ import {
 } from '@/store/slices/dashboardSlice';
 
 import TabNavigation from '@/components/dashboard/TabNavigation';
-import { preloadStaticData, preloadUserData, getCachedData, createCacheKey } from '@/utils/preloadData';
+import {
+  preloadStaticData,
+  preloadUserData,
+  getCachedData,
+  createCacheKey,
+} from '@/utils/preloadData';
 
 const MarketManagementTab = React.lazy(() => import('@/components/dashboard/MarketManagementTab'));
 const ClassManagementTab = React.lazy(() => import('@/components/dashboard/ClassManagementTab'));
@@ -63,7 +68,7 @@ const TeacherDashboardContent = React.memo(() => {
     const cachedColors = getCachedData<string[]>(createCacheKey('static', 'studentColors'));
     return cachedColors || ['#22c55e', '#a855f7', '#eab308'];
   }, []);
-  
+
   const getStudentColor = useCallback(
     (studentId: number): string | null => {
       return state.studentColorMap[studentId] || null;
@@ -78,9 +83,12 @@ const TeacherDashboardContent = React.memo(() => {
       .slice(0, 2);
   }, [state.marketProducts]);
 
-  const handleTabChange = useCallback((tab: string) => {
-    dispatch(setSelectedTab(tab));
-  }, [dispatch]);
+  const handleTabChange = useCallback(
+    (tab: string) => {
+      dispatch(setSelectedTab(tab));
+    },
+    [dispatch],
+  );
 
   const handleMarketRefresh = useCallback(() => {
     dispatch(loadMarketStats());
@@ -91,53 +99,64 @@ const TeacherDashboardContent = React.memo(() => {
     dispatch(refreshAll());
   }, [dispatch]);
 
-  const handleStudentSelect = React.useCallback((studentId: number) => {
-    if (studentId === -1) {
-      dispatch(setStudentColorMap({}));
-      dispatch(setSelectedStudents([]));
-      return;
-    }
-    
-    const prev = state.selectedStudents;
-    if (prev.includes(studentId)) {
-      const newColorMap = { ...state.studentColorMap };
-      delete newColorMap[studentId];
-      dispatch(setStudentColorMap(newColorMap));
-      dispatch(setSelectedStudents(prev.filter((id) => id !== studentId)));
-    } else if (prev.length < 3) {
-      const usedColors = Object.values(state.studentColorMap);
-      const availableColors = studentColors.filter((color: string) => !usedColors.includes(color));
-      const assignedColor =
-        availableColors[0] || studentColors[prev.length % studentColors.length];
+  const handleStudentSelect = React.useCallback(
+    (studentId: number) => {
+      if (studentId === -1) {
+        dispatch(setStudentColorMap({}));
+        dispatch(setSelectedStudents([]));
+        return;
+      }
 
-      const newColorMap = {
-        ...state.studentColorMap,
-        [studentId]: assignedColor,
-      };
-      dispatch(setStudentColorMap(newColorMap));
-      dispatch(setSelectedStudents([...prev, studentId]));
-    }
-  }, [state.selectedStudents, state.studentColorMap, dispatch, studentColors]);
+      const prev = state.selectedStudents;
+      if (prev.includes(studentId)) {
+        const newColorMap = { ...state.studentColorMap };
+        delete newColorMap[studentId];
+        dispatch(setStudentColorMap(newColorMap));
+        dispatch(setSelectedStudents(prev.filter((id) => id !== studentId)));
+      } else if (prev.length < 3) {
+        const usedColors = Object.values(state.studentColorMap);
+        const availableColors = studentColors.filter(
+          (color: string) => !usedColors.includes(color),
+        );
+        const assignedColor =
+          availableColors[0] || studentColors[prev.length % studentColors.length];
 
-  const handleAssignmentSelect = React.useCallback((assignmentId: string) => {
-    const prev = state.selectedAssignments;
-    if (prev.includes(assignmentId)) {
-      dispatch(setSelectedAssignments(prev.filter((id) => id !== assignmentId)));
-    } else if (prev.length < 7) {
-      dispatch(setSelectedAssignments([...prev, assignmentId]));
-    }
-  }, [state.selectedAssignments, dispatch]);
+        const newColorMap = {
+          ...state.studentColorMap,
+          [studentId]: assignedColor,
+        };
+        dispatch(setStudentColorMap(newColorMap));
+        dispatch(setSelectedStudents([...prev, studentId]));
+      }
+    },
+    [state.selectedStudents, state.studentColorMap, dispatch, studentColors],
+  );
 
-  const handleProductSelect = React.useCallback((productId: number) => {
-    const prev = state.selectedProducts;
-    if (productId === -1) {
-      dispatch(setSelectedProducts([]));
-    } else if (prev.includes(productId)) {
-      dispatch(setSelectedProducts(prev.filter((id) => id !== productId)));
-    } else if (prev.length < 2) {
-      dispatch(setSelectedProducts([...prev, productId]));
-    }
-  }, [state.selectedProducts, dispatch]);
+  const handleAssignmentSelect = React.useCallback(
+    (assignmentId: string) => {
+      const prev = state.selectedAssignments;
+      if (prev.includes(assignmentId)) {
+        dispatch(setSelectedAssignments(prev.filter((id) => id !== assignmentId)));
+      } else if (prev.length < 7) {
+        dispatch(setSelectedAssignments([...prev, assignmentId]));
+      }
+    },
+    [state.selectedAssignments, dispatch],
+  );
+
+  const handleProductSelect = React.useCallback(
+    (productId: number) => {
+      const prev = state.selectedProducts;
+      if (productId === -1) {
+        dispatch(setSelectedProducts([]));
+      } else if (prev.includes(productId)) {
+        dispatch(setSelectedProducts(prev.filter((id) => id !== productId)));
+      } else if (prev.length < 2) {
+        dispatch(setSelectedProducts([...prev, productId]));
+      }
+    },
+    [state.selectedProducts, dispatch],
+  );
 
   // 데이터 초기화 최적화 (배치 처리)
   useEffect(() => {
@@ -150,7 +169,7 @@ const TeacherDashboardContent = React.memo(() => {
 
       // 클래스 로드 후 통계 로드
       const classesPromise = dispatch(loadClasses());
-      
+
       // 마켓 데이터를 병렬로 로드
       const marketPromises = Promise.allSettled([
         dispatch(loadMarketStats()),
@@ -201,51 +220,58 @@ const TeacherDashboardContent = React.memo(() => {
     }
   }, [state.selectedClass, dispatch, state.classes.length]);
 
-  const ErrorAlert = React.memo(({ errorKey, message, onRemove }: { 
-    errorKey: string; 
-    message: string; 
-    onRemove: (key: string) => void;
-  }) => (
-    <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center">
-          <div className="flex-shrink-0">
-            <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+  const ErrorAlert = React.memo(
+    ({
+      errorKey,
+      message,
+      onRemove,
+    }: {
+      errorKey: string;
+      message: string;
+      onRemove: (key: string) => void;
+    }) => (
+      <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                <path
+                  fillRule="evenodd"
+                  d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-yellow-800">
+                {errorKey === 'classes' && '클래스 정보 로딩 중'}
+                {errorKey === 'assignments' && '과제 정보 로딩 중'}
+                {errorKey === 'market' && '마켓 정보 로딩 중'}
+              </h3>
+              <p className="mt-1 text-sm text-yellow-700">
+                {errorKey === 'classes' && '일부 서비스가 연결되지 않아 기본 정보만 표시됩니다.'}
+                {errorKey === 'assignments' &&
+                  '과제 서비스 연결 중입니다. 잠시 후 다시 시도해주세요.'}
+                {errorKey === 'market' && '마켓 서비스 연결 중입니다. 잠시 후 다시 시도해주세요.'}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => onRemove(errorKey)}
+            className="text-yellow-400 hover:text-yellow-600"
+          >
+            <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
               <path
                 fillRule="evenodd"
-                d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
                 clipRule="evenodd"
               />
             </svg>
-          </div>
-          <div className="ml-3">
-            <h3 className="text-sm font-medium text-yellow-800">
-              {errorKey === 'classes' && '클래스 정보 로딩 중'}
-              {errorKey === 'assignments' && '과제 정보 로딩 중'}
-              {errorKey === 'market' && '마켓 정보 로딩 중'}
-            </h3>
-            <p className="mt-1 text-sm text-yellow-700">
-              {errorKey === 'classes' && '일부 서비스가 연결되지 않아 기본 정보만 표시됩니다.'}
-              {errorKey === 'assignments' && '과제 서비스 연결 중입니다. 잠시 후 다시 시도해주세요.'}
-              {errorKey === 'market' && '마켓 서비스 연결 중입니다. 잠시 후 다시 시도해주세요.'}
-            </p>
-          </div>
+          </button>
         </div>
-        <button
-          onClick={() => onRemove(errorKey)}
-          className="text-yellow-400 hover:text-yellow-600"
-        >
-          <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-            <path
-              fillRule="evenodd"
-              d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-              clipRule="evenodd"
-            />
-          </svg>
-        </button>
       </div>
-    </div>
-  ));
+    ),
+  );
 
   return (
     <div className="flex flex-col min-h-screen p-5 space-y-6">
@@ -260,15 +286,15 @@ const TeacherDashboardContent = React.memo(() => {
         <ErrorAlert
           key={errorKey}
           errorKey={errorKey}
-          message={state.errorMessages[errorKey] || `알 수 없는 오류가 발생했습니다. (에러 키: ${errorKey})`}
+          message={
+            state.errorMessages[errorKey] ||
+            `알 수 없는 오류가 발생했습니다. (에러 키: ${errorKey})`
+          }
           onRemove={(key) => dispatch(removeApiError(key))}
         />
       ))}
 
-      <TabNavigation 
-        selectedTab={state.selectedTab} 
-        setSelectedTab={handleTabChange} 
-      />
+      <TabNavigation selectedTab={state.selectedTab} setSelectedTab={handleTabChange} />
 
       {state.selectedTab === '마켓 관리' && (
         <Suspense fallback={<QuickLoadingFallback />}>

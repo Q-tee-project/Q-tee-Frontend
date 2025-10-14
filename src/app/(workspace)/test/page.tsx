@@ -561,7 +561,14 @@ function TestPageContent() {
         setError('과제에 문제가 없습니다. 선생님에게 문의하세요.');
       }
 
-      setWorksheetProblems(problems);
+      // sequence_order 순서대로 정렬
+      const sortedProblems = [...problems].sort((a, b) => {
+        const orderA = a.sequence_order || 0;
+        const orderB = b.sequence_order || 0;
+        return orderA - orderB;
+      });
+
+      setWorksheetProblems(sortedProblems);
     } catch (error: any) {}
   };
 
@@ -956,7 +963,7 @@ function TestPageContent() {
           <AssignmentList
             worksheets={filteredWorksheets as Worksheet[]}
             selectedWorksheet={selectedWorksheet as Worksheet}
-            worksheetProblems={worksheetProblems as MathProblem[]}
+            worksheetProblems={(selectedSubject === '국어' ? worksheetProblems.map(p => ({...p, problem_type: (p as any).problem_type || (p as any).korean_type})) : worksheetProblems) as MathProblem[]}
             worksheetEnglishProblems={
               selectedSubject === '영어' ? (worksheetProblems as any[]) : []
             }

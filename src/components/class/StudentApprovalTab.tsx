@@ -121,22 +121,7 @@ export function ApprovalTab({ classId, onStudentApproved }: ApprovalTabProps) {
         <h3 className="text-lg font-semibold text-gray-800">
           승인 대기 목록 ({pendingRequests.length})
         </h3>
-        <div className="flex gap-2">
-          <button
-            onClick={() => handleBatchApproval('approve')}
-            disabled={!selectedApprovals.some(selected => selected)}
-            className="flex items-center gap-2 px-4 py-2 bg-[#ffffff] text-[#000000] border border-[#000000] rounded-md hover:bg-[#f0f0f0] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            일괄 승인
-          </button>
-          <button
-            onClick={() => handleBatchApproval('reject')}
-            disabled={!selectedApprovals.some(selected => selected)}
-            className="flex items-center gap-2 px-4 py-2 bg-[#ffffff] text-[#000000] border border-[#000000] rounded-md hover:bg-[#f0f0f0] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            일괄 거절
-          </button>
-        </div>
+
       </div>
 
       {/* 에러 메시지 */}

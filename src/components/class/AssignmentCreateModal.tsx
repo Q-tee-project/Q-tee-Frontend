@@ -130,8 +130,8 @@ export function AssignmentCreateModal({
 
   const subjectTabs = [
     { id: 'korean' as const, label: '국어' },
-    { id: 'math' as const, label: '수학' },
     { id: 'english' as const, label: '영어' },
+    { id: 'math' as const, label: '수학' },
   ];
 
   return (
@@ -142,12 +142,7 @@ export function AssignmentCreateModal({
             <DialogTitle className="flex items-center gap-2">
               과제 생성
             </DialogTitle>
-            <button
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 bg-none border-none cursor-pointer p-0 w-6 h-6 flex items-center justify-center"
-            >
-              <IoIosClose />
-            </button>
+
           </div>
         </DialogHeader>
 
@@ -197,16 +192,12 @@ export function AssignmentCreateModal({
                       </TableHead>
                       <TableHead>제목</TableHead>
                       <TableHead>학교/학년</TableHead>
-                      {activeSubject !== 'english' && (
+                      {activeSubject === 'math' && (
                         <TableHead>단원</TableHead>
                       )}
-                      {
-                        activeSubject === 'english' && (
-                          <TableHead>문제유형</TableHead>
-                        )
-                      }
-                      <TableHead>문제수</TableHead>
-                      <TableHead>생성일</TableHead>
+                      {(activeSubject === 'english' || activeSubject === 'korean') && (
+                        <TableHead>문제유형</TableHead>
+                      )}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -228,39 +219,41 @@ export function AssignmentCreateModal({
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <Badge
-                              className={`text-sm border-none px-3 py-1.5 min-w-[60px] text-center ${
+                              className={`text-sm border-none px-3 py-1.5 text-center ${
                                 (worksheet as any).school_level === '중학교' 
                                   ? 'bg-[#E6F3FF] text-[#0085FF]' 
                                   : 'bg-[#FFF5E9] text-[#FF9F2D]'
                               }`}
                             >
-                              {(worksheet as any).school_level || '중학교'}
+                              {((worksheet as any).school_level || '중학교').charAt(0)}
                             </Badge>
-                            <Badge className="text-sm border-none px-3 py-1.5 min-w-[60px] text-center bg-[#f5f5f5] text-[#999999]">
-                              {(worksheet as any).grade || 1}학년
+                            <Badge className="text-sm border-none px-3 py-1.5 text-center bg-[#f5f5f5] text-[#999999]">
+                              {(worksheet as any).grade || 1}
                             </Badge>
                           </div>
                         </TableCell>
-                        <TableCell>
-                          <div className="text-sm">
-                            <div className="font-medium">
-                              {activeSubject === 'english' ? (worksheet as EnglishWorksheet).problem_type || 'N/A' : (worksheet as any).unit_name || 'N/A'}
+                        {activeSubject === 'math' && (
+                          <TableCell>
+                            <div className="text-sm">
+                              <div className="font-medium">{(worksheet as any).unit_name || 'N/A'}</div>
+                              <div className="text-gray-500">{(worksheet as any).chapter_name || 'N/A'}</div>
                             </div>
-                            {
-                              activeSubject !== 'english' && (
-                                <div className="text-gray-500">{(worksheet as any).chapter_name || 'N/A'}</div>
-                              )
-                            }
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge className="text-sm border-none px-3 py-1.5 min-w-[60px] text-center bg-[#f5f5f5] text-[#999999]">
-                            {activeSubject === 'english' ? (worksheet as EnglishWorksheet).total_questions : (worksheet as any).problem_count}문제
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-sm text-gray-600">
-                          {new Date((worksheet as any).created_at).toLocaleDateString('ko-KR')}
-                        </TableCell>
+                          </TableCell>
+                        )}
+                        {activeSubject === 'english' && (
+                          <TableCell>
+                            <div className="text-sm">
+                              <div className="font-medium">{(worksheet as EnglishWorksheet).problem_type || 'N/A'}</div>
+                            </div>
+                          </TableCell>
+                        )}
+                        {activeSubject === 'korean' && (
+                          <TableCell>
+                            <div className="text-sm">
+                              <div className="font-medium">{(worksheet as KoreanWorksheet).korean_type || 'N/A'}</div>
+                            </div>
+                          </TableCell>
+                        )}
                       </TableRow>
                       );
                     })}
