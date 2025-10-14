@@ -88,6 +88,9 @@ export const LaTeXRenderer: React.FC<LaTeXRendererProps> = ({
     text = text.replace(/\\n/g, '<br />'); // AI가 생성한 literal '\n' 처리
     text = text.replace(/\n/g, '<br />'); // 일반 개행 문자 처리
 
+    // Markdown bold 패턴 처리 (**텍스트** -> <strong>텍스트</strong>)
+    text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+
     return text;
   };
 
