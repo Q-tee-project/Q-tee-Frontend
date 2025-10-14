@@ -47,7 +47,7 @@ export interface DashboardState {
   studentColorMap: Record<number, string>;
   isAssignmentModalOpen: boolean;
   isRefreshing: boolean;
-  
+
   // 데이터 상태
   classes: ClassData[];
   students: Record<string, StudentData[]>;
@@ -56,7 +56,7 @@ export interface DashboardState {
   marketStats: MarketStats | null;
   marketProducts: MarketProduct[];
   selectedProducts: number[];
-  
+
   // 로딩 상태
   isLoadingClasses: boolean;
   isLoadingStudents: boolean;
@@ -64,11 +64,11 @@ export interface DashboardState {
   isLoadingStats: boolean;
   isLoadingMarketStats: boolean;
   isLoadingProducts: boolean;
-  
+
   // 에러 상태
   apiErrors: string[];
   errorMessages: Record<string, string>;
-  
+
   // 동기화 시간 (ISO 문자열로 저장)
   lastSyncTime: string | null;
   lastClassSyncTime: string | null;
@@ -83,7 +83,7 @@ const initialState: DashboardState = {
   studentColorMap: {},
   isAssignmentModalOpen: false,
   isRefreshing: false,
-  
+
   classes: [],
   students: {},
   assignments: [],
@@ -96,17 +96,17 @@ const initialState: DashboardState = {
   marketStats: null,
   marketProducts: [],
   selectedProducts: [],
-  
+
   isLoadingClasses: false,
   isLoadingStudents: false,
   isLoadingAssignments: false,
   isLoadingStats: false,
   isLoadingMarketStats: false,
   isLoadingProducts: false,
-  
+
   apiErrors: [],
   errorMessages: {},
-  
+
   lastSyncTime: null,
   lastClassSyncTime: null,
 };
@@ -144,7 +144,7 @@ const getErrorMessage = (error: any, context: string): string => {
 };
 
 // API 재시도 함수
-const retryApiCall = async <T,>(
+const retryApiCall = async <T>(
   apiCall: () => Promise<T>,
   context: string = 'API',
   maxRetries: number = 2,
@@ -195,7 +195,7 @@ export const loadClasses = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(getErrorMessage(error, '클래스 정보'));
     }
-  }
+  },
 );
 
 export const loadStudents = createAsyncThunk(
@@ -204,8 +204,8 @@ export const loadStudents = createAsyncThunk(
     try {
       const state = getState() as { dashboard: DashboardState };
       const studentsData: Record<string, StudentData[]> = {};
-      const classesToProcess = classId 
-        ? state.dashboard.classes.filter(cls => cls.id === classId)
+      const classesToProcess = classId
+        ? state.dashboard.classes.filter((cls) => cls.id === classId)
         : state.dashboard.classes;
 
       const classPromises = classesToProcess.map(async (classroom) => {
@@ -239,7 +239,7 @@ export const loadStudents = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(getErrorMessage(error, '학생 정보'));
     }
-  }
+  },
 );
 
 export const loadAssignments = createAsyncThunk(
@@ -255,12 +255,13 @@ export const loadAssignments = createAsyncThunk(
 
       const classPromises = classesToProcess.map(async (classroom) => {
         try {
-          const [koreanAssignments, englishAssignments, mathAssignments] =
-            await Promise.allSettled([
+          const [koreanAssignments, englishAssignments, mathAssignments] = await Promise.allSettled(
+            [
               retryApiCall(() => koreanService.getDeployedAssignments(classroom.id.toString())),
               retryApiCall(() => EnglishService.getDeployedAssignments(classroom.id.toString())),
               retryApiCall(() => mathService.getDeployedAssignments(classroom.id.toString())),
-            ]);
+            ],
+          );
 
           const processAssignments = async (
             assignments: any[],
@@ -312,104 +313,101 @@ export const loadAssignments = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(getErrorMessage(error, '과제 정보'));
     }
-  }
+  },
 );
 
-export const loadStats = createAsyncThunk(
-  'dashboard/loadStats',
-  async (_, { rejectWithValue }) => {
+export const loadStats = createAsyncThunk('dashboard/loadStats', async (_, { rejectWithValue }) => {
+  try {
+    let myClasses: any[] = [];
     try {
-      let myClasses: any[] = [];
-      try {
-        myClasses = await classroomService.getMyClassrooms();
-      } catch (error) {
-        myClasses = [];
-      }
-
-      const totalClasses = myClasses.length;
-
-      const [totalStudents, activeAssignments] = await Promise.all([
-        (async () => {
-          let students = 0;
-          const studentPromises = myClasses.map(async (classroom) => {
-            try {
-              const classStudents = await classroomService.getClassroomStudents(classroom.id);
-              return classStudents.length;
-            } catch (error) {
-              return 0;
-            }
-          });
-          const studentCounts = await Promise.all(studentPromises);
-          students = studentCounts.reduce((sum, count) => sum + count, 0);
-          return students;
-        })(),
-
-        (async () => {
-          let assignments = 0;
-          const assignmentPromises = myClasses.map(async (classroom) => {
-            try {
-              const [koreanAssignments, englishAssignments, mathAssignments] =
-                await Promise.allSettled([
-                  retryApiCall(() => koreanService.getDeployedAssignments(classroom.id.toString())),
-                  retryApiCall(() => EnglishService.getDeployedAssignments(classroom.id.toString())),
-                  retryApiCall(() => mathService.getDeployedAssignments(classroom.id.toString())),
-                ]);
-
-              let classAssignments = 0;
-              if (koreanAssignments.status === 'fulfilled')
-                classAssignments += koreanAssignments.value?.length || 0;
-              if (englishAssignments.status === 'fulfilled')
-                classAssignments += englishAssignments.value?.length || 0;
-              if (mathAssignments.status === 'fulfilled')
-                classAssignments += mathAssignments.value?.length || 0;
-
-              return classAssignments;
-            } catch (error) {
-              return 0;
-            }
-          });
-          const assignmentCounts = await Promise.all(assignmentPromises);
-          assignments = assignmentCounts.reduce((sum, count) => sum + count, 0);
-          return assignments;
-        })(),
-      ]);
-
-      const totalProblems = await (async () => {
-        try {
-          const [koreanWorksheets, englishWorksheets, mathWorksheets] = await Promise.allSettled([
-            retryApiCall(() => koreanService.getKoreanWorksheets()),
-            retryApiCall(() => EnglishService.getEnglishWorksheets()),
-            retryApiCall(() => mathService.getMathWorksheets()),
-          ]);
-
-          let problems = 0;
-          if (koreanWorksheets.status === 'fulfilled' && koreanWorksheets.value?.worksheets) {
-            problems += koreanWorksheets.value.worksheets.length;
-          }
-          if (englishWorksheets.status === 'fulfilled' && Array.isArray(englishWorksheets.value)) {
-            problems += englishWorksheets.value.length;
-          }
-          if (mathWorksheets.status === 'fulfilled' && mathWorksheets.value?.worksheets) {
-            problems += mathWorksheets.value.worksheets.length;
-          }
-
-          return problems;
-        } catch (error) {
-          return 0;
-        }
-      })();
-
-      return {
-        totalClasses,
-        totalStudents,
-        activeAssignments,
-        totalProblems,
-      };
+      myClasses = await classroomService.getMyClassrooms();
     } catch (error) {
-      return rejectWithValue(getErrorMessage(error, '통계 정보'));
+      myClasses = [];
     }
+
+    const totalClasses = myClasses.length;
+
+    const [totalStudents, activeAssignments] = await Promise.all([
+      (async () => {
+        let students = 0;
+        const studentPromises = myClasses.map(async (classroom) => {
+          try {
+            const classStudents = await classroomService.getClassroomStudents(classroom.id);
+            return classStudents.length;
+          } catch (error) {
+            return 0;
+          }
+        });
+        const studentCounts = await Promise.all(studentPromises);
+        students = studentCounts.reduce((sum, count) => sum + count, 0);
+        return students;
+      })(),
+
+      (async () => {
+        let assignments = 0;
+        const assignmentPromises = myClasses.map(async (classroom) => {
+          try {
+            const [koreanAssignments, englishAssignments, mathAssignments] =
+              await Promise.allSettled([
+                retryApiCall(() => koreanService.getDeployedAssignments(classroom.id.toString())),
+                retryApiCall(() => EnglishService.getDeployedAssignments(classroom.id.toString())),
+                retryApiCall(() => mathService.getDeployedAssignments(classroom.id.toString())),
+              ]);
+
+            let classAssignments = 0;
+            if (koreanAssignments.status === 'fulfilled')
+              classAssignments += koreanAssignments.value?.length || 0;
+            if (englishAssignments.status === 'fulfilled')
+              classAssignments += englishAssignments.value?.length || 0;
+            if (mathAssignments.status === 'fulfilled')
+              classAssignments += mathAssignments.value?.length || 0;
+
+            return classAssignments;
+          } catch (error) {
+            return 0;
+          }
+        });
+        const assignmentCounts = await Promise.all(assignmentPromises);
+        assignments = assignmentCounts.reduce((sum, count) => sum + count, 0);
+        return assignments;
+      })(),
+    ]);
+
+    const totalProblems = await (async () => {
+      try {
+        const [koreanWorksheets, englishWorksheets, mathWorksheets] = await Promise.allSettled([
+          retryApiCall(() => koreanService.getKoreanWorksheets()),
+          retryApiCall(() => EnglishService.getEnglishWorksheets()),
+          retryApiCall(() => mathService.getMathWorksheets()),
+        ]);
+
+        let problems = 0;
+        if (koreanWorksheets.status === 'fulfilled' && koreanWorksheets.value?.worksheets) {
+          problems += koreanWorksheets.value.worksheets.length;
+        }
+        if (englishWorksheets.status === 'fulfilled' && Array.isArray(englishWorksheets.value)) {
+          problems += englishWorksheets.value.length;
+        }
+        if (mathWorksheets.status === 'fulfilled' && mathWorksheets.value?.worksheets) {
+          problems += mathWorksheets.value.worksheets.length;
+        }
+
+        return problems;
+      } catch (error) {
+        return 0;
+      }
+    })();
+
+    return {
+      totalClasses,
+      totalStudents,
+      activeAssignments,
+      totalProblems,
+    };
+  } catch (error) {
+    return rejectWithValue(getErrorMessage(error, '통계 정보'));
   }
-);
+});
 
 export const loadMarketStats = createAsyncThunk(
   'dashboard/loadMarketStats',
@@ -426,7 +424,7 @@ export const loadMarketStats = createAsyncThunk(
       };
       return fallbackStats;
     }
-  }
+  },
 );
 
 export const loadMarketProducts = createAsyncThunk(
@@ -438,14 +436,14 @@ export const loadMarketProducts = createAsyncThunk(
     } catch (error: any) {
       return [];
     }
-  }
+  },
 );
 
 export const refreshAll = createAsyncThunk(
   'dashboard/refreshAll',
   async (_, { dispatch, getState }) => {
     const state = getState() as { dashboard: DashboardState };
-    
+
     await Promise.all([
       dispatch(loadMarketStats()),
       dispatch(loadMarketProducts()),
@@ -454,9 +452,9 @@ export const refreshAll = createAsyncThunk(
       dispatch(loadStudents()),
       dispatch(loadAssignments(state.dashboard.selectedClass)),
     ]);
-    
+
     return new Date().toISOString();
-  }
+  },
 );
 
 // Slice
@@ -493,9 +491,7 @@ const dashboardSlice = createSlice({
       }
     },
     removeApiError: (state, action: PayloadAction<string>) => {
-      state.apiErrors = state.apiErrors.filter(
-        (error) => error !== action.payload
-      );
+      state.apiErrors = state.apiErrors.filter((error) => error !== action.payload);
     },
     setErrorMessage: (state, action: PayloadAction<{ key: string; message: string }>) => {
       state.errorMessages[action.payload.key] = action.payload.message;

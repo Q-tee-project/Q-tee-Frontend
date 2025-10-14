@@ -2,6 +2,8 @@
 
 import React, { useMemo } from 'react';
 import katex from 'katex';
+// @ts-ignore
+import 'katex/dist/katex.min.css';
 
 interface TikZRendererProps {
   tikzCode: string;
@@ -317,12 +319,24 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
     }
 
     // Function plots 파싱: \draw[domain=1.2:5, smooth, variable=\x, blue, thick] plot ({\x}, {-6/\x}) node[right] {$y=\frac{k}{x}$};
-    // 또는: \draw[thick, blue, domain=0:2.5] plot (\x, {3*\x});
-    const functionMatches = tikzCode.matchAll(
-      /\\draw\[([^\]]+)\]\s*plot\s*\((?:\{)?\\x(?:\})?,\s*\{([^}]+)\}\)(?:\s*node\[([^\]]+)\]\s*\{([^}]+)\})?/g,
-    );
-    for (const match of functionMatches) {
-      const [, styleStr, yExpr, nodePosStr, nodeText] = match;
+    const functionRegex = /\\draw\[([^\]]+)\]\s*plot\s*\((?:\{)?\\x(?:\})?,\s*\{([^}]+)\}\)(?:\s*node\[([^\]]+)\]\s*\{)?/g;
+    let functionMatch;
+    while ((functionMatch = functionRegex.exec(tikzCode)) !== null) {
+      const [fullMatch, styleStr, yExpr, nodePosStr] = functionMatch;
+
+      // node 텍스트 추출 (중괄호 카운팅)
+      let nodeText = '';
+      if (nodePosStr) {
+        const startIndex = functionMatch.index + fullMatch.length;
+        let braceCount = 1;
+        let endIndex = startIndex;
+        while (braceCount > 0 && endIndex < tikzCode.length) {
+          if (tikzCode[endIndex] === '{') braceCount++;
+          else if (tikzCode[endIndex] === '}') braceCount--;
+          endIndex++;
+        }
+        nodeText = tikzCode.substring(startIndex, endIndex - 1);
+      }
 
       // 도메인 파싱
       const domainMatch = styleStr.match(/domain=([\d.]+):([\d.]+)/);
@@ -372,7 +386,7 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
 
         data.labels.push({
           coord: { x: labelX, y: labelY },
-          text: cleanLatexLabel(nodeText),
+          text: nodeText.replace(/\$/g, ''), // $ 기호만 제거하고 LaTeX는 유지
           color: color,
         });
       }
@@ -407,8 +421,6 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
 
       // 원점 O 라벨 필터링 (O, $O$ 등)
       const cleanedText = cleanLatexLabel(text);
-
-      console.log('[TikZ] 라벨 변환:', text, '→', cleanedText);
 
       if (coord.x === 0 && coord.y === 0 && (cleanedText === 'O' || cleanedText === 'o')) {
         continue;
@@ -761,47 +773,55 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
 
             // LaTeX 수식을 KaTeX로 렌더링
             let renderedMath = '';
+            let displayText = label.text;
             try {
               let mathContent = label.text;
 
-              // 분수가 포함된 경우 LaTeX로 렌더링
-              if (mathContent.includes('/')) {
-                // 다양한 분수 패턴 처리:
-                // y=16/x -> y=\frac{16}{x}
-                mathContent = mathContent.replace(/(\w+)=(\d+)\/(\w+)/g, '$1=\\frac{$2}{$3}');
-                // y=(a)/x -> y=\frac{a}{x}
-                mathContent = mathContent.replace(/(\w+)=\(([^)]+)\)\/(\w+)/g, '$1=\\frac{$2}{$3}');
-                // (a)/x -> \frac{a}{x} (앞에 = 없는 경우)
-                mathContent = mathContent.replace(/\(([^)]+)\)\/(\w+)/g, '\\frac{$1}{$2}');
-                // 16/x -> \frac{16}{x} (앞에 = 없는 경우)
-                mathContent = mathContent.replace(/(\d+)\/(\w+)/g, '\\frac{$1}{$2}');
+              // LaTeX 명령어가 있거나 분수가 있으면 KaTeX로 렌더링 시도
+              if (mathContent.includes('\\') || mathContent.includes('/')) {
+                // / 가 있으면 \frac으로 변환
+                if (!mathContent.includes('\\frac') && mathContent.includes('/')) {
+                  // y=16/x -> y=\frac{16}{x}
+                  mathContent = mathContent.replace(/(\w+)=(\d+)\/(\w+)/g, '$1=\\frac{$2}{$3}');
+                  // y=(a)/x -> y=\frac{a}{x}
+                  mathContent = mathContent.replace(/(\w+)=\(([^)]+)\)\/(\w+)/g, '$1=\\frac{$2}{$3}');
+                  // y=a/x -> y=\frac{a}{x}
+                  mathContent = mathContent.replace(/(\w+)=(\w+)\/(\w+)/g, '$1=\\frac{$2}{$3}');
+                }
 
                 renderedMath = katex.renderToString(mathContent, {
                   displayMode: false,
                   throwOnError: false,
-                  output: 'mathml',
+                  output: 'html',
+                  trust: true,
                 });
+              } else {
+                // 일반 텍스트는 그대로 표시
+                displayText = mathContent;
               }
             } catch (e) {
-              console.warn('KaTeX rendering failed:', e);
+              // 실패 시 원본 텍스트 사용
+              displayText = label.text;
             }
 
             return renderedMath ? (
               <foreignObject
                 key={`label-${idx}`}
-                x={svgX - 40}
-                y={svgY - 15}
-                width="80"
-                height="30"
+                x={svgX - 50}
+                y={svgY - 20}
+                width="120"
+                height="40"
+                style={{ overflow: 'visible' }}
               >
                 <div
                   style={{
                     color: colors[label.color as keyof typeof colors] || label.color,
-                    fontSize: '14px',
+                    fontSize: '15px',
                     fontWeight: 500,
                     display: 'flex',
                     justifyContent: 'center',
                     alignItems: 'center',
+                    whiteSpace: 'nowrap',
                   }}
                   dangerouslySetInnerHTML={{ __html: renderedMath }}
                 />
@@ -818,7 +838,7 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
                 fontStyle="italic"
                 fontWeight="500"
               >
-                {label.text}
+                {displayText}
               </text>
             );
           })}
