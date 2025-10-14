@@ -188,7 +188,15 @@ export function AssignmentResultView({ assignment, onBack }: AssignmentResultVie
           });
         }
       } else {
-        setSessionDetails(session);
+        try {
+          const sessionId = session.id || session.grading_session_id;
+          if (!sessionId) throw new Error('No valid session ID found for math result');
+          const details = await mathService.getGradingSessionDetails(sessionId);
+          setSessionDetails(details);
+        } catch (error) {
+          console.warn('Math grading session details not available, falling back to summary:', error);
+          setSessionDetails(session);
+        }
       }
     } catch (error) {
       console.error('Failed to load session details:', error);
