@@ -319,7 +319,8 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
     }
 
     // Function plots 파싱: \draw[domain=1.2:5, smooth, variable=\x, blue, thick] plot ({\x}, {-6/\x}) node[right] {$y=\frac{k}{x}$};
-    const functionRegex = /\\draw\[([^\]]+)\]\s*plot\s*\((?:\{)?\\x(?:\})?,\s*\{([^}]+)\}\)(?:\s*node\[([^\]]+)\]\s*\{)?/g;
+    const functionRegex =
+      /\\draw\[([^\]]+)\]\s*plot\s*\((?:\{)?\\x(?:\})?,\s*\{([^}]+)\}\)(?:\s*node\[([^\]]+)\]\s*\{)?/g;
     let functionMatch;
     while ((functionMatch = functionRegex.exec(tikzCode)) !== null) {
       const [fullMatch, styleStr, yExpr, nodePosStr] = functionMatch;
@@ -784,7 +785,10 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
                   // y=16/x -> y=\frac{16}{x}
                   mathContent = mathContent.replace(/(\w+)=(\d+)\/(\w+)/g, '$1=\\frac{$2}{$3}');
                   // y=(a)/x -> y=\frac{a}{x}
-                  mathContent = mathContent.replace(/(\w+)=\(([^)]+)\)\/(\w+)/g, '$1=\\frac{$2}{$3}');
+                  mathContent = mathContent.replace(
+                    /(\w+)=\(([^)]+)\)\/(\w+)/g,
+                    '$1=\\frac{$2}{$3}',
+                  );
                   // y=a/x -> y=\frac{a}{x}
                   mathContent = mathContent.replace(/(\w+)=(\w+)\/(\w+)/g, '$1=\\frac{$2}{$3}');
                 }

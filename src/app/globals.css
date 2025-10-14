@@ -740,17 +740,17 @@
   background-color: #FFF5E9;
 }
 
-/* MathML 분수 표기 크기 약간 확대 */
+/* MathML 분수 표기 크기 조정 */
 math {
-  font-size: 1.02em;
+  font-size: 0.95em;
 }
 
-/* 분수 표기 크기 약간 증가 */
+/* 분수 표기 크기 */
 mfrac {
-  font-size: 1.05em;
+  font-size: 0.9em;
 }
 
-/* 분자와 분모 크기 약간 증가 */
+/* 분자와 분모 크기 */
 mfrac > * {
-  font-size: 1.03em;
+  font-size: 0.95em;
 }
