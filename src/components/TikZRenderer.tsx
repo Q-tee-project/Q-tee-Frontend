@@ -138,14 +138,12 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
     }
 
     // Coordinate 정의 파싱: \coordinate (A) at (x,y); 또는 \coordinate (A) at (\a/2, 3);
-    const coordMatches = tikzCode.matchAll(
-      /\\coordinate\s*\((\w+)\)\s*at\s*\(([^)]+)\)/g,
-    );
+    const coordMatches = tikzCode.matchAll(/\\coordinate\s*\((\w+)\)\s*at\s*\(([^)]+)\)/g);
     for (const match of coordMatches) {
       const [, name, coordExpr] = match;
       // 변수 치환
       const replacedExpr = replaceVariables(coordExpr);
-      const parts = replacedExpr.split(',').map(s => s.trim());
+      const parts = replacedExpr.split(',').map((s) => s.trim());
       if (parts.length === 2) {
         try {
           const x = eval(parts[0]);
@@ -192,7 +190,9 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
     };
 
     // Rectangle 명령어 파싱: \draw[fill=red!20] (0,0) rectangle (2, 10);
-    const rectangleMatches = tikzCode.matchAll(/\\draw\[([^\]]+)\]\s*\(([^)]+)\)\s*rectangle\s*\(([^)]+)\)/g);
+    const rectangleMatches = tikzCode.matchAll(
+      /\\draw\[([^\]]+)\]\s*\(([^)]+)\)\s*rectangle\s*\(([^)]+)\)/g,
+    );
     for (const match of rectangleMatches) {
       const [, styleStr, coord1Str, coord2Str] = match;
 
@@ -212,7 +212,7 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
             coord1,
             { x: coord2.x, y: coord1.y },
             coord2,
-            { x: coord1.x, y: coord2.y }
+            { x: coord1.x, y: coord2.y },
           ];
 
           data.filledAreas.push({ points, color, opacity });
@@ -256,7 +256,12 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
       if (styleStr.includes('->')) continue;
 
       // plot, grid, foreach, rectangle는 skip
-      if (pathStr.includes('plot') || pathStr.includes('grid') || pathStr.includes('foreach') || pathStr.includes('rectangle'))
+      if (
+        pathStr.includes('plot') ||
+        pathStr.includes('grid') ||
+        pathStr.includes('foreach') ||
+        pathStr.includes('rectangle')
+      )
         continue;
 
       const style = styleStr.includes('dashed') ? 'dashed' : 'solid';
@@ -349,9 +354,12 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
       // node 라벨이 있으면 labels에 추가
       if (nodeText) {
         // 라벨 위치는 함수 끝점 근처로 설정
-        const labelX = nodePosStr && nodePosStr.includes('right') ? domain.max :
-                      nodePosStr && nodePosStr.includes('left') ? domain.min :
-                      (domain.min + domain.max) / 2;
+        const labelX =
+          nodePosStr && nodePosStr.includes('right')
+            ? domain.max
+            : nodePosStr && nodePosStr.includes('left')
+            ? domain.min
+            : (domain.min + domain.max) / 2;
 
         // y 값 계산
         let labelY = 0;

@@ -220,9 +220,6 @@ export function AssignmentList({
                           <TableHead className="font-semibold text-center border-b border-[#666666] text-base text-[#666666] p-3 w-[8%]">
                             점수
                           </TableHead>
-                          <TableHead className="font-semibold text-center border-b border-[#666666] text-base text-[#666666] p-3 w-[10%]">
-                            소요 시간
-                          </TableHead>
                           <TableHead className="font-semibold text-center border-b border-[#666666] text-base text-[#666666] p-3 w-[12%]">
                             완료일시
                           </TableHead>
@@ -336,8 +333,6 @@ export function AssignmentList({
                                 ? studentResult.score || studentResult.total_score
                                 : null;
 
-                              // 소요 시간 계산 (임시로 설정)
-                              const duration = hasSubmitted ? '정보없음' : null;
                               const completedAt =
                                 hasSubmitted &&
                                 (studentResult.completed_at || studentResult.submitted_at)
@@ -389,9 +384,6 @@ export function AssignmentList({
                                         ? `${score}점`
                                         : '0점'}
                                     </span>
-                                  </TableCell>
-                                  <TableCell className="text-center text-sm text-[#666666] p-3">
-                                    {hasSubmitted && duration ? duration : '-'}
                                   </TableCell>
                                   <TableCell className="text-center text-sm text-[#666666] p-3">
                                     {hasSubmitted && completedAt ? completedAt : '-'}

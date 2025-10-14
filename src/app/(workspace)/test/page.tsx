@@ -963,7 +963,7 @@ function TestPageContent() {
           <AssignmentList
             worksheets={filteredWorksheets as Worksheet[]}
             selectedWorksheet={selectedWorksheet as Worksheet}
-            worksheetProblems={worksheetProblems as MathProblem[]}
+            worksheetProblems={(selectedSubject === '국어' ? worksheetProblems.map(p => ({...p, problem_type: (p as any).problem_type || (p as any).korean_type})) : worksheetProblems) as MathProblem[]}
             worksheetEnglishProblems={
               selectedSubject === '영어' ? (worksheetProblems as any[]) : []
             }
