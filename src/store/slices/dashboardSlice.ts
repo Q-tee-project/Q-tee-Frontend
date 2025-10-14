@@ -66,7 +66,7 @@ export interface DashboardState {
   isLoadingProducts: boolean;
   
   // 에러 상태
-  apiErrors: Set<string>;
+  apiErrors: string[];
   errorMessages: Record<string, string>;
   
   // 동기화 시간 (ISO 문자열로 저장)
@@ -104,7 +104,7 @@ const initialState: DashboardState = {
   isLoadingMarketStats: false,
   isLoadingProducts: false,
   
-  apiErrors: new Set(),
+  apiErrors: [],
   errorMessages: {},
   
   lastSyncTime: null,
@@ -488,10 +488,14 @@ const dashboardSlice = createSlice({
       state.selectedProducts = action.payload;
     },
     addApiError: (state, action: PayloadAction<string>) => {
-      state.apiErrors.add(action.payload);
+      if (!state.apiErrors.includes(action.payload)) {
+        state.apiErrors.push(action.payload);
+      }
     },
     removeApiError: (state, action: PayloadAction<string>) => {
-      state.apiErrors.delete(action.payload);
+      state.apiErrors = state.apiErrors.filter(
+        (error) => error !== action.payload
+      );
     },
     setErrorMessage: (state, action: PayloadAction<{ key: string; message: string }>) => {
       state.errorMessages[action.payload.key] = action.payload.message;
@@ -510,7 +514,7 @@ const dashboardSlice = createSlice({
     builder
       .addCase(loadClasses.pending, (state) => {
         state.isLoadingClasses = true;
-        state.apiErrors.delete('classes');
+        state.apiErrors = state.apiErrors.filter((e) => e !== 'classes');
       })
       .addCase(loadClasses.fulfilled, (state, action) => {
         state.isLoadingClasses = false;
@@ -520,7 +524,9 @@ const dashboardSlice = createSlice({
       .addCase(loadClasses.rejected, (state, action) => {
         state.isLoadingClasses = false;
         state.classes = [];
-        state.apiErrors.add('classes');
+        if (!state.apiErrors.includes('classes')) {
+          state.apiErrors.push('classes');
+        }
         if (action.payload) {
           state.errorMessages.classes = action.payload as string;
         }
@@ -530,7 +536,7 @@ const dashboardSlice = createSlice({
     builder
       .addCase(loadStudents.pending, (state) => {
         state.isLoadingStudents = true;
-        state.apiErrors.delete('students');
+        state.apiErrors = state.apiErrors.filter((e) => e !== 'students');
       })
       .addCase(loadStudents.fulfilled, (state, action) => {
         state.isLoadingStudents = false;
@@ -539,7 +545,9 @@ const dashboardSlice = createSlice({
       .addCase(loadStudents.rejected, (state, action) => {
         state.isLoadingStudents = false;
         state.students = {};
-        state.apiErrors.add('students');
+        if (!state.apiErrors.includes('students')) {
+          state.apiErrors.push('students');
+        }
         if (action.payload) {
           state.errorMessages.students = action.payload as string;
         }
