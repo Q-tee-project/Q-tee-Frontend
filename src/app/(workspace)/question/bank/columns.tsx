@@ -42,13 +42,16 @@ export const columns: ColumnDef<AnyWorksheet, unknown>[] = [
     header: () => <div className="text-center text-xs">학교</div>,
     cell: ({ row }) => {
       const schoolLevel = row.getValue('school_level') as string;
+      const isHighSchool = schoolLevel === '고등학교';
       return (
         <div className="flex justify-center">
           <Badge
-            className="rounded-[4px]"
+            className={`rounded-[4px] ${
+              isHighSchool
+                ? 'bg-[#FFF5E9] dark:bg-orange-900/30 text-[#FF9F2D] dark:text-orange-400'
+                : 'bg-[#E6F3FF] dark:bg-blue-900/30 text-[#0085FF] dark:text-blue-400'
+            }`}
             style={{
-              backgroundColor: schoolLevel === '고등학교' ? '#FFF5E9' : '#E6F3FF',
-              color: schoolLevel === '고등학교' ? '#FF9F2D' : '#0085FF',
               padding: '3px 6px',
               fontSize: '12px',
             }}
@@ -70,10 +73,8 @@ export const columns: ColumnDef<AnyWorksheet, unknown>[] = [
       return (
         <div className="flex justify-center">
           <Badge
-            className="rounded-[4px]"
+            className="rounded-[4px] bg-[#f5f5f5] dark:bg-slate-700 text-[#999999] dark:text-gray-400"
             style={{
-              backgroundColor: '#f5f5f5',
-              color: '#999999',
               padding: '3px 6px',
               fontSize: '12px',
             }}
@@ -98,7 +99,7 @@ export const columns: ColumnDef<AnyWorksheet, unknown>[] = [
     cell: ({ row }) => {
       const title = row.getValue('title') as string;
       return (
-        <div className="text-sm font-medium text-gray-900 truncate max-w-[150px] text-center">
+        <div className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate max-w-[150px] text-center">
           {title}
         </div>
       );
@@ -121,7 +122,7 @@ export const columns: ColumnDef<AnyWorksheet, unknown>[] = [
       const typeInfo = row.getValue('type_info') as string;
       return (
         <div className="text-center">
-          <span className="text-xs text-gray-500 truncate block max-w-[100px] mx-auto">{typeInfo}</span>
+          <span className="text-xs text-gray-500 dark:text-gray-400 truncate block max-w-[100px] mx-auto">{typeInfo}</span>
         </div>
       );
     },
@@ -136,7 +137,7 @@ export const columns: ColumnDef<AnyWorksheet, unknown>[] = [
       const date = new Date(row.getValue('created_at'));
       return (
         <div className="text-center">
-          <span className="text-xs text-gray-500">
+          <span className="text-xs text-gray-500 dark:text-gray-400">
             {date
               .toLocaleDateString('ko-KR', {
                 year: 'numeric',
