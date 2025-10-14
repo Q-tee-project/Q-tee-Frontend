@@ -97,16 +97,35 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
       labels: [],
     };
 
+    // 변수 정의 파싱 (\def\a{20})
+    const variables = new Map<string, number>();
+    const defMatches = tikzCode.matchAll(/\\def\\(\w+)\{([-\d.]+)\}/g);
+    for (const match of defMatches) {
+      const [, varName, value] = match;
+      variables.set(varName, parseFloat(value));
+    }
+
+    // 변수를 값으로 치환하는 함수
+    const replaceVariables = (expr: string): string => {
+      let result = expr;
+      for (const [varName, value] of variables) {
+        // \a/2, \a/3 같은 패턴을 값으로 치환
+        const regex = new RegExp(`\\\\${varName}`, 'g');
+        result = result.replace(regex, value.toString());
+      }
+      return result;
+    };
+
     // Scale 파싱
     const scaleMatch = tikzCode.match(/scale=([\d.]+)/);
     if (scaleMatch) data.scale = parseFloat(scaleMatch[1]);
 
     // 축 범위 파싱
     const xAxisMatch = tikzCode.match(
-      /\\draw\[->.*?\]\s*\(([-\d.]+),([-\d.]+)\)\s*--\s*\(([-\d.]+),([-\d.]+)\)\s*node\[right\]/,
+      /\\draw\[->.*?\]\s*\(([-\d.]+),([-\d.]+)\)\s*--\s*\(([-\d.]+),([-\d.]+)\)\s*node\[(?:right|below)\]/,
     );
     const yAxisMatch = tikzCode.match(
-      /\\draw\[->.*?\]\s*\(([-\d.]+),([-\d.]+)\)\s*--\s*\(([-\d.]+),([-\d.]+)\)\s*node\[(?:above|top)\]/,
+      /\\draw\[->.*?\]\s*\(([-\d.]+),([-\d.]+)\)\s*--\s*\(([-\d.]+),([-\d.]+)\)\s*node\[(?:above|top|left)\]/,
     );
 
     if (xAxisMatch) {
@@ -118,23 +137,44 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
       data.yMax = Math.ceil(parseFloat(yAxisMatch[4]));
     }
 
-    // Coordinate 정의 파싱: \coordinate (A) at (x,y);
+    // Coordinate 정의 파싱: \coordinate (A) at (x,y); 또는 \coordinate (A) at (\a/2, 3);
     const coordMatches = tikzCode.matchAll(
-      /\\coordinate\s*\((\w+)\)\s*at\s*\(([-\d.]+),([-\d.]+)\)/g,
+      /\\coordinate\s*\((\w+)\)\s*at\s*\(([^)]+)\)/g,
     );
     for (const match of coordMatches) {
-      const [, name, x, y] = match;
-      data.coordinates.set(name, { x: parseFloat(x), y: parseFloat(y) });
+      const [, name, coordExpr] = match;
+      // 변수 치환
+      const replacedExpr = replaceVariables(coordExpr);
+      const parts = replacedExpr.split(',').map(s => s.trim());
+      if (parts.length === 2) {
+        try {
+          const x = eval(parts[0]);
+          const y = eval(parts[1]);
+          data.coordinates.set(name, { x, y });
+        } catch (e) {
+          console.warn('Failed to parse coordinate:', coordExpr);
+        }
+      }
     }
 
     // Helper: 좌표 이름이나 숫자를 Coordinate로 변환
     const resolveCoord = (coordStr: string): Coordinate | null => {
       coordStr = coordStr.trim();
 
-      // (x,y) 형식 - 공백 허용
-      const directMatch = coordStr.match(/\(([-\d.]+)\s*,\s*([-\d.]+)\)/);
+      // 변수 치환
+      coordStr = replaceVariables(coordStr);
+
+      // (x,y) 형식 - 공백 허용, 수식 지원
+      const directMatch = coordStr.match(/\(([^,]+),([^)]+)\)/);
       if (directMatch) {
-        return { x: parseFloat(directMatch[1]), y: parseFloat(directMatch[2]) };
+        try {
+          const x = eval(directMatch[1].trim());
+          const y = eval(directMatch[2].trim());
+          return { x, y };
+        } catch (e) {
+          console.warn('Failed to evaluate coordinate:', coordStr);
+          return null;
+        }
       }
 
       // 좌표 이름 (A, B, C 등)
@@ -150,6 +190,35 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
 
       return null;
     };
+
+    // Rectangle 명령어 파싱: \draw[fill=red!20] (0,0) rectangle (2, 10);
+    const rectangleMatches = tikzCode.matchAll(/\\draw\[([^\]]+)\]\s*\(([^)]+)\)\s*rectangle\s*\(([^)]+)\)/g);
+    for (const match of rectangleMatches) {
+      const [, styleStr, coord1Str, coord2Str] = match;
+
+      const coord1 = resolveCoord(`(${coord1Str})`);
+      const coord2 = resolveCoord(`(${coord2Str})`);
+
+      if (coord1 && coord2) {
+        // fill 옵션 추출
+        const fillMatch = styleStr.match(/fill=(\w+!?\d*)/);
+        if (fillMatch) {
+          const colorSpec = fillMatch[1];
+          let color = colorSpec.includes('!') ? colorSpec.split('!')[0] : colorSpec;
+          let opacity = colorSpec.includes('!') ? parseInt(colorSpec.split('!')[1]) / 100 : 0.7;
+
+          // 직사각형의 네 점 생성
+          const points: Coordinate[] = [
+            coord1,
+            { x: coord2.x, y: coord1.y },
+            coord2,
+            { x: coord1.x, y: coord2.y }
+          ];
+
+          data.filledAreas.push({ points, color, opacity });
+        }
+      }
+    }
 
     // Filled areas 파싱: \filldraw[color!opacity] (A) -- (B) -- (C) -- cycle;
     const filledMatches = tikzCode.matchAll(/\\filldraw\[([\w!]+)\]\s*(.*?);/g);
@@ -186,8 +255,8 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
       // 축은 skip
       if (styleStr.includes('->')) continue;
 
-      // plot, grid, foreach는 skip
-      if (pathStr.includes('plot') || pathStr.includes('grid') || pathStr.includes('foreach'))
+      // plot, grid, foreach, rectangle는 skip
+      if (pathStr.includes('plot') || pathStr.includes('grid') || pathStr.includes('foreach') || pathStr.includes('rectangle'))
         continue;
 
       const style = styleStr.includes('dashed') ? 'dashed' : 'solid';
@@ -199,8 +268,11 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
       );
       if (colorMatch) color = colorMatch[1];
 
+      // node가 있는 경우 제거 (라벨은 별도 처리)
+      let cleanPathStr = pathStr.replace(/node\[([^\]]+)\]\s*\{[^}]+\}/g, '').trim();
+
       // 경로에서 좌표 추출
-      const coordParts = pathStr.split('--').map((s) => s.trim());
+      const coordParts = cleanPathStr.split('--').map((s) => s.trim());
       const points: Coordinate[] = [];
       let isCycle = false;
 
@@ -239,13 +311,13 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
       });
     }
 
-    // Function plots 파싱: \draw[domain=1.2:5, smooth, variable=\x, blue, thick] plot ({\x}, {-6/\x});
+    // Function plots 파싱: \draw[domain=1.2:5, smooth, variable=\x, blue, thick] plot ({\x}, {-6/\x}) node[right] {$y=\frac{k}{x}$};
     // 또는: \draw[thick, blue, domain=0:2.5] plot (\x, {3*\x});
     const functionMatches = tikzCode.matchAll(
-      /\\draw\[([^\]]+)\]\s*plot\s*\((?:\{)?\\x(?:\})?,\s*\{([^}]+)\}\)/g,
+      /\\draw\[([^\]]+)\]\s*plot\s*\((?:\{)?\\x(?:\})?,\s*\{([^}]+)\}\)(?:\s*node\[([^\]]+)\]\s*\{([^}]+)\})?/g,
     );
     for (const match of functionMatches) {
-      const [, styleStr, yExpr] = match;
+      const [, styleStr, yExpr, nodePosStr, nodeText] = match;
 
       // 도메인 파싱
       const domainMatch = styleStr.match(/domain=([\d.]+):([\d.]+)/);
@@ -263,12 +335,39 @@ export const TikZRenderer: React.FC<TikZRendererProps> = ({ tikzCode, className 
       );
       if (colorMatch) color = colorMatch[1];
 
+      // 변수 치환 및 표현식 정리
+      let processedExpr = replaceVariables(yExpr);
+      processedExpr = processedExpr.replace(/\\x/g, 'x');
+
       data.functionPlots.push({
-        expression: yExpr.replace(/\\x/g, 'x'),
+        expression: processedExpr,
         domain,
         color,
         style,
       });
+
+      // node 라벨이 있으면 labels에 추가
+      if (nodeText) {
+        // 라벨 위치는 함수 끝점 근처로 설정
+        const labelX = nodePosStr && nodePosStr.includes('right') ? domain.max :
+                      nodePosStr && nodePosStr.includes('left') ? domain.min :
+                      (domain.min + domain.max) / 2;
+
+        // y 값 계산
+        let labelY = 0;
+        try {
+          const evalExpr = processedExpr.replace(/x/g, `(${labelX})`);
+          labelY = eval(evalExpr);
+        } catch (e) {
+          labelY = 0;
+        }
+
+        data.labels.push({
+          coord: { x: labelX, y: labelY },
+          text: cleanLatexLabel(nodeText),
+          color: color,
+        });
+      }
     }
 
     // Labels 파싱: \node[blue] at (4, -2.5) {$y=\frac{a}{x}$};
