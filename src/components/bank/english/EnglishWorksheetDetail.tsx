@@ -287,11 +287,8 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
 
     setIsLoading(true);
     try {
-      // 저장용 데이터 준비 (객관식 정답을 사용자 번호에서 인덱스로 변환: 1,2,3,4 -> 0,1,2,3)
+      // 저장용 데이터 준비 (정답은 1-based로 그대로 저장)
       const saveData = { ...editFormData };
-      if (editFormData.question_type === '객관식' && !isNaN(editFormData.correct_answer as any)) {
-        saveData.correct_answer = (parseInt(editFormData.correct_answer as string) - 1).toString();
-      }
 
       await EnglishService.updateEnglishQuestion(
         selectedWorksheet.worksheet_id as number,
