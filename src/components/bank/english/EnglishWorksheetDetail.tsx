@@ -748,50 +748,40 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
           if (!previewData || !selectedWorksheet) return;
 
           try {
-            if (mode === 'generation' && onUpdateQuestion) {
-              // 생성 모드: 메모리에서만 업데이트
-              onUpdateQuestion(
-                previewData.original.question.question_id,
-                previewData.regenerated.question,
-                previewData.regenerated.passage,
-                previewData.regenerated.relatedQuestions
-              );
-            } else if (mode === 'bank') {
-              // 뱅크 모드: DB에 저장
-              const worksheetId = selectedWorksheet.worksheet_id as number;
+            // 생성과 동시에 DB에 저장되므로 모든 편집은 DB에 저장
+            const worksheetId = selectedWorksheet.worksheet_id as number;
 
-              // 메인 문제 업데이트
-              if (previewData.regenerated.question) {
+            // 메인 문제 업데이트
+            if (previewData.regenerated.question) {
+              await EnglishService.updateEnglishQuestion(
+                worksheetId,
+                previewData.regenerated.question.question_id,
+                previewData.regenerated.question
+              );
+            }
+
+            // 지문이 재생성되었다면 업데이트
+            if (previewData.regenerated.passage && previewData.original.passage) {
+              await EnglishService.updateEnglishPassage(
+                worksheetId,
+                previewData.original.passage.passage_id,
+                previewData.regenerated.passage
+              );
+            }
+
+            // 연관 문제들 업데이트
+            if (previewData.regenerated.relatedQuestions) {
+              for (const relatedQuestion of previewData.regenerated.relatedQuestions) {
                 await EnglishService.updateEnglishQuestion(
                   worksheetId,
-                  previewData.regenerated.question.question_id,
-                  previewData.regenerated.question
+                  relatedQuestion.question_id,
+                  relatedQuestion
                 );
               }
-
-              // 지문이 재생성되었다면 업데이트
-              if (previewData.regenerated.passage && previewData.original.passage) {
-                await EnglishService.updateEnglishPassage(
-                  worksheetId,
-                  previewData.original.passage.passage_id,
-                  previewData.regenerated.passage
-                );
-              }
-
-              // 연관 문제들 업데이트
-              if (previewData.regenerated.relatedQuestions) {
-                for (const relatedQuestion of previewData.regenerated.relatedQuestions) {
-                  await EnglishService.updateEnglishQuestion(
-                    worksheetId,
-                    relatedQuestion.question_id,
-                    relatedQuestion
-                  );
-                }
-              }
-
-              // 데이터 새로고침
-              onRefresh();
             }
+
+            // 데이터 새로고침
+            onRefresh();
 
             setIsRegenerationPreviewModalOpen(false);
             setPreviewData(null);
