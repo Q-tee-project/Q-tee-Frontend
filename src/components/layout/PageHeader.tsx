@@ -36,16 +36,17 @@ export function PageHeader({
               className={cn(
                 'relative flex items-center justify-center w-11 h-11',
                 'border-[1.5px] rounded-xl bg-gradient-to-br',
-                variantStyles[variant]
+                variantStyles[variant],
+                'dark:from-blue-500/20 dark:border-blue-500/30 dark:text-blue-400'
               )}
             >
               <div className="text-xl">{icon}</div>
             </div>
           )}
           <div className={cn('ml-4', !icon && 'ml-0')}>
-            <h1 className="text-xl font-semibold text-gray-900">{title}</h1>
+            <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{title}</h1>
             {description && (
-              <p className="text-sm text-gray-600 mt-1">{description}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{description}</p>
             )}
           </div>
         </div>

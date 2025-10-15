@@ -89,14 +89,14 @@ export const WorksheetList: React.FC<WorksheetListProps> = ({
 
   return (
     <Card
-      className={`w-1/3 flex flex-col shadow-sm ${hasNoData ? 'h-auto' : 'h-[calc(100vh-200px)]'}`}
+      className={`w-1/3 flex flex-col shadow-sm dark:bg-slate-800 dark:border-slate-700 ${hasNoData ? 'h-auto' : 'h-[calc(100vh-200px)]'}`}
       style={{ gap: '0', padding: '0' }}
     >
       <CardHeader
-        className="flex flex-row items-center justify-between border-b border-gray-100"
+        className="flex flex-row items-center justify-between border-b border-gray-100 dark:border-slate-700"
         style={{ padding: '20px' }}
       >
-        <CardTitle className="text-lg font-semibold text-gray-900">
+        <CardTitle className="text-lg font-semibold text-gray-900 dark:text-gray-100">
           문제 목록
           {selectedWorksheets.length > 0 && (
             <span className="ml-2 text-sm text-[#0072CE]">
@@ -109,7 +109,7 @@ export const WorksheetList: React.FC<WorksheetListProps> = ({
             onClick={onRefresh}
             variant="ghost"
             size="icon"
-            className="text-[#0072CE] hover:text-[#0056A3] hover:bg-[#EBF6FF]"
+            className="text-[#0072CE] hover:text-[#0056A3] hover:bg-[#EBF6FF] dark:text-blue-400 dark:hover:text-blue-300 dark:hover:bg-slate-700"
             title="새로고침"
           >
             <RefreshCw className="w-4 h-4" />
@@ -119,7 +119,7 @@ export const WorksheetList: React.FC<WorksheetListProps> = ({
               onClick={handleBatchDelete}
               variant="ghost"
               size="sm"
-              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+              className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-slate-700"
               title="선택된 워크시트들 일괄 삭제"
             >
               <Trash2 className="w-4 h-4 mr-1" />
@@ -131,7 +131,7 @@ export const WorksheetList: React.FC<WorksheetListProps> = ({
               disabled={!selectedWorksheet}
               variant="ghost"
               size="icon"
-              className="text-[#0072CE] hover:text-[#0056A3] hover:bg-[#EBF6FF]"
+              className="text-[#0072CE] hover:text-[#0056A3] hover:bg-[#EBF6FF] dark:text-blue-400 dark:hover:text-blue-300 dark:hover:bg-slate-700"
               title="선택된 워크시트 삭제"
             >
               <Trash2 className="w-4 h-4" />
@@ -152,8 +152,8 @@ export const WorksheetList: React.FC<WorksheetListProps> = ({
                 onClick={() => onSubjectChange(subject)}
                 className={`py-2 px-4 text-sm font-medium rounded transition-colors duration-150 cursor-pointer ${
                   selectedSubject === subject
-                    ? 'bg-[#E6F3FF] text-[#0085FF]'
-                    : 'bg-[#f5f5f5] text-[#999999]'
+                    ? 'bg-[#E6F3FF] text-[#0085FF] dark:bg-blue-900 dark:text-blue-300'
+                    : 'bg-[#f5f5f5] text-[#999999] dark:bg-slate-700 dark:text-gray-400'
                 }`}
               >
                 {subject}
@@ -163,7 +163,7 @@ export const WorksheetList: React.FC<WorksheetListProps> = ({
         </div>
 
         {hasNoData ? (
-          <div className="text-center py-8 text-gray-500">
+          <div className="text-center py-8 text-gray-500 dark:text-gray-400">
             <div className="text-sm">
               저장된 워크시트가 없습니다 (로딩 상태: {isLoading ? '로딩 중' : '로딩 완료'}, 과목:{' '}
               {selectedSubject}){error && <div className="text-red-500 mt-2">오류: {error}</div>}

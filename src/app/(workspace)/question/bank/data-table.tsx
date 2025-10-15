@@ -117,14 +117,14 @@ export function DataTable<TData, TValue>({
                 <TableRow
                   key={rowId}
                   data-state={row.getIsSelected() && 'selected'}
-                  className={`cursor-pointer hover:bg-[#F8FAFF] transition-colors ${
-                    isSelected ? 'bg-[#F0F7FF]' : ''
+                  className={`cursor-pointer hover:bg-[#F8FAFF] dark:hover:bg-slate-700 transition-colors ${
+                    isSelected ? 'bg-[#F0F7FF] dark:bg-slate-700' : ''
                   }`}
                   style={{ minHeight: '60px' }}
                   onClick={() => onRowClick?.(row.original)}
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="py-3 px-3">
+                    <TableCell key={cell.id} className="py-3 px-3 dark:text-gray-300">
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}
@@ -133,7 +133,7 @@ export function DataTable<TData, TValue>({
             })
           ) : (
             <TableRow>
-              <TableCell colSpan={columns.length} className="h-24 text-center">
+              <TableCell colSpan={columns.length} className="h-24 text-center dark:text-gray-400">
                 데이터가 없습니다.
               </TableCell>
             </TableRow>

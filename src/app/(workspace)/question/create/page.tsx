@@ -647,18 +647,90 @@ export default function CreatePage() {
               <div className="text-gray-500">과목을 선택하고 문제를 생성해주세요</div>
             </Card>
           ) : currentGeneration.previewQuestions.length === 0 && subject !== '영어' ? (
-            <Card className="w-2/3 h-full flex items-center justify-center shadow-sm">
-              <div className="text-gray-500">문제를 생성해주세요</div>
+            <Card className="w-2/3 h-full flex items-center justify-center shadow-sm p-8">
+              <div className="max-w-2xl text-center space-y-6">
+                <h3 className="text-3xl font-semibold text-gray-800">
+                  {subject === '수학' ? '수학 문제 생성 가이드' : '국어 문제 생성 가이드'}
+                </h3>
+                {subject === '수학' ? (
+                  <div className="text-base text-gray-600 space-y-5 text-left">
+                    <div>
+                      <p className="font-semibold text-gray-700 mb-2 text-lg">문제 유형</p>
+                      <p className="leading-relaxed">
+                        • <strong>전체</strong>를 선택하면 객관식, 단답형의 비율을 설정할 수
+                        있습니다.
+                        <br />• 각 유형별로 10% 단위로 비율을 조정할 수 있습니다.
+                        <br />• 총 비율은 100%가 되어야 합니다.
+                      </p>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-700 mb-2 text-lg">난이도</p>
+                      <p className="leading-relaxed">
+                        • <strong>전체</strong>를 선택하면 A, B, C 난이도의 비율을 설정할 수
+                        있습니다.
+                        <br />• 각 난이도별로 10% 단위로 비율을 조정할 수 있습니다.
+                        <br />• 총 비율은 100%가 되어야 합니다.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-base text-gray-600 space-y-5 text-left">
+                    <div>
+                      <p className="font-semibold text-gray-700 mb-2 text-lg">문제 유형</p>
+                      <p className="leading-relaxed">
+                        • 각 문제지는 하나의 영역만 선택할 수 있습니다.
+                        <br />• 시, 소설, 수필/비문학, 문법 중 하나를 선택하세요.
+                      </p>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-700 mb-2 text-lg">난이도</p>
+                      <p className="leading-relaxed">
+                        • <strong>상</strong>: 높은 난이도의 문제들로 구성
+                        <br />• <strong>중</strong>: 보통 난이도의 문제들로 구성
+                        <br />• <strong>하</strong>: 기본 난이도의 문제들로 구성
+                        <br />• <strong>전체</strong>: 상, 중, 하 난이도가 골고루 섞인 문제들로 구성
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
             </Card>
           ) : subject === '영어' &&
             (!englishGeneration.worksheetData ||
               !englishGeneration.worksheetData.questions ||
               englishGeneration.worksheetData.questions.length === 0) ? (
-            <Card className="w-2/3 h-full flex items-center justify-center shadow-sm">
-              <div className="text-gray-500">
-                {currentGeneration.isGenerating
-                  ? '영어 문제를 생성하고 있습니다...'
-                  : '영어 과목을 선택하고 문제를 생성해주세요'}
+            <Card className="w-2/3 h-full flex items-center justify-center shadow-sm p-8">
+              <div className="max-w-2xl text-center space-y-6">
+                {currentGeneration.isGenerating ? (
+                  <div className="text-gray-500">영어 문제를 생성하고 있습니다...</div>
+                ) : (
+                  <>
+                    <h3 className="text-3xl font-semibold text-gray-800">영어 문제 생성 가이드</h3>
+                    <div className="text-base text-gray-600 space-y-5 text-left">
+                      <div>
+                        <p className="font-semibold text-gray-700 mb-2 text-lg">문제 영역</p>
+                        <p className="leading-relaxed">
+                          • <strong>전체</strong>를 선택하면 독해, 어휘, 문법의 비율과 세부
+                          카테고리를 설정할 수 있습니다.
+                        </p>
+                      </div>
+                      <div>
+                        <p className="font-semibold text-gray-700 mb-2 text-lg">문제 유형</p>
+                        <p className="leading-relaxed">
+                          • <strong>전체</strong>를 선택하면 객관식, 단답형, 서술형의 비율을 설정할
+                          수 있습니다.
+                        </p>
+                      </div>
+                      <div>
+                        <p className="font-semibold text-gray-700 mb-2 text-lg">난이도</p>
+                        <p className="leading-relaxed">
+                          • <strong>전체</strong>를 선택하면 상, 중, 하 난이도의 비율을 설정할 수
+                          있습니다.
+                        </p>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             </Card>
           ) : null}

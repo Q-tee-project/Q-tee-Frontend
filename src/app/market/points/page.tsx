@@ -6,7 +6,13 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
-import { getUserPoints, chargePoints, getPointTransactions, UserPointResponse, PointTransactionResponse } from '@/services/marketApi';
+import {
+  getUserPoints,
+  chargePoints,
+  getPointTransactions,
+  UserPointResponse,
+  PointTransactionResponse,
+} from '@/services/marketApi';
 
 interface ChargeOption {
   amount: number;
@@ -16,9 +22,9 @@ interface ChargeOption {
 
 const CHARGE_OPTIONS: ChargeOption[] = [
   { amount: 10000, label: '10,000P' },
-  { amount: 30000, label: '30,000P', bonus: 3000 },
-  { amount: 50000, label: '50,000P', bonus: 7000 },
-  { amount: 100000, label: '100,000P', bonus: 20000 },
+  { amount: 30000, label: '30,000P' },
+  { amount: 50000, label: '50,000P' },
+  { amount: 100000, label: '100,000P' },
 ];
 
 export default function PointsPage() {
@@ -40,7 +46,7 @@ export default function PointsPage() {
     try {
       const [pointsData, transactionsData] = await Promise.all([
         getUserPoints(),
-        getPointTransactions({ skip: 0, limit: 10 })
+        getPointTransactions({ skip: 0, limit: 10 }),
       ]);
       setUserPoints(pointsData);
       setTransactions(transactionsData);
@@ -137,7 +143,7 @@ export default function PointsPage() {
                   {userPoints?.available_points.toLocaleString() || '0'}P
                 </div>
                 <div className="text-sm text-gray-500">
-                  적립 포인트: {userPoints?.earned_points?.toLocaleString() || '0'}P
+                  판매 수익: {userPoints?.total_earned?.toLocaleString() || '0'}P
                 </div>
                 <div className="text-sm text-gray-500">
                   사용 포인트: {userPoints?.used_points?.toLocaleString() || '0'}P
@@ -169,9 +175,6 @@ export default function PointsPage() {
                     } ${charging ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
                     <div>{option.label}</div>
-                    {option.bonus && (
-                      <div className="text-xs text-green-600">+{option.bonus.toLocaleString()}P 보너스</div>
-                    )}
                   </button>
                 ))}
               </div>
@@ -223,15 +226,12 @@ export default function PointsPage() {
         <Card className="shadow-md">
           <CardHeader className="py-3 px-6 border-b border-gray-100">
             <CardTitle className="text-base font-semibold flex items-center gap-2">
-              <FiDollarSign className="w-4 h-4" />
               포인트 사용 내역
             </CardTitle>
           </CardHeader>
           <CardContent className="p-6">
             {transactions.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                포인트 사용 내역이 없습니다.
-              </div>
+              <div className="text-center py-8 text-gray-500">포인트 사용 내역이 없습니다.</div>
             ) : (
               <div className="space-y-3">
                 {transactions.map((transaction) => (
@@ -241,9 +241,13 @@ export default function PointsPage() {
                   >
                     <div>
                       <div className="font-medium text-gray-800">
-                        {transaction.transaction_type === 'charge' ? '포인트 충전' :
-                         transaction.transaction_type === 'purchase' ? '상품 구매' :
-                         transaction.transaction_type}
+                        {transaction.transaction_type === 'charge'
+                          ? '포인트 충전'
+                          : transaction.transaction_type === 'purchase'
+                          ? '상품 구매'
+                          : transaction.transaction_type === 'earn'
+                          ? transaction.description || '판매 수익'
+                          : transaction.transaction_type}
                       </div>
                       <div className="text-sm text-gray-500">
                         {new Date(transaction.created_at).toLocaleDateString('ko-KR', {
@@ -251,15 +255,18 @@ export default function PointsPage() {
                           month: 'short',
                           day: 'numeric',
                           hour: '2-digit',
-                          minute: '2-digit'
+                          minute: '2-digit',
                         })}
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className={`font-semibold ${
-                        transaction.amount > 0 ? 'text-green-600' : 'text-red-600'
-                      }`}>
-                        {transaction.amount > 0 ? '+' : ''}{transaction.amount.toLocaleString()}P
+                      <div
+                        className={`font-semibold ${
+                          transaction.amount > 0 ? 'text-green-600' : 'text-red-600'
+                        }`}
+                      >
+                        {transaction.amount > 0 ? '+' : ''}
+                        {transaction.amount.toLocaleString()}P
                       </div>
                       <div className="text-sm text-gray-500">
                         잔액: {transaction.balance_after.toLocaleString()}P
