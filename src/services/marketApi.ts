@@ -80,7 +80,7 @@ export interface MarketPurchaseCreate {
 export interface UserPointResponse {
   user_id: number;
   available_points: number;
-  earned_points: number;
+  total_earned: number;
   used_points: number;
 }
 
@@ -92,7 +92,7 @@ export interface PointTransactionResponse {
   id: number;
   user_id: number;
   amount: number;
-  transaction_type: 'charge' | 'purchase' | 'refund';
+  transaction_type: 'charge' | 'purchase' | 'refund' | 'earn';
   balance_after: number;
   created_at: string;
   description?: string;

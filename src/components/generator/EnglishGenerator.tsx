@@ -339,10 +339,10 @@ export default function EnglishGenerator({ onGenerate, isGenerating }: EnglishGe
             value={requirements}
             onChange={(e) => setRequirements(e.target.value)}
             placeholder="문제 출제 요구사항을 입력해주세요."
-            maxLength={50}
+            maxLength={100}
             className="w-full h-16 resize-none"
           />
-          <div className="text-right text-sm text-gray-500 mt-2">{requirements.length}/50</div>
+          <div className="text-right text-sm text-gray-500 mt-2">{requirements.length}/100</div>
         </GeneratorSection>
 
         <GeneratorSection title="총 문항 수">
