@@ -175,7 +175,6 @@ export const HandwritingCanvas: React.FC<HandwritingCanvasProps> = ({
           <Eraser className="w-4 h-4" />
           지우개
         </Button>
-        <div className="flex-1" />
         <Button
           size="sm"
           variant="outline"
@@ -185,26 +184,8 @@ export const HandwritingCanvas: React.FC<HandwritingCanvasProps> = ({
           <Trash2 className="w-4 h-4" />
           전체 지우기
         </Button>
-        {enableOCR && (problemType === 'short_answer' || problemType === 'essay') && (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={captureForOCR}
-            disabled={isProcessingOCR || strokes.length === 0}
-            className="flex items-center gap-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-          >
-            {isProcessingOCR ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                텍스트 변환 중...
-              </>
-            ) : (
-              <>
-                📝 텍스트로 변환
-              </>
-            )}
-          </Button>
-        )}
+        <div className="flex-1" />
+
       </div>
 
       {/* 캔버스 */}

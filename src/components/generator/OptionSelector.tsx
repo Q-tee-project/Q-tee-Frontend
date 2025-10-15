@@ -21,7 +21,7 @@ export function OptionSelector<T extends string | number>({
   const chipUnselected = 'border-gray-300 bg-white text-gray-800 hover:bg-gray-50';
 
   return (
-    <div className={`flex flex-wrap justify-center gap-1 ${className}`}>
+    <div className={`flex flex-wrap justify-start gap-1 ${className}`}>
       {options.map((value) => (
         <button
           key={value}

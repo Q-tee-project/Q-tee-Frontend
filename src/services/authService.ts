@@ -53,6 +53,25 @@ export interface StudentProfile {
   created_at: string;
 }
 
+export interface TeacherStatistics {
+  created_worksheets: number;
+  total_classrooms: number;
+  total_students: number;
+}
+
+export interface StudentStatistics {
+  completed_assignments: number;
+  joined_classrooms: number;
+  average_score: number;
+}
+
+export interface RecentActivity {
+  id: number;
+  description: string;
+  timestamp: string;
+  activity_type: string;
+}
+
 export interface UserProfile {
   userType: 'teacher' | 'student';
   teacherProfile?: TeacherProfile & { classrooms?: Classroom[] };
@@ -289,6 +308,34 @@ export const authService = {
     return authApiRequest<{ available: boolean; message?: string }>('/api/auth/check-email', {
       method: 'POST',
       body: JSON.stringify({ email }),
+    });
+  },
+
+  // 선생님 활동 통계 조회
+  async getTeacherStatistics(): Promise<TeacherStatistics> {
+    return authApiRequest<TeacherStatistics>('/api/auth/teacher/statistics', {
+      headers: getAuthHeaders(),
+    });
+  },
+
+  // 학생 활동 통계 조회
+  async getStudentStatistics(): Promise<StudentStatistics> {
+    return authApiRequest<StudentStatistics>('/api/auth/student/statistics', {
+      headers: getAuthHeaders(),
+    });
+  },
+
+  // 선생님 최근 활동 조회
+  async getTeacherRecentActivities(limit: number = 10): Promise<RecentActivity[]> {
+    return authApiRequest<RecentActivity[]>(`/api/auth/teacher/recent-activities?limit=${limit}`, {
+      headers: getAuthHeaders(),
+    });
+  },
+
+  // 학생 최근 활동 조회
+  async getStudentRecentActivities(limit: number = 10): Promise<RecentActivity[]> {
+    return authApiRequest<RecentActivity[]>(`/api/auth/student/recent-activities?limit=${limit}`, {
+      headers: getAuthHeaders(),
     });
   },
 };

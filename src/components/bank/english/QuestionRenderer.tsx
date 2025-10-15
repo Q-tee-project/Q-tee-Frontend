@@ -155,69 +155,6 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                       />
                     </div>
 
-                    <div className="grid grid-cols-3 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          문제 유형
-                        </label>
-                        <Select
-                          value={editFormData.question_type || '객관식'}
-                          onValueChange={(value) =>
-                            onEditFormDataChange({ ...editFormData, question_type: value })
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="객관식">객관식</SelectItem>
-                            <SelectItem value="단답형">단답형</SelectItem>
-                            <SelectItem value="서술형">서술형</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">영역</label>
-                        <Select
-                          value={editFormData.question_subject || '독해'}
-                          onValueChange={(value) =>
-                            onEditFormDataChange({ ...editFormData, question_subject: value })
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="독해">독해</SelectItem>
-                            <SelectItem value="문법">문법</SelectItem>
-                            <SelectItem value="어휘">어휘</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          난이도
-                        </label>
-                        <Select
-                          value={editFormData.question_difficulty || '중'}
-                          onValueChange={(value) =>
-                            onEditFormDataChange({ ...editFormData, question_difficulty: value })
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="상">상</SelectItem>
-                            <SelectItem value="중">중</SelectItem>
-                            <SelectItem value="하">하</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-
                     {/* 예문 편집 (원래 예문이 있는 경우만) */}
                     {question.example_content && (
                       <div>
@@ -268,58 +205,41 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                       </div>
                     )}
 
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">정답</label>
-                        {editFormData.question_type === '객관식' ? (
-                          <Select
-                            value={editFormData.correct_answer || ''}
-                            onValueChange={(value) =>
-                              onEditFormDataChange({ ...editFormData, correct_answer: value })
-                            }
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="정답 선택" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {editFormData.question_choices?.map(
-                                (choice: string, index: number) => (
-                                  <SelectItem key={index} value={(index + 1).toString()}>
-                                    {index + 1}번:{' '}
-                                    {choice.length > 30 ? `${choice.substring(0, 30)}...` : choice}
-                                  </SelectItem>
-                                ),
-                              )}
-                            </SelectContent>
-                          </Select>
-                        ) : (
-                          <Input
-                            value={editFormData.correct_answer || ''}
-                            onChange={(e) =>
-                              onEditFormDataChange({
-                                ...editFormData,
-                                correct_answer: e.target.value,
-                              })
-                            }
-                            placeholder="정답을 입력하세요"
-                          />
-                        )}
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          세부 유형
-                        </label>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">정답</label>
+                      {editFormData.question_type === '객관식' ? (
+                        <Select
+                          value={editFormData.correct_answer || ''}
+                          onValueChange={(value) =>
+                            onEditFormDataChange({ ...editFormData, correct_answer: value })
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="정답 선택" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {editFormData.question_choices?.map(
+                              (choice: string, index: number) => (
+                                <SelectItem key={index} value={(index + 1).toString()}>
+                                  {index + 1}번:{' '}
+                                  {choice.length > 30 ? `${choice.substring(0, 30)}...` : choice}
+                                </SelectItem>
+                              ),
+                            )}
+                          </SelectContent>
+                        </Select>
+                      ) : (
                         <Input
-                          value={editFormData.question_detail_type || ''}
+                          value={editFormData.correct_answer || ''}
                           onChange={(e) =>
                             onEditFormDataChange({
                               ...editFormData,
-                              question_detail_type: e.target.value,
+                              correct_answer: e.target.value,
                             })
                           }
-                          placeholder="세부 유형"
+                          placeholder="정답을 입력하세요"
                         />
-                      </div>
+                      )}
                     </div>
 
                     <div>

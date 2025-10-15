@@ -20,6 +20,7 @@ interface NotificationItemProps {
   isMainItem: boolean;
   onClick: () => void;
   onDelete: (e: React.MouseEvent) => void;
+  count?: number;
 }
 
 export function NotificationItem({
@@ -28,6 +29,7 @@ export function NotificationItem({
   isMainItem,
   onClick,
   onDelete,
+  count,
 }: NotificationItemProps) {
   const meta = notificationTypeMeta[notification.type];
   const colors = colorClassMap[meta.colorClass];
@@ -61,6 +63,12 @@ export function NotificationItem({
         >
           {meta.icon}
         </div>
+        {/* 알림 개수 배지 */}
+        {count && count > 1 && !isExpanded && (
+          <div className="absolute -top-1 -right-1 flex items-center justify-center w-5 h-5 rounded-full bg-gray-800 text-white text-xs font-semibold z-[3]">
+            {count}
+          </div>
+        )}
       </div>
 
       {/* 중앙 텍스트 */}

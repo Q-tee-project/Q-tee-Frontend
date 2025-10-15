@@ -65,7 +65,7 @@ export default function KoreanGenerator({ onGenerate, isGenerating }: KoreanGene
     <div>
       <div className="divide-y divide-gray-200">
         <GeneratorSection title="기본 정보">
-          <div className="flex justify-center gap-4">
+          <div className="flex justify-start gap-4">
             <Select value={school || ''} onValueChange={(v) => setSchool(v as School)}>
               <SelectTrigger>
                 <SelectValue placeholder="학교 선택" />
