@@ -22,9 +22,9 @@ interface StudentResultViewProps {
   selectedClass?: string;
   onClassChange?: (classId: string) => void;
   selectedWorksheet?: any;
-  onGetAnswerStatus?: (problemId: string) => { 
-    studentAnswer?: string; 
-    correctAnswer?: string; 
+  onGetAnswerStatus?: (problemId: string) => {
+    studentAnswer?: string;
+    correctAnswer?: string;
     isCorrect?: boolean;
     aiFeedback?: string;
     explanation?: string;
@@ -53,7 +53,7 @@ export function StudentResultView({
   const [sessionDetails, setSessionDetails] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   // 외부에서 제공된 currentProblemIndex를 사용하거나, 없으면 내부 상태 사용
   const currentProblemIndex = externalProblemIndex;
   const setCurrentProblemIndex = onProblemIndexChange || (() => {});
@@ -65,7 +65,7 @@ export function StudentResultView({
   // 정렬된 문제 목록
   const sortedProblems = (() => {
     if (!problems || problems.length === 0) return [];
-    
+
     return [...problems].sort((a: any, b: any) => {
       if (isKorean) return a.sequence_order - b.sequence_order;
       if (isEnglish) return (a.question_id || 0) - (b.question_id || 0);
@@ -119,10 +119,10 @@ export function StudentResultView({
                   : isEnglish
                   ? problem.question_id
                   : problem.id;
-                
+
                 const answerStatus = getAnswerStatus(problemId?.toString());
                 const isCurrentProblem = index === currentProblemIndex;
-                
+
                 return (
                   <tr
                     key={problemId}
@@ -217,18 +217,19 @@ export function StudentResultView({
                 {(currentProblem.passage || currentProblem.example_content) && (
                   <div className="bg-gray-50 p-3 rounded mt-2 mb-2">
                     <p className="text-sm text-gray-700 whitespace-pre-wrap">
-                      {currentProblem.passage || currentProblem.example_content}
+                      {(currentProblem.passage || currentProblem.example_content)
+                        ?.replace(/<u>___<\/u>/g, '___')
+                        ?.replace(/<u>/g, '')
+                        ?.replace(/<\/u>/gi, '')}
                     </p>
                   </div>
                 )}
               </div>
             ) : (
               <LaTeXRenderer
-                content={
-                  (currentProblem.question || `문제 ${problemNumber}`)
-                    .replace(/\\begin\{tikzpicture\}[\s\S]*?\\end\{tikzpicture\}/g, '')
-                    .trim()
-                }
+                content={(currentProblem.question || `문제 ${problemNumber}`)
+                  .replace(/\\begin\{tikzpicture\}[\s\S]*?\\end\{tikzpicture\}/g, '')
+                  .trim()}
               />
             )}
           </div>
@@ -244,44 +245,46 @@ export function StudentResultView({
         {/* Choices */}
         {(currentProblem.choices || currentProblem.question_choices) && (
           <div className="space-y-2">
-            {(currentProblem.choices || currentProblem.question_choices).map((choice: string, choiceIndex: number) => {
-              const choiceLetter = String.fromCharCode(65 + choiceIndex);
-              const isStudentAnswer = answerStatus?.studentAnswer === choiceLetter;
-              const isCorrectAnswer = answerStatus?.correctAnswer === choiceLetter;
+            {(currentProblem.choices || currentProblem.question_choices).map(
+              (choice: string, choiceIndex: number) => {
+                const choiceLetter = String.fromCharCode(65 + choiceIndex);
+                const isStudentAnswer = answerStatus?.studentAnswer === choiceLetter;
+                const isCorrectAnswer = answerStatus?.correctAnswer === choiceLetter;
 
-              let choiceStyle = 'p-3 rounded-lg border ';
-              if (isCorrectAnswer) {
-                choiceStyle += 'bg-green-100 border-green-300 text-green-800';
-              } else if (isStudentAnswer && !isCorrectAnswer) {
-                choiceStyle += 'bg-red-100 border-red-300 text-red-800';
-              } else {
-                choiceStyle += 'bg-gray-50 border-gray-200';
-              }
+                let choiceStyle = 'p-3 rounded-lg border ';
+                if (isCorrectAnswer) {
+                  choiceStyle += 'bg-green-100 border-green-300 text-green-800';
+                } else if (isStudentAnswer && !isCorrectAnswer) {
+                  choiceStyle += 'bg-red-100 border-red-300 text-red-800';
+                } else {
+                  choiceStyle += 'bg-gray-50 border-gray-200';
+                }
 
-              return (
-                <div key={choiceIndex} className={choiceStyle}>
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2">
-                      {isStudentAnswer && (
-                        <FaDotCircle className="text-blue-600 text-sm" title="학생이 선택한 답" />
-                      )}
-                      {isCorrectAnswer && (
-                        <FaCheckCircle className="text-green-600 text-sm" title="정답" />
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      {isKorean ? (
-                        <span>{renderFormattedText(choice)}</span>
-                      ) : isEnglish ? (
-                        <span>{choice}</span>
-                      ) : (
-                        <LaTeXRenderer content={choice || ''} />
-                      )}
+                return (
+                  <div key={choiceIndex} className={choiceStyle}>
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        {isStudentAnswer && (
+                          <FaDotCircle className="text-blue-600 text-sm" title="학생이 선택한 답" />
+                        )}
+                        {isCorrectAnswer && (
+                          <FaCheckCircle className="text-green-600 text-sm" title="정답" />
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        {isKorean ? (
+                          <span>{renderFormattedText(choice)}</span>
+                        ) : isEnglish ? (
+                          <span>{choice}</span>
+                        ) : (
+                          <LaTeXRenderer content={choice || ''} />
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              },
+            )}
           </div>
         )}
 
@@ -708,9 +711,7 @@ export function StudentResultView({
         {/* 과제명 */}
         <div className="flex items-center gap-4">
           <div>
-            <span className="text-lg font-semibold text-gray-900">
-              {assignmentTitle}
-            </span>
+            <span className="text-lg font-semibold text-gray-900">{assignmentTitle}</span>
           </div>
         </div>
 
@@ -728,7 +729,7 @@ export function StudentResultView({
             <div className="flex flex-col gap-8">
               {/* 풀이 결과 텍스트 */}
               <h2 className="text-xl font-semibold">풀이 결과</h2>
-              
+
               {/* 점수 요약 카드들 */}
               <div className="flex gap-4">
                 {/* 점수 카드 */}
@@ -738,7 +739,7 @@ export function StudentResultView({
                     <p className="text-lg font-bold text-gray-600">{currentScore}점</p>
                   </div>
                 </div>
-                
+
                 {/* 맞춘 개수 카드 */}
                 <div className="flex-1 relative">
                   <span className="text-sm text-gray-600 absolute -top-6 left-0">맞춘 개수</span>
@@ -755,12 +756,12 @@ export function StudentResultView({
           {/* 풀이 내역 섹션 */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold mb-4">풀이 내역</h3>
-            
+
             {/* 현재 문제 */}
             <div className="h-full overflow-y-auto">
               <CurrentProblemView />
             </div>
-            
+
             {/* 하단 네비게이션 */}
             {sortedProblems.length > 1 && (
               <div className="flex items-center justify-between pt-4 border-t border-gray-200">
@@ -773,11 +774,11 @@ export function StudentResultView({
                   <FaArrowLeft className="w-4 h-4" />
                   이전 문제
                 </Button>
-                
+
                 <div className="text-sm text-gray-600">
                   {currentProblemIndex + 1} / {sortedProblems.length}
                 </div>
-                
+
                 <Button
                   variant="outline"
                   onClick={goToNextProblem}
