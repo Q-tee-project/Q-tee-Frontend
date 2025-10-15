@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { IoIosArrowDropright } from 'react-icons/io';
@@ -24,6 +24,23 @@ const Sidebar = ({ onToggle }: SidebarProps) => {
   const pathname = usePathname();
   const { userType, logout } = useAuth();
 
+  // /question/bank 경로에서만 다크모드 적용
+  useEffect(() => {
+    const isQuestionBankPath = pathname.startsWith('/question/bank');
+
+    if (isQuestionBankPath) {
+      // 다크모드 적용
+      if (isDarkMode) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    } else {
+      // 다른 경로에서는 다크모드 제거
+      document.documentElement.classList.remove('dark');
+    }
+  }, [isDarkMode, pathname]);
+
   // Teacher 메뉴
   const teacherMenuItems = [
     { icon: <RxDashboard />, text: '대시보드', path: '/teacher' },
@@ -42,12 +59,16 @@ const Sidebar = ({ onToggle }: SidebarProps) => {
     { icon: <FiHome />, text: '내 클래스', path: '/class' },
   ];
 
+  // /question/bank 경로 체크
+  const isQuestionBankPath = pathname.startsWith('/question/bank');
+
   // 하단 메뉴 (공통)
   const bottomMenuItems = [
-    { 
-      icon: isDarkMode ? <FiSun /> : <CiDark />, 
-      text: isDarkMode ? '라이트모드' : '다크모드', 
-      isToggle: true 
+    {
+      icon: isDarkMode ? <FiSun /> : <CiDark />,
+      text: isDarkMode ? '라이트모드' : '다크모드',
+      isToggle: true,
+      disabled: !isQuestionBankPath // 문제함이 아니면 비활성화
     },
     { icon: <FaUserCircle />, text: '프로필', isProfile: true },
     { icon: <FiLogOut />, text: '로그아웃', isLogout: true },
@@ -199,13 +220,18 @@ const Sidebar = ({ onToggle }: SidebarProps) => {
         
         {bottomMenuItems.map((item, index) => {
           const isActive = item.isProfile ? pathname === '/profile' : false;
+          const isDisabled = item.disabled;
           return (
           <motion.div
             key={index}
-            className={`flex items-center gap-4 rounded-md cursor-pointer transition-colors relative p-2.5 ${
-              isActive ? 'bg-gray-800' : 'hover:bg-gray-800'
+            className={`flex items-center gap-4 rounded-md transition-colors relative p-2.5 ${
+              isDisabled
+                ? 'opacity-50 cursor-not-allowed'
+                : `cursor-pointer ${isActive ? 'bg-gray-800' : 'hover:bg-gray-800'}`
             }`}
             onClick={() => {
+              if (isDisabled) return; // 비활성화 시 클릭 무시
+
               if (item.isProfile) {
                 router.push('/profile');
               } else if (item.isToggle) {

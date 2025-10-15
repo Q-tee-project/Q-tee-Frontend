@@ -103,7 +103,7 @@ export default function BankPage() {
   } = useDistribution();
 
   return (
-    <div className="flex flex-col p-5 gap-5">
+    <div className="flex flex-col p-5 gap-5 min-h-screen dark:bg-slate-900 dark:text-gray-100 transition-colors">
       {/* 헤더 영역 */}
       <PageHeader
         icon={<FileText />}
