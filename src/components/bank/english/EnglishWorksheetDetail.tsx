@@ -123,7 +123,7 @@ const RegenerationPreviewModal: React.FC<RegenerationPreviewModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[98vw] w-full max-h-[95vh] flex flex-col">
+      <DialogContent className="!max-w-[98vw] w-full max-h-[95vh] flex flex-col">
         <DialogHeader className="flex-row items-center justify-between pr-6">
           <DialogTitle>재생성 결과 비교</DialogTitle>
           <div className="flex items-center gap-4">
@@ -684,7 +684,7 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
           {regenerationInfo && (
             <div className="space-y-6 pt-4">
               {/* 지문 연계 경고 */}
-              {regenerationInfo.has_passage && regenerationInfo.related_questions?.length && regenerationInfo.related_questions.length > 0 && (
+              {regenerationInfo.has_passage && regenerationInfo.related_questions && regenerationInfo.related_questions.length > 0 && (
                 <div className="border border-blue-200 bg-blue-50 rounded-lg p-4">
                   <div className="flex items-start gap-3">
                     <AlertTriangle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
@@ -748,50 +748,40 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
           if (!previewData || !selectedWorksheet) return;
 
           try {
-            if (mode === 'generation' && onUpdateQuestion) {
-              // 생성 모드: 메모리에서만 업데이트
-              onUpdateQuestion(
-                previewData.original.question.question_id,
-                previewData.regenerated.question,
-                previewData.regenerated.passage,
-                previewData.regenerated.relatedQuestions
-              );
-            } else if (mode === 'bank') {
-              // 뱅크 모드: DB에 저장
-              const worksheetId = selectedWorksheet.worksheet_id as number;
+            // 생성과 동시에 DB에 저장되므로 모든 편집은 DB에 저장
+            const worksheetId = selectedWorksheet.worksheet_id as number;
 
-              // 메인 문제 업데이트
-              if (previewData.regenerated.question) {
+            // 메인 문제 업데이트
+            if (previewData.regenerated.question) {
+              await EnglishService.updateEnglishQuestion(
+                worksheetId,
+                previewData.regenerated.question.question_id,
+                previewData.regenerated.question
+              );
+            }
+
+            // 지문이 재생성되었다면 업데이트
+            if (previewData.regenerated.passage && previewData.original.passage) {
+              await EnglishService.updateEnglishPassage(
+                worksheetId,
+                previewData.original.passage.passage_id,
+                previewData.regenerated.passage
+              );
+            }
+
+            // 연관 문제들 업데이트
+            if (previewData.regenerated.relatedQuestions) {
+              for (const relatedQuestion of previewData.regenerated.relatedQuestions) {
                 await EnglishService.updateEnglishQuestion(
                   worksheetId,
-                  previewData.regenerated.question.question_id,
-                  previewData.regenerated.question
+                  relatedQuestion.question_id,
+                  relatedQuestion
                 );
               }
-
-              // 지문이 재생성되었다면 업데이트
-              if (previewData.regenerated.passage && previewData.original.passage) {
-                await EnglishService.updateEnglishPassage(
-                  worksheetId,
-                  previewData.original.passage.passage_id,
-                  previewData.regenerated.passage
-                );
-              }
-
-              // 연관 문제들 업데이트
-              if (previewData.regenerated.relatedQuestions) {
-                for (const relatedQuestion of previewData.regenerated.relatedQuestions) {
-                  await EnglishService.updateEnglishQuestion(
-                    worksheetId,
-                    relatedQuestion.question_id,
-                    relatedQuestion
-                  );
-                }
-              }
-
-              // 데이터 새로고침
-              onRefresh();
             }
+
+            // 데이터 새로고침
+            onRefresh();
 
             setIsRegenerationPreviewModalOpen(false);
             setPreviewData(null);
