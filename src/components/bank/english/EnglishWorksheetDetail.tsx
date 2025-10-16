@@ -123,7 +123,7 @@ const RegenerationPreviewModal: React.FC<RegenerationPreviewModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[98vw] w-full max-h-[95vh] flex flex-col">
+      <DialogContent className="!max-w-[98vw] w-full max-h-[95vh] flex flex-col">
         <DialogHeader className="flex-row items-center justify-between pr-6">
           <DialogTitle>재생성 결과 비교</DialogTitle>
           <div className="flex items-center gap-4">
@@ -684,7 +684,7 @@ export const EnglishWorksheetDetail: React.FC<EnglishWorksheetDetailProps> = ({
           {regenerationInfo && (
             <div className="space-y-6 pt-4">
               {/* 지문 연계 경고 */}
-              {regenerationInfo.has_passage && regenerationInfo.related_questions?.length && regenerationInfo.related_questions.length > 0 && (
+              {regenerationInfo.has_passage && regenerationInfo.related_questions && regenerationInfo.related_questions.length > 0 && (
                 <div className="border border-blue-200 bg-blue-50 rounded-lg p-4">
                   <div className="flex items-start gap-3">
                     <AlertTriangle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
