@@ -134,22 +134,22 @@ export default function JoinPage() {
       if (Math.abs(e.deltaY) < 10) return;
 
       const maxStep = getMaxStep();
-      
-      // Scroll down (next section)
-      if (e.deltaY > 0 && state.currentStep < maxStep && state.canScrollToNext) {
+
+      // Scroll down (next section) - removed canScrollToNext requirement
+      if (e.deltaY > 0 && state.currentStep < maxStep) {
         e.preventDefault();
         setState(prev => ({ ...prev, isScrolling: true }));
-        
+
         const nextStep = state.currentStep + 1;
         setState(prev => ({ ...prev, currentStep: nextStep as Step }));
-        
+
         setTimeout(() => scrollToSection(nextStep - 1), 50);
-        
+
         // Clear scroll timeout if exists
         if (scrollTimeoutRef.current) {
           clearTimeout(scrollTimeoutRef.current);
         }
-        
+
         scrollTimeoutRef.current = setTimeout(() => {
           setState(prev => ({ ...prev, isScrolling: false }));
         }, 1000);
@@ -158,17 +158,17 @@ export default function JoinPage() {
       else if (e.deltaY < 0 && state.currentStep > 1) {
         e.preventDefault();
         setState(prev => ({ ...prev, isScrolling: true }));
-        
+
         const prevStep = state.currentStep - 1;
         setState(prev => ({ ...prev, currentStep: prevStep as Step }));
-        
+
         setTimeout(() => scrollToSection(prevStep - 1), 50);
-        
+
         // Clear scroll timeout if exists
         if (scrollTimeoutRef.current) {
           clearTimeout(scrollTimeoutRef.current);
         }
-        
+
         scrollTimeoutRef.current = setTimeout(() => {
           setState(prev => ({ ...prev, isScrolling: false }));
         }, 1000);
@@ -185,7 +185,7 @@ export default function JoinPage() {
         }
       };
     }
-  }, [state.currentStep, state.canScrollToNext, state.isScrolling, state.isTypingPhone, getMaxStep, scrollToSection]);
+  }, [state.currentStep, state.isScrolling, state.isTypingPhone, getMaxStep, scrollToSection]);
 
   // Memoized phone formatting function
   const formatPhoneNumber = useCallback((value: string) => {
@@ -242,16 +242,75 @@ export default function JoinPage() {
   const handleInputBlur = useCallback((e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
 
-    setState(prev => ({
-      ...prev,
-      // Clear typing phone state
-      ...(name === 'phone' || name === 'parent_phone' ? { isTypingPhone: false } : {}),
-      // Mark field as touched
-      touchedFields: { ...prev.touchedFields, [name]: true },
-    }));
+    setState(prev => {
+      const updatedState = {
+        ...prev,
+        // Clear typing phone state
+        ...(name === 'phone' || name === 'parent_phone' ? { isTypingPhone: false } : {}),
+        // Mark field as touched
+        touchedFields: { ...prev.touchedFields, [name]: true },
+      };
 
-    // Validate field
-    validateField(name, value);
+      // Validate field using current state
+      const trimmedValue = value.toString().trim();
+
+      if (!trimmedValue) {
+        return {
+          ...updatedState,
+          fieldErrors: Object.fromEntries(
+            Object.entries(prev.fieldErrors).filter(([key]) => key !== name)
+          ),
+        };
+      }
+
+      let errorMessage: string | undefined;
+
+      switch (name) {
+        case 'name':
+          errorMessage = trimmedValue.length < 2 ? '이름은 2자 이상 입력해주세요.' : undefined;
+          break;
+        case 'email':
+          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          errorMessage = !emailRegex.test(trimmedValue) ? '올바른 이메일 형식이 아닙니다.' : undefined;
+          break;
+        case 'phone':
+          const phoneNumbers = trimmedValue.replace(/[^\d]/g, '');
+          if (phoneNumbers.length < 10) {
+            errorMessage = '전화번호는 최소 10자리 이상 입력해주세요.';
+          } else if (phoneNumbers.length > 11) {
+            errorMessage = '전화번호는 최대 11자리까지 입력 가능합니다.';
+          }
+          break;
+        case 'username':
+          errorMessage = trimmedValue.length < 4 ? '아이디는 4자 이상 입력해주세요.' : undefined;
+          break;
+        case 'password':
+          errorMessage = trimmedValue.length < 8 ? '비밀번호는 8자 이상 입력해주세요.' : undefined;
+          break;
+        case 'confirmPassword':
+          errorMessage = trimmedValue !== prev.formData.password ? '비밀번호가 일치하지 않습니다.' : undefined;
+          break;
+        case 'parent_phone':
+          if (prev.userType === 'student') {
+            const parentPhoneNumbers = trimmedValue.replace(/[^\d]/g, '');
+            if (parentPhoneNumbers.length < 10) {
+              errorMessage = '전화번호는 최소 10자리 이상 입력해주세요.';
+            } else if (parentPhoneNumbers.length > 11) {
+              errorMessage = '전화번호는 최대 11자리까지 입력 가능합니다.';
+            }
+          }
+          break;
+      }
+
+      return {
+        ...updatedState,
+        fieldErrors: errorMessage
+          ? { ...prev.fieldErrors, [name]: errorMessage }
+          : Object.fromEntries(
+              Object.entries(prev.fieldErrors).filter(([key]) => key !== name)
+            ),
+      };
+    });
   }, []);
 
   const handlePhoneFocus = useCallback(() => {
